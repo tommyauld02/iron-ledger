@@ -137,6 +137,40 @@ with sync_playwright() as pw:
     p.click("#undoBtn"); p.wait_for_timeout(400)
     check("pantry: undo remove", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==n0)
 
+    # ---------- PANTRY -> MACROS, one tap ----------
+    check("pantry: wording", p.eval_on_selector('label[for="panName"]',"e=>e.textContent.strip?e.textContent:e.textContent")=="Type and save it")
+    # count across every day: earlier steps move the cursor, so pinning this to
+    # today's key would silently measure a day the tap never touched
+    TOTAL="""()=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{};
+        return Object.keys(d).reduce((n,k)=>n+((d[k].food||[]).length),0);}"""
+    LASTADDED="""n=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{};
+        for(const k of Object.keys(d)) for(const f of (d[k].food||[])) if(f.note===n) return f;
+        return null;}"""
+    before=p.evaluate(TOTAL)
+    row=p.evaluate("""()=>{const b=document.querySelector('[data-addpan]');if(!b)return null;
+        const it=b.closest('.pan-item');return {id:b.dataset.addpan,name:it.querySelector('.nm').textContent};}""")
+    check("pantry: every good food offers +", row is not None, str(row))
+    box=p.locator("[data-addpan]").first.bounding_box()
+    check("pantry: + is 44px", box and box["width"]>=44 and box["height"]>=44,
+          box and "%dx%d"%(box["width"],box["height"]))
+    p.locator("[data-addpan]").first.click(); p.wait_for_timeout(400)
+    after=p.evaluate(TOTAL)
+    check("pantry: + logs one row to the day", after==before+1, "%d -> %d"%(before,after))
+    logged=p.evaluate(LASTADDED, row["name"])
+    check("pantry: + carries the food's own numbers",
+          bool(logged) and logged.get("note")==row["name"] and logged.get("cal") and logged.get("pro"),
+          json.dumps(logged))
+    # rule 3: the row lands on a tab you cannot see, so the button must speak
+    check("pantry: + confirms visibly",
+          p.eval_on_selector('[data-addpan="%s"]'%row["id"], "e=>e.classList.contains('is-done')"))
+    p.wait_for_timeout(1500)
+    check("pantry: + goes back to +",
+          p.eval_on_selector('[data-addpan="%s"]'%row["id"], "e=>e.textContent")=="+")
+    p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
+    check("pantry: the row really is on macros",
+          p.evaluate("n=>[...document.querySelectorAll('.t-row')].some(r=>r.textContent.includes(n))", row["name"]))
+    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(400)
+
     # ---------- LOG ----------
     p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(600)
     check("log: 12 months render", p.eval_on_selector_all(".month","e=>e.length")==12)
