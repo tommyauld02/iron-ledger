@@ -13,8 +13,12 @@ store={"days":{T:{"food":[
             "sCal":130,"sPro":30,"aliases":[]}],"v":1}
 
 # every device the app realistically has to fit
+# 402x874 / 440x956 are the logical sizes the 16 Pro and Pro Max report; the
+# 17 Pro shares the 6.3" panel and reports the same. If Tommy's phone ever
+# disagrees, read window.innerWidth off the real device and correct these.
 DEVICES=[("iPhone SE",320,568),("iPhone 13 mini",375,812),("iPhone 15",393,852),
-         ("iPhone 15 Pro Max",430,932),("landscape 15",852,393)]
+         ("iPhone 17 Pro",402,874),("iPhone 17 Pro Max",440,956),
+         ("iPhone 15 Pro Max",430,932),("landscape 17 Pro",874,402)]
 TABS=["macros","pantry","gym","coach","log"]
 
 # iOS zooms the page whenever you focus a field smaller than 16px, and never zooms back

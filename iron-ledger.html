@@ -1,13 +1,12 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style></head><body><title>The Iron Ledger</title>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style></head><body><title>The Iron Ledger</title>
 <!-- pwa:start  (build.sh strips this block from the artifact copies) -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Iron Ledger">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#E9EBE8" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111614" media="(prefers-color-scheme: dark)">
+<!-- No apple-mobile-web-app-* or theme-color here on purpose. homeScreenMeta()
+     at the bottom of the script already injects them, and it paints
+     theme-color from --surface with a prefers-color-scheme listener. A static
+     theme-color would come first in the document, win, and silently override
+     that with a colour that no longer matches the top bar. -->
 <!-- pwa:end -->
 <style>
 /* Self-hosted so the app works with no network. Archivo is variable
@@ -1688,11 +1687,6 @@
     if (!isMeal(f)) return f.pro || 0;
     var s = 0; f.items.forEach(function (x) { s += x.pro || 0; }); return s;
   }
-  function rowPending(f) {
-    if (!isMeal(f)) return !!f.pending;
-    return f.items.some(function (x) { return x.pending; });
-  }
-
   function autoMealName(items) {
     var named = items.map(function (x) { return (x.note || "").trim(); }).filter(Boolean);
     if (!named.length) return "Meal";

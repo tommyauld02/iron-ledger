@@ -5,7 +5,7 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 17 suites, ~200 checks. Run
+**1. Nothing ships without `./verify.sh` passing.** 18 suites, ~220 checks. Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
 
@@ -22,8 +22,11 @@ is a `@media (pointer: coarse)` rule forcing 16px. Any new input must not
 escape it. `tests/mobile.py` checks this.
 
 **5. 44px minimum on anything tappable, 48px in the tab bar.** Measured, not
-eyeballed — `tests/audit2.py` and `tests/mobile.py` enforce it. **`audit2` is
-skipped right now** (see Testing), so only `mobile` is holding this rule up. Destructive
+eyeballed — `tests/audit2.py`, `tests/mobile.py` and `tests/handoff.py` enforce
+it. **`audit2` is skipped right now** (see Testing); `handoff` measures every
+visible control at 402x874 and covers most of that gap. Calendar day cells are
+the one exemption — a 12-month grid cannot give each day 44px — and both
+`mobile` and `handoff` skip them deliberately rather than by accident. Destructive
 controls have been the repeat offenders: a delete X at 30×30 near the screen
 edge, set chips at 69×29, a Remove button at 52×15.
 
@@ -45,7 +48,7 @@ manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              17 Playwright suites
+tests/              18 Playwright suites
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -163,7 +166,10 @@ Suites: `sweep` features · `days` date rollover and month/year boundaries ·
 contrast in both themes · `audit2` touch targets and undo · `coach` routine
 builder and history preservation · `meals` combine/split/take out ·
 `estmeal` the estimate-as-one-meal path · `pwa` the offline shell, served the
-way Pages serves it, with the network cut · `touch` real touch events via CDP
+way Pages serves it, with the network cut · `handoff` safe-area opt-in, all
+three wake paths, measured touch targets on a 402x874 phone, and the
+no-Claude-and-no-network mode Pages actually runs in · `touch` real touch
+events via CDP
 including the press-and-hold drag · `mobile` fit and font audit across five
 iPhone sizes · plus `commit`, `noclaude`, `yourwords`, `firstrun`, `photo2`,
 `taborder`.
