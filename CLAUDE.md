@@ -38,10 +38,21 @@ no longer train"* rather than being relabelled as a day the user still trains.
 
 ```
 iron-ledger.html    the whole app — source of truth, open it in any browser
+fonts/              self-hosted Archivo + IBM Plex Mono (see Fonts below)
+icons/              generated — run tools/make-icons.py, never hand-draw
+manifest.webmanifest, sw.js   the PWA shell
+tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              16 Playwright suites
+tests/              17 Playwright suites
+.github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
+
+**Nothing in `fonts/`, `icons/` or `dist/` is hand-written.** Neither is the
+deployed `index.html` — the Pages workflow copies `iron-ledger.html` to that
+name at deploy time and does not commit it, because a second copy of the app in
+the repo is precisely how this project once spent a while testing green against
+a stale build.
 
 ## Architecture
 
@@ -78,6 +89,28 @@ use it anywhere food is looked up by id.
 `stampGoal()` snapshots it, so changing your target today never rewrites last
 month's calendar.
 
+**The app is installed, not just bookmarked.** `manifest.webmanifest` and
+`sw.js` make it a real PWA: standalone display, home-screen icon, and an
+offline shell. The service worker is **network-first for documents** and
+cache-first for fonts and icons. That direction is deliberate and is the fix
+for the iOS-serves-an-old-build problem this project kept hitting — online you
+always get the current build, offline the cache answers. The worker reads its
+version from its own `?v=` query, which the app sets from `BUILD`, so there is
+no second version to bump.
+
+Registration is gated on the app's own `<link rel="manifest">`, not on the
+protocol. Artifacts are https too, so a protocol test would send them chasing a
+`sw.js` that isn't there and write a phantom error into the Backup panel;
+`build.sh` strips the manifest link from both artifact copies, so they never
+register.
+
+**Fonts are self-hosted.** Google Fonts was the only outbound reference in the
+whole file and there are no `fetch` calls anywhere, so removing it made the app
+genuinely offline. Archivo is a variable font — one file per subset spans
+400–700, and Google serves the same bytes for every weight you ask for, so do
+not re-add per-weight Archivo files. IBM Plex Mono is static, one per weight.
+Latin and latin-ext only.
+
 **Dates re-check on wake.** iOS suspends a home-screen app rather than closing
 it, so `TODAY` computed once at load meant food logged after midnight landed on
 yesterday. `checkDayRollover()` runs on visibilitychange, focus and pageshow.
@@ -94,9 +127,13 @@ yesterday. `checkDayRollover()` runs on visibilitychange, focus and pageshow.
   viewers, so testers would overwrite each other's data.
 
 Bump `BUILD` on every publish. It shows in the header (`b19`) and is stamped
-into saved data, which is how you tell a real bug from an iOS cache serving an
-old copy. The cache fix is: delete the home-screen icon, refresh in Safari,
-re-add.
+into saved data, which is how you tell a real bug from a stale copy. It is also
+what versions the service worker cache.
+
+The old cache fix — delete the home-screen icon, refresh in Safari, re-add —
+should no longer be necessary on the Pages build, because documents are fetched
+network-first. If you ever find yourself needing it again, that is a service
+worker bug, not an iOS quirk to work around.
 
 ## Testing
 
@@ -107,11 +144,25 @@ pip install playwright && playwright install chromium
 python3 tests/meals.py
 ```
 
+`verify.sh` and `build.sh` find their own interpreter. Windows ships a `python3`
+that satisfies `command -v` but only advertises the Microsoft Store, so they
+probe candidates by running them, and `verify.sh` forces UTF-8 on the children —
+a cp1252 console dies on the `✕` the suites print. The suites normalise
+`os.getcwd()` into a `file:///C:/...` URL; that is a no-op on POSIX.
+
+A suite exiting **77** means it could not run at all, which is not the same as
+the app being broken. `verify.sh` names those separately at the end and still
+exits 0. `audit2` is skipped this way right now: it reads its `MEASURE` snippet
+from `audit.py`, which was not in the archive this repo was seeded from. **That
+is real missing coverage on the 44px rule** — restore `tests/audit.py` from the
+cowork project and the suite comes back by itself.
+
 Suites: `sweep` features · `days` date rollover and month/year boundaries ·
 `probe` clicks every tappable and asserts something changed · `darkcheck` WCAG
 contrast in both themes · `audit2` touch targets and undo · `coach` routine
 builder and history preservation · `meals` combine/split/take out ·
-`estmeal` the estimate-as-one-meal path · `touch` real touch events via CDP
+`estmeal` the estimate-as-one-meal path · `pwa` the offline shell, served the
+way Pages serves it, with the network cut · `touch` real touch events via CDP
 including the press-and-hold drag · `mobile` fit and font audit across five
 iPhone sizes · plus `commit`, `noclaude`, `yourwords`, `firstrun`, `photo2`,
 `taborder`.

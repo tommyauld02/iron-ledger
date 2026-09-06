@@ -1,6 +1,7 @@
 # The Iron Ledger
 
-Gym and macro log. One HTML file, no build step, no dependencies, works offline.
+Gym and macro log. One HTML file, no build step, no dependencies, genuinely
+offline — it makes no network requests at all.
 
 ## Run it
 
@@ -16,12 +17,26 @@ Read `CLAUDE.md` first — it has the architecture and the rules that keep this
 thing from breaking in the specific ways it has broken before.
 
     pip install playwright && playwright install chromium
-    ./verify.sh        # ~190 checks across 16 suites, phone-emulated
+    ./verify.sh        # ~200 checks across 17 suites, phone-emulated
+
+On Windows use Git Bash; the scripts find their own Python (`python3` there is
+a Microsoft Store stub, not an interpreter).
 
 Nothing ships without that passing. Bump `BUILD` in `iron-ledger.html` on
-every publish.
+every publish — it versions the service worker cache as well as the header tag.
 
-## Publish
+`audit2` currently reports SKIPPED: it needs `tests/audit.py`, which was not in
+the archive this repo was seeded from. That is missing coverage on the 44px
+touch-target rule, not a passing test.
+
+## Put it on a phone
+
+Push to `main`. `.github/workflows/pages.yml` runs the suites and, if they pass,
+deploys to GitHub Pages. Open the Pages URL on the phone and use Add to Home
+Screen — it installs as a standalone app with its own icon and works with no
+signal. Nothing leaves the device; the log lives in localStorage.
+
+## Publish as a Claude artifact
 
     ./build.sh
 

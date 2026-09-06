@@ -1,0 +1,56 @@
+name: Deploy to Pages
+
+# iron-ledger.html stays the one source of truth. Pages needs the app at
+# index.html, so that copy is made here at deploy time and never committed —
+# a second copy in the repo is how this project previously ended up testing
+# against a stale build.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Playwright
+        run: |
+          python -m pip install --quiet playwright
+          python -m playwright install --with-deps chromium
+      - name: Run the suites
+        run: sh verify.sh
+
+  deploy:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble the site
+        run: |
+          mkdir -p _site
+          cp iron-ledger.html _site/index.html
+          cp manifest.webmanifest sw.js _site/
+          cp -r fonts icons _site/
+          echo "built from $(grep -o 'BUILD = \"[^\"]*\"' iron-ledger.html | head -1)"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

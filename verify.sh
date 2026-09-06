@@ -22,11 +22,19 @@ done
 
 echo "### testing $(grep -o 'BUILD = \"[^\"]*\"' iron-ledger.html | head -1)  [$PY]"
 fail=0
+skipped=""
 for s in sweep days probe darkcheck audit2 coach meals estmeal touch mobile \
          commit noclaude yourwords firstrun photo2 taborder pwa; do
   echo "=================== $s ==================="
-  if [ -n "$1" ]; then out=$("$PY" tests/$s.py 2>&1) || fail=1; echo "$out" | tail -"$1"
-  else "$PY" tests/$s.py 2>&1 || fail=1; fi
+  # `cmd && rc=0 || rc=$?` keeps set -e out of it: a bare `cmd; rc=$?` would
+  # abort the whole run on the first failing suite, hiding every later one.
+  if [ -n "$1" ]; then out=$("$PY" tests/$s.py 2>&1) && rc=0 || rc=$?; echo "$out" | tail -"$1"
+  else "$PY" tests/$s.py 2>&1 && rc=0 || rc=$?; fi
+  # 77 is a suite saying it could not run at all, which is not the same as the
+  # app being broken. It is still missing coverage, so it is named at the end.
+  if [ "$rc" -eq 77 ]; then skipped="$skipped $s"
+  elif [ "$rc" -ne 0 ]; then fail=1; fi
 done
 echo "==========================================="
+[ -n "$skipped" ] && echo "SKIPPED (did not run, coverage is missing):$skipped"
 [ "$fail" -eq 0 ] && echo "ALL SUITES PASSED" || { echo "SOME SUITES FAILED"; exit 1; }
