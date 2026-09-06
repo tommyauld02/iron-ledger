@@ -23,7 +23,7 @@ done
 echo "### testing $(grep -o 'BUILD = \"[^\"]*\"' iron-ledger.html | head -1)  [$PY]"
 fail=0
 for s in sweep days probe darkcheck audit2 coach meals estmeal touch mobile \
-         commit noclaude yourwords firstrun photo2 taborder; do
+         commit noclaude yourwords firstrun photo2 taborder pwa; do
   echo "=================== $s ==================="
   if [ -n "$1" ]; then out=$("$PY" tests/$s.py 2>&1) || fail=1; echo "$out" | tail -"$1"
   else "$PY" tests/$s.py 2>&1 || fail=1; fi

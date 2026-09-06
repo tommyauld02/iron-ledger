@@ -1,4 +1,14 @@
 <!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style></head><body><title>The Iron Ledger</title>
+<!-- pwa:start  (build.sh strips this block from the artifact copies) -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Iron Ledger">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#E9EBE8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111614" media="(prefers-color-scheme: dark)">
+<!-- pwa:end -->
 <style>
 /* Self-hosted so the app works with no network. Archivo is variable
    (one file spans 400-700); IBM Plex Mono is static, one file per weight. */
@@ -3800,6 +3810,19 @@
     hideUndo();
     if (fn) fn();
   });
+
+  // Offline shell. Gated on our own manifest link rather than on the protocol:
+  // build.sh strips that link from the artifact copies, and an artifact is
+  // served over https, so a protocol test would have it chase a sw.js that
+  // isn't there and write a phantom error into the Backup panel. Under
+  // file:// there is no service worker either, and the app is built to work
+  // without one. The ?v= is what makes a new BUILD a new worker — see sw.js.
+  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) &&
+      document.querySelector('link[rel="manifest"]')) {
+    navigator.serviceWorker.register("sw.js?v=" + BUILD).catch(function (e) {
+      lastError = "service worker: " + (e && e.message ? e.message : String(e));
+    });
+  }
 
   window.addEventListener("error", function (e) {
     lastError = (e && e.message ? e.message : "unknown") +

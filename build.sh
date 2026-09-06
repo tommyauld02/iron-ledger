@@ -21,6 +21,11 @@ s = io.open("iron-ledger.html", encoding="utf-8").read()
 body = re.sub(r'^.*?<body>', '', s, flags=re.S)
 body = re.sub(r'</body>\s*</html>\s*$', '', body, flags=re.S)
 assert "<title>The Iron Ledger</title>" in body, "wrapper strip went wrong"
+
+# The artifact platform supplies its own head and has no service worker or
+# manifest, so the PWA block is dropped from both generated copies.
+body = re.sub(r'<!-- pwa:start.*?<!-- pwa:end -->\s*', '', body, flags=re.S)
+assert "pwa:start" not in body
 io.open("dist/iron-ledger.artifact.html", "w", encoding="utf-8").write(body)
 
 # the copy handed to testers: different title, build tag marked, no cloud mirror
