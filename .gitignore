@@ -3,4 +3,10 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# local screenshots — scratch, never part of the app
 shot-*.png
+gym-*.png
+lock-*.png
+row-*.png
+est-*.png
