@@ -224,7 +224,7 @@ with sync_playwright() as pw:
     # ---- 5. states that only exist after an action ------------------------
     # darkcheck walks the tabs as it finds them, so a panel that only appears
     # once you press something is never painted and its contrast is never
-    # judged. The locked gym bar shipped at 4.37:1 in light for exactly that
+    # judged. The finished-day card shipped at 4.37:1 in light for exactly that
     # reason. Anything gated behind a click belongs here.
     CONTRAST = r"""() => {
       const lum = c => {const [r,g,b] = c.match(/\d+/g).map(Number).map(v => {v /= 255;
@@ -237,7 +237,7 @@ with sync_playwright() as pw:
           n = n.parentElement;}
         return getComputedStyle(document.body).backgroundColor;};
       const out = [];
-      document.querySelectorAll('.lockbar, .lockbar *').forEach(el => {
+      document.querySelectorAll('.daydone, .daydone *').forEach(el => {
         if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
         const s = getComputedStyle(el);
         const L1 = lum(s.color), L2 = lum(bgOf(el));
@@ -268,9 +268,48 @@ with sync_playwright() as pw:
         p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(600)
         rows = p.evaluate(CONTRAST)
         # an empty list would pass silently — the whole point of this section
-        check("locked gym bar painted in %s" % scheme, len(rows) > 0, "%d text nodes" % len(rows))
+        check("finished-day card painted in %s" % scheme, len(rows) > 0, "%d text nodes" % len(rows))
         bad = ["%s %.2f<%.1f" % (r["what"][:12], r["ratio"], r["need"]) for r in rows if not r["ok"]]
-        check("locked gym bar contrast in %s" % scheme, not bad, "; ".join(bad))
+        check("finished-day card contrast in %s" % scheme, not bad, "; ".join(bad))
+        ctx.close()
+
+    # mobile.py sweeps five iPhone widths but never locks a day, so the card's
+    # four-column stat grid is unmeasured there. A big volume figure on the
+    # narrowest phone is exactly where it would burst.
+    for name, w, h in [("iPhone SE", 320, 568), ("iPhone 17 Pro", 402, 874)]:
+        ctx = b.new_context(viewport={"width": w, "height": h}, has_touch=True, is_mobile=True)
+        p = ctx.new_page()
+        p.goto(BASE); p.wait_for_timeout(500)
+        BIG = dict(LOCKED)
+        BIG["days"] = dict(LOCKED["days"])
+        BIG["days"][Ts] = dict(LOCKED["days"][Ts])
+        # six movements, heavy numbers: the shape of a real long session
+        BIG["days"][Ts]["lifts"] = [
+            {"id": "b%d" % n, "cat": "back", "movement": "Movement %d" % n,
+             "sets": [{"w": 315, "r": 12}, {"w": 315, "r": 12}, {"w": 315, "r": 10}]}
+            for n in range(6)]
+        p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", BIG)
+        p.reload(); p.wait_for_timeout(900)
+        try:
+            p.click("text=Got it", timeout=2500)
+        except Exception:
+            pass
+        p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(600)
+        card = p.eval_on_selector_all(".daydone", "e => e.length")
+        check("finished card renders on %s" % name, card == 1, "%d cards" % card)
+        over = p.evaluate("""() => {
+          const bad = [];
+          document.querySelectorAll('.daydone, .daydone *').forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width && (r.left < -1 || r.right > window.innerWidth + 1))
+              bad.push((el.className || el.tagName) + ' ' + Math.round(r.left) + '..' + Math.round(r.right));
+          });
+          return bad;}""")
+        check("finished card fits on %s" % name, not over, "; ".join(over[:4]))
+        check("page does not scroll sideways on %s" % name,
+              p.evaluate("() => document.documentElement.scrollWidth <= window.innerWidth + 1"),
+              "scrollWidth=%s inner=%s" % (p.evaluate("()=>document.documentElement.scrollWidth"),
+                                           p.evaluate("()=>window.innerWidth")))
         ctx.close()
 
     b.close()

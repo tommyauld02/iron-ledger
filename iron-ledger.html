@@ -1296,27 +1296,34 @@
   button.set:hover { border-color: var(--danger); color: var(--danger); }
   button.set:hover .x { color: var(--danger); }
 
-  .lockbar {
+  /* The card is the finished state and persists; the confetti is the moment
+     and does not. accent, not --hit: the hit tokens mean "macro target met" on
+     the calendar, and a finished workout is a different thing entirely. --hit
+     on --hit-bg also measured 4.37:1 here, under the 4.5 this size needs. */
+  .daydone {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 10px 12px;
-    /* accent, not --hit: the hit tokens mean "macro target met" on the
-       calendar, and a locked workout is a different thing entirely. --hit on
-       --hit-bg also came out at 4.37:1 here, under the 4.5 this size needs. */
+    flex-direction: column;
+    gap: 13px;
+    padding: 14px;
     background: var(--accent-soft);
     border: 1px solid var(--accent);
     border-radius: 2px;
   }
-  .lockbar .msg {
+  .daydone .dd-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .daydone .dd-title {
     font-family: var(--font-num);
-    font-size: 11px;
-    letter-spacing: .06em;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .1em;
     text-transform: uppercase;
     color: var(--accent);
   }
-  .lockbar button {
+  .daydone .dd-head button {
     min-height: 44px;
     padding: 0 12px;
     font-family: var(--font-num);
@@ -1329,6 +1336,46 @@
     border-radius: 2px;
     white-space: nowrap;
   }
+  .daydone .dd-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+  .daydone .dd-stats div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .daydone .dd-stats b {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .daydone .dd-stats span {
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+
+  .confetti {
+    position: fixed;
+    inset: 0;
+    z-index: 60;            /* over the tab bar, which sits at 20 */
+    pointer-events: none;   /* never intercepts a tap */
+    overflow: hidden;
+  }
+  .confetti i {
+    position: absolute;
+    top: -14px;
+    width: 7px;
+    height: 11px;
+    border-radius: 1px;
+    animation: confetti-fall linear forwards;
+  }
+  @keyframes confetti-fall {
+    from { transform: translate3d(0, -6vh, 0) rotate(0deg); }
+    to   { transform: translate3d(var(--dx, 0), 112vh, 0) rotate(var(--spin, 540deg)); }
+  }
+  @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
 
   .setadd {
     display: grid;
@@ -2954,6 +3001,35 @@
     }
   }
 
+  // Marks a finished day. Appended to <body>, not #view, so the next render
+  // cannot sweep it away mid-flight, and it removes itself. Wrapped in
+  // try/catch and skipped under reduced-motion: a celebration must never be
+  // the reason a workout fails to save.
+  function celebrate() {
+    try {
+      if (window.matchMedia &&
+          window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var host = document.createElement("div");
+      host.className = "confetti";
+      host.setAttribute("aria-hidden", "true");
+      var cols = ["--accent", "--cat-a", "--cat-b", "--cat-c", "--hit"];
+      for (var i = 0; i < 42; i++) {
+        var bit = document.createElement("i");
+        bit.style.left = (Math.random() * 100) + "vw";
+        bit.style.background = "var(" + cols[i % cols.length] + ")";
+        bit.style.setProperty("--dx", Math.round(Math.random() * 120 - 60) + "px");
+        bit.style.setProperty("--spin", Math.round(Math.random() * 720 + 360) + "deg");
+        bit.style.animationDuration = (1.6 + Math.random() * 1.4).toFixed(2) + "s";
+        bit.style.animationDelay = (Math.random() * 0.5).toFixed(2) + "s";
+        host.appendChild(bit);
+      }
+      document.body.appendChild(host);
+      setTimeout(function () {
+        if (host.parentNode) host.parentNode.removeChild(host);
+      }, 3400);
+    } catch (e) { /* never let a flourish break logging */ }
+  }
+
   function renderGym(key, d) {
     // Someone whose routine no longer contains the day we were showing (a reset,
     // a restore from another phone) must land on a real day, not an empty one.
@@ -3019,8 +3095,8 @@
     }).join("");
 
     var totals = d.lifts.reduce(function (a, l) {
-      var v = volume(l); a.sets += v.sets; a.reps += v.reps; return a;
-    }, { sets: 0, reps: 0 });
+      var v = volume(l); a.sets += v.sets; a.reps += v.reps; a.vol += v.vol; return a;
+    }, { sets: 0, reps: 0, vol: 0 });
 
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:10px">' +
@@ -3031,11 +3107,19 @@
       // A locked day says so at the top, where you look first — the missing
       // form further down is a consequence, not the announcement.
       (locked
-        ? '<section class="lockbar">' +
-            '<span class="msg">Locked in · ' + d.lifts.length +
-              (d.lifts.length === 1 ? ' movement · ' : ' movements · ') +
-              totals.sets + (totals.sets === 1 ? ' set' : ' sets') + '</span>' +
-            '<button id="unlockDay">Unlock</button>' +
+        ? '<section class="daydone">' +
+            '<div class="dd-head">' +
+              '<span class="dd-title">Day complete</span>' +
+              '<button id="unlockDay">Unlock</button>' +
+            '</div>' +
+            '<div class="dd-stats">' +
+              '<div><b>' + d.lifts.length + '</b><span>' +
+                (d.lifts.length === 1 ? 'movement' : 'movements') + '</span></div>' +
+              '<div><b>' + totals.sets + '</b><span>' +
+                (totals.sets === 1 ? 'set' : 'sets') + '</span></div>' +
+              '<div><b>' + totals.reps + '</b><span>reps</span></div>' +
+              '<div><b>' + fmt(totals.vol) + '</b><span>lb volume</span></div>' +
+            '</div>' +
           '</section>'
         : '') +
 
@@ -3089,12 +3173,15 @@
     }
 
     // Locking is one tap each way, so it needs no undo — the way out is the
-    // button that replaces it.
+    // button that replaces it. The card persists; the confetti does not, so
+    // reopening the app on a finished day does not replay someone else's
+    // celebration, and a second session that day can unlock, add and re-lock.
     var lockBtn = document.getElementById("lockDay");
     if (lockBtn) {
       lockBtn.addEventListener("click", function () {
         d.gymLocked = true;
         touch(key); save(); render();
+        celebrate();
       });
     }
     var unlockBtn = document.getElementById("unlockDay");

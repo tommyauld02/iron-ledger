@@ -170,8 +170,17 @@ with sync_playwright() as pw:
     p.click("#lockDay"); p.wait_for_timeout(500)
     check("gym: lock is stored on the day",
           p.evaluate("k=>!!JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].gymLocked", Ts))
-    check("gym: locked says so", "locked in" in p.eval_on_selector(".lockbar .msg","e=>e.textContent").lower(),
-          p.eval_on_selector(".lockbar .msg","e=>e.textContent"))
+    check("gym: locked says the day is done",
+          "complete" in p.eval_on_selector(".daydone .dd-title","e=>e.textContent").lower(),
+          p.eval_on_selector(".daydone .dd-title","e=>e.textContent"))
+    stats=p.eval_on_selector_all(".daydone .dd-stats div","e=>e.map(x=>x.textContent)")
+    check("gym: the finished card totals the day", len(stats)==4, " | ".join(stats))
+    # transient by design: the card persists, the confetti is only the moment
+    check("gym: confetti fired on the tap and cleans itself up",
+          p.evaluate("()=>document.querySelectorAll('.confetti i').length")>0,
+          "%d pieces" % p.evaluate("()=>document.querySelectorAll('.confetti i').length"))
+    check("gym: confetti cannot swallow a tap",
+          p.evaluate("()=>{const c=document.querySelector('.confetti');return !c||getComputedStyle(c).pointerEvents==='none';}"))
     check("gym: locked hides the add form", p.evaluate("()=>!document.getElementById('addLift')"))
     check("gym: locked hides set entry", p.eval_on_selector_all("[data-addset]","e=>e.length")==0)
     check("gym: locked hides remove", p.eval_on_selector_all("[data-rmlift]","e=>e.length")==0)
@@ -181,6 +190,11 @@ with sync_playwright() as pw:
     ubox=p.locator("#unlockDay").bounding_box()
     check("gym: unlock is 44px", ubox and ubox["height"]>=44,
           ubox and "%dx%d"%(ubox["width"],ubox["height"]))
+    p.reload(); p.wait_for_timeout(900)
+    p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(500)
+    check("gym: still finished after a reload", p.eval_on_selector_all(".daydone","e=>e.length")==1)
+    check("gym: the celebration does not replay on reopen",
+          p.eval_on_selector_all(".confetti","e=>e.length")==0)
     liftsWere=p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.sets.length)", Ts)
     p.click("#unlockDay"); p.wait_for_timeout(500)
     check("gym: unlock restores editing", p.evaluate("()=>!!document.getElementById('addLift')"))
