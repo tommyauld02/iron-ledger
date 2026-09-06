@@ -1,0 +1,181 @@
+from playwright.sync_api import sync_playwright
+import os, json, datetime
+d=os.getcwd()
+T=datetime.date.today(); Ts=T.isoformat()
+Y=(T-datetime.timedelta(days=2)).isoformat()
+G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+store={"days":{
+  Y:{"food":[{"id":"y1","cal":1800,"pro":160,"note":"Whole day"}],
+     "lifts":[{"id":"yl","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10},{"w":135,"r":10},{"w":145,"r":8}]}],
+     "updated":1,"goal":G}},
+  "moves":None,"goal":G,"region":"United States",
+  "pantry":[{"id":"p1","name":"costco protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,"sCal":130,"sPro":30,"aliases":[]}],
+  "v":1}
+
+SAMPLE_STUB = """
+window.claude={use:function(n){
+ if(n==='sample'){var f=function(){};
+  f.json=function(p){return Promise.resolve({items:[{food:'Chipotle burrito bowl',amount:'1 bowl',calories:700,protein:45}],note:'Assumed chicken, rice, beans.'});};
+  f.limits=function(){return Promise.resolve({maxPromptBytes:65536,images:{maxCount:4,maxInputBytes:2e7,mediaTypes:['image/jpeg']}});};
+  return Promise.resolve(f);}
+ return Promise.resolve(null);}};
+"""
+
+results=[]
+def check(name, ok, detail=""):
+    results.append((("PASS" if ok else "FAIL"), name, detail))
+
+with sync_playwright() as pw:
+    b=pw.chromium.launch()
+    ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True); ctx.add_init_script(SAMPLE_STUB)
+    p=ctx.new_page(); errs=[]
+    p.on("pageerror", lambda e: errs.append(str(e)))
+    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(400)
+    p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
+    p.reload(); p.wait_for_timeout(1200)
+
+    # ---------- MACROS ----------
+    p.fill("#fCal","250"); p.fill("#fPro","25"); p.fill("#fNote","Yogurt")
+    p.click("#addFood"); p.wait_for_timeout(400)
+    check("macros: manual add", p.eval_on_selector_all(".t-row","e=>e.length")==1)
+    check("macros: confirmation shown", p.evaluate("()=>!!document.querySelector('.added-flash')"))
+
+    p.fill("#fCal","100"); p.fill("#fPro","5"); p.press("#fPro","Enter"); p.wait_for_timeout(400)
+    check("macros: Enter submits", p.eval_on_selector_all(".t-row","e=>e.length")==2)
+
+    p.eval_on_selector_all(".t-del","e=>e[1].click()"); p.wait_for_timeout(400)
+    check("macros: delete row", p.eval_on_selector_all(".t-row","e=>e.length")==1)
+    check("macros: undo bar appears", p.evaluate("()=>!document.getElementById('undobar').hidden"))
+    p.click("#undoBtn"); p.wait_for_timeout(400)
+    check("macros: undo restores", p.eval_on_selector_all(".t-row","e=>e.length")==2)
+
+    # goal editor
+    p.click("#openGoal"); p.wait_for_timeout(300)
+    check("macros: goal editor opens", p.evaluate("()=>!!document.getElementById('gCal')"))
+    p.eval_on_selector_all("#dirCal button","e=>e[0].click()")   # switch cal to "+ Above"
+    p.fill("#gCal","2500"); p.fill("#gPro","180")
+    p.click("#saveGoal"); p.wait_for_timeout(400)
+    gt = p.text_content("#openGoal")
+    check("macros: goal saves w/ direction", "+2,500" in gt and "+180" in gt, gt.strip())
+    p.click("#openGoal"); p.wait_for_timeout(250); p.click("#cancelGoal"); p.wait_for_timeout(300)
+    check("macros: goal cancel", p.evaluate("()=>!document.getElementById('gCal')"))
+
+    # estimator: table + pantry + claude fallback in one
+    p.fill("#estText","200g chicken breast & 1 costco protein coffee & chipotle burrito bowl")
+    p.click("#runEst"); p.wait_for_timeout(1200)
+    rows=p.eval_on_selector_all(".rev-item",
+      "e=>e.map(x=>x.querySelector('.food').textContent+'|'+x.querySelector('.amt').textContent.trim())")
+    srcs=" ".join(rows)
+    check("estimator: table match", "built-in reference" in srcs)
+    check("estimator: pantry match", "your pantry" in srcs)
+    check("estimator: claude fallback", "estimated" in srcs, " / ".join(rows))
+    before=p.eval_on_selector_all(".t-row","e=>e.length")
+    p.click("#commitEst"); p.wait_for_timeout(500)
+    check("estimator: commit adds rows", p.eval_on_selector_all(".t-row","e=>e.length")==before+3)
+
+    # date nav
+    p.click("#prevDay"); p.wait_for_timeout(350)
+    d1=p.text_content("#dateFull")
+    p.click("#nextDay"); p.wait_for_timeout(350)
+    check("macros: date arrows", d1!=p.text_content("#dateFull"))
+    p.click("#prevDay"); p.wait_for_timeout(300)
+    check("macros: 'back to today' visible off-today", p.evaluate("()=>!document.getElementById('todayBtn').hidden"))
+    p.click("#todayBtn"); p.wait_for_timeout(350)
+    check("macros: back to today works", p.evaluate("()=>document.getElementById('todayBtn').hidden"))
+
+    # region persists
+    p.fill("#regionIn","Canada"); p.click("#estText"); p.wait_for_timeout(300)
+    check("macros: region persists", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).region")=="Canada")
+
+    # ---------- GYM ----------
+    p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(500)
+    p.eval_on_selector_all(".cat","e=>e[1].click()"); p.wait_for_timeout(350)
+    check("gym: category switch", p.evaluate("()=>document.querySelectorAll('.cat')[1].getAttribute('aria-pressed')")=="true")
+    p.eval_on_selector_all(".cat","e=>e[0].click()"); p.wait_for_timeout(350)
+    p.select_option("#mSel","Barbell Row"); p.click("#addLift"); p.wait_for_timeout(400)
+    check("gym: add movement", p.eval_on_selector_all(".lift","e=>e.length")==1)
+    last=p.eval_on_selector(".lift .last","e=>e.textContent")
+    check("gym: last-session lookup", "135" in last, last.strip())
+    p.fill('[data-w="0"]',"185"); p.fill('[data-r="0"]',"6")
+    p.click('[data-addset="0"]'); p.wait_for_timeout(400)
+    check("gym: add set", p.eval_on_selector_all(".set","e=>e.length")==1)
+    check("gym: volume line", "1 set" in p.eval_on_selector(".lift-foot span","e=>e.textContent"))
+    p.fill('[data-w="0"]',"185"); p.fill('[data-r="0"]',"5"); p.press('[data-r="0"]',"Enter"); p.wait_for_timeout(400)
+    check("gym: Enter adds set", p.eval_on_selector_all(".set","e=>e.length")==2)
+    p.eval_on_selector_all(".set","e=>e[0].click()"); p.wait_for_timeout(400)
+    check("gym: delete set + undo offered", p.eval_on_selector_all(".set","e=>e.length")==1 and not p.evaluate("()=>document.getElementById('undobar').hidden"))
+    p.click("#undoBtn"); p.wait_for_timeout(400)
+    check("gym: undo set", p.eval_on_selector_all(".set","e=>e.length")==2)
+    # custom movement
+    p.select_option("#mSel","__new"); p.wait_for_timeout(200)
+    p.fill("#mNew","Meadows Row"); p.click("#addLift"); p.wait_for_timeout(400)
+    check("gym: custom movement", p.eval_on_selector_all(".lift","e=>e.length")==2)
+    check("gym: custom movement remembered",
+          "Meadows Row" in p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves.back"))
+    p.eval_on_selector_all("[data-rmlift]","e=>e[1].click()"); p.wait_for_timeout(400)
+    check("gym: remove movement", p.eval_on_selector_all(".lift","e=>e.length")==1)
+    p.click("#undoBtn"); p.wait_for_timeout(400)
+    check("gym: undo movement", p.eval_on_selector_all(".lift","e=>e.length")==2)
+
+    # ---------- PANTRY ----------
+    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    check("pantry: photo button (sample avail)", p.evaluate("()=>!!document.getElementById('shotBtn')"))
+    p.fill("#panName","Quest bar"); p.fill("#panServe","1"); p.select_option("#panUnit","bar")
+    p.fill("#panCal","200"); p.fill("#panPro","21"); p.click("#savePan"); p.wait_for_timeout(400)
+    check("pantry: add count-unit food", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==2)
+    p.fill("#panName","Bulk oats"); p.fill("#panServe","40"); p.select_option("#panUnit","g")
+    p.fill("#panCal","150"); p.fill("#panPro","5"); p.click("#savePan"); p.wait_for_timeout(400)
+    check("pantry: add weight-unit food", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==3)
+    p.fill("#panName","Bad entry"); p.fill("#panServe","1"); p.select_option("#panUnit","g")
+    p.fill("#panCal","200"); p.fill("#panPro","20"); p.click("#savePan"); p.wait_for_timeout(400)
+    check("pantry: rejects impossible density",
+          p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==3 and
+          p.evaluate("()=>{const w=document.getElementById('panWarn');return w&&!w.hidden;}"))
+    n0=p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")
+    p.eval_on_selector_all("[data-rmpan]","e=>e[0].click()"); p.wait_for_timeout(400)
+    check("pantry: remove", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==n0-1)
+    p.click("#undoBtn"); p.wait_for_timeout(400)
+    check("pantry: undo remove", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==n0)
+
+    # ---------- LOG ----------
+    p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(600)
+    check("log: 12 months render", p.eval_on_selector_all(".month","e=>e.length")==12)
+    check("log: today ringed", p.eval_on_selector_all(".cal-cell.is-today","e=>e.length")==1)
+    check("log: stats row", p.eval_on_selector_all(".yearstats b","e=>e.length")==3)
+    yr0=p.text_content(".yearnav .y")
+    p.click("#nextYear"); p.wait_for_timeout(500)
+    check("log: year nav", p.text_content(".yearnav .y")!=yr0)
+    p.click("#prevYear"); p.wait_for_timeout(500)
+    p.eval_on_selector_all(".cal-cell.hit, .cal-cell.miss","e=>{if(e.length)e[0].click()}"); p.wait_for_timeout(500)
+    check("log: tap day jumps to macros", p.evaluate("()=>document.querySelector('.tabs button[data-tab=macros]').getAttribute('aria-selected')")=="true")
+
+    # ---------- BACKUP / RESTORE ----------
+    p.click("#backupBtn"); p.wait_for_timeout(400)
+    txt=p.evaluate("()=>document.getElementById('backupText').value")
+    check("backup: produces JSON", txt.startswith("{") and '"pantry"' in txt)
+    check("backup: shows build", "Build" in p.text_content("#diag"))
+    payload=json.loads(txt)
+    # wipe and restore
+    p.evaluate("()=>{document.getElementById('closeSheet').click();}"); p.wait_for_timeout(200)
+    p.evaluate("()=>localStorage.removeItem('iron-ledger-v1')")
+    p.reload(); p.wait_for_timeout(900)
+    p.click("#backupBtn"); p.wait_for_timeout(300)
+    p.evaluate("t=>{document.getElementById('backupText').value=t;}", txt)
+    p.click("#restoreBtn"); p.wait_for_timeout(600)
+    after=p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))")
+    check("restore: days come back", len(after.get("days",{}))==len(payload.get("days",{})),
+          "%d of %d days" % (len(after.get("days",{})), len(payload.get("days",{}))))
+    check("restore: pantry comes back", len(after.get("pantry",[]))==len(payload.get("pantry",[])),
+          "%d of %d pantry items" % (len(after.get("pantry",[])), len(payload.get("pantry",[]))))
+    check("restore: goal comes back", after.get("goal")==payload.get("goal"),
+          "got %s" % json.dumps(after.get("goal")))
+    check("restore: region comes back", after.get("region")==payload.get("region"),
+          "got %s want %s" % (after.get("region"), payload.get("region")))
+
+    print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
+    for st,name,detail in results:
+        print("%-6s %-42s %s" % (st,name,detail))
+    fails=[r for r in results if r[0]=="FAIL"]
+    print("\n%d passed, %d FAILED" % (len(results)-len(fails), len(fails)))
+    print("pageerrors:", errs if errs else "none")
+    b.close()

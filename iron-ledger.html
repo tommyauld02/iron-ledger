@@ -1,0 +1,4033 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style></head><body><title>The Iron Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --ground: #E9EBE8;
+    --surface: #FFFFFF;
+    --surface-2: #F2F4F1;
+    --ink: #141A19;
+    --ink-2: #4A5551;
+    --ink-3: #63706C;
+    --rule: #C6CDC9;
+    --rule-hard: #141A19;
+    --accent: #0B6E63;
+    --accent-soft: #D8E8E4;
+    --cat-a: #2E5E8C;
+    --cat-b: #8C4A2E;
+    --cat-c: #5A6E23;
+    --danger: #A03327;
+    --hit: #3F7A22;
+    --hit-bg: #E2EFD6;
+    --miss: #A03327;
+    --miss-bg: #F4E1DE;
+    --on-accent: #FFFFFF;
+    --shadow: 0 1px 2px rgba(20, 26, 25, .07), 0 8px 24px -12px rgba(20, 26, 25, .18);
+
+    --font-ui: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #111614;
+      --surface: #191F1D;
+      --surface-2: #222927;
+      --ink: #E4E9E6;
+      --ink-2: #A2AEA9;
+      --ink-3: #8B9691;
+      --rule: #2E3835;
+      --rule-hard: #6D7A76;
+      --accent: #56B9A9;
+      --accent-soft: #17342F;
+      --cat-a: #6FA3D4;
+      --cat-b: #D08A65;
+      --cat-c: #A3BC5E;
+      --danger: #E0796B;
+      --hit: #8FC46A;
+      --hit-bg: #1E2C18;
+      --miss: #E0796B;
+      --miss-bg: #2F1D1A;
+      --on-accent: #0B1614;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #111614;
+    --surface: #191F1D;
+    --surface-2: #222927;
+    --ink: #E4E9E6;
+    --ink-2: #A2AEA9;
+    --ink-3: #8B9691;
+    --rule: #2E3835;
+    --rule-hard: #6D7A76;
+    --accent: #56B9A9;
+    --accent-soft: #17342F;
+    --cat-a: #6FA3D4;
+    --cat-b: #D08A65;
+    --cat-c: #A3BC5E;
+    --danger: #E0796B;
+    --hit: #8FC46A;
+    --hit-bg: #1E2C18;
+    --miss: #E0796B;
+    --miss-bg: #2F1D1A;
+    --on-accent: #0B1614;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
+  }
+
+  * { box-sizing: border-box; }
+
+  /* iOS zooms the whole page in the moment you focus a field under 16px, and
+     it does not zoom back out. Every field you can type into is 16px or more
+     on a touch screen — nothing else in the app is worth the trade. */
+  @media (pointer: coarse) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+
+  /* No 300ms wait before a tap registers, and no zoom on a double tap. */
+  button, select, [role="tab"] { touch-action: manipulation; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-ui);
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* stops the rubber-band bounce dragging the whole app around */
+    overscroll-behavior-y: none;
+  }
+
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; border: none; background: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+  .app {
+    max-width: 540px;
+    margin: 0 auto;
+    min-height: 100vh;      /* fallback for older iOS */
+    min-height: 100dvh;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    border-inline: 1px solid var(--rule);
+  }
+
+  /* ---------- header ---------- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: max(env(safe-area-inset-top), 14px) 16px 10px;
+  }
+  .app { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .brand h1 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .brand h1 span {
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: .06em;
+    text-transform: none;
+    color: var(--ink-3);
+  }
+
+  .brand .backup-btn {
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    min-height: 44px;
+    padding: 0 12px;
+    margin: -8px -4px -8px 0;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .brand .backup-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  .datenav {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .datenav button.arrow {
+    height: 44px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--ink-2);
+    background: var(--surface-2);
+  }
+  .datenav button.arrow:hover { color: var(--accent); border-color: var(--accent); }
+
+  .datelabel { text-align: center; }
+  .datelabel .dow {
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: block;
+  }
+  .datelabel .full {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .datelabel button.today {
+    display: block;
+    margin: 2px auto 0;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .datelabel button.today[hidden] { display: none; }
+
+  /* on an SE the date wrapped to two lines and pushed the app down a row */
+  @media (max-width: 360px) {
+    .datelabel .full { font-size: 16px; }
+    .brand h1 { font-size: 12px; letter-spacing: .1em; }
+  }
+
+  /* ---------- main ---------- */
+  main {
+    flex: 1;
+    /* clears the sticky tab bar so the last control is never sitting under it */
+    padding: 18px 16px 72px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ---------- T chart ---------- */
+  /* The foods get the room; the numbers get a narrow T on the right. Head, rows
+     and total share one grid so every rule and every digit lines up. */
+  .tchart { position: relative; }
+  .t-head, .t-row, .t-total {
+    display: grid;
+    grid-template-columns: 1fr 76px 58px;
+    align-items: center;
+  }
+
+  .t-head { border-bottom: 2px solid var(--rule-hard); padding-bottom: 6px; }
+  .t-head span {
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .t-head .h-food { padding-left: 10px; }
+  .t-head .h-cal, .t-head .h-pro {
+    text-align: center;
+    padding: 0 4px;
+    font-size: 9px;
+    letter-spacing: .08em;
+  }
+  /* the left edge of the T, and its stem */
+  .t-head .h-cal, .t-row .t-cal, .t-total .t-cal,
+  .t-head .h-pro, .t-row .t-pro, .t-total .t-pro { border-left: 1px solid var(--rule); }
+
+  /* the food column reads as its own box without boxing every row separately */
+  .t-row {
+    border-bottom: 1px solid var(--rule);
+    background: linear-gradient(to right, var(--surface-2) 0 calc(100% - 134px), transparent 0);
+  }
+
+  .t-food {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    padding: 6px 0 6px 10px;
+  }
+  .t-food .nm {
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .t-food .nm.untitled { color: var(--ink-3); }
+
+  .t-cal, .t-pro {
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px;
+  }
+  .t-cal b, .t-pro b {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 18px;
+    font-weight: 500;
+  }
+  .t-cal b.zero, .t-pro b.zero { color: var(--ink-3); font-weight: 400; }
+
+  .t-del {
+    flex: none;
+    /* 44px is the smallest reliable thumb target */
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+    color: var(--ink-3);
+    border-radius: 50%;
+  }
+  .t-del:hover { color: var(--danger); background: var(--surface); }
+  .t-del:active { color: var(--danger); background: var(--miss-bg); transform: scale(.9); }
+
+  .t-total {
+    padding-top: 10px;
+    margin-top: 3px;
+    border-top: 3px double var(--rule-hard);
+  }
+  .t-total .t-label {
+    padding-left: 10px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .t-total b {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: -.02em;
+  }
+
+  .t-note { margin: 0 0 4px; font-size: 12px; color: var(--ink-3); overflow-wrap: anywhere; }
+
+  /* ---------- meals ---------- */
+  .drag-hint {
+    margin: 8px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+
+  /* A press-and-hold picks a row up; a plain swipe still scrolls the list. */
+  .t-row { -webkit-touch-callout: none; }
+  body.dragging { -webkit-user-select: none; user-select: none; }
+  body.dragging .t-row { cursor: grabbing; }
+
+  .t-row.lifted { opacity: .35; }
+  .t-row.dropto {
+    box-shadow: inset 0 0 0 2px var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .drag-ghost {
+    position: fixed;
+    z-index: 60;
+    transform: translate(-50%, -140%);
+    pointer-events: none;
+    max-width: 240px;
+    padding: 8px 12px;
+    border-radius: 3px;
+    background: var(--ink);
+    color: var(--surface);
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: var(--shadow);
+  }
+
+  .t-row.is-meal { background: linear-gradient(to right, var(--accent-soft) 0 calc(100% - 134px), transparent 0); }
+  .t-row.is-open { border-bottom-color: var(--accent); }
+
+  .meal-open {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-height: 44px;
+    justify-content: center;
+    padding: 2px 0;
+  }
+  .meal-open .mn { font-size: 14px; font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+  .meal-open .mc {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* the expanded meal spans the whole grid, under its own row */
+  .meal-body {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--rule);
+    background: var(--surface);
+    padding: 4px 0 10px 10px;
+  }
+  /* same two number columns as the chart above, so the digits line up */
+  .meal-item {
+    display: grid;
+    grid-template-columns: 1fr 76px 58px;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .meal-item .mi-nm { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+  .meal-item .mi-n {
+    text-align: center;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    color: var(--ink-2);
+  }
+  .meal-item .mi-out {
+    grid-column: 1 / -1;
+    justify-self: start;
+    min-height: 44px;
+    padding: 0 10px 0 0;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .meal-item .mi-out:hover, .meal-item .mi-out:active { color: var(--danger); }
+
+  .meal-toggle {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 4px 0 0;
+    text-align: left;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .meal-toggle .box {
+    flex: none;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--surface);
+    font-size: 13px;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .meal-toggle[aria-pressed="true"] { color: var(--ink); }
+  .meal-toggle[aria-pressed="true"] .box { border-color: var(--accent); background: var(--accent-soft); }
+
+  .meal-actions { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 10px 0 0; }
+  .meal-actions button {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: var(--surface-2);
+  }
+  .meal-actions button:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- first run ---------- */
+  .welcome {
+    border: 1px solid var(--accent);
+    border-left-width: 3px;
+    border-radius: 2px;
+    background: var(--surface);
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .welcome h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+  .welcome p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+  .welcome dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 12px;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+  .welcome dt {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding-top: 3px;
+  }
+  .welcome dd { margin: 0; color: var(--ink-2); }
+
+  /* ---------- estimator ---------- */
+  .est textarea {
+    width: 100%;
+    min-height: 76px;
+    resize: vertical;
+    padding: 10px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-ui);
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .est textarea::placeholder { color: var(--ink-3); }
+
+  .est-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-3);
+  }
+
+  .working {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-family: var(--font-num);
+    font-size: 12px;
+    color: var(--ink-2);
+    padding: 4px 0;
+  }
+  .working i {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .working i { animation: none; opacity: .7; } }
+
+  .review {
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    overflow: hidden;
+    background: var(--surface);
+  }
+  .review > header {
+    background: var(--accent-soft);
+    padding: 9px 12px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .review > header b {
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .review > header span {
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-2);
+  }
+  .rev-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 4px 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border-top: 1px solid var(--rule);
+  }
+  .rev-item .food { font-size: 14px; }
+  .rev-item .amt {
+    grid-column: 1;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .rev-item input {
+    width: 66px;
+    height: 44px;
+    padding: 0 7px;
+    text-align: right;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+  }
+  .rev-item .unit {
+    grid-row: 1 / span 2;
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .rev-units {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    padding: 6px 12px 0;
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .rev-units span:nth-child(2) { width: 66px; text-align: right; }
+  .rev-units span:nth-child(3) { width: 66px; text-align: right; }
+  .rev-foot {
+    padding: 11px 12px 12px;
+    border-top: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .rev-assume {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+  .rev-actions { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+
+  .pending-chip {
+    display: inline-block;
+    text-align: left;
+    margin-top: 3px;
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border: 1px dashed var(--rule);
+    border-radius: 2px;
+    padding: 2px 6px;
+    background: var(--surface);
+  }
+  .est-badge {
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .1em;
+    color: var(--ink-3);
+  }
+
+  .added-flash {
+    margin: 0;
+    padding: 9px 10px;
+    border-left: 3px solid var(--hit);
+    background: var(--hit-bg);
+    color: var(--hit);
+    font-family: var(--font-num);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .added-flash span {
+    display: block;
+    color: var(--ink-2);
+    font-size: 11px;
+    margin-top: 2px;
+  }
+
+  .src-tag {
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .src-tag.pantry { color: var(--accent); }
+  .src-tag.table { color: var(--ink-3); }
+  .src-tag.typical { color: var(--cat-b); }
+  .src-tag.claude { color: var(--ink-3); }
+  .src-tag.unknown { color: var(--miss); }
+
+  /* ---------- coach ---------- */
+  .rt-day {
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--daycolor);
+    border-radius: 0 3px 3px 0;
+    background: var(--surface);
+    overflow: hidden;
+  }
+  .rt-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px 10px;
+    padding: 11px 12px;
+  }
+  .rt-head .nm { font-size: 15px; font-weight: 600; }
+  .rt-head .ct {
+    grid-column: 1;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .rt-head .tag {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--daycolor);
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+  }
+  .rt-moves {
+    border-top: 1px solid var(--rule);
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rt-chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
+  .rt-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 44px;
+    padding: 0 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .rt-chip b { font-weight: 400; }
+  .rt-chip i {
+    font-style: normal;
+    font-family: var(--font-num);
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+  .rt-chip:hover, .rt-chip:active { border-color: var(--danger); }
+  .rt-chip:hover i, .rt-chip:active i { color: var(--danger); }
+
+  .rt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .rt-actions button {
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: var(--surface);
+  }
+  .rt-actions button:hover { color: var(--accent); border-color: var(--accent); }
+  .rt-actions button.danger:hover { color: var(--danger); border-color: var(--danger); }
+
+  .lib-group { border-top: 1px solid var(--rule); padding-top: 10px; }
+  .lib-group h4 {
+    margin: 0 0 7px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .lib-add {
+    min-height: 44px;
+    padding: 0 10px;
+    border: 1px dashed var(--rule);
+    border-radius: 2px;
+    background: var(--surface);
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .lib-add:hover { border-color: var(--accent); color: var(--accent); border-style: solid; }
+  .lib-add[disabled] { opacity: .4; }
+
+  /* ---------- pantry ---------- */
+  .pan-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 3px 12px;
+    align-items: baseline;
+    padding: 11px 2px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .pan-item .nm { font-size: 15px; font-weight: 500; }
+  .pan-item .macros {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .pan-item .sub {
+    grid-column: 1 / -1;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .04em;
+    color: var(--ink-3);
+  }
+  .pan-item .rm {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    min-height: 44px;
+    padding: 0 10px;
+    margin-right: -10px;
+  }
+  .pan-item .rm:hover, .pan-item .rm:active { color: var(--danger); }
+
+  .photo-btn {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    border: 1px dashed var(--accent);
+    border-radius: 2px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  .photo-btn:hover { filter: brightness(.97); }
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+  /* ---------- goal strip ---------- */
+  .goalbar {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    margin-top: 12px;
+    border-top: 1px solid var(--rule);
+    padding-top: 10px;
+  }
+  .goalbar::before {
+    content: "";
+    position: absolute;
+    left: 50%; top: 10px; bottom: 0;
+    width: 1px;
+    background: var(--rule);
+    transform: translateX(-.5px);
+  }
+  .goalcell { padding: 0 16px; display: flex; flex-direction: column; gap: 5px; }
+  .goalcell.left { text-align: right; align-items: flex-end; }
+  .goalcell.right { text-align: left; align-items: flex-start; }
+  .goaltarget {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    letter-spacing: .04em;
+    color: var(--ink-2);
+  }
+  .goaltarget .dir { font-weight: 600; }
+  .goalstat {
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .04em;
+  }
+  .goalstat.hit { color: var(--hit); }
+  .goalstat.miss { color: var(--miss); }
+  .goalstat.none { color: var(--ink-3); }
+  .meter {
+    width: 100%;
+    height: 3px;
+    background: var(--rule);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .meter i { display: block; height: 100%; background: var(--ink-3); }
+  .meter i.hit { background: var(--hit); }
+  .meter i.miss { background: var(--miss); }
+
+  .goaledit-open {
+    display: block;
+    width: 100%;
+    margin-top: 10px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    min-height: 44px;
+    padding: 7px;
+    border: 1px dashed var(--rule);
+    border-radius: 2px;
+  }
+  .goaledit-open:hover { color: var(--accent); border-color: var(--accent); }
+
+  .dirtoggle { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  .dirtoggle button {
+    height: 46px;
+    border: 1px solid var(--rule);
+    font-family: var(--font-num);
+    font-size: 12px;
+    color: var(--ink-3);
+    background: var(--surface);
+  }
+  .dirtoggle button:first-child { border-radius: 2px 0 0 2px; }
+  .dirtoggle button:last-child { border-radius: 0 2px 2px 0; margin-left: -1px; }
+  .dirtoggle button[aria-pressed="true"] {
+    color: var(--ink);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ---------- year calendar ---------- */
+  .yearnav {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    gap: 8px;
+  }
+  .yearnav button {
+    height: 44px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink-2);
+    font-size: 15px;
+  }
+  .yearnav button:hover { color: var(--accent); border-color: var(--accent); }
+  .yearnav .y {
+    text-align: center;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 21px;
+    font-weight: 600;
+    letter-spacing: .04em;
+  }
+
+  .yearstats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .yearstats div { background: var(--surface); padding: 9px 8px; text-align: center; }
+  .yearstats b {
+    display: block;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 19px;
+    font-weight: 600;
+  }
+  .yearstats span {
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  .months { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px 14px; }
+  @media (min-width: 470px) { .months { grid-template-columns: repeat(3, 1fr); } }
+
+  .month h4 {
+    margin: 0 0 5px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .month.is-now h4 { color: var(--accent); }
+  .dow-row, .month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 3px;
+  }
+  .dow-row span {
+    font-family: var(--font-num);
+    font-size: 8px;
+    text-align: center;
+    color: var(--ink-3);
+    padding-bottom: 2px;
+  }
+  .cal-cell {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    border-radius: 2px;
+    background: var(--surface-2);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 9px;
+    line-height: 1;
+    color: var(--ink-3);
+    padding: 0;
+    border: 1px solid transparent;
+  }
+  .cal-cell.blank { background: none; }
+  .cal-cell.hit { background: var(--hit-bg); color: var(--hit); font-weight: 600; }
+  .cal-cell.miss { background: var(--miss-bg); color: var(--miss); font-weight: 600; }
+  .cal-cell.future { background: none; color: var(--ink-3); opacity: .45; }
+  .cal-cell.is-today {
+    border-color: var(--ink);
+    box-shadow: 0 0 0 1px var(--ink);
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .cal-cell:not(.blank):hover { border-color: var(--accent); }
+  .cal-cell .bar {
+    width: 60%;
+    height: 2px;
+    border-radius: 1px;
+    background: var(--barcolor, transparent);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .04em;
+    color: var(--ink-3);
+    padding-top: 2px;
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .legend i.line { height: 3px; width: 12px; border-radius: 1px; }
+
+  .empty {
+    padding: 22px 8px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-3);
+    line-height: 1.6;
+  }
+
+  /* ---------- entry forms ---------- */
+  .entry {
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .entry .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .field input, .field select {
+    width: 100%;
+    height: 46px;
+    padding: 0 10px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+  }
+  .field input.text { font-family: var(--font-ui); font-size: 15px; }
+  .field select { font-family: var(--font-ui); font-size: 15px; }
+  .field input::placeholder { color: var(--ink-3); }
+
+  .btn {
+    height: 46px;
+    background: var(--accent);
+    color: var(--on-accent);
+    border-radius: 2px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    font-family: var(--font-num);
+  }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost {
+    background: none;
+    color: var(--ink-2);
+    border: 1px solid var(--rule);
+  }
+  .btn.ghost:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ---------- gym ---------- */
+  .cats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .cat {
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 9px 6px;
+    text-align: center;
+    line-height: 1.25;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink-2);
+    background: var(--surface);
+  }
+  .cat .tag {
+    display: block;
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .16em;
+    margin-bottom: 3px;
+    color: var(--catcolor);
+  }
+  .cat[aria-pressed="true"] {
+    border-color: var(--catcolor);
+    box-shadow: inset 0 0 0 1px var(--catcolor);
+    color: var(--ink);
+  }
+
+  .liftgroup { display: flex; flex-direction: column; gap: 12px; }
+
+  .lift {
+    display: grid;
+    grid-template-columns: 5px 1fr;
+    gap: 0 12px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-left: none;
+    border-radius: 0 3px 3px 0;
+    overflow: hidden;
+  }
+  .lift .spine { background: var(--catcolor); }
+  .lift .body { padding: 11px 12px 12px 0; min-width: 0; }
+
+  .lift-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  .lift-head h3 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -.005em;
+  }
+  .lift-head .cattag {
+    font-family: var(--font-num);
+    font-size: 9px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--catcolor);
+    white-space: nowrap;
+  }
+
+  .lift .last {
+    margin: 4px 0 0;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+  .lift .last em { font-style: normal; color: var(--ink-2); }
+
+  .sets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 9px;
+  }
+  .set {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    padding: 0 13px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .set .x { color: var(--ink-3); margin: 0 1px; }
+  .set:hover { border-color: var(--danger); color: var(--danger); }
+  .set:hover .x { color: var(--danger); }
+
+  .setadd {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 6px;
+    margin-top: 9px;
+    align-items: center;
+  }
+  .setadd input {
+    height: 46px;
+    padding: 0 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+    width: 100%;
+  }
+  .setadd button {
+    height: 46px;
+    min-width: 56px;
+    padding: 0 14px;
+    border: 1px solid var(--catcolor);
+    color: var(--catcolor);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  .setadd button:hover { background: var(--catcolor); color: var(--surface); }
+
+  .lift-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-top: 9px;
+    padding-top: 8px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .lift-foot button {
+    font: inherit;
+    color: var(--ink-3);
+    min-height: 44px;
+    padding: 0 10px;
+    margin-right: -10px;
+  }
+  .lift-foot button:hover, .lift-foot button:active { color: var(--danger); }
+
+  .daysum {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+    padding-top: 2px;
+  }
+  .daysum b { color: var(--ink-2); font-weight: 500; }
+
+  /* ---------- history ---------- */
+  .histrow {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 12px;
+    align-items: center;
+    text-align: left;
+    padding: 12px 2px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .histrow:hover { background: var(--surface-2); }
+  .histrow .d { font-size: 14px; font-weight: 500; }
+  .histrow .m {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .histrow .w {
+    grid-column: 1 / -1;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .histrow .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-right: 5px;
+    vertical-align: 1px;
+  }
+
+  /* ---------- backup sheet ---------- */
+  .sheet {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(20, 26, 25, .55);
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  .sheet[hidden] { display: none !important; }
+  .sheet-inner {
+    width: 100%;
+    max-width: 540px;
+    max-height: 88dvh;
+    overflow-y: auto;
+    background: var(--surface);
+    border-top: 3px solid var(--accent);
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .sheet-inner h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  .sheet-inner p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+  .sheet-inner textarea {
+    width: 100%;
+    height: 150px;
+    resize: vertical;
+    padding: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ---------- undo ---------- */
+  .undobar {
+    position: sticky;
+    bottom: 0;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--ink);
+    color: var(--surface);
+    font-family: var(--font-num);
+    font-size: 12px;
+  }
+  .undobar[hidden] { display: none !important; }
+  .undobar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .undobar button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--surface);
+    border-radius: 2px;
+    color: var(--surface);
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .undobar button:active { background: var(--surface); color: var(--ink); }
+
+  /* ---------- tabs ---------- */
+  .tabs {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    background: var(--surface);
+    border-top: 1px solid var(--rule);
+    padding-bottom: max(env(safe-area-inset-bottom), 4px);
+  }
+  .tabs button {
+    min-height: 48px;
+    padding: 12px 2px 13px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+  }
+  .tabs button[aria-selected="true"] {
+    color: var(--accent);
+    border-top-color: var(--accent);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .t-row, .lift { animation: rise .18s ease-out; }
+    @keyframes rise { from { opacity: .4; transform: translateY(-3px); } }
+  }
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <h1>The Iron Ledger <span id="buildTag"></span></h1>
+      <button class="backup-btn" id="backupBtn">Backup</button>
+    </div>
+    <div class="datenav">
+      <button class="arrow" id="prevDay" aria-label="Previous day">‹</button>
+      <div class="datelabel">
+        <span class="dow" id="dow">—</span>
+        <span class="full" id="dateFull">—</span>
+        <button class="today" id="todayBtn" hidden>Back to today</button>
+      </div>
+      <button class="arrow" id="nextDay" aria-label="Next day">›</button>
+    </div>
+  </header>
+
+  <main id="view"></main>
+
+  <div class="undobar" id="undobar" hidden>
+    <span id="undoLabel"></span>
+    <button id="undoBtn">Undo</button>
+  </div>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="macros" aria-selected="true">Macros</button>
+    <button role="tab" data-tab="pantry" aria-selected="false">Pantry</button>
+    <button role="tab" data-tab="gym" aria-selected="false">Gym</button>
+    <button role="tab" data-tab="coach" aria-selected="false">Coach</button>
+    <button role="tab" data-tab="log" aria-selected="false">Log</button>
+  </nav>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-inner">
+    <h2>Backup &amp; restore</h2>
+    <p id="sheetNote">Your log lives on this device. Copy this text somewhere safe now and then — paste it back here on a new phone to restore everything.</p>
+    <p id="diag" hidden style="font-family:var(--font-num);font-size:11px;color:var(--miss);margin:0"></p>
+    <textarea id="backupText" spellcheck="false"></textarea>
+    <div class="sheet-actions">
+      <button class="btn" id="copyBtn">Copy</button>
+      <button class="btn ghost" id="restoreBtn">Restore from text</button>
+    </div>
+    <button class="btn ghost" id="closeSheet">Close</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  var KEY = "iron-ledger-v1";
+  var BUILD = "2026-09-05.19";
+
+  // A routine is a list of training days. It is the ONLY place a split is
+  // defined — the Gym tab renders whatever is here. The three starting days
+  // keep their original ids so workouts logged before routines existed still
+  // resolve to the right day.
+  var DAY_COLORS = ["var(--cat-a)", "var(--cat-b)", "var(--cat-c)",
+                    "var(--accent)", "var(--cat-a)", "var(--cat-b)", "var(--cat-c)"];
+
+  var DEFAULT_ROUTINE = {
+    name: "My split",
+    days: [
+      { id: "back", name: "Back / Bi / Rear Delt", short: "Back · Bi · RD" },
+      { id: "push", name: "Chest / Shoulder / Tri", short: "Chest · Sh · Tri" },
+      { id: "legs", name: "Legs", short: "Legs" }
+    ]
+  };
+
+  var SEED_MOVES = {
+    back: ["Barbell Row", "Lat Pulldown", "Seated Cable Row", "Pull-Up", "T-Bar Row",
+           "Straight-Arm Pulldown", "Face Pull", "Rear Delt Fly", "Shrug",
+           "Barbell Curl", "Dumbbell Curl", "Hammer Curl", "Preacher Curl"],
+    push: ["Bench Press", "Incline DB Press", "Cable Fly", "Dip", "Overhead Press",
+           "DB Shoulder Press", "Lateral Raise", "Cable Lateral Raise",
+           "Triceps Pushdown", "Skullcrusher", "Overhead Triceps Ext", "Close-Grip Bench"],
+    legs: ["Back Squat", "Front Squat", "Hack Squat", "Leg Press", "Romanian Deadlift",
+           "Leg Curl", "Leg Extension", "Walking Lunge", "Bulgarian Split Squat",
+           "Hip Thrust", "Standing Calf Raise"]
+  };
+
+  // Browsable movement library for building a day, grouped the way people think
+  // about training rather than by equipment.
+  var LIBRARY = [
+    { g: "Chest", m: ["Bench Press", "Incline Bench Press", "Decline Bench Press", "Dumbbell Bench Press",
+        "Incline DB Press", "Machine Chest Press", "Cable Fly", "Pec Deck", "Dumbbell Fly",
+        "Dip", "Push-Up", "Svend Press"] },
+    { g: "Back", m: ["Deadlift", "Barbell Row", "Pendlay Row", "T-Bar Row", "Seated Cable Row",
+        "Chest-Supported Row", "Meadows Row", "Single-Arm DB Row", "Lat Pulldown",
+        "Close-Grip Pulldown", "Pull-Up", "Chin-Up", "Straight-Arm Pulldown", "Shrug", "Rack Pull"] },
+    { g: "Shoulders", m: ["Overhead Press", "DB Shoulder Press", "Arnold Press", "Machine Shoulder Press",
+        "Lateral Raise", "Cable Lateral Raise", "Front Raise", "Rear Delt Fly", "Face Pull",
+        "Reverse Pec Deck", "Upright Row"] },
+    { g: "Biceps", m: ["Barbell Curl", "EZ-Bar Curl", "Dumbbell Curl", "Hammer Curl", "Incline DB Curl",
+        "Preacher Curl", "Cable Curl", "Concentration Curl", "Spider Curl"] },
+    { g: "Triceps", m: ["Close-Grip Bench", "Triceps Pushdown", "Rope Pushdown", "Skullcrusher",
+        "Overhead Triceps Ext", "Dumbbell Kickback", "Bench Dip", "JM Press"] },
+    { g: "Quads", m: ["Back Squat", "Front Squat", "Hack Squat", "Leg Press", "Bulgarian Split Squat",
+        "Walking Lunge", "Reverse Lunge", "Step-Up", "Leg Extension", "Goblet Squat", "Sissy Squat"] },
+    { g: "Hamstrings", m: ["Romanian Deadlift", "Stiff-Leg Deadlift", "Lying Leg Curl", "Seated Leg Curl",
+        "Nordic Curl", "Good Morning", "Glute-Ham Raise"] },
+    { g: "Glutes", m: ["Hip Thrust", "Glute Bridge", "Cable Kickback", "Sumo Deadlift",
+        "Bulgarian Split Squat", "Abduction Machine"] },
+    { g: "Calves", m: ["Standing Calf Raise", "Seated Calf Raise", "Leg Press Calf Raise", "Donkey Calf Raise"] },
+    { g: "Core", m: ["Hanging Leg Raise", "Cable Crunch", "Plank", "Ab Wheel", "Russian Twist",
+        "Decline Sit-Up", "Pallof Press", "Side Plank"] },
+    { g: "Conditioning", m: ["Treadmill", "Incline Walk", "Stair Master", "Rowing Machine",
+        "Assault Bike", "Cycling", "Elliptical", "Jump Rope", "Sled Push", "Farmer's Carry"] }
+  ];
+
+  // ---------- state ----------
+  var DEFAULT_GOAL = { cal: { dir: "-", v: 2000 }, pro: { dir: "+", v: 150 } };
+
+  var REGIONS = ["United States", "Canada", "Mexico", "United Kingdom", "Ireland", "Australia",
+    "New Zealand", "Germany", "France", "Spain", "Italy", "Portugal", "Netherlands", "Belgium",
+    "Switzerland", "Austria", "Sweden", "Norway", "Denmark", "Finland", "Poland", "Czechia",
+    "Greece", "Turkey", "Israel", "United Arab Emirates", "Saudi Arabia", "Egypt", "South Africa",
+    "Nigeria", "Kenya", "India", "Pakistan", "Bangladesh", "China", "Japan", "South Korea",
+    "Taiwan", "Hong Kong", "Singapore", "Malaysia", "Indonesia", "Thailand", "Vietnam",
+    "Philippines", "Brazil", "Argentina", "Chile", "Colombia", "Peru"];
+
+  var store = { days: {}, moves: null, goal: null, region: null, pantry: null, v: 1 };
+  var cursor = new Date();
+  var tab = "macros";
+  var activeCat = "back";
+  var logYear = new Date().getFullYear();
+  var editingGoal = false;
+  var db = null;
+  var sampleFn = null;
+  var syncTimer = null;
+  // { status: 'loading' | 'review' | 'error', text, items, note, message, replacing }
+  var est = null;
+  var estDraft = "";
+  var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
+  var pantryForm = null;
+  var coachOpen = null;
+  var pantryShot = null;
+  var canSendImages = false;
+  var imageTypes = "image/*";
+  var lastError = null;
+  var lastAdded = null;
+  var pendingUndo = null;
+  var openMeal = null;    // which meal is expanded on the Macros tab
+  var drag = null;        // the row currently being dragged, if any
+
+  function ymd(d) {
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + m + "-" + day;
+  }
+  function parseYmd(s) {
+    var p = s.split("-");
+    return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  }
+  var TODAY = ymd(new Date());
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") store = parsed;
+      }
+    } catch (e) { /* fresh start */ }
+    if (!store.days) store.days = {};
+    if (!store.moves) store.moves = JSON.parse(JSON.stringify(SEED_MOVES));
+    store.goal = normGoal(store.goal);   // repairs a partial goal instead of tripping on it
+    if (!store.region) store.region = "United States";
+    if (!store.pantry) store.pantry = [];
+    if (!store.retired) store.retired = {};
+    // Rows are addressed by id, so make sure every one has one.
+    Object.keys(store.days).forEach(function (k) {
+      (store.days[k].food || []).forEach(function (f) {
+        if (!f.id) f.id = uid();
+        if (f.items) f.items.forEach(function (x) { if (!x.id) x.id = uid(); });
+      });
+    });
+    if (!store.routine || !store.routine.days || !store.routine.days.length) {
+      store.routine = JSON.parse(JSON.stringify(DEFAULT_ROUTINE));
+    }
+    store.routine.days.forEach(function (dy) {
+      if (!store.moves[dy.id]) store.moves[dy.id] = (SEED_MOVES[dy.id] || []).slice();
+    });
+  }
+
+  function save() {
+    store.build = BUILD;   // so a backup always says which version wrote it
+    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* quota */ }
+    queueSync();
+  }
+
+  function day(key) {
+    if (!store.days[key]) store.days[key] = { food: [], lifts: [], updated: 0 };
+    var d = store.days[key];
+    if (!d.food) d.food = [];
+    if (!d.lifts) d.lifts = [];
+    return d;
+  }
+  function touch(key) { day(key).updated = Date.now(); }
+
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function num(v) { var n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; }
+  function fmt(n) { return Math.round(n).toLocaleString("en-US"); }
+  // The active routine's days, decorated for display.
+  function cats() {
+    var days = (store.routine && store.routine.days) ? store.routine.days : DEFAULT_ROUTINE.days;
+    return days.map(function (d, i) {
+      return {
+        id: d.id,
+        tag: String.fromCharCode(65 + i),
+        name: d.name,
+        short: d.short || d.name,
+        color: DAY_COLORS[i % DAY_COLORS.length]
+      };
+    });
+  }
+
+  // A workout logged under a day that has since been renamed away or deleted
+  // must still say what it was — never silently relabel it as another day.
+  function cat(id) {
+    var found = cats().filter(function (c) { return c.id === id; })[0];
+    if (found) return found;
+    // The day is gone from the routine, but the workout still happened. Look up
+    // the name it was logged under so old sessions read the way they were logged.
+    var was = (store.retired && store.retired[id]) || "Removed day";
+    return { id: id, tag: "–", name: was, short: was,
+             color: "var(--ink-3)", gone: true };
+  }
+
+  // A meal is a row that holds other rows. Its numbers are always read through
+  // from what is inside it, so a meal can never drift out of step with its items.
+  function isMeal(f) { return !!(f && f.items); }
+
+  function rowCal(f) {
+    if (!isMeal(f)) return f.cal || 0;
+    var s = 0; f.items.forEach(function (x) { s += x.cal || 0; }); return s;
+  }
+  function rowPro(f) {
+    if (!isMeal(f)) return f.pro || 0;
+    var s = 0; f.items.forEach(function (x) { s += x.pro || 0; }); return s;
+  }
+  function rowPending(f) {
+    if (!isMeal(f)) return !!f.pending;
+    return f.items.some(function (x) { return x.pending; });
+  }
+
+  function autoMealName(items) {
+    var named = items.map(function (x) { return (x.note || "").trim(); }).filter(Boolean);
+    if (!named.length) return "Meal";
+    if (named.length <= 2) return named.join(" + ");
+    return named[0] + " + " + (named.length - 1) + " more";
+  }
+  function rowNote(f) {
+    if (!isMeal(f)) return f.note || "";
+    return f.note || autoMealName(f.items);
+  }
+
+  // Finds a row anywhere in the day — at the top level, or inside a meal.
+  function locate(d, id) {
+    for (var i = 0; i < d.food.length; i++) {
+      if (d.food[i].id === id) {
+        return { list: d.food, idx: i, row: d.food[i], meal: null };
+      }
+      var items = d.food[i].items;
+      if (items) {
+        for (var j = 0; j < items.length; j++) {
+          if (items[j].id === id) {
+            return { list: items, idx: j, row: items[j], meal: d.food[i] };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // Anything a meal holds is a plain entry, never another meal — combining a
+  // meal with something else flattens rather than nesting.
+  function asItems(f) { return isMeal(f) ? f.items.slice() : [f]; }
+
+  function totals(d) {
+    var cal = 0, pro = 0;
+    d.food.forEach(function (f) { cal += rowCal(f); pro += rowPro(f); });
+    return { cal: cal, pro: pro };
+  }
+
+  // A day is judged against the goal that was in force when it was logged,
+  // so changing your target today never rewrites last month's verdicts.
+  // Always hand back a complete goal. A half-written one used to throw while
+  // drawing the Macros screen, which killed every handler wired after it.
+  function normGoal(g) {
+    g = g || {};
+    var c = g.cal || {}, p = g.pro || {};
+    return {
+      cal: { dir: c.dir === "+" ? "+" : "-",
+             v: Number(c.v) > 0 ? Number(c.v) : DEFAULT_GOAL.cal.v },
+      pro: { dir: p.dir === "-" ? "-" : "+",
+             v: Number(p.v) > 0 ? Number(p.v) : DEFAULT_GOAL.pro.v }
+    };
+  }
+
+  function goalFor(key) {
+    var d = store.days[key];
+    return normGoal((d && d.goal) ? d.goal : store.goal);
+  }
+
+  function stampGoal(key) {
+    var d = day(key);
+    if (!d.goal) d.goal = normGoal(store.goal);
+  }
+
+  // "met" for a + goal means at or above; for a − goal, at or below.
+  function meets(g, total) {
+    return g.dir === "+" ? total >= g.v : total <= g.v;
+  }
+
+  function goalText(g, total) {
+    var diff = Math.abs(total - g.v);
+    if (g.dir === "+") {
+      return total >= g.v
+        ? (diff ? "over by " + fmt(diff) : "exactly on")
+        : "short by " + fmt(diff);
+    }
+    return total <= g.v
+      ? (diff ? "under by " + fmt(diff) : "exactly on")
+      : "over by " + fmt(diff);
+  }
+
+  function pendingCount(d) {
+    var n = 0;
+    (d && d.food ? d.food : []).forEach(function (f) {
+      n += isMeal(f) ? f.items.filter(function (x) { return x.pending; }).length
+                     : (f.pending ? 1 : 0);
+    });
+    return n;
+  }
+
+  // 'none' = nothing to judge yet: no food logged, or something still
+  // waiting on an estimate, which would make the totals a lie.
+  function verdict(key) {
+    var d = store.days[key];
+    if (!d || !d.food || !d.food.length) return "none";
+    if (pendingCount(d)) return "none";
+    var g = goalFor(key), t = totals(d);
+    return (meets(g.cal, t.cal) && meets(g.pro, t.pro)) ? "hit" : "miss";
+  }
+
+  // ---------- built-in food reference ----------
+  // kcal and protein per 100 g. `u` maps a named portion to its weight in grams.
+  // Reference values for common foods — close enough to log against, not a lab result.
+  var FOODS = [
+    // grains + starches
+    { n: "White rice, cooked", k: 130, d: 158, p: 2.7, a: ["jasmine rice", "white rice", "steamed rice", "rice"], u: { cup: 158 } },
+    { n: "White rice, dry", k: 365, d: 45, p: 7.1, a: ["dry white rice", "uncooked rice", "raw rice"], u: { cup: 185 } },
+    { n: "Brown rice, cooked", k: 112, d: 195, p: 2.6, a: ["brown rice"], u: { cup: 195 } },
+    { n: "Pasta, cooked", k: 158, d: 140, p: 5.8, a: ["pasta", "spaghetti", "penne", "noodles", "macaroni"], u: { cup: 140 } },
+    { n: "Pasta, dry", k: 371, d: 56, p: 13, a: ["dry pasta", "uncooked pasta"], u: {} },
+    { n: "Oats, dry", k: 389, d: 40, p: 16.9, a: ["oats", "oatmeal", "rolled oats", "porridge oats"], u: { cup: 81, serving: 40 } },
+    { n: "White bread", k: 265, d: 28, p: 9, a: ["bread", "white bread", "toast"], u: { slice: 28, each: 28 } },
+    { n: "Whole wheat bread", k: 247, d: 28, p: 13, a: ["wheat bread", "whole wheat bread", "brown bread"], u: { slice: 28, each: 28 } },
+    { n: "Bagel", k: 250, d: 98, p: 10, a: ["bagel"], u: { each: 98 } },
+    { n: "Flour tortilla", k: 306, d: 45, p: 8, a: ["tortilla", "flour tortilla", "wrap"], u: { each: 45 } },
+    { n: "Potato, baked", k: 93, d: 173, p: 2.5, a: ["potato", "potatoes", "baked potato"], u: { each: 173, cup: 150 } },
+    { n: "Sweet potato, baked", k: 90, d: 151, p: 2, a: ["sweet potato", "sweet potatoes", "yam"], u: { each: 151, cup: 200 } },
+    { n: "French fries", k: 312, d: 117, p: 3.4, a: ["fries", "french fries", "chips"], u: { serving: 117 } },
+    { n: "Quinoa, cooked", k: 120, d: 185, p: 4.4, a: ["quinoa"], u: { cup: 185 } },
+    { n: "Couscous, cooked", k: 112, d: 157, p: 3.8, a: ["couscous"], u: { cup: 157 } },
+    { n: "Rice cake", k: 387, d: 9, p: 8, a: ["rice cake", "rice cakes"], u: { each: 9 } },
+    { n: "Granola", k: 471, d: 60, p: 10, a: ["granola"], u: { cup: 122 } },
+    { n: "Breakfast cereal", k: 379, d: 40, p: 7, a: ["cereal"], u: { cup: 40, serving: 40 } },
+
+    // beef
+    { n: "Top sirloin steak, cooked", k: 212, d: 170, p: 31, a: ["top sirloin", "sirloin", "sirloin steak", "steak"], u: {} },
+    { n: "Ribeye steak, cooked", k: 291, d: 226, p: 24, a: ["ribeye", "rib eye", "ribeye steak"], u: {} },
+    { n: "New York strip, cooked", k: 220, d: 226, p: 29, a: ["new york strip", "ny strip", "strip steak"], u: {} },
+    { n: "Flank steak, cooked", k: 192, d: 170, p: 28, a: ["flank steak", "flank"], u: {} },
+    { n: "Filet mignon, cooked", k: 227, d: 170, p: 29, a: ["filet mignon", "tenderloin steak", "filet"], u: {} },
+    { n: "Ground beef 80/20, cooked", k: 254, d: 113, p: 26, a: ["ground beef", "80/20 beef", "hamburger meat", "beef mince"], u: { patty: 85 } },
+    { n: "Ground beef 90/10, cooked", k: 217, d: 113, p: 26, a: ["90/10 beef", "lean ground beef"], u: { patty: 85 } },
+    { n: "Ground beef 93/7, cooked", k: 172, d: 113, p: 26, a: ["93/7 beef", "extra lean ground beef"], u: { patty: 85 } },
+    { n: "Beef jerky", k: 410, d: 28, p: 33, a: ["beef jerky", "jerky"], u: { serving: 28 } },
+
+    // poultry
+    { n: "Chicken breast, cooked", k: 165, d: 172, p: 31, a: ["chicken breast", "chicken breasts", "grilled chicken", "chicken"], u: { each: 174, breast: 174 } },
+    { n: "Chicken breast, raw", k: 120, d: 174, p: 22.5, a: ["raw chicken breast", "uncooked chicken"], u: { each: 174 } },
+    { n: "Chicken thigh, cooked", k: 209, d: 104, p: 26, a: ["chicken thigh", "chicken thighs"], u: { each: 52 } },
+    { n: "Chicken nuggets", k: 296, d: 96, p: 15, a: ["chicken nuggets", "nuggets"], u: { each: 17 } },
+    { n: "Turkey breast, cooked", k: 135, d: 84, p: 30, a: ["turkey breast", "turkey"], u: { slice: 28 } },
+    { n: "Ground turkey 93/7, cooked", k: 176, d: 113, p: 27, a: ["ground turkey"], u: {} },
+
+    // pork
+    { n: "Pork chop, cooked", k: 231, d: 130, p: 27, a: ["pork chop", "pork chops"], u: { each: 130 } },
+    { n: "Pork tenderloin, cooked", k: 143, d: 113, p: 26, a: ["pork tenderloin", "pork loin"], u: {} },
+    { n: "Bacon, cooked", k: 541, d: 24, p: 37, a: ["bacon"], u: { slice: 8, each: 8, rasher: 8 } },
+    { n: "Ham, sliced", k: 145, d: 56, p: 21, a: ["ham", "deli ham"], u: { slice: 28 } },
+    { n: "Sausage, cooked", k: 301, d: 68, p: 18, a: ["sausage", "sausages"], u: { each: 68, link: 68 } },
+
+    // fish + seafood
+    { n: "Salmon, cooked", k: 208, d: 154, p: 22, a: ["salmon"], u: { fillet: 154 } },
+    { n: "Tilapia, cooked", k: 129, d: 87, p: 26, a: ["tilapia"], u: { fillet: 87 } },
+    { n: "Cod, cooked", k: 105, d: 180, p: 23, a: ["cod"], u: { fillet: 180 } },
+    { n: "Tuna, canned in water", k: 116, d: 142, p: 26, a: ["canned tuna", "tuna"], u: { can: 142, serving: 142 } },
+    { n: "Shrimp, cooked", k: 99, d: 113, p: 24, a: ["shrimp", "prawns"], u: {} },
+
+    // eggs + dairy
+    { n: "Egg, whole", k: 143, d: 50, p: 12.6, a: ["egg", "eggs", "whole eggs"], u: { each: 50, large: 50 } },
+    { n: "Egg white", k: 52, d: 33, p: 11, a: ["egg white", "egg whites"], u: { each: 33, cup: 243 } },
+    { n: "Greek yogurt, nonfat", k: 59, d: 170, p: 10, a: ["greek yogurt", "nonfat greek yogurt"], u: { cup: 245, container: 170 } },
+    { n: "Greek yogurt, 2%", k: 73, d: 170, p: 9.9, a: ["2% greek yogurt", "low fat greek yogurt"], u: { cup: 245, container: 170 } },
+    { n: "Yogurt, plain", k: 61, d: 170, p: 3.5, a: ["yogurt", "yoghurt"], u: { cup: 245, container: 170 } },
+    { n: "Cottage cheese, 2%", k: 84, d: 113, p: 11, a: ["cottage cheese"], u: { cup: 226 } },
+    { n: "Milk, whole", k: 61, d: 244, p: 3.2, a: ["whole milk", "milk"], u: { cup: 244 } },
+    { n: "Milk, 2%", k: 50, d: 244, p: 3.3, a: ["2% milk", "semi skimmed milk"], u: { cup: 244 } },
+    { n: "Milk, skim", k: 34, d: 245, p: 3.4, a: ["skim milk", "skimmed milk", "nonfat milk"], u: { cup: 245 } },
+    { n: "Almond milk, unsweetened", k: 15, d: 240, p: 0.6, a: ["almond milk"], u: { cup: 240 } },
+    { n: "Cheddar cheese", k: 403, d: 28, p: 25, a: ["cheddar", "cheddar cheese", "cheese"], u: { slice: 28 } },
+    { n: "Mozzarella", k: 300, d: 28, p: 22, a: ["mozzarella"], u: { slice: 28 } },
+    { n: "Parmesan", k: 431, d: 5, p: 38, a: ["parmesan", "parmigiano"], u: { tbsp: 5 } },
+    { n: "String cheese", k: 300, d: 28, p: 24, a: ["string cheese", "cheese stick"], u: { each: 28 } },
+    { n: "Cream cheese", k: 342, d: 28, p: 6, a: ["cream cheese"], u: { tbsp: 14 } },
+    { n: "Butter", k: 717, d: 14, p: 0.9, a: ["butter"], u: { tbsp: 14, tsp: 5 } },
+
+    // protein supplements
+    { n: "Whey protein powder", k: 375, d: 30, p: 78, a: ["whey protein", "protein powder", "whey", "protein shake"], u: { scoop: 30, serving: 30 } },
+    { n: "Protein bar", k: 350, d: 60, p: 27, a: ["protein bar"], u: { each: 60, bar: 60 } },
+    { n: "Casein protein powder", k: 360, d: 33, p: 75, a: ["casein"], u: { scoop: 33 } },
+
+    // legumes + plant protein
+    { n: "Black beans, cooked", k: 132, d: 172, p: 8.9, a: ["black beans"], u: { cup: 172, can: 260 } },
+    { n: "Chickpeas, cooked", k: 164, d: 164, p: 8.9, a: ["chickpeas", "garbanzo beans"], u: { cup: 164, can: 260 } },
+    { n: "Lentils, cooked", k: 116, d: 198, p: 9, a: ["lentils"], u: { cup: 198 } },
+    { n: "Kidney beans, cooked", k: 127, d: 177, p: 8.7, a: ["kidney beans"], u: { cup: 177 } },
+    { n: "Tofu, firm", k: 144, d: 85, p: 17, a: ["tofu"], u: { serving: 85 } },
+    { n: "Hummus", k: 166, d: 30, p: 8, a: ["hummus"], u: { tbsp: 15 } },
+
+    // fats + nuts
+    { n: "Olive oil", k: 884, d: 13.5, p: 0, a: ["olive oil", "oil"], u: { tbsp: 13.5, tsp: 4.5 } },
+    { n: "Peanut butter", k: 588, d: 32, p: 25, a: ["peanut butter"], u: { tbsp: 16 } },
+    { n: "Almonds", k: 579, d: 28, p: 21, a: ["almonds", "almond"], u: { cup: 143, serving: 28 } },
+    { n: "Peanuts", k: 567, d: 28, p: 26, a: ["peanuts"], u: { serving: 28 } },
+    { n: "Walnuts", k: 654, d: 28, p: 15, a: ["walnuts"], u: { serving: 28 } },
+    { n: "Cashews", k: 553, d: 28, p: 18, a: ["cashews"], u: { serving: 28 } },
+    { n: "Avocado", k: 160, d: 150, p: 2, a: ["avocado"], u: { each: 150, half: 75 } },
+
+    // vegetables
+    { n: "Broccoli, cooked", k: 35, d: 156, p: 2.4, a: ["broccoli"], u: { cup: 156 } },
+    { n: "Spinach, raw", k: 23, d: 30, p: 2.9, a: ["spinach"], u: { cup: 30 } },
+    { n: "Green beans", k: 35, d: 125, p: 1.8, a: ["green beans"], u: { cup: 125 } },
+    { n: "Carrots", k: 41, d: 61, p: 0.9, a: ["carrots", "carrot"], u: { each: 61, cup: 128 } },
+    { n: "Asparagus", k: 22, d: 134, p: 2.4, a: ["asparagus"], u: { cup: 134 } },
+    { n: "Bell pepper", k: 31, d: 119, p: 1, a: ["bell pepper", "peppers", "capsicum"], u: { each: 119 } },
+    { n: "Onion", k: 40, d: 110, p: 1.1, a: ["onion", "onions"], u: { each: 110, cup: 160 } },
+    { n: "Tomato", k: 18, d: 123, p: 0.9, a: ["tomato", "tomatoes"], u: { each: 123 } },
+    { n: "Lettuce", k: 15, d: 47, p: 1.4, a: ["lettuce", "salad greens"], u: { cup: 47 } },
+    { n: "Cucumber", k: 15, d: 104, p: 0.7, a: ["cucumber"], u: { each: 301 } },
+    { n: "Mushrooms", k: 22, d: 70, p: 3.1, a: ["mushrooms", "mushroom"], u: { cup: 70 } },
+    { n: "Corn", k: 96, d: 164, p: 3.4, a: ["corn", "sweetcorn"], u: { cup: 164 } },
+    { n: "Peas", k: 81, d: 160, p: 5.4, a: ["peas"], u: { cup: 160 } },
+
+    // fruit
+    { n: "Banana", k: 89, d: 118, p: 1.1, a: ["banana", "bananas"], u: { each: 118, medium: 118 } },
+    { n: "Apple", k: 52, d: 182, p: 0.3, a: ["apple", "apples"], u: { each: 182, medium: 182 } },
+    { n: "Orange", k: 47, d: 131, p: 0.9, a: ["orange", "oranges"], u: { each: 131 } },
+    { n: "Strawberries", k: 32, d: 152, p: 0.7, a: ["strawberries", "strawberry"], u: { cup: 152 } },
+    { n: "Blueberries", k: 57, d: 148, p: 0.7, a: ["blueberries"], u: { cup: 148 } },
+    { n: "Grapes", k: 69, d: 151, p: 0.7, a: ["grapes"], u: { cup: 151 } },
+    { n: "Pineapple", k: 50, d: 165, p: 0.5, a: ["pineapple"], u: { cup: 165 } },
+    { n: "Mango", k: 60, d: 165, p: 0.8, a: ["mango"], u: { each: 336, cup: 165 } },
+    { n: "Watermelon", k: 30, d: 152, p: 0.6, a: ["watermelon"], u: { cup: 152 } },
+
+    // condiments + sweets + drinks
+    { n: "Honey", k: 304, d: 21, p: 0.3, a: ["honey"], u: { tbsp: 21 } },
+    { n: "Sugar", k: 387, d: 12.5, p: 0, a: ["sugar"], u: { tbsp: 12.5, tsp: 4.2 } },
+    { n: "Ketchup", k: 101, d: 17, p: 1.3, a: ["ketchup"], u: { tbsp: 17 } },
+    { n: "Mayonnaise", k: 680, d: 14, p: 1, a: ["mayo", "mayonnaise"], u: { tbsp: 14 } },
+    { n: "Ranch dressing", k: 430, d: 30, p: 1.3, a: ["ranch", "ranch dressing"], u: { tbsp: 15 } },
+    { n: "Soy sauce", k: 53, d: 16, p: 8, a: ["soy sauce"], u: { tbsp: 16 } },
+    { n: "Salsa", k: 36, d: 32, p: 1.5, a: ["salsa"], u: { tbsp: 16 } },
+    { n: "Pizza", k: 266, d: 107, p: 11, a: ["pizza"], u: { slice: 107, each: 107 } },
+    { n: "Ice cream", k: 207, d: 132, p: 3.5, a: ["ice cream"], u: { cup: 132 } },
+    { n: "Chocolate", k: 546, d: 40, p: 4.9, a: ["chocolate"], u: { serving: 40 } },
+    { n: "Orange juice", k: 45, d: 248, p: 0.7, a: ["orange juice"], u: { cup: 248 } },
+    { n: "Beer", k: 43, d: 355, p: 0.5, a: ["beer"], u: { can: 355, bottle: 355, each: 355 } },
+    { n: "Soda", k: 41, d: 355, p: 0, a: ["soda", "coke", "pepsi"], u: { can: 355, each: 355 } },
+    { n: "Coffee, black", k: 1, d: 237, p: 0.1, a: ["coffee", "black coffee"], u: { cup: 237 } }
+  ];
+
+  var WEIGHT_UNITS = { g: 1, gram: 1, grams: 1, gm: 1, gs: 1, kg: 1000, kilogram: 1000, kilograms: 1000,
+    oz: 28.3495, ounce: 28.3495, ounces: 28.3495, ozs: 28.3495,
+    lb: 453.592, lbs: 453.592, pound: 453.592, pounds: 453.592 };
+
+  // Portion words. They only resolve if the matched food knows its weight.
+  var PORTION_WORDS = { cup: "cup", cups: "cup", tbsp: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
+    tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp", slice: "slice", slices: "slice",
+    scoop: "scoop", scoops: "scoop", can: "can", cans: "can", bar: "bar", bars: "bar",
+    fillet: "fillet", fillets: "fillet", breast: "breast", breasts: "breast",
+    patty: "patty", patties: "patty", link: "link", links: "link", rasher: "rasher",
+    container: "container", serving: "serving", servings: "serving",
+    bottle: "bottle", bottles: "bottle", packet: "packet", packets: "packet",
+    pouch: "pouch", pouches: "pouch", box: "box", boxes: "box", tub: "tub", tubs: "tub",
+    carton: "carton", cartons: "carton", stick: "stick", sticks: "stick",
+    bag: "bag", bags: "bag", unit: "each", units: "each",
+    piece: "each", pieces: "each", medium: "each", large: "each", small: "each", half: "half" };
+
+  // Units a pantry serving can be measured in. Weight and volume give us a gram
+  // figure, so weights can be asked for later; a count is just "one of them".
+  var VOLUME_UNITS = { ml: 1, cl: 10, l: 1000, "fl oz": 29.57 };
+  var COUNT_UNITS = ["bottle", "can", "bar", "packet", "pouch", "container",
+    "tub", "carton", "box", "bag", "stick", "slice", "piece", "scoop", "cup", "serving", "unit"];
+
+  function unitKind(u) {
+    if (WEIGHT_UNITS[u] !== undefined) return "weight";
+    if (VOLUME_UNITS[u] !== undefined) return "volume";
+    return "count";
+  }
+
+  // One shape for old and new pantry records. Old ones stored grams only.
+  function normPantry(it) {
+    var qty = Number(it.serveQty) > 0 ? Number(it.serveQty) : 1;
+    var unit = it.serveUnit || "g";
+    var sCal, sPro, serveG = null;
+
+    if (it.sCal !== undefined) {
+      sCal = Number(it.sCal) || 0;
+      sPro = Number(it.sPro) || 0;
+      serveG = it.serveG ? Number(it.serveG) : null;
+    } else {
+      // legacy record: per-100 g values with a gram serving
+      var g = Number(it.servingG) > 0 ? Number(it.servingG) : 100;
+      serveG = g; qty = g; unit = "g";
+      sCal = (Number(it.k) || 0) * g / 100;
+      sPro = (Number(it.p) || 0) * g / 100;
+    }
+
+    return {
+      name: it.name,
+      qty: qty,
+      unit: unit,
+      kind: unitKind(unit),
+      serveG: serveG,
+      sCal: sCal,
+      sPro: sPro,
+      k: serveG ? (sCal / serveG) * 100 : null,
+      p: serveG ? (sPro / serveG) * 100 : null,
+      label: unitKind(unit) === "count" ? unit : qty + " " + unit
+    };
+  }
+
+  function pantryEntries() {
+    return (store.pantry || []).map(function (it) {
+      var aliases = [normalize(it.name)];
+      (it.aliases || []).forEach(function (a) { if (a) aliases.push(normalize(a)); });
+      return { raw: it, a: aliases };
+    });
+  }
+
+  function matchPantryItem(q) {
+    var norm = " " + normalize(q) + " ";
+    var best = null, bestLen = 0;
+    pantryEntries().forEach(function (e) {
+      e.a.forEach(function (alias) {
+        if (!alias || norm.indexOf(" " + alias + " ") === -1) return;
+        if (alias.length > bestLen) { bestLen = alias.length; best = e.raw; }
+      });
+    });
+    return best;
+  }
+
+  // Pantry resolution understands counts: "2 protein coffees" is 2 servings,
+  // no weighing involved. Weights only work when the serving has a gram figure.
+  function resolvePantry(chunk) {
+    var q = parseQty(chunk);
+    var raw = matchPantryItem(q.name) || matchPantryItem(q.whole);
+    if (!raw) return null;
+    var n = normPantry(raw);
+    var qty = q.qty || 1;
+    var cal, pro, amount;
+
+    if (q.unit && q.unit.kind === "weight") {
+      if (!n.k) return null;                   // count-only item — can't answer by weight
+      var grams = qty * q.unit.grams;
+      cal = n.k * grams / 100;
+      pro = n.p * grams / 100;
+      amount = Math.round(grams) + " g";
+    } else {
+      cal = n.sCal * qty;
+      pro = n.sPro * qty;
+      amount = n.kind === "count"
+        ? qty + " × " + n.unit + (qty > 1 ? "s" : "")
+        : qty + " × " + n.label;
+    }
+
+    return {
+      food: n.name,
+      amount: amount,
+      calories: Math.round(cal),
+      protein: Math.round(pro),
+      src: "pantry"
+    };
+  }
+
+  var WORD_NUMBERS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+    seven: 7, eight: 8, nine: 9, ten: 10, twelve: 12, dozen: 12, half: 0.5,
+    some: 1, my: 1, the: 1 };
+
+  function normalize(s) {
+    return String(s).toLowerCase().replace(/[^a-z0-9/%.\s]/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  function splitItems(text) {
+    return String(text).split(/\s*(?:&|,|\+|;|\band\b|\bwith\b|\n)\s*/i)
+      .map(function (s) { return s.trim(); })
+      .filter(function (s) { return s.length > 1; });
+  }
+
+
+  // Longest whole-word alias wins, so "top sirloin" beats "sirloin".
+  function matchIn(list, q) {
+    var norm = " " + normalize(q) + " ";
+    var wantsDry = /\b(dry|uncooked|raw)\b/.test(norm);
+    var best = null, bestLen = 0;
+    list.forEach(function (f) {
+      f.a.forEach(function (alias) {
+        if (!alias || norm.indexOf(" " + alias + " ") === -1) return;
+        var len = alias.length;
+        var dryAlias = /\b(dry|uncooked|raw)\b/.test(alias);
+        if (wantsDry && dryAlias) len += 20;      // prefer the dry entry when asked
+        if (!wantsDry && dryAlias) len -= 20;     // and avoid it otherwise
+        if (len > bestLen) { bestLen = len; best = f; }
+      });
+    });
+    return bestLen > 0 ? best : null;
+  }
+
+  function matchFood(q) {
+    return matchIn(FOODS, q);
+  }
+
+  function parseQty(chunk) {
+    var norm = normalize(chunk);
+    var qty = null, unit = null, rest = norm;
+
+    // "1 1/2", "1/2", "2.5", or a written number
+    var m = norm.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.?\d+)\s*(.*)$/);
+    if (m) {
+      var raw = m[1];
+      if (raw.indexOf("/") > -1) {
+        var parts = raw.split(/\s+/);
+        qty = 0;
+        parts.forEach(function (pp) {
+          if (pp.indexOf("/") > -1) { var fr = pp.split("/"); qty += Number(fr[0]) / Number(fr[1]); }
+          else qty += Number(pp);
+        });
+      } else { qty = Number(raw); }
+      rest = m[2];
+    } else {
+      var w = norm.match(/^([a-z]+)\s+(.*)$/);
+      if (w && WORD_NUMBERS[w[1]] !== undefined) { qty = WORD_NUMBERS[w[1]]; rest = w[2]; }
+    }
+
+    var u = rest.match(/^([a-z]+)\.?\s+(?:of\s+)?(.*)$/);
+    if (u) {
+      var word = u[1];
+      if (WEIGHT_UNITS[word] !== undefined) { unit = { kind: "weight", grams: WEIGHT_UNITS[word] }; rest = u[2]; }
+      else if (PORTION_WORDS[word]) { unit = { kind: "portion", key: PORTION_WORDS[word] }; rest = u[2]; }
+    }
+    return { qty: qty, unit: unit, name: rest.trim() || norm, whole: norm };
+  }
+
+  // Your own pantry answers first; the built-in table is the fallback.
+  function resolveLocal(chunk) {
+    return resolvePantry(chunk) || resolveTable(chunk);
+  }
+
+  // Resolve one chunk against the built-in table. Null when it can't answer.
+  function resolveTable(chunk) {
+    var p = parseQty(chunk);
+    var food = matchFood(p.name) || matchFood(p.whole);
+    if (!food) return null;
+
+    var grams = null, amount = "", showGrams = true, assumed = false;
+    if (p.unit && p.unit.kind === "weight") {
+      grams = (p.qty || 1) * p.unit.grams;
+      var label = p.unit.grams === 1 ? "g" : p.unit.grams === 28.3495 ? "oz"
+                : p.unit.grams === 453.592 ? "lb" : "kg";
+      amount = (p.qty || 1) + " " + label;
+      showGrams = label !== "g";                   // don't print grams twice
+    } else if (p.unit && p.unit.kind === "portion") {
+      var per = food.u && food.u[p.unit.key];
+      if (!per) return null;                       // unit we can't weigh for this food
+      grams = (p.qty || 1) * per;
+      amount = (p.qty || 1) + " " + p.unit.key + (p.qty > 1 ? "s" : "");
+    } else if (p.qty && food.u && (food.u.each || food.u.slice)) {
+      var one = food.u.each || food.u.slice;
+      grams = p.qty * one;
+      amount = p.qty + " × " + Math.round(one) + " g";
+      showGrams = false;
+    } else if (food.d) {
+      // No amount given — fall back to a typical serving so "chicken and rice"
+      // still produces a number. Flagged as an assumption you can edit.
+      var n = p.qty || 1;
+      grams = n * food.d;
+      assumed = true;
+      if (n > 1) {
+        amount = n + " × " + Math.round(food.d) + " g";
+        showGrams = false;
+      } else {
+        amount = "";                               // the tag already says "typical serving"
+      }
+    } else if (!p.qty && food.u && food.u.serving) {
+      grams = food.u.serving;
+      amount = "1 serving";
+    } else {
+      return null;                                 // nothing we can size it by
+    }
+
+    return {
+      food: food.n,
+      assumed: assumed,
+      amount: showGrams
+        ? (amount ? amount + " · " : "") + Math.round(grams) + " g"
+        : amount,
+      calories: Math.round((food.k * grams) / 100),
+      protein: Math.round((food.p * grams) / 100),
+      src: assumed ? "typical" : "table"
+    };
+  }
+
+  // ---------- macro estimator ----------
+  function estimatePrompt(text) {
+    var region = store.region || "United States";
+    return "You estimate calories and protein for food descriptions. Reply with JSON only.\n\n" +
+      "Food eaten: \"" + text + "\"\n" +
+      "Country: " + region + "\n\n" +
+      "Rules:\n" +
+      "- Answer for " + region + ": use that country's food composition data, its retail and " +
+        "restaurant products, and its typical cuts, preparations and serving sizes. A named store " +
+        "or brand means that country's version of it, and an ambiguous unit means whatever that " +
+        "country normally uses.\n" +
+      "- Split the description into individual foods, one object each.\n" +
+      "- Use the stated quantity. Weights of rice, pasta and grains are cooked weight unless the text says dry or uncooked.\n" +
+      "- If a brand or store is named and you know its published values, use them; otherwise use the generic equivalent.\n" +
+      "- If a quantity is missing, assume one typical serving and say so in the note.\n" +
+      "- calories: whole number of kcal. protein: whole number of grams.\n" +
+      "- note: one short sentence naming any assumption worth knowing, or an empty string.\n\n" +
+      'Return exactly this shape: {"items":[{"food":"","amount":"","calories":0,"protein":0}],"note":""}';
+  }
+
+  function unknownItem(chunk) {
+    return { food: chunk, amount: "", calories: 0, protein: 0, src: "unknown" };
+  }
+
+  function runEstimate(text, replacingId) {
+    var rep = replacingId || null;
+    var resolved = [], leftovers = [];
+
+    splitItems(text).forEach(function (chunk) {
+      var hit = resolveLocal(chunk);
+      if (hit) resolved.push(hit); else leftovers.push(chunk);
+    });
+
+    // Everything the built-in table knew — instant, no round trip, works offline.
+    if (!leftovers.length && resolved.length) {
+      est = { status: "review", text: text, items: resolved, note: "", replacing: rep };
+      render();
+      return;
+    }
+
+    if (!sampleFn) {
+      if (!resolved.length && !leftovers.length) {
+        est = { status: "error", text: text, replacing: rep,
+                message: "Couldn't read that as food. Try naming amounts, like \"6 oz sirloin, 1 cup rice\"." };
+      } else {
+        est = { status: "review", text: text, replacing: rep, note: "",
+                items: resolved.concat(leftovers.map(unknownItem)) };
+      }
+      render();
+      return;
+    }
+
+    est = { status: "loading", text: text, replacing: rep, partial: resolved.length };
+    render();
+
+    sampleFn.json(estimatePrompt(leftovers.join(" & ")), { modelTier: "default", cache: true }).then(function (out) {
+      var items = (out && out.items ? out.items : []).filter(function (it) { return it && it.food; })
+        .map(function (it) {
+          return {
+            food: String(it.food),
+            amount: it.amount ? String(it.amount) : "",
+            calories: Math.max(0, Math.round(Number(it.calories) || 0)),
+            protein: Math.max(0, Math.round(Number(it.protein) || 0)),
+            src: "claude"
+          };
+        });
+      if (!items.length && !resolved.length) {
+        est = { status: "error", text: text, replacing: rep,
+                message: "Couldn't read that as food. Try naming the items and amounts, like \"6 oz sirloin, 1 cup rice\"." };
+      } else {
+        est = { status: "review", text: text, replacing: rep,
+                items: resolved.concat(items.length ? items : leftovers.map(unknownItem)),
+                note: out && out.note ? String(out.note) : "" };
+      }
+      render();
+    }).catch(function (e) {
+      var code = e && e.code;
+      var msg = code === "rate_limited"
+        ? "Too many estimates just now. Give it a minute and try again."
+        : code === "not_granted"
+          ? "Estimating isn't available in this window. Open the app inside Claude and try again."
+          : "That estimate didn't come back. Try again, or enter the numbers by hand.";
+      // Anything the table already resolved is still good — keep it.
+      if (resolved.length) {
+        est = { status: "review", text: text, replacing: rep, warn: msg, note: "",
+                items: resolved.concat(leftovers.map(unknownItem)) };
+      } else {
+        est = { status: "error", text: text, message: msg, replacing: rep };
+      }
+      render();
+    });
+  }
+
+  // Your own words make the best meal name; anything long falls back to the
+  // auto-name built from what's inside it.
+  function mealNameFrom(text) {
+    var t = (text || "").trim().replace(/\s+/g, " ");
+    return (t && t.length <= 40) ? t : "";
+  }
+
+  function commitEstimate(key) {
+    var d = day(key);
+
+    var made = est.items.map(function (it) {
+      if (it.src === "unknown" && !it.calories && !it.protein) {
+        // Nothing could price it — keep the words, resolve it later.
+        return { id: uid(), cal: 0, pro: 0, note: it.food, pending: true };
+      }
+      return {
+        id: uid(),
+        cal: it.calories,
+        pro: it.protein,
+        note: it.amount ? it.food + " · " + it.amount : it.food,
+        est: it.src !== "pantry" && !it.edited
+      };
+    });
+
+    // Resolving a placeholder that lives inside a meal puts the answer back
+    // inside that meal, not loose at the bottom of the day — and never wraps a
+    // meal inside a meal.
+    var at = est.replacing ? locate(d, est.replacing) : null;
+    var asMeal = estAsMeal && made.length > 1 && !(at && at.meal);
+    var toPlace = asMeal
+      ? [{ id: uid(), note: mealNameFrom(est.text), items: made }]
+      : made;
+
+    if (at) {
+      var args = [at.idx, 1].concat(toPlace);
+      at.list.splice.apply(at.list, args);
+    } else {
+      toPlace.forEach(function (r) { d.food.push(r); });
+    }
+    tidyMeals(d);
+    stampGoal(key);
+    est = null;
+    estDraft = "";
+    estAsMeal = false;
+    touch(key); save(); render();
+  }
+
+  function volume(l) {
+    var v = 0, reps = 0;
+    l.sets.forEach(function (s) { v += s.w * s.r; reps += s.r; });
+    return { vol: v, reps: reps, sets: l.sets.length };
+  }
+
+  // last time this movement was trained, before `beforeKey`
+  function lastTime(movement, beforeKey) {
+    var keys = Object.keys(store.days).filter(function (k) { return k < beforeKey; }).sort().reverse();
+    for (var i = 0; i < keys.length; i++) {
+      var lifts = store.days[keys[i]].lifts || [];
+      for (var j = 0; j < lifts.length; j++) {
+        if (lifts[j].movement === movement && lifts[j].sets.length) {
+          return { key: keys[i], lift: lifts[j] };
+        }
+      }
+    }
+    return null;
+  }
+
+  function shortDate(key) {
+    var d = parseYmd(key);
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  }
+
+
+  // ---------- rendering ----------
+  var view = document.getElementById("view");
+
+  // Logging food must survive anything. It reads the form itself, is wired once
+  // by delegation, and never depends on the rest of a render having succeeded.
+  function addFoodFromForm() {
+    var key = ymd(cursor);
+    var d = day(key);
+    var calEl = document.getElementById("fCal");
+    var proEl = document.getElementById("fPro");
+    var noteEl = document.getElementById("fNote");
+    if (!calEl || !proEl) return;
+
+    var c = num(calEl.value), p = num(proEl.value);
+    if (!c && !p) { calEl.focus(); return; }
+
+    var label = noteEl && noteEl.value.trim() ? noteEl.value.trim() : "Entry";
+    d.food.push({ id: uid(), cal: c, pro: p, note: noteEl ? noteEl.value.trim() : "" });
+    stampGoal(key);
+    touch(key);
+    save();
+    lastAdded = { label: label, cal: c, pro: p, at: Date.now() };
+    render();
+
+    // The new row lands above the fold, so confirm it down here where the thumb is.
+    var btn = document.getElementById("addFood");
+    if (btn) {
+      btn.textContent = "Added";
+      setTimeout(function () {
+        var b2 = document.getElementById("addFood");
+        if (b2 && b2.textContent === "Added") b2.textContent = "Add to ledger";
+      }, 1400);
+    }
+    var again = document.getElementById("fCal");
+    if (again) again.focus();
+  }
+
+  function render() {
+    var key = ymd(cursor);
+    var d = day(key);
+
+    document.getElementById("dow").textContent =
+      cursor.toLocaleDateString("en-US", { weekday: "long" });
+    document.getElementById("dateFull").textContent =
+      cursor.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    document.getElementById("todayBtn").hidden = (key === TODAY);
+
+    try {
+      if (tab === "macros") renderMacros(key, d);
+      else if (tab === "gym") renderGym(key, d);
+      else if (tab === "pantry") renderPantry();
+    else if (tab === "coach") renderCoach();
+      else renderLog();
+    } catch (e) {
+      lastError = (e && e.message ? e.message : String(e)) + " · in " + tab;
+      if (window.console && console.error) console.error("render failed in " + tab + ":", e);
+      // Never leave a blank screen: the day's own numbers still render.
+      if (tab === "macros" && !document.getElementById("addFood")) {
+        var t = totals(d);
+        view.innerHTML =
+          '<section class="tchart">' +
+            '<div class="t-head">' +
+              '<span class="h-food">Food</span>' +
+              '<span class="h-cal">Kcal</span>' +
+              '<span class="h-pro">Protein</span>' +
+            '</div>' +
+            '<div class="t-total">' +
+              '<span class="t-label">Day total</span>' +
+              '<span class="t-cal"><b>' + fmt(t.cal) + '</b></span>' +
+              '<span class="t-pro"><b>' + fmt(t.pro) + '</b></span>' +
+            '</div>' +
+          '</section>' +
+          '<section class="entry">' +
+            '<div class="pair">' +
+              '<div class="field"><label for="fCal">Calories</label>' +
+                '<input id="fCal" inputmode="numeric" placeholder="0"></div>' +
+              '<div class="field"><label for="fPro">Protein · g</label>' +
+                '<input id="fPro" inputmode="numeric" placeholder="0"></div>' +
+            '</div>' +
+            '<div class="field"><label for="fNote">What was it (optional)</label>' +
+              '<input id="fNote" class="text"></div>' +
+            '<button class="btn" id="addFood">Add to ledger</button>' +
+            '<p class="est-note" style="color:var(--miss)">Something in this day tripped the full view, ' +
+              'so this is the plain version — logging still works. Tap Backup and send the details to Claude.</p>' +
+          '</section>';
+      }
+    }
+  }
+
+  function estimatorHtml(key, d) {
+    if (est && est.status === "loading") {
+      return '<section class="entry est">' +
+        '<span class="eyebrow">Working it out</span>' +
+        '<div class="working"><i></i>Estimating “' + esc(est.text) + '”</div>' +
+      '</section>';
+    }
+
+    if (est && est.status === "review") {
+      var tc = 0, tp = 0;
+      est.items.forEach(function (it) { tc += it.calories; tp += it.protein; });
+      var SRC = { pantry: "your pantry", table: "built-in reference",
+                  typical: "typical serving",
+                  claude: "estimated", unknown: "needs numbers" };
+      var items = est.items.map(function (it, i) {
+        return '<div class="rev-item">' +
+          '<span class="food">' + esc(it.food) + '</span>' +
+          '<input inputmode="numeric" data-ic="' + i + '" value="' + it.calories + '" aria-label="Calories">' +
+          '<input inputmode="numeric" data-ip="' + i + '" value="' + it.protein + '" aria-label="Protein grams">' +
+          '<span class="amt">' + (it.amount ? esc(it.amount) + " · " : "") +
+            '<span class="src-tag ' + it.src + '">' + SRC[it.src || "claude"] + '</span></span>' +
+        '</div>';
+      }).join("");
+
+      return '<section class="review">' +
+        '<header><b>Estimate</b><span>' + fmt(tc) + ' kcal · ' + fmt(tp) + ' g</span></header>' +
+        '<div class="rev-units"><span></span><span>kcal</span><span>protein</span></div>' +
+        items +
+        '<div class="rev-foot">' +
+          (est.warn ? '<p class="rev-assume" style="color:var(--miss)">' + esc(est.warn) + '</p>' : '') +
+          '<p class="rev-assume">' +
+            (est.note ? esc(est.note) + " " : "") +
+            'Anything marked <em>typical serving</em> is an assumed portion — tap the number to correct it. ' +
+            'Anything marked <em>needs numbers</em> goes in as a placeholder you can fill later.' +
+          '</p>' +
+          // One description usually is one meal, so offer it here rather than
+          // making you drag the rows together afterwards.
+          (est.items.length > 1
+            ? '<button class="meal-toggle" id="estMeal" aria-pressed="' + (estAsMeal ? 'true' : 'false') + '">' +
+                '<span class="box">' + (estAsMeal ? '✓' : '') + '</span>' +
+                'Put these in as one meal' +
+              '</button>'
+            : '') +
+          '<div class="rev-actions">' +
+            '<button class="btn" id="commitEst">' +
+              ((estAsMeal && est.items.length > 1)
+                ? 'Add as one meal'
+                : 'Add ' + est.items.length + (est.items.length === 1 ? ' item' : ' items')) +
+            '</button>' +
+            '<button class="btn ghost" id="discardEst" style="padding:0 16px">Discard</button>' +
+          '</div>' +
+        '</div>' +
+      '</section>';
+    }
+
+    var pend = pendingCount(d);
+    var errHtml = (est && est.status === "error")
+      ? '<p class="est-note" style="color:var(--miss)">' + esc(est.message) + '</p>' : '';
+
+    return '<section class="entry est">' +
+      '<span class="eyebrow">Need help counting?</span>' +
+      '<textarea id="estText" placeholder="What did you eat?" ' +
+        'spellcheck="false">' + esc(estDraft) + '</textarea>' +
+      '<div class="field"><label for="regionIn">Estimate for food sold in</label>' +
+        '<input id="regionIn" class="text" list="regionList" autocomplete="country-name" ' +
+          'value="' + esc(store.region || "") + '" placeholder="United States">' +
+        '<datalist id="regionList">' +
+          REGIONS.map(function (r) { return '<option value="' + esc(r) + '"></option>'; }).join("") +
+        '</datalist></div>' +
+      errHtml +
+      '<button class="btn" id="runEst">Work out the macros</button>' +
+      '<p class="est-note">' +
+        (sampleFn
+          ? 'Describe the meal in plain words. Your pantry and the built-in food table answer first; anything they don’t recognise goes to Claude. The country above decides which version of a product gets used. You’ll see the breakdown and can edit it before it goes in the ledger.'
+          : 'Your pantry and the built-in food table work offline — most everyday foods resolve straight away, and anything without an amount gets a typical serving. Whatever it doesn’t recognise is saved as a placeholder you can fill in by hand.') +
+      '</p>' +
+      (pend
+        ? '<p class="est-note">' + pend + (pend === 1 ? ' entry is' : ' entries are') +
+          ' waiting on an estimate. Today stays uncoloured on the calendar until ' +
+          (pend === 1 ? 'it is' : 'they are') + ' filled in.</p>'
+        : '') +
+    '</section>';
+  }
+
+  function renderMacros(key, d) {
+    var t = totals(d);
+    var rows = d.food.map(function (f, i) {
+      var meal = isMeal(f);
+      var c = rowCal(f), pr = rowPro(f);
+      var open = meal && openMeal === f.id;
+
+      var label = meal
+        ? '<button class="meal-open" data-openmeal="' + esc(f.id) + '">' +
+            '<span class="mn">' + esc(rowNote(f)) + '</span>' +
+            '<span class="mc">' + f.items.length +
+              (f.items.length === 1 ? ' item' : ' items') + ' · tap to ' +
+              (open ? 'close' : 'open') + '</span>' +
+          '</button>'
+        : '<span class="nm' + (f.note ? '' : ' untitled') + '">' +
+            (f.note ? esc(f.note) : 'Untitled entry') +
+            (f.est ? ' <span class="est-badge">est</span>' : '') +
+            (f.pending
+              ? '<br><button class="pending-chip" data-est="' + f.id + '">' +
+                  (sampleFn ? 'Tap to estimate' : 'Tap to add numbers') + '</button>'
+              : '') +
+          '</span>';
+
+      var inside = "";
+      if (open) {
+        inside = '<div class="meal-body">' +
+          f.items.map(function (x) {
+            return '<div class="meal-item">' +
+              '<span class="mi-nm">' + esc(x.note || "Untitled entry") +
+                (x.est ? ' <span class="est-badge">est</span>' : '') +
+                (x.pending
+                  ? ' <button class="pending-chip" data-est="' + x.id + '">' +
+                      (sampleFn ? 'Tap to estimate' : 'Tap to add numbers') + '</button>'
+                  : '') +
+              '</span>' +
+              '<span class="mi-n">' + (x.cal ? fmt(x.cal) : "—") + '</span>' +
+              '<span class="mi-n">' + (x.pro ? fmt(x.pro) : "—") + '</span>' +
+              '<button class="mi-out" data-takeout="' + esc(x.id) + '">Take out</button>' +
+            '</div>';
+          }).join("") +
+          '<div class="meal-actions">' +
+            '<button data-renamemeal="' + esc(f.id) + '">Name this meal</button>' +
+            '<button data-split="' + esc(f.id) + '">Split apart</button>' +
+          '</div>' +
+        '</div>';
+      }
+
+      return '<div class="t-row' + (meal ? ' is-meal' : '') + (open ? ' is-open' : '') +
+               '" data-row="' + esc(f.id) + '">' +
+        '<div class="t-food">' + label +
+          '<button class="t-del" data-del="' + esc(f.id) + '" aria-label="Delete entry">✕</button>' +
+        '</div>' +
+        '<div class="t-cal"><b class="' + (c ? "" : "zero") + '">' + (c ? fmt(c) : "—") + '</b></div>' +
+        '<div class="t-pro"><b class="' + (pr ? "" : "zero") + '">' + (pr ? fmt(pr) : "—") + '</b></div>' +
+        inside +
+      '</div>';
+    }).join("");
+
+    var g = goalFor(key);
+    var logged = d.food.length > 0;
+
+    function half(side, gg, total, unit) {
+      var ok = meets(gg, total);
+      var state = logged ? (ok ? "hit" : "miss") : "none";
+      var pct = gg.v > 0 ? Math.max(0, Math.min(100, (total / gg.v) * 100)) : 0;
+      return '<div class="goalcell ' + side + '">' +
+        '<span class="goaltarget"><span class="dir">' + (gg.dir === "+" ? "+" : "−") + '</span>' +
+          fmt(gg.v) + ' ' + unit + '</span>' +
+        '<span class="meter"><i class="' + state + '" style="width:' + pct.toFixed(1) + '%"></i></span>' +
+        '<span class="goalstat ' + state + '">' +
+          (logged ? goalText(gg, total) : "not started") + '</span>' +
+      '</div>';
+    }
+
+    var goalHtml = editingGoal
+      ? '<div class="entry" style="margin-top:14px">' +
+          '<span class="eyebrow">Daily target</span>' +
+          '<div class="pair">' +
+            '<div class="field"><label>Calories</label>' +
+              '<div class="dirtoggle" id="dirCal">' +
+                '<button data-d="+" aria-pressed="' + (g.cal.dir === "+") + '">+ Above</button>' +
+                '<button data-d="-" aria-pressed="' + (g.cal.dir === "-") + '">− Below</button>' +
+              '</div>' +
+              '<input id="gCal" inputmode="numeric" value="' + g.cal.v + '" style="margin-top:6px"></div>' +
+            '<div class="field"><label>Protein · g</label>' +
+              '<div class="dirtoggle" id="dirPro">' +
+                '<button data-d="+" aria-pressed="' + (g.pro.dir === "+") + '">+ Above</button>' +
+                '<button data-d="-" aria-pressed="' + (g.pro.dir === "-") + '">− Below</button>' +
+              '</div>' +
+              '<input id="gPro" inputmode="numeric" value="' + g.pro.v + '" style="margin-top:6px"></div>' +
+          '</div>' +
+          '<p style="margin:0;font-size:12px;line-height:1.5;color:var(--ink-3)">' +
+            'Applies to this day and every day after it. Days already logged keep the target they were judged against.</p>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+            '<button class="btn" id="saveGoal">Save target</button>' +
+            '<button class="btn ghost" id="cancelGoal">Cancel</button>' +
+          '</div>' +
+        '</div>'
+      : '<button class="goaledit-open" id="openGoal">Target · ' +
+          (g.cal.dir === "+" ? "+" : "−") + fmt(g.cal.v) + ' kcal · ' +
+          (g.pro.dir === "+" ? "+" : "−") + fmt(g.pro.v) + ' g protein · edit</button>';
+
+    // Shown only until something is logged — invisible to anyone already using it.
+    var isNew = !store.seen &&
+      !Object.keys(store.days).some(function (k) {
+        var dd = store.days[k];
+        return (dd.food && dd.food.length) || (dd.lifts && dd.lifts.length);
+      }) && !(store.pantry || []).length;
+
+    var welcome = isNew
+      ? '<section class="welcome">' +
+          '<h2>A quick tour</h2>' +
+          '<p>A gym and food log built to replace a paper one. Everything stays on this phone — ' +
+            'nobody else sees what you log, including whoever shared this with you.</p>' +
+          '<dl>' +
+            '<dt>Macros</dt><dd>Calories left, protein right, totals at the bottom. Type the numbers, ' +
+              'or describe the meal — “chicken and rice” works, and you can correct it before it goes in.</dd>' +
+            '<dt>Pantry</dt><dd>Save things you eat often, once. Pre-made items are counted in bottles ' +
+              'and bars, not weighed.</dd>' +
+            '<dt>Gym</dt><dd>Pick a split, add movements, log weight and reps. It shows what you lifted last time.</dd>' +
+            '<dt>Log</dt><dd>The year at a glance. Green means you hit your target, red means you missed.</dd>' +
+          '</dl>' +
+          '<p>The daily target below starts at under 2,000 calories and above 150 g protein — ' +
+            'tap it to set your own. Found something broken? Tap <strong>Backup</strong> in the corner ' +
+            'and send that text back, build number included.</p>' +
+          '<button class="btn ghost" id="dismissWelcome">Got it</button>' +
+        '</section>'
+      : '';
+
+    view.innerHTML =
+      welcome +
+      '<section class="tchart">' +
+        '<div class="t-head">' +
+          '<span class="h-food">Food</span>' +
+          '<span class="h-cal">Kcal</span>' +
+          '<span class="h-pro">Protein</span>' +
+        '</div>' +
+        '<div class="t-body">' +
+          (rows || '<p class="empty">Nothing logged yet.<br>Add your first entry below.</p>') +
+        '</div>' +
+        ((d.food.length > 1 && !d.food.some(isMeal))
+          ? '<p class="drag-hint">Hold a row and drag it onto another to combine them into one meal.</p>'
+          : '') +
+        '<div class="t-total">' +
+          '<span class="t-label">Day total</span>' +
+          '<span class="t-cal"><b>' + fmt(t.cal) + '</b></span>' +
+          '<span class="t-pro"><b>' + fmt(t.pro) + '</b></span>' +
+        '</div>' +
+        '<div class="goalbar">' + half("left", g.cal, t.cal, "kcal") + half("right", g.pro, t.pro, "g") + '</div>' +
+        goalHtml +
+      '</section>' +
+
+      '<section class="entry">' +
+        '<div class="pair">' +
+          '<div class="field"><label for="fCal">Calories</label>' +
+            '<input id="fCal" inputmode="numeric" placeholder="0"></div>' +
+          '<div class="field"><label for="fPro">Protein · g</label>' +
+            '<input id="fPro" inputmode="numeric" placeholder="0"></div>' +
+        '</div>' +
+        '<div class="field"><label for="fNote">What was it (optional)</label>' +
+          '<input id="fNote" class="text"></div>' +
+        '<button class="btn" id="addFood">Add to ledger</button>' +
+        ((lastAdded && Date.now() - lastAdded.at < 8000)
+          ? '<p class="added-flash">✓ Added ' + esc(lastAdded.label) + ' · ' +
+              fmt(lastAdded.cal) + ' kcal · ' + fmt(lastAdded.pro) + ' g' +
+              '<span>Day now ' + fmt(t.cal) + ' kcal · ' + fmt(t.pro) + ' g protein</span></p>'
+          : '') +
+      '</section>' +
+      estimatorHtml(key, d);
+
+    // Deleting is delegated too — see the handler near setTab.
+
+    var dismiss = document.getElementById("dismissWelcome");
+    if (dismiss) {
+      dismiss.addEventListener("click", function () {
+        store.seen = true; save(); render();
+      });
+    }
+
+    var openGoal = document.getElementById("openGoal");
+    if (openGoal) {
+      openGoal.addEventListener("click", function () { editingGoal = true; render(); });
+    }
+
+    var pendingDir = { cal: g.cal.dir, pro: g.pro.dir };
+    ["Cal", "Pro"].forEach(function (which) {
+      var wrap = document.getElementById("dir" + which);
+      if (!wrap) return;
+      wrap.querySelectorAll("button").forEach(function (b) {
+        b.addEventListener("click", function () {
+          pendingDir[which.toLowerCase()] = b.dataset.d;
+          wrap.querySelectorAll("button").forEach(function (x) {
+            x.setAttribute("aria-pressed", String(x === b));
+          });
+        });
+      });
+    });
+
+    var saveGoalBtn = document.getElementById("saveGoal");
+    if (saveGoalBtn) {
+      saveGoalBtn.addEventListener("click", function () {
+        var gc = num(document.getElementById("gCal").value);
+        var gp = num(document.getElementById("gPro").value);
+        if (!gc || !gp) { document.getElementById("gCal").focus(); return; }
+        var next = { cal: { dir: pendingDir.cal, v: gc }, pro: { dir: pendingDir.pro, v: gp } };
+        store.goal = next;
+        day(key).goal = JSON.parse(JSON.stringify(next));
+        editingGoal = false;
+        touch(key); save(); render();
+      });
+      document.getElementById("cancelGoal").addEventListener("click", function () {
+        editingGoal = false; render();
+      });
+    }
+
+    // Adding food is wired once, by delegation, outside this function — so a
+    // failure anywhere else in the render can never leave the button dead.
+
+    // --- estimator wiring ---
+    var estText = document.getElementById("estText");
+    if (estText) {
+      estText.addEventListener("input", function () { estDraft = estText.value; });
+    }
+
+    var regionIn = document.getElementById("regionIn");
+    if (regionIn) {
+      var saveRegion = function () {
+        var v = regionIn.value.trim();
+        if (v && v !== store.region) { store.region = v; save(); }
+      };
+      regionIn.addEventListener("change", saveRegion);
+      regionIn.addEventListener("blur", saveRegion);
+    }
+
+    var runEst = document.getElementById("runEst");
+    if (runEst) {
+      runEst.addEventListener("click", function () {
+        var text = (estText ? estText.value : "").trim();
+        if (!text) { if (estText) estText.focus(); return; }
+        // Pick up a country typed but not yet committed by a blur.
+        if (regionIn && regionIn.value.trim()) store.region = regionIn.value.trim();
+        // Always try the built-in table and your pantry first — that works
+        // offline. Only what they can't answer needs Claude, or a placeholder.
+        estDraft = text;
+        runEstimate(text);
+      });
+    }
+
+    view.querySelectorAll("[data-est]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.dataset.est;
+        var at = locate(d, id);
+        if (!at) return;
+        // Always run the estimate — the built-in table and your pantry work
+        // offline, so most placeholders resolve without Claude. If nothing can
+        // price it, runEstimate says so and the placeholder stays put.
+        runEstimate(at.row.note, id);
+      });
+    });
+
+    view.querySelectorAll("[data-ic], [data-ip]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        if (!est || est.status !== "review") return;
+        var isCal = input.dataset.ic !== undefined;
+        var i = Number(isCal ? input.dataset.ic : input.dataset.ip);
+        var v = Math.max(0, Math.round(Number(input.value) || 0));
+        if (isCal) est.items[i].calories = v; else est.items[i].protein = v;
+        // A number you typed yourself is not an estimate, so it shouldn't
+        // carry the "est" badge into the ledger.
+        est.items[i].edited = true;
+        var tc = 0, tp = 0;
+        est.items.forEach(function (it) { tc += it.calories; tp += it.protein; });
+        var head = view.querySelector(".review > header span");
+        if (head) head.textContent = fmt(tc) + " kcal · " + fmt(tp) + " g";
+      });
+    });
+
+    var mealToggle = document.getElementById("estMeal");
+    if (mealToggle) {
+      mealToggle.addEventListener("click", function () { estAsMeal = !estAsMeal; render(); });
+    }
+
+    var commit = document.getElementById("commitEst");
+    if (commit) {
+      commit.addEventListener("click", function () { commitEstimate(key); });
+      document.getElementById("discardEst").addEventListener("click", function () {
+        est = null; estAsMeal = false; render();
+      });
+    }
+  }
+
+  function renderGym(key, d) {
+    // Someone whose routine no longer contains the day we were showing (a reset,
+    // a restore from another phone) must land on a real day, not an empty one.
+    var live = cats();
+    if (!live.filter(function (x) { return x.id === activeCat; }).length && live.length) {
+      activeCat = live[0].id;
+    }
+    var c = cat(activeCat);
+
+    var chips = cats().map(function (x) {
+      return '<button class="cat" data-cat="' + x.id + '" aria-pressed="' + (x.id === activeCat) + '" ' +
+             'style="--catcolor:' + x.color + '"><span class="tag">' + x.tag + '</span>' + esc(x.short) + '</button>';
+    }).join("");
+
+    var opts = (store.moves[activeCat] || []).slice().sort().map(function (m) {
+      return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+    }).join("");
+
+    var cards = d.lifts.map(function (l, i) {
+      var lc = cat(l.cat);
+      var v = volume(l);
+      var prev = lastTime(l.movement, key);
+      var lastLine = prev
+        ? 'Last · ' + shortDate(prev.key) + ' — <em>' +
+          prev.lift.sets.map(function (s) { return s.w + "×" + s.r; }).join(", ") + '</em>'
+        : 'First time logging this one.';
+
+      var sets = l.sets.map(function (s, si) {
+        return '<button class="set" data-lift="' + i + '" data-set="' + si + '" title="Tap to remove">' +
+               s.w + '<span class="x">×</span>' + s.r + '</button>';
+      }).join("");
+
+      return '<article class="lift" style="--catcolor:' + lc.color + '">' +
+        '<div class="spine"></div>' +
+        '<div class="body">' +
+          '<div class="lift-head"><h3>' + esc(l.movement) + '</h3>' +
+            '<span class="cattag"' + (lc.gone ? ' title="' + esc(lc.name) + '"' : '') + '>' +
+              lc.tag + '</span></div>' +
+          (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
+                     '</em> — a day you no longer train.</p>' : '') +
+          '<p class="last">' + lastLine + '</p>' +
+          (sets ? '<div class="sets">' + sets + '</div>' : '') +
+          '<div class="setadd">' +
+            '<input inputmode="decimal" placeholder="lb" data-w="' + i + '">' +
+            '<input inputmode="numeric" placeholder="reps" data-r="' + i + '">' +
+            '<button data-addset="' + i + '">Set</button>' +
+          '</div>' +
+          '<div class="lift-foot">' +
+            '<span>' + (v.sets
+              ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
+              : 'Log your first set — tap a set chip to remove it') + '</span>' +
+            '<button data-rmlift="' + i + '">Remove</button>' +
+          '</div>' +
+        '</div>' +
+      '</article>';
+    }).join("");
+
+    view.innerHTML =
+      '<section style="display:flex;flex-direction:column;gap:10px">' +
+        '<span class="eyebrow">Today’s split</span>' +
+        '<div class="cats">' + chips + '</div>' +
+      '</section>' +
+
+      '<section class="entry" style="--catcolor:' + c.color + '">' +
+        '<div class="field"><label for="mSel">Add movement · ' + esc(c.name) + '</label>' +
+          '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select></div>' +
+        '<input id="mNew" class="text" placeholder="Name the movement" hidden ' +
+          'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);border-radius:2px;font-size:15px;width:100%">' +
+        '<button class="btn" id="addLift">Add to today</button>' +
+      '</section>' +
+
+      (cards
+        ? '<section class="liftgroup">' + cards + '</section>'
+        : '<p class="empty">No movements logged for this day.<br>Pick a split above and add your first.</p>');
+
+    view.querySelectorAll("[data-cat]").forEach(function (b) {
+      b.addEventListener("click", function () { activeCat = b.dataset.cat; render(); });
+    });
+
+    var sel = document.getElementById("mSel");
+    var neu = document.getElementById("mNew");
+    sel.addEventListener("change", function () {
+      neu.hidden = sel.value !== "__new";
+      if (!neu.hidden) neu.focus();
+    });
+
+    document.getElementById("addLift").addEventListener("click", function () {
+      var name = sel.value === "__new" ? neu.value.trim() : sel.value;
+      if (!name) { neu.focus(); return; }
+      var mlist = store.moves[activeCat] || (store.moves[activeCat] = []);
+      if (mlist.indexOf(name) === -1) mlist.push(name);
+      d.lifts.push({ id: uid(), cat: activeCat, movement: name, sets: [] });
+      touch(key); save(); render();
+    });
+
+    view.querySelectorAll("[data-addset]").forEach(function (b) {
+      b.addEventListener("click", function () { addSet(Number(b.dataset.addset)); });
+    });
+    view.querySelectorAll("[data-w], [data-r]").forEach(function (el) {
+      el.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") addSet(Number(el.dataset.w !== undefined ? el.dataset.w : el.dataset.r));
+      });
+    });
+
+    function addSet(i) {
+      var w = num(view.querySelector('[data-w="' + i + '"]').value);
+      var r = num(view.querySelector('[data-r="' + i + '"]').value);
+      if (!r) { view.querySelector('[data-r="' + i + '"]').focus(); return; }
+      d.lifts[i].sets.push({ w: w, r: r });
+      touch(key); save(); render();
+      var next = view.querySelector('[data-w="' + i + '"]');
+      if (next) next.focus();
+    }
+
+    view.querySelectorAll("[data-set]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var li = Number(b.dataset.lift), si = Number(b.dataset.set);
+        var lift = d.lifts[li];
+        if (!lift || !lift.sets[si]) return;
+        var gone = lift.sets[si];
+        lift.sets.splice(si, 1);
+        touch(key); save(); render();
+        offerUndo("Removed " + gone.w + " × " + gone.r + " from " + lift.movement, function () {
+          var l2 = day(key).lifts[li];
+          if (l2) l2.sets.splice(Math.min(si, l2.sets.length), 0, gone);
+          touch(key); save(); render();
+        });
+      });
+    });
+
+    view.querySelectorAll("[data-rmlift]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = Number(b.dataset.rmlift);
+        var gone = d.lifts[i];
+        if (!gone) return;
+        d.lifts.splice(i, 1);
+        touch(key); save(); render();
+        offerUndo("Removed " + gone.movement +
+          (gone.sets.length ? " and its " + gone.sets.length + " sets" : ""), function () {
+          var dd = day(key);
+          dd.lifts.splice(Math.min(i, dd.lifts.length), 0, gone);
+          touch(key); save(); render();
+        });
+      });
+    });
+  }
+
+  function renderCoach() {
+    var days = cats();
+    var open = coachOpen;
+
+    var dayCards = days.map(function (c, i) {
+      var moves = store.moves[c.id] || [];
+      var isOpen = open === c.id;
+
+      var chips = moves.slice().sort().map(function (m) {
+        return '<button class="rt-chip" data-dropmove="' + esc(c.id) + '|' + esc(m) + '">' +
+          '<b>' + esc(m) + '</b><i>✕</i></button>';
+      }).join("");
+
+      var lib = LIBRARY.map(function (grp) {
+        var buttons = grp.m.map(function (m) {
+          var have = moves.indexOf(m) > -1;
+          return '<button class="lib-add" data-addmove="' + esc(c.id) + '|' + esc(m) + '"' +
+                 (have ? " disabled" : "") + '>' + (have ? "✓ " : "+ ") + esc(m) + '</button>';
+        }).join("");
+        return '<div class="lib-group"><h4>' + esc(grp.g) + '</h4>' +
+               '<div class="rt-chiprow">' + buttons + '</div></div>';
+      }).join("");
+
+      return '<article class="rt-day" style="--daycolor:' + c.color + '">' +
+        '<button class="rt-head" data-openday="' + esc(c.id) + '" ' +
+          'style="width:100%;text-align:left;background:none">' +
+          '<span class="nm">' + esc(c.name) + '</span>' +
+          '<span class="ct">' + moves.length + (moves.length === 1 ? " movement" : " movements") +
+            ' · tap to ' + (isOpen ? "close" : "edit") + '</span>' +
+          '<span class="tag">' + c.tag + '</span>' +
+        '</button>' +
+        (isOpen
+          ? '<div class="rt-moves">' +
+              (chips
+                ? '<div class="rt-chiprow">' + chips + '</div>'
+                : '<p class="est-note">No movements yet — add some from the library below.</p>') +
+              '<div class="rt-actions">' +
+                '<button data-renameday="' + esc(c.id) + '">Rename day</button>' +
+                '<button data-newmove="' + esc(c.id) + '">Add your own</button>' +
+                (days.length > 1 ? '<button class="danger" data-rmday="' + esc(c.id) + '">Delete day</button>' : '') +
+              '</div>' +
+              lib +
+            '</div>'
+          : '') +
+      '</article>';
+    }).join("");
+
+    view.innerHTML =
+      '<section style="display:flex;flex-direction:column;gap:10px">' +
+        '<span class="eyebrow">Your routine</span>' +
+        '<div class="field"><label for="rtName">Call it what you like</label>' +
+          '<input id="rtName" class="text" value="' + esc(store.routine.name || "My split") + '"></div>' +
+        '<p class="est-note">These are the days you train. Whatever you build here is what shows up ' +
+          'on the Gym tab — rename them, add days, and stock each one with the movements you actually do.</p>' +
+      '</section>' +
+
+      '<section style="display:flex;flex-direction:column;gap:12px">' + dayCards + '</section>' +
+
+      '<section class="rt-actions">' +
+        '<button id="addDay">+ Add a training day</button>' +
+        '<button id="resetRoutine">Start over</button>' +
+      '</section>';
+
+    var nameEl = document.getElementById("rtName");
+    if (nameEl) {
+      var saveName = function () {
+        var v = nameEl.value.trim();
+        if (v && v !== store.routine.name) { store.routine.name = v; save(); }
+      };
+      nameEl.addEventListener("change", saveName);
+      nameEl.addEventListener("blur", saveName);
+    }
+
+    view.querySelectorAll("[data-openday]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        coachOpen = (coachOpen === b.dataset.openday) ? null : b.dataset.openday;
+        render();
+      });
+    });
+
+    view.querySelectorAll("[data-addmove]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var parts = b.dataset.addmove.split("|");
+        var list = store.moves[parts[0]] || (store.moves[parts[0]] = []);
+        if (list.indexOf(parts[1]) === -1) { list.push(parts[1]); save(); render(); }
+      });
+    });
+
+    view.querySelectorAll("[data-dropmove]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var parts = b.dataset.dropmove.split("|");
+        var list = store.moves[parts[0]] || [];
+        var i = list.indexOf(parts[1]);
+        if (i === -1) return;
+        list.splice(i, 1);
+        save(); render();
+        offerUndo("Removed " + parts[1], function () {
+          (store.moves[parts[0]] || []).push(parts[1]); save(); render();
+        });
+      });
+    });
+
+    view.querySelectorAll("[data-newmove]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var name = window.prompt("Name the movement");
+        if (!name || !name.trim()) return;
+        var list = store.moves[b.dataset.newmove] || (store.moves[b.dataset.newmove] = []);
+        if (list.indexOf(name.trim()) === -1) list.push(name.trim());
+        save(); render();
+      });
+    });
+
+    view.querySelectorAll("[data-renameday]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var day = store.routine.days.filter(function (x) { return x.id === b.dataset.renameday; })[0];
+        if (!day) return;
+        var name = window.prompt("What do you call this day?", day.name);
+        if (!name || !name.trim()) return;
+        day.name = name.trim();
+        day.short = day.name.length > 18 ? day.name.slice(0, 17) + "…" : day.name;
+        save(); render();
+      });
+    });
+
+    view.querySelectorAll("[data-rmday]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.dataset.rmday;
+        var idx = -1;
+        store.routine.days.forEach(function (x, i) { if (x.id === id) idx = i; });
+        if (idx === -1) return;
+        var gone = store.routine.days[idx];
+        var goneMoves = store.moves[id];
+        store.routine.days.splice(idx, 1);
+        // Remember what it was called so workouts logged under it stay readable.
+        store.retired[id] = gone.name;
+        if (coachOpen === id) coachOpen = null;
+        // Never leave the Gym tab pointed at a day that no longer exists.
+        if (activeCat === id && store.routine.days.length) activeCat = store.routine.days[0].id;
+        save(); render();
+        // Workouts already logged under this day keep their own label.
+        offerUndo("Deleted " + gone.name, function () {
+          store.routine.days.splice(Math.min(idx, store.routine.days.length), 0, gone);
+          if (goneMoves) store.moves[id] = goneMoves;
+          delete store.retired[id];
+          activeCat = id;
+          save(); render();
+        });
+      });
+    });
+
+    document.getElementById("addDay").addEventListener("click", function () {
+      var name = window.prompt("What do you call this day?", "Day " + (store.routine.days.length + 1));
+      if (!name || !name.trim()) return;
+      var id = "d" + uid();
+      store.routine.days.push({
+        id: id,
+        name: name.trim(),
+        short: name.trim().length > 18 ? name.trim().slice(0, 17) + "…" : name.trim()
+      });
+      store.moves[id] = [];
+      coachOpen = id;
+      save(); render();
+    });
+
+    document.getElementById("resetRoutine").addEventListener("click", function () {
+      var before = JSON.parse(JSON.stringify({ r: store.routine, m: store.moves }));
+      store.routine = JSON.parse(JSON.stringify(DEFAULT_ROUTINE));
+      store.routine.days.forEach(function (dy) {
+        if (!store.moves[dy.id]) store.moves[dy.id] = (SEED_MOVES[dy.id] || []).slice();
+      });
+      coachOpen = null;
+      save(); render();
+      offerUndo("Reset to the starting split", function () {
+        store.routine = before.r; store.moves = before.m; save(); render();
+      });
+    });
+  }
+
+  function renderPantry() {
+    var list = (store.pantry || []).slice().sort(function (a, b) {
+      return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
+    });
+
+    var rows = list.map(function (raw) {
+      var n = normPantry(raw);
+      var bad = n.k && (n.k > 900 || n.p > 90);
+
+      var right = bad ? "check this"
+        : n.k ? Math.round(n.k) + ' kcal · ' + Math.round(n.p) + ' g <span style="color:var(--ink-3)">/100 g</span>'
+              : Math.round(n.sCal) + ' kcal · ' + Math.round(n.sPro) + ' g <span style="color:var(--ink-3)">/' + esc(n.unit) + '</span>';
+
+      var sub = bad
+        ? "Saved as a weight when it isn’t one. Tap Fix and pick the container."
+        : (n.kind === "count"
+            ? "1 " + n.unit + " · " + Math.round(n.sCal) + " kcal · " + Math.round(n.sPro) + " g protein"
+            : n.qty + " " + n.unit + " · " + Math.round(n.sCal) + " kcal · " + Math.round(n.sPro) + " g protein");
+
+      return '<div class="pan-item"' + (bad ? ' style="background:var(--miss-bg)"' : '') + '>' +
+        '<span class="nm">' + esc(raw.name) + '</span>' +
+        '<span class="macros"' + (bad ? ' style="color:var(--miss)"' : '') + '>' + right + '</span>' +
+        '<span class="sub"' + (bad ? ' style="color:var(--miss)"' : '') + '>' + esc(sub) + '</span>' +
+        '<button class="rm" data-' + (bad ? 'fixpan' : 'rmpan') + '="' + raw.id + '">' +
+          (bad ? "Fix" : "Remove") + '</button>' +
+      '</div>';
+    }).join("");
+
+    var photoBlock = "";
+    if (pantryShot && pantryShot.status === "loading") {
+      photoBlock = '<div class="working"><i></i>Reading the label…</div>';
+    } else if (canSendImages) {
+      photoBlock =
+        '<button class="photo-btn" id="shotBtn">📷 Read a nutrition label</button>' +
+        '<input type="file" id="shotFile" accept="' + esc(imageTypes) + '" capture="environment" hidden>' +
+        (pantryShot && pantryShot.status === "error"
+          ? '<p class="est-note" style="color:var(--miss)">' + esc(pantryShot.message) + '</p>'
+          : '<p class="est-note">Photograph the nutrition panel and the numbers come back filled in below. Check them against the package before saving — small print and glare both cost accuracy.</p>');
+    } else {
+      photoBlock = '<p class="est-note">Photo reading isn’t available in this window — type the three numbers off the package instead. Once saved they work everywhere, offline.</p>';
+    }
+
+    var f = pantryForm || { name: "", servingG: "", cal: "", pro: "" };
+
+    view.innerHTML =
+      '<section style="display:flex;flex-direction:column;gap:12px">' +
+        '<span class="eyebrow">Add a food you buy often</span>' +
+        photoBlock +
+        '<div class="entry">' +
+          '<div class="field"><label for="panName">Name it the way you’d type it</label>' +
+            '<input id="panName" class="text" placeholder="Costco top sirloin" value="' + esc(f.name) + '"></div>' +
+          '<div class="pair">' +
+            '<div class="field"><label for="panServe">One serving is</label>' +
+              '<input id="panServe" inputmode="decimal" placeholder="1" value="' + esc(f.servingG) + '"></div>' +
+            '<div class="field"><label for="panUnit">Measured in</label>' +
+              '<select id="panUnit">' +
+                '<optgroup label="Pre-made — no weighing">' +
+                  COUNT_UNITS.map(function (u) {
+                    return '<option value="' + u + '"' + (f.unit === u ? " selected" : "") + '>' + u + '</option>';
+                  }).join("") +
+                '</optgroup>' +
+                '<optgroup label="By weight">' +
+                  ["g", "oz", "lb"].map(function (u) {
+                    return '<option value="' + u + '"' + (f.unit === u ? " selected" : "") + '>' + u + '</option>';
+                  }).join("") +
+                '</optgroup>' +
+                '<optgroup label="By volume">' +
+                  ["ml", "fl oz"].map(function (u) {
+                    return '<option value="' + u + '"' + (f.unit === u ? " selected" : "") + '>' + u + '</option>';
+                  }).join("") +
+                '</optgroup>' +
+              '</select></div>' +
+          '</div>' +
+          '<div class="pair">' +
+            '<div class="field"><label for="panCal">Calories per serving</label>' +
+              '<input id="panCal" inputmode="numeric" placeholder="220" value="' + esc(f.cal) + '"></div>' +
+            '<div class="field"><label for="panPro">Protein · g</label>' +
+              '<input id="panPro" inputmode="numeric" placeholder="34" value="' + esc(f.pro) + '"></div>' +
+          '</div>' +
+          '<p class="est-note">For anything pre-made, leave it at <strong>1</strong> and pick the container — bottle, bar, can. ' +
+            'Only reach for grams or ounces when it’s something you actually portion out yourself, like rice or meat.</p>' +
+          '<p class="est-note" id="panWarn" hidden style="color:var(--miss)"></p>' +
+          '<button class="btn" id="savePan">Save to pantry</button>' +
+        '</div>' +
+      '</section>' +
+
+      '<section style="display:flex;flex-direction:column;gap:8px">' +
+        '<span class="eyebrow">' + (list.length ? list.length + (list.length === 1 ? ' food saved' : ' foods saved') : 'Nothing saved yet') + '</span>' +
+        (rows || '<p class="empty">Foods you save here are matched first — ahead of the built-in reference — every time you describe a meal.</p>') +
+      '</section>';
+
+    var shotBtn = document.getElementById("shotBtn");
+    if (shotBtn) {
+      var shotFile = document.getElementById("shotFile");
+      shotBtn.addEventListener("click", function () { shotFile.click(); });
+      shotFile.addEventListener("change", function () {
+        if (shotFile.files && shotFile.files[0]) readLabel(shotFile.files[0]);
+      });
+    }
+
+    var FIELD = { panName: "name", panServe: "servingG", panCal: "cal", panPro: "pro", panUnit: "unit" };
+    ["panName", "panServe", "panCal", "panPro", "panUnit"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      var handler = function () {
+        pantryForm = pantryForm || { name: "", servingG: "", cal: "", pro: "", unit: "" };
+        pantryForm[FIELD[id]] = el.value;
+      };
+      el.addEventListener("input", handler);
+      el.addEventListener("change", handler);
+    });
+
+    view.querySelectorAll("[data-fixpan]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var raw = store.pantry.filter(function (x) { return x.id === b.dataset.fixpan; })[0];
+        if (!raw) return;
+        var n = normPantry(raw);
+        // Keep the numbers, drop the bad weight, let him name the container.
+        pantryForm = { name: raw.name, servingG: "1", unit: "bottle",
+                       cal: String(Math.round(n.sCal)), pro: String(Math.round(n.sPro)) };
+        store.pantry = store.pantry.filter(function (x) { return x.id !== b.dataset.fixpan; });
+        save(); render();
+        var nameEl = document.getElementById("panName");
+        if (nameEl) nameEl.scrollIntoView({ block: "center" });
+      });
+    });
+
+    document.getElementById("savePan").addEventListener("click", function () {
+      var name = document.getElementById("panName").value.trim();
+      var serve = num(document.getElementById("panServe").value);
+      var kcal = num(document.getElementById("panCal").value);
+      var pro = Math.max(0, Number(document.getElementById("panPro").value) || 0);
+      var warn = document.getElementById("panWarn");
+      function complain(msg, focusId) {
+        if (warn) { warn.hidden = false; warn.textContent = msg; }
+        var el = document.getElementById(focusId);
+        if (el) { el.focus(); el.select && el.select(); }
+      }
+      var unit = document.getElementById("panUnit").value;
+      var kind = unitKind(unit);
+
+      if (!name) { complain("Give it a name first.", "panName"); return; }
+      if (!serve) { complain("How much is one serving? For anything pre-made that's just 1.", "panServe"); return; }
+      if (!kcal) { complain("Calories per serving, straight off the panel.", "panCal"); return; }
+
+      // A gram figure, when the unit gives us one — that's what lets you later
+      // ask for this food by weight. Volume is taken at roughly 1 g per ml.
+      var serveG = null;
+      if (kind === "weight") serveG = serve * WEIGHT_UNITS[unit];
+      else if (kind === "volume") serveG = serve * VOLUME_UNITS[unit];
+
+      if (serveG) {
+        var per100 = (kcal / serveG) * 100;
+        if (per100 > 900 || (pro / serveG) * 100 > 90) {
+          complain("That comes to " + Math.round(per100) + " kcal per 100 g, which no food reaches. " +
+                   "If this is something pre-made, set it to 1 and pick the container instead of a weight.", "panServe");
+          return;
+        }
+      }
+      if (warn) warn.hidden = true;
+
+      store.pantry.push({
+        id: uid(),
+        name: name,
+        serveQty: serve,
+        serveUnit: unit,
+        serveG: serveG,
+        sCal: kcal,
+        sPro: pro,
+        aliases: []
+      });
+      pantryForm = null;
+      pantryShot = null;
+      save(); render();
+    });
+
+    view.querySelectorAll("[data-rmpan]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.dataset.rmpan;
+        var idx = -1;
+        store.pantry.forEach(function (x, i) { if (x.id === id) idx = i; });
+        if (idx === -1) return;
+        var gone = store.pantry[idx];
+        store.pantry.splice(idx, 1);
+        save(); render();
+        offerUndo("Removed " + gone.name + " from your pantry", function () {
+          store.pantry.splice(Math.min(idx, store.pantry.length), 0, gone);
+          save(); render();
+        });
+      });
+    });
+  }
+
+  function readLabel(file) {
+    if (!sampleFn) return;
+    pantryShot = { status: "loading" };
+    render();
+
+    var prompt =
+      "This photo shows a nutrition facts panel from a food package" +
+      (store.region ? " sold in " + store.region : "") + ". Reply with JSON only.\n\n" +
+      "Read the panel and report ONE serving as printed:\n" +
+      "- name: the product name if visible, otherwise a short description of the food.\n" +
+      "- servingGrams: the serving size in grams. Convert from oz if that is what is printed. " +
+      "If the panel gives only a household measure with no weight, use 0.\n" +
+      "- calories: calories per serving.\n" +
+      "- protein: grams of protein per serving.\n" +
+      "Use 0 for anything you genuinely cannot read rather than guessing.\n\n" +
+      'Return exactly: {"name":"","servingGrams":0,"calories":0,"protein":0}';
+
+    sampleFn.json(prompt, { images: file, modelTier: "default", cache: false }).then(function (out) {
+      if (!out || (!out.calories && !out.protein)) {
+        pantryShot = { status: "error", message: "Couldn't read that panel. Try a straighter, closer shot — or type the numbers in below." };
+      } else {
+        // The panel gives a weight, so set the unit to grams — otherwise it
+        // saves as "one serving is 60 bottles" and the weight is lost.
+        var grams = Math.round(Number(out.servingGrams) || 0);
+        pantryForm = {
+          name: out.name ? String(out.name) : "",
+          servingG: grams > 0 ? String(grams) : "1",
+          unit: grams > 0 ? "g" : "bottle",
+          cal: out.calories ? String(Math.round(Number(out.calories))) : "",
+          pro: out.protein ? String(Math.round(Number(out.protein))) : ""
+        };
+        pantryShot = null;
+      }
+      render();
+    }).catch(function (e) {
+      var code = e && e.code;
+      pantryShot = { status: "error", message:
+        code === "image_rejected" ? "That image didn't go through — try a smaller photo or a different format."
+        : code === "rate_limited" ? "Too many requests just now. Give it a minute."
+        : "Couldn't read that one. Type the numbers in below instead." };
+      render();
+    });
+  }
+
+  function renderLog() {
+    var now = new Date();
+    var MONTHS = ["January", "February", "March", "April", "May", "June",
+                  "July", "August", "September", "October", "November", "December"];
+    var DOW = ["S", "M", "T", "W", "T", "F", "S"];
+
+    var trained = 0, hits = 0, judged = 0;
+    Object.keys(store.days).forEach(function (k) {
+      if (k.slice(0, 4) !== String(logYear)) return;
+      var d = store.days[k];
+      if (d.lifts && d.lifts.length) trained++;
+      var v = verdict(k);
+      if (v !== "none") { judged++; if (v === "hit") hits++; }
+    });
+
+    function dayTitle(k) {
+      var d = store.days[k];
+      var label = parseYmd(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length))) return label + " — nothing logged";
+      var bits = [label];
+      if (d.food && d.food.length) {
+        var t = totals(d);
+        bits.push(fmt(t.cal) + " kcal · " + fmt(t.pro) + " g protein (" + (verdict(k) === "hit" ? "target hit" : "target missed") + ")");
+      }
+      if (d.lifts && d.lifts.length) {
+        var cats = [];
+        d.lifts.forEach(function (l) { if (cats.indexOf(l.cat) === -1) cats.push(l.cat); });
+        var sets = d.lifts.reduce(function (a, l) { return a + l.sets.length; }, 0);
+        bits.push(cats.map(function (id) { return cat(id).short; }).join(" + ") + " · " + sets + " sets");
+      } else {
+        bits.push("no gym");
+      }
+      return bits.join(" — ");
+    }
+
+    var months = "";
+    for (var m = 0; m < 12; m++) {
+      var pad = new Date(logYear, m, 1).getDay();
+      var dim = new Date(logYear, m + 1, 0).getDate();
+      var cells = "";
+      for (var i = 0; i < pad; i++) cells += '<span class="cal-cell blank"></span>';
+      for (var dnum = 1; dnum <= dim; dnum++) {
+        var key = ymd(new Date(logYear, m, dnum));
+        var rec = store.days[key];
+        var v = verdict(key);
+        var cls = "cal-cell";
+        if (v !== "none") cls += " " + v;
+        else if (key > TODAY) cls += " future";
+        if (key === TODAY) cls += " is-today";
+        var bar = (rec && rec.lifts && rec.lifts.length) ? cat(rec.lifts[0].cat).color : "transparent";
+        cells += '<button class="' + cls + '" data-go="' + key + '" style="--barcolor:' + bar + '" ' +
+                 'title="' + esc(dayTitle(key)) + '">' + dnum + '<span class="bar"></span></button>';
+      }
+      var isNow = (m === now.getMonth() && logYear === now.getFullYear());
+      months += '<div class="month' + (isNow ? " is-now" : "") + '">' +
+          '<h4>' + MONTHS[m] + '</h4>' +
+          '<div class="dow-row">' + DOW.map(function (x) { return "<span>" + x + "</span>"; }).join("") + '</div>' +
+          '<div class="month-grid">' + cells + '</div>' +
+        '</div>';
+    }
+
+    var legend =
+      '<div class="legend">' +
+        '<span><i style="background:var(--hit-bg);box-shadow:inset 0 0 0 1px var(--hit)"></i>Target hit</span>' +
+        '<span><i style="background:var(--miss-bg);box-shadow:inset 0 0 0 1px var(--miss)"></i>Target missed</span>' +
+        '<span><i style="background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--ink);"></i>Today</span>' +
+        cats().map(function (c) {
+          return '<span><i class="line" style="background:' + c.color + '"></i>' + esc(c.short) + '</span>';
+        }).join("") +
+      '</div>';
+
+    view.innerHTML =
+      '<section style="display:flex;flex-direction:column;gap:12px">' +
+        '<div class="yearnav">' +
+          '<button id="prevYear" aria-label="Previous year">‹</button>' +
+          '<span class="y">' + logYear + '</span>' +
+          '<button id="nextYear" aria-label="Next year">›</button>' +
+        '</div>' +
+        '<div class="yearstats">' +
+          '<div><b>' + trained + '</b><span>Gym days</span></div>' +
+          '<div><b>' + hits + '</b><span>Targets hit</span></div>' +
+          '<div><b>' + (judged ? Math.round((hits / judged) * 100) + "%" : "—") + '</b><span>Hit rate</span></div>' +
+        '</div>' +
+        legend +
+        '<div class="months">' + months + '</div>' +
+        '<p style="margin:0;font-size:12px;line-height:1.55;color:var(--ink-3)">' +
+          'Colour is your macro target for that day. The bar underneath is the split you trained — no bar means no gym. Tap any day to open it.</p>' +
+      '</section>';
+
+    document.getElementById("prevYear").addEventListener("click", function () { logYear--; render(); });
+    document.getElementById("nextYear").addEventListener("click", function () { logYear++; render(); });
+
+    view.querySelectorAll("[data-go]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        cursor = parseYmd(b.dataset.go);
+        setTab("macros");
+      });
+    });
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  // ---------- chrome ----------
+  function setTab(t) {
+    tab = t;
+    editingGoal = false;
+    if (t === "log") logYear = cursor.getFullYear();
+    document.querySelectorAll(".tabs button").forEach(function (b) {
+      b.setAttribute("aria-selected", String(b.dataset.tab === t));
+    });
+    render();
+  }
+
+  document.querySelectorAll(".tabs button").forEach(function (b) {
+    b.addEventListener("click", function () { setTab(b.dataset.tab); });
+  });
+
+  // Every delete is reversible for a few seconds. Small targets plus instant
+  // destruction is a bad combination; undo beats a confirmation dialog you'd
+  // have to dismiss mid-set.
+  var undoTimer = null;
+
+  function offerUndo(label, restore) {
+    var bar = document.getElementById("undobar");
+    var lab = document.getElementById("undoLabel");
+    if (!bar || !lab) return;
+    lab.textContent = label;
+    bar.hidden = false;
+    pendingUndo = restore;
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(function () {
+      bar.hidden = true;
+      pendingUndo = null;
+    }, 9000);
+  }
+
+  function hideUndo() {
+    var bar = document.getElementById("undobar");
+    if (bar) bar.hidden = true;
+    pendingUndo = null;
+    clearTimeout(undoTimer);
+  }
+
+  // Removing a row by its id, not its position — a row can't shift out from
+  // under the tap between drawing the list and you touching it.
+  function deleteFoodById(id) {
+    var key = ymd(cursor);
+    var d = day(key);
+    var idx = -1;
+    d.food.forEach(function (f, i) { if (f.id === id) idx = i; });
+    if (idx === -1) return;
+    var removed = d.food[idx];
+    d.food.splice(idx, 1);
+    lastAdded = null;
+    touch(key); save(); render();
+    offerUndo("Removed " + (removed.note || fmt(removed.cal) + " kcal"), function () {
+      var dd = day(key);
+      dd.food.splice(Math.min(idx, dd.food.length), 0, removed);
+      touch(key); save(); render();
+    });
+  }
+
+  // Dropping one row onto another makes a meal. Nothing is destroyed: the
+  // entries go inside it unchanged, and splitting puts them straight back.
+  function combineRows(dragId, dropId) {
+    if (dragId === dropId) return;
+    var key = ymd(cursor);
+    var d = day(key);
+    var from = locate(d, dragId), onto = locate(d, dropId);
+    // Only top-level rows can be dragged onto each other.
+    if (!from || !onto || from.meal || onto.meal) return;
+
+    var before = JSON.parse(JSON.stringify(d.food));
+    var moving = asItems(from.row);
+    var target = onto.row;
+    var targetIdx = onto.idx;
+
+    if (isMeal(target)) {
+      target.items = target.items.concat(moving);
+    } else {
+      d.food[targetIdx] = { id: uid(), items: asItems(target).concat(moving) };
+    }
+    // Remove the dragged row by identity, after the merge, so the index is right.
+    d.food = d.food.filter(function (f) { return f.id !== dragId; });
+
+    lastAdded = null;
+    touch(key); save(); render();
+    offerUndo("Combined into a meal", function () {
+      var dd = day(key);
+      dd.food = before;
+      touch(key); save(); render();
+    });
+  }
+
+  function splitMeal(id) {
+    var key = ymd(cursor);
+    var d = day(key);
+    var at = locate(d, id);
+    if (!at || at.meal || !isMeal(at.row)) return;
+    var before = JSON.parse(JSON.stringify(d.food));
+    var args = [at.idx, 1].concat(at.row.items);
+    d.food.splice.apply(d.food, args);
+    if (openMeal === id) openMeal = null;
+    touch(key); save(); render();
+    offerUndo("Split " + rowNote(at.row) + " apart", function () {
+      var dd = day(key);
+      dd.food = before;
+      touch(key); save(); render();
+    });
+  }
+
+  // Pulling one entry back out of a meal, for when the wrong thing got dragged in.
+  function takeOutOfMeal(itemId) {
+    var key = ymd(cursor);
+    var d = day(key);
+    var at = locate(d, itemId);
+    if (!at || !at.meal) return;
+    var before = JSON.parse(JSON.stringify(d.food));
+    var meal = at.meal;
+    var item = at.row;
+    meal.items.splice(at.idx, 1);
+    d.food.splice(d.food.indexOf(meal) + 1, 0, item);
+    tidyMeals(d);
+    touch(key); save(); render();
+    offerUndo("Took " + (item.note || "that entry") + " out", function () {
+      var dd = day(key);
+      dd.food = before;
+      touch(key); save(); render();
+    });
+  }
+
+  // A meal that has been emptied down to one entry is not a meal any more.
+  // One rule, applied after anything that can remove an item, so no path
+  // can leave a container with a single thing rattling around in it.
+  function tidyMeals(d) {
+    for (var i = d.food.length - 1; i >= 0; i--) {
+      var f = d.food[i];
+      if (!isMeal(f)) continue;
+      if (!f.items.length) {
+        d.food.splice(i, 1);
+        if (openMeal === f.id) openMeal = null;
+      } else if (f.items.length === 1) {
+        d.food.splice(i, 1, f.items[0]);
+        if (openMeal === f.id) openMeal = null;
+      }
+    }
+  }
+
+  function renameMeal(id) {
+    var key = ymd(cursor);
+    var d = day(key);
+    var at = locate(d, id);
+    if (!at || !isMeal(at.row)) return;
+    var name = window.prompt("Name this meal", rowNote(at.row));
+    if (name === null) return;
+    name = name.trim();
+    at.row.note = name || "";
+    touch(key); save(); render();
+  }
+
+  function findAction(target) {
+    var el = target;
+    while (el && el !== view) {
+      if (el.id === "addFood") return { kind: "add" };
+      if (el.getAttribute && el.getAttribute("data-del")) {
+        return { kind: "del", id: el.getAttribute("data-del") };
+      }
+      if (el.getAttribute && el.getAttribute("data-openmeal")) {
+        return { kind: "openmeal", id: el.getAttribute("data-openmeal") };
+      }
+      if (el.getAttribute && el.getAttribute("data-split")) {
+        return { kind: "split", id: el.getAttribute("data-split") };
+      }
+      if (el.getAttribute && el.getAttribute("data-takeout")) {
+        return { kind: "takeout", id: el.getAttribute("data-takeout") };
+      }
+      if (el.getAttribute && el.getAttribute("data-renamemeal")) {
+        return { kind: "renamemeal", id: el.getAttribute("data-renamemeal") };
+      }
+      el = el.parentNode;
+    }
+    return null;
+  }
+
+  var swallowClickUntil = 0;
+  var swallowTapUntil = 0;    // set when a drag ends, so the release isn't read as a tap
+
+  // On iOS, tapping a button while the keyboard is open blurs the field first,
+  // which closes the keyboard and reflows the page — the button can move out
+  // from under your finger before the tap lands, so nothing happens. Acting on
+  // the press itself, and blocking the blur, makes it fire the first time.
+  view.addEventListener("pointerdown", function (e) {
+    var a = findAction(e.target);
+    if (!a || a.kind !== "add") return;
+    e.preventDefault();
+    swallowClickUntil = Date.now() + 800;
+    addFoodFromForm();
+  });
+
+  // Delegated once, on a container that is never replaced.
+  view.addEventListener("click", function (e) {
+    var a = findAction(e.target);
+    if (!a) return;
+    if (a.kind === "add") {
+      if (Date.now() < swallowClickUntil) return;   // already handled on press
+      addFoodFromForm();
+    } else if (a.kind === "del") {
+      deleteFoodById(a.id);
+    } else if (a.kind === "openmeal") {
+      if (Date.now() < swallowTapUntil) return;   // this was the end of a drag
+      openMeal = (openMeal === a.id) ? null : a.id;
+      render();
+    } else if (a.kind === "split") {
+      splitMeal(a.id);
+    } else if (a.kind === "takeout") {
+      takeOutOfMeal(a.id);
+    } else if (a.kind === "renamemeal") {
+      renameMeal(a.id);
+    }
+  });
+  // ---------- drag a row onto another to combine them ----------
+  // A press-and-hold starts the drag rather than a plain drag, so an ordinary
+  // finger-swipe still scrolls the list. Once lifted, touchmove is cancelled
+  // so the page stays put while the row follows the finger.
+  var HOLD_MS = 380;
+  var SLOP = 10;
+
+  function rowElFrom(el) {
+    while (el && el !== view) {
+      if (el.classList && el.classList.contains("t-row") && el.getAttribute("data-row")) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+
+  function clearDrag() {
+    if (!drag) return;
+    if (drag.timer) clearTimeout(drag.timer);
+    if (drag.ghost && drag.ghost.parentNode) drag.ghost.parentNode.removeChild(drag.ghost);
+    if (drag.el) drag.el.classList.remove("lifted");
+    var over = view.querySelector(".t-row.dropto");
+    if (over) over.classList.remove("dropto");
+    document.body.classList.remove("dragging");
+    drag = null;
+  }
+
+  function liftRow(x, y) {
+    if (!drag || !drag.el || !drag.el.parentNode) { clearDrag(); return; }
+    drag.active = true;
+    drag.el.classList.add("lifted");
+    document.body.classList.add("dragging");
+    var g = document.createElement("div");
+    g.className = "drag-ghost";
+    var nm = drag.el.querySelector(".nm, .mn");
+    g.textContent = nm ? nm.textContent.trim() : "Entry";
+    document.body.appendChild(g);
+    drag.ghost = g;
+    moveGhost(x, y);
+  }
+
+  function moveGhost(x, y) {
+    if (!drag || !drag.ghost) return;
+    drag.ghost.style.left = x + "px";
+    drag.ghost.style.top = y + "px";
+    var was = view.querySelector(".t-row.dropto");
+    if (was) was.classList.remove("dropto");
+    if (drag.ghost) drag.ghost.style.visibility = "hidden";
+    var under = document.elementFromPoint(x, y);
+    if (drag.ghost) drag.ghost.style.visibility = "";
+    var row = under ? rowElFrom(under) : null;
+    drag.over = (row && row !== drag.el) ? row.getAttribute("data-row") : null;
+    if (drag.over && row) row.classList.add("dropto");
+  }
+
+  view.addEventListener("pointerdown", function (e) {
+    if (tab !== "macros" || drag) return;
+    if (e.target.closest && e.target.closest("button")) return;  // buttons keep working
+    var el = rowElFrom(e.target);
+    if (!el) return;
+    drag = { id: el.getAttribute("data-row"), el: el, x0: e.clientX, y0: e.clientY,
+             active: false, ghost: null, over: null, timer: null };
+    drag.timer = setTimeout(function () { liftRow(drag.x0, drag.y0); }, HOLD_MS);
+  });
+
+  view.addEventListener("pointermove", function (e) {
+    if (!drag) return;
+    if (!drag.active) {
+      // Moved before the hold completed — that was a scroll, not a pick-up.
+      if (Math.abs(e.clientX - drag.x0) > SLOP || Math.abs(e.clientY - drag.y0) > SLOP) clearDrag();
+      return;
+    }
+    moveGhost(e.clientX, e.clientY);
+  });
+
+  // Non-passive, so the page does not scroll out from under a lifted row.
+  document.addEventListener("touchmove", function (e) {
+    if (drag && drag.active) e.preventDefault();
+  }, { passive: false });
+
+  function endDrag() {
+    if (!drag) return;
+    var from = drag.id, onto = drag.over, was = drag.active;
+    clearDrag();
+    if (was) swallowTapUntil = Date.now() + 250;   // the release must not read as a tap
+    if (was && onto) combineRows(from, onto);
+  }
+  view.addEventListener("pointerup", endDrag);
+  view.addEventListener("pointercancel", clearDrag);
+  window.addEventListener("blur", clearDrag);
+
+  view.addEventListener("keydown", function (e) {
+    if (e.key !== "Enter") return;
+    var id = e.target && e.target.id;
+    if (id === "fCal" || id === "fPro" || id === "fNote") { e.preventDefault(); addFoodFromForm(); }
+  });
+
+  // iOS suspends a home-screen app rather than closing it, so "today" was
+  // whatever day you first opened it — and food logged after midnight landed
+  // on yesterday. Re-check the date every time the app comes back to the front.
+  function checkDayRollover() {
+    var nowKey = ymd(new Date());
+    if (nowKey === TODAY) return;
+    var wasOnToday = ymd(cursor) === TODAY;
+    TODAY = nowKey;
+    if (wasOnToday) cursor = new Date();
+    hideUndo();
+    render();
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) checkDayRollover();
+  });
+  window.addEventListener("focus", checkDayRollover);
+  window.addEventListener("pageshow", checkDayRollover);
+
+  document.getElementById("undoBtn").addEventListener("click", function () {
+    var fn = pendingUndo;
+    hideUndo();
+    if (fn) fn();
+  });
+
+  window.addEventListener("error", function (e) {
+    lastError = (e && e.message ? e.message : "unknown") +
+      (e && e.lineno ? " (line " + e.lineno + ")" : "");
+  });
+
+  document.getElementById("prevDay").addEventListener("click", function () {
+    cursor.setDate(cursor.getDate() - 1); editingGoal = false; render();
+  });
+  document.getElementById("nextDay").addEventListener("click", function () {
+    cursor.setDate(cursor.getDate() + 1); editingGoal = false; render();
+  });
+  document.getElementById("todayBtn").addEventListener("click", function () {
+    cursor = new Date(); editingGoal = false; render();
+  });
+
+  // ---------- backup sheet ----------
+  var sheet = document.getElementById("sheet");
+  var backupText = document.getElementById("backupText");
+
+  document.getElementById("backupBtn").addEventListener("click", function () {
+    backupText.value = JSON.stringify(store);
+    sheet.hidden = false;
+    var diag = document.getElementById("diag");
+    if (diag) {
+      diag.hidden = false;
+      diag.textContent = "Build " + BUILD + (lastError ? " · last error: " + lastError : "");
+      diag.style.color = lastError ? "var(--miss)" : "var(--ink-3)";
+    }
+  });
+  document.getElementById("closeSheet").addEventListener("click", function () { sheet.hidden = true; });
+  sheet.addEventListener("click", function (e) { if (e.target === sheet) sheet.hidden = true; });
+
+  document.getElementById("copyBtn").addEventListener("click", function () {
+    var btn = this;
+    backupText.select();
+    var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1600); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(backupText.value).then(done, function () { btn.textContent = "Press ⌘C / long-press"; });
+    } else { done(); }
+  });
+
+  document.getElementById("restoreBtn").addEventListener("click", function () {
+    var btn = this;
+    try {
+      var incoming = JSON.parse(backupText.value);
+      if (!incoming || !incoming.days) throw new Error("shape");
+      mergeInto(incoming);
+      save(); sheet.hidden = true; render();
+    } catch (e) {
+      btn.textContent = "That text isn't a valid backup";
+      setTimeout(function () { btn.textContent = "Restore from text"; }, 2400);
+    }
+  });
+
+  function mergeInto(incoming) {
+    Object.keys(incoming.days || {}).forEach(function (k) {
+      var mine = store.days[k];
+      var theirs = incoming.days[k];
+      if (!mine || (theirs.updated || 0) > (mine.updated || 0)) store.days[k] = theirs;
+    });
+    if (incoming.moves) {
+      Object.keys(incoming.moves).forEach(function (cid) {
+        if (!store.moves[cid]) store.moves[cid] = [];
+        (incoming.moves[cid] || []).forEach(function (m) {
+          if (store.moves[cid].indexOf(m) === -1) store.moves[cid].push(m);
+        });
+      });
+    }
+    // Restoring on a new phone has to bring everything back, not just the days.
+    (incoming.pantry || []).forEach(function (it) {
+      if (!it || !it.id) return;
+      var have = store.pantry.some(function (x) { return x.id === it.id; });
+      if (!have) store.pantry.push(it);
+    });
+    if (incoming.routine && incoming.routine.days && incoming.routine.days.length) {
+      store.routine = incoming.routine;
+    }
+    if (incoming.retired) {
+      Object.keys(incoming.retired).forEach(function (k) {
+        if (!store.retired[k]) store.retired[k] = incoming.retired[k];
+      });
+    }
+    if (incoming.goal) store.goal = normGoal(incoming.goal);
+    if (incoming.region) store.region = incoming.region;
+
+    Object.keys(store.days).forEach(function (k) {
+      (store.days[k].food || []).forEach(function (f) {
+        if (!f.id) f.id = uid();
+        if (f.items) f.items.forEach(function (x) { if (!x.id) x.id = uid(); });
+      });
+    });
+  }
+
+  // ---------- optional cloud mirror (only inside the Claude viewer) ----------
+  function monthsOf(obj) {
+    var out = {};
+    Object.keys(obj.days).forEach(function (k) {
+      var m = k.slice(0, 7);
+      if (!out[m]) out[m] = {};
+      out[m][k] = obj.days[k];
+    });
+    return out;
+  }
+
+  function queueSync() {
+    if (!db) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushSync, 2500);
+  }
+
+  function pushSync() {
+    if (!db) return;
+    var months = monthsOf(store);
+    Object.keys(months).forEach(function (m) {
+      db.doc("backup/" + m).set({ days: months[m], moves: store.moves, goal: store.goal,
+                                  region: store.region, pantry: store.pantry,
+                                  routine: store.routine, at: Date.now() })
+        .catch(function () { /* offline or unavailable — local copy still holds */ });
+    });
+  }
+
+  if (window.claude && typeof window.claude.use === "function") {
+    window.claude.use("sample").then(function (ns) {
+      if (!ns) return;
+      sampleFn = ns;
+      render();
+      if (ns.limits) {
+        ns.limits().then(function (lim) {
+          if (lim && lim.images) {
+            canSendImages = true;
+            if (lim.images.mediaTypes && lim.images.mediaTypes.length) {
+              imageTypes = lim.images.mediaTypes.join(",");
+            }
+            if (tab === "pantry") render();
+          }
+        }).catch(function () { /* no label photos in this view */ });
+      }
+    }).catch(function () { /* estimator stays off */ });
+
+    window.claude.use("db").then(function (ns) {
+      if (!ns) return;
+      db = ns;
+      var note = document.getElementById("sheetNote");
+      if (note) {
+        note.textContent = "Your log lives on this device, and mirrors to your Claude workspace whenever you open it here. " +
+          "On your home screen it works offline from the phone's own copy — copy this text somewhere safe now and then, or paste it back to restore.";
+      }
+      db.collection("backup").get().then(function (snap) {
+        var changed = false;
+        var newestGoal = null, newestRegion = null, newestAt = 0;
+        snap.docs.forEach(function (doc) {
+          var body = doc.data() || {};
+          if (body.goal && (body.at || 0) > newestAt) {
+            newestAt = body.at || 0; newestGoal = body.goal;
+            if (body.region) newestRegion = body.region;
+          }
+          Object.keys(body.days || {}).forEach(function (k) {
+            var mine = store.days[k];
+            var theirs = body.days[k];
+            if (!mine || (theirs.updated || 0) > (mine.updated || 0)) { store.days[k] = theirs; changed = true; }
+          });
+          if (body.moves) {
+            Object.keys(body.moves).forEach(function (cid) {
+              if (!store.moves[cid]) store.moves[cid] = [];
+              (body.moves[cid] || []).forEach(function (m) {
+                if (store.moves[cid].indexOf(m) === -1) { store.moves[cid].push(m); changed = true; }
+              });
+            });
+          }
+          (body.pantry || []).forEach(function (it) {
+            var have = store.pantry.some(function (x) { return x.id === it.id; });
+            if (!have) { store.pantry.push(it); changed = true; }
+          });
+        });
+        if (newestGoal && JSON.stringify(store.goal) === JSON.stringify(DEFAULT_GOAL)) {
+          store.goal = newestGoal; changed = true;
+        }
+        if (newestRegion && store.region === "United States") { store.region = newestRegion; changed = true; }
+        if (changed) { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} render(); }
+        pushSync();
+      }).catch(function () { /* first run, nothing stored yet */ });
+    }).catch(function () { /* no viewer capabilities — local only */ });
+  }
+
+  // ---------- home-screen hints ----------
+  ["apple-mobile-web-app-capable", "mobile-web-app-capable"].forEach(function (n) {
+    var m = document.createElement("meta");
+    m.setAttribute("name", n);
+    m.setAttribute("content", "yes");
+    document.head.appendChild(m);
+  });
+  var st = document.createElement("meta");
+  st.setAttribute("name", "apple-mobile-web-app-status-bar-style");
+  st.setAttribute("content", "default");
+  document.head.appendChild(st);
+
+  load();
+
+  // Stamp the build straight away, so a backup always reveals which code wrote
+  // it — even if nothing has been logged since.
+  var tag = document.getElementById("buildTag");
+  if (tag) tag.textContent = "b" + BUILD.split(".").pop();
+  if (store.build !== BUILD) { save(); }
+
+  // Saved to the home screen, iOS reads these off the page as it stands when you
+  // tap Add to Home Screen — so putting them in at load makes the icon open a
+  // real full-screen app with its own status bar rather than a Safari tab.
+  (function homeScreenMeta() {
+    function meta(name, content) {
+      if (document.querySelector('meta[name="' + name + '"]')) return;
+      var m = document.createElement("meta");
+      m.setAttribute("name", name);
+      m.setAttribute("content", content);
+      document.head.appendChild(m);
+    }
+    meta("apple-mobile-web-app-capable", "yes");
+    meta("mobile-web-app-capable", "yes");
+    meta("apple-mobile-web-app-title", "Iron Ledger");
+    meta("apple-mobile-web-app-status-bar-style", "default");
+    meta("format-detection", "telephone=no");   // stops iOS linkifying rep counts
+
+    // Paint the status bar and the area behind the tab bar to match the app,
+    // and keep it matching when the phone flips between light and dark.
+    var themeMeta = document.createElement("meta");
+    themeMeta.setAttribute("name", "theme-color");
+    document.head.appendChild(themeMeta);
+    var mq = window.matchMedia("(prefers-color-scheme: dark)");
+    function paint() {
+      themeMeta.setAttribute("content", mq.matches ? "#191F1D" : "#FFFFFF");
+    }
+    paint();
+    if (mq.addEventListener) mq.addEventListener("change", paint);
+    else if (mq.addListener) mq.addListener(paint);
+  })();
+
+  render();
+})();
+</script>
+</body></html>
