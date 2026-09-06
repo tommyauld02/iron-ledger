@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os, json, datetime, hashlib
-d=os.getcwd(); T=datetime.date.today(); Ts=T.isoformat(); Y=(T-datetime.timedelta(days=1)).isoformat()
+d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today(); Ts=T.isoformat(); Y=(T-datetime.timedelta(days=1)).isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 STORE={"days":{
   Y:{"food":[{"id":"y1","cal":1800,"pro":160,"note":"Yesterday"}],

@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os, datetime
-d=os.getcwd()
+d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
 T=datetime.date.today(); Ts=T.isoformat()
 Y=(T-datetime.timedelta(days=2)).isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}

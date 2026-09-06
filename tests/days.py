@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os, json, datetime
-d=os.getcwd()
+d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 res=[]
 def ck(n,ok,det=""): res.append((("PASS" if ok else "FAIL"),n,det))

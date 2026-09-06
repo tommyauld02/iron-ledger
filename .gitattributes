@@ -1,0 +1,6 @@
+# Shell scripts and the app itself stay LF on checkout — CRLF breaks sh.
+*.sh   text eol=lf
+*.py   text eol=lf
+*.html text eol=lf
+*.md   text eol=lf
+*.json text eol=lf

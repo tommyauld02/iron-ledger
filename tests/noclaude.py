@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os, datetime
-d=os.getcwd(); T=datetime.date.today().isoformat()
+d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 S={"days":{T:{"food":[{"id":"pp","cal":0,"pro":0,"note":"leftover curry","pending":True}],
               "lifts":[],"updated":1,"goal":G}},

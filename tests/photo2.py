@@ -1,6 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os, datetime, json
-d=os.getcwd(); T=datetime.date.today().isoformat()
+d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 STORE={"days":{T:{"food":[],"lifts":[],"updated":1,"goal":G}},"moves":None,"goal":G,
        "region":"United States","pantry":[],"v":1}
@@ -23,7 +23,7 @@ with sync_playwright() as pw:
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", STORE)
         p.reload(); p.wait_for_timeout(800)
         p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
-        p.set_input_files("#shotFile","label.png"); p.wait_for_timeout(900)
+        p.set_input_files("#shotFile","tests/label.png"); p.wait_for_timeout(900)
         print("\n=== %s ===" % label)
         print("  form:", p.evaluate("()=>[panName.value,panServe.value,panUnit.value,panCal.value,panPro.value]"))
         p.click("#savePan"); p.wait_for_timeout(400)

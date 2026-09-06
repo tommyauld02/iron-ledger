@@ -6,7 +6,16 @@
 set -e
 mkdir -p dist
 
-python3 - <<'PY'
+# Windows ships a "python3" stub that only advertises the Microsoft Store, so
+# probe by running each candidate rather than trusting `command -v`.
+PY=""
+for c in python3 python py; do
+  command -v "$c" >/dev/null 2>&1 || continue
+  "$c" -c "import sys; assert sys.version_info[0]==3" >/dev/null 2>&1 && { PY="$c"; break; }
+done
+[ -n "$PY" ] || { echo "no working python 3 found (tried python3, python, py)"; exit 1; }
+
+"$PY" - <<'PYEOF'
 import io, re
 s = io.open("iron-ledger.html", encoding="utf-8").read()
 body = re.sub(r'^.*?<body>', '', s, flags=re.S)
@@ -20,4 +29,4 @@ test = test.replace('"b" + BUILD.split(".").pop()', '"b" + BUILD.split(".").pop(
 io.open("dist/iron-ledger-test.artifact.html", "w", encoding="utf-8").write(test)
 print("dist/iron-ledger.artifact.html      -> publish with capabilities {db, sample}")
 print("dist/iron-ledger-test.artifact.html -> publish with capabilities {sample} ONLY")
-PY
+PYEOF
