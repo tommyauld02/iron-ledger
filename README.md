@@ -7,9 +7,15 @@ offline — it makes no network requests at all.
 
 Open `iron-ledger.html` in a browser. That's it.
 
-To use it on a phone, publish it (see below) or serve the folder:
+To use it on a phone on the same wifi:
 
-    python3 -m http.server 8000
+    python tools/serve.py
+
+That prints a http://192.168.x.x URL to open on the phone, and serves the app
+at "/" the way GitHub Pages does. Service workers need a secure context, so
+over plain wifi the app runs but the offline cache does not activate — offline
+is only real on the https Pages URL. If the phone cannot reach it, Windows is
+probably blocking inbound on a Public network profile.
 
 ## Work on it
 
