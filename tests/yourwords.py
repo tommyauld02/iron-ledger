@@ -24,7 +24,7 @@ with sync_playwright() as pw:
     for q in QUERIES:
         p.fill("#estText", q); p.click("#runEst"); p.wait_for_timeout(600)
         rows=p.eval_on_selector_all(".rev-item",
-          "e=>e.map(x=>x.querySelector('.food').textContent+': '+x.querySelector('[data-ic]').value+' kcal, '+x.querySelector('[data-ip]').value+' g  ('+x.querySelector('.amt').textContent.trim()+')')")
+          "e=>{const amt=x=>{const g=x.querySelector('[data-ig]'),t=x.querySelector('.amt');if(!g) return t.textContent.trim();const pre=t.querySelector('.pre'),u=t.querySelector('.g-unit'),s=t.querySelector('.src-tag');return ((pre?pre.textContent:'')+g.value+' '+(u?u.textContent:'')+' '+(s?s.textContent:'')).trim();};return e.map(x=>x.querySelector('.food').textContent+': '+x.querySelector('[data-ic]').value+' kcal, '+x.querySelector('[data-ip]').value+' g  ('+amt(x)+')');}")
         total=p.evaluate("()=>{const h=document.querySelector('.review > header span');return h?h.textContent:'—';}")
         print('  "%s"' % q)
         for r in rows: print("      "+r)

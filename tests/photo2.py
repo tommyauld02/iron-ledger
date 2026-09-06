@@ -33,7 +33,7 @@ with sync_playwright() as pw:
         p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
         for q in queries:
             p.fill("#estText",q); p.click("#runEst"); p.wait_for_timeout(700)
-            r=p.eval_on_selector_all(".rev-item","e=>e.map(x=>x.querySelector('[data-ic]').value+' kcal, '+x.querySelector('[data-ip]').value+' g ('+x.querySelector('.amt').textContent.trim()+')')")
+            r=p.eval_on_selector_all(".rev-item","e=>{const amt=x=>{const g=x.querySelector('[data-ig]'),t=x.querySelector('.amt');if(!g) return t.textContent.trim();const pre=t.querySelector('.pre'),u=t.querySelector('.g-unit'),s=t.querySelector('.src-tag');return ((pre?pre.textContent:'')+g.value+' '+(u?u.textContent:'')+' '+(s?s.textContent:'')).trim();};return e.map(x=>x.querySelector('[data-ic]').value+' kcal, '+x.querySelector('[data-ip]').value+' g ('+amt(x)+')');}")
             print("  %-34s %s" % ('"'+q+'"', r[0] if r else "NO RESULT"))
             if r: p.click("#discardEst"); p.wait_for_timeout(250)
         print("  errors:", errs if errs else "none")

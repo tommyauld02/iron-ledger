@@ -618,6 +618,22 @@
     font-size: 11px;
     color: var(--ink-3);
   }
+  /* Only rows with a gram basis get a field here, so the flex row is scoped to
+     them — the text-only rows keep flowing as plain inline text. */
+  .rev-item .amt.editable {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0 6px;
+  }
+  .rev-item .amt.editable .pre:empty { display: none; }
+  .rev-item .amt.editable input.g {
+    width: 62px;
+    height: 44px;          /* rule 5: it is tappable, so it is 44px */
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .rev-item .amt.editable .g-unit { margin-left: -2px; }
   .rev-item input {
     width: 66px;
     height: 44px;
@@ -2070,6 +2086,11 @@
     return {
       food: n.name,
       amount: amount,
+      // Only weight-resolved pantry rows have a gram basis to edit. A count
+      // ("2 × bottle") has no grams to change, so it stays as typed.
+      grams: (q.unit && q.unit.kind === "weight" && n.k) ? Math.round(qty * q.unit.grams) : null,
+      per100: n.k ? { k: n.k, p: n.p } : null,
+      pre: "",
       calories: Math.round(cal),
       protein: Math.round(pro),
       src: "pantry"
@@ -2197,6 +2218,12 @@
       amount: showGrams
         ? (amount ? amount + " · " : "") + Math.round(grams) + " g"
         : amount,
+      // A typical serving is a guess about *your* portion, so the weight has to
+      // be correctable. Editing it re-derives the macros, which needs the basis
+      // rather than the rendered string: the grams, and the per-100 g figures.
+      grams: Math.round(grams),
+      per100: { k: food.k, p: food.p },
+      pre: showGrams ? amount : "",     // "1 cup", "2 ×" — describes the weight
       calories: Math.round((food.k * grams) / 100),
       protein: Math.round((food.p * grams) / 100),
       src: assumed ? "typical" : "table"
@@ -2458,6 +2485,12 @@
     }
   }
 
+  // Hoisted so the weight editor can relabel a row after it stops being an
+  // assumed portion; it used to be local to the render.
+  var SRC = { pantry: "your pantry", table: "built-in reference",
+              typical: "typical serving",
+              claude: "estimated", unknown: "needs numbers" };
+
   function estimatorHtml(key, d) {
     if (est && est.status === "loading") {
       return '<section class="entry est">' +
@@ -2469,16 +2502,25 @@
     if (est && est.status === "review") {
       var tc = 0, tp = 0;
       est.items.forEach(function (it) { tc += it.calories; tp += it.protein; });
-      var SRC = { pantry: "your pantry", table: "built-in reference",
-                  typical: "typical serving",
-                  claude: "estimated", unknown: "needs numbers" };
       var items = est.items.map(function (it, i) {
+        var tag = '<span class="src-tag ' + it.src + '">' + SRC[it.src || "claude"] + '</span>';
+        // Anything with a gram basis gets its weight as a field rather than as
+        // text, so a portion you did not choose can be corrected to one you did.
+        var amt = (it.grams && it.per100)
+          ? '<span class="amt editable">' +
+              '<span class="pre">' + (it.pre ? esc(it.pre) + " · " : "") + '</span>' +
+              '<input inputmode="decimal" class="g" data-ig="' + i + '" value="' + it.grams +
+                '" aria-label="Grams of ' + esc(it.food) + '">' +
+              // the separator rides with the unit so it can never wrap onto a
+              // line by itself, the way a standalone "·" span would
+              '<span class="g-unit">g ·</span>' + tag +
+            '</span>'
+          : '<span class="amt">' + (it.amount ? esc(it.amount) + " · " : "") + tag + '</span>';
         return '<div class="rev-item">' +
           '<span class="food">' + esc(it.food) + '</span>' +
           '<input inputmode="numeric" data-ic="' + i + '" value="' + it.calories + '" aria-label="Calories">' +
           '<input inputmode="numeric" data-ip="' + i + '" value="' + it.protein + '" aria-label="Protein grams">' +
-          '<span class="amt">' + (it.amount ? esc(it.amount) + " · " : "") +
-            '<span class="src-tag ' + it.src + '">' + SRC[it.src || "claude"] + '</span></span>' +
+          amt +
         '</div>';
       }).join("");
 
@@ -2799,6 +2841,49 @@
         // offline, so most placeholders resolve without Claude. If nothing can
         // price it, runEstimate says so and the placeholder stays put.
         runEstimate(at.row.note, id);
+      });
+    });
+
+    // Change the weight, the macros follow. Updated in place rather than by a
+    // re-render, so the field keeps focus while you are still typing into it.
+    view.querySelectorAll("[data-ig]").forEach(function (input) {
+      input.addEventListener("input", function () {
+        if (!est || est.status !== "review") return;
+        var it = est.items[Number(input.dataset.ig)];
+        if (!it || !it.per100) return;
+
+        var g = Math.max(0, Number(input.value) || 0);
+        it.grams = g;
+        it.calories = Math.round((it.per100.k * g) / 100);
+        it.protein = Math.round((it.per100.p * g) / 100);
+        // The portion is yours now, so it is no longer an assumption, and any
+        // prefix that described the old weight ("1 cup") no longer describes it.
+        // The per-100 g figures are still the reference table's, so `edited`
+        // stays untouched and the row keeps its honest "est" badge.
+        if (it.src === "typical") it.src = "table";
+        it.pre = "";
+        // commitEstimate writes `amount` into the row's note, so it has to move
+        // with the weight or the ledger records a portion you did not log.
+        it.amount = g ? g + " g" : "";
+
+        var row = input.closest(".rev-item");
+        if (row) {
+          var cEl = row.querySelector("[data-ic]"), pEl = row.querySelector("[data-ip]");
+          if (cEl) cEl.value = it.calories;
+          if (pEl) pEl.value = it.protein;
+          var tagEl = row.querySelector(".src-tag");
+          if (tagEl) {
+            tagEl.className = "src-tag " + it.src;
+            tagEl.textContent = SRC[it.src || "claude"];
+          }
+          var preEl = row.querySelector(".amt .pre");
+          if (preEl) preEl.textContent = "";
+        }
+
+        var gc = 0, gp = 0;
+        est.items.forEach(function (x) { gc += x.calories; gp += x.protein; });
+        var gHead = view.querySelector(".review > header span");
+        if (gHead) gHead.textContent = fmt(gc) + " kcal · " + fmt(gp) + " g";
       });
     });
 
@@ -3217,7 +3302,7 @@
         photoBlock +
         '<div class="entry">' +
           '<div class="field"><label for="panName">Type and save it</label>' +
-            '<input id="panName" class="text" placeholder="What’s your usual foods" value="' + esc(f.name) + '"></div>' +
+            '<input id="panName" class="text" placeholder="What do you usually eat?" value="' + esc(f.name) + '"></div>' +
           '<div class="pair">' +
             '<div class="field"><label for="panServe">One serving is</label>' +
               '<input id="panServe" inputmode="decimal" placeholder="1" value="' + esc(f.servingG) + '"></div>' +

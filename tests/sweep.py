@@ -73,6 +73,47 @@ with sync_playwright() as pw:
     p.click("#commitEst"); p.wait_for_timeout(500)
     check("estimator: commit adds rows", p.eval_on_selector_all(".t-row","e=>e.length")==before+3)
 
+    # ---------- correcting an assumed portion ----------
+    # A typical serving is a guess about your plate, so the weight is a field.
+    p.fill("#estText","white rice & 1 costco protein coffee")
+    p.click("#runEst"); p.wait_for_timeout(1200)
+    SNAP="""()=>[...document.querySelectorAll('.rev-item')].map(x=>({
+        food:x.querySelector('.food').textContent,
+        g:(x.querySelector('[data-ig]')||{}).value||null,
+        cal:Number(x.querySelector('[data-ic]').value),
+        pro:Number(x.querySelector('[data-ip]').value),
+        tag:x.querySelector('.src-tag').textContent}))"""
+    was=p.evaluate(SNAP)
+    rice=[r for r in was if r["g"]][0]
+    check("serving: assumed portion is editable", rice["g"] is not None, json.dumps(rice))
+    check("serving: a count from the pantry is not",
+          any(r["g"] is None for r in was), json.dumps([r for r in was if r["g"] is None]))
+    gbox=p.locator("[data-ig]").first.bounding_box()
+    check("serving: weight field is 44px", gbox and gbox["height"]>=44,
+          gbox and "%dx%d"%(gbox["width"],gbox["height"]))
+
+    g0=float(rice["g"]); c0=rice["cal"]; p0=rice["pro"]
+    p.fill('[data-ig="0"]', str(int(g0*2))); p.wait_for_timeout(400)
+    now=p.evaluate(SNAP)[0]
+    check("serving: doubling the weight doubles the macros",
+          abs(now["cal"]-c0*2)<=2 and abs(now["pro"]-p0*2)<=2,
+          "%s/%s -> %s/%s" % (c0,p0,now["cal"],now["pro"]))
+    check("serving: it stops calling itself a typical serving",
+          now["tag"]!="typical serving", now["tag"])
+    rowsum=sum(r["cal"] for r in p.evaluate(SNAP))
+    head=p.eval_on_selector(".review > header span","e=>e.textContent").replace(",","")
+    check("serving: the running total follows", ("%d kcal"%rowsum) in head,
+          "rows=%d head=%r" % (rowsum, head))
+    p.click("#commitEst"); p.wait_for_timeout(600)
+    # the note is built from `amount`; if that does not move with the weight the
+    # ledger permanently records a portion you never logged
+    notes=p.evaluate("""()=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{};
+        const out=[]; for(const k of Object.keys(d)) for(const f of (d[k].food||[])) out.push(f.note||"");
+        return out;}""")
+    check("serving: the ledger records the corrected weight",
+          any(("%d g"%int(g0*2)) in n for n in notes),
+          " | ".join(notes[-3:]))
+
     # date nav
     p.click("#prevDay"); p.wait_for_timeout(350)
     d1=p.text_content("#dateFull")
