@@ -5,7 +5,7 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 16 suites, ~190 checks. Run
+**1. Nothing ships without `./verify.sh` passing.** 17 suites, ~200 checks. Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
 
@@ -22,7 +22,8 @@ is a `@media (pointer: coarse)` rule forcing 16px. Any new input must not
 escape it. `tests/mobile.py` checks this.
 
 **5. 44px minimum on anything tappable, 48px in the tab bar.** Measured, not
-eyeballed — `tests/audit2.py` and `tests/mobile.py` enforce it. Destructive
+eyeballed — `tests/audit2.py` and `tests/mobile.py` enforce it. **`audit2` is
+skipped right now** (see Testing), so only `mobile` is holding this rule up. Destructive
 controls have been the repeat offenders: a delete X at 30×30 near the screen
 edge, set chips at 69×29, a Remove button at 52×15.
 
