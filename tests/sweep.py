@@ -158,6 +158,36 @@ with sync_playwright() as pw:
     p.click("#undoBtn"); p.wait_for_timeout(400)
     check("gym: undo movement", p.eval_on_selector_all(".lift","e=>e.length")==2)
 
+    # the form belongs under the movements: the list reads in training order and
+    # the next thing to add is the next thing on screen
+    check("gym: add-movement sits below the movements", p.evaluate("""()=>{
+        const g=document.querySelector('.liftgroup'), f=document.getElementById('addLift');
+        return !!(g&&f&&(g.compareDocumentPosition(f)&Node.DOCUMENT_POSITION_FOLLOWING));}"""))
+
+    # ---------- LOCK IN ----------
+    check("gym: lock offered once something is logged",
+          p.evaluate("()=>!!document.getElementById('lockDay')"))
+    p.click("#lockDay"); p.wait_for_timeout(500)
+    check("gym: lock is stored on the day",
+          p.evaluate("k=>!!JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].gymLocked", Ts))
+    check("gym: locked says so", "locked in" in p.eval_on_selector(".lockbar .msg","e=>e.textContent").lower(),
+          p.eval_on_selector(".lockbar .msg","e=>e.textContent"))
+    check("gym: locked hides the add form", p.evaluate("()=>!document.getElementById('addLift')"))
+    check("gym: locked hides set entry", p.eval_on_selector_all("[data-addset]","e=>e.length")==0)
+    check("gym: locked hides remove", p.eval_on_selector_all("[data-rmlift]","e=>e.length")==0)
+    # spans, not disabled buttons — probe reads a control that does nothing as dead
+    check("gym: locked set chips are not controls",
+          p.eval_on_selector_all(".set","e=>e.length>0&&e.every(x=>x.tagName==='SPAN')"))
+    ubox=p.locator("#unlockDay").bounding_box()
+    check("gym: unlock is 44px", ubox and ubox["height"]>=44,
+          ubox and "%dx%d"%(ubox["width"],ubox["height"]))
+    liftsWere=p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.sets.length)", Ts)
+    p.click("#unlockDay"); p.wait_for_timeout(500)
+    check("gym: unlock restores editing", p.evaluate("()=>!!document.getElementById('addLift')"))
+    check("gym: locking never touched the sets",
+          p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.sets.length)", Ts)==liftsWere,
+          str(liftsWere))
+
     # ---------- PANTRY ----------
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
     check("pantry: photo button (sample avail)", p.evaluate("()=>!!document.getElementById('shotBtn')"))

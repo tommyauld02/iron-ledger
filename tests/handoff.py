@@ -220,6 +220,59 @@ with sync_playwright() as pw:
           p.evaluate("() => !document.getElementById('shotBtn')"))
     check("no page errors offline", not errs, str(errs[:2]))
     ctx.close()
+
+    # ---- 5. states that only exist after an action ------------------------
+    # darkcheck walks the tabs as it finds them, so a panel that only appears
+    # once you press something is never painted and its contrast is never
+    # judged. The locked gym bar shipped at 4.37:1 in light for exactly that
+    # reason. Anything gated behind a click belongs here.
+    CONTRAST = r"""() => {
+      const lum = c => {const [r,g,b] = c.match(/\d+/g).map(Number).map(v => {v /= 255;
+        return v <= 0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4);});
+        return 0.2126*r + 0.7152*g + 0.0722*b;};
+      const bgOf = el => {let n = el;
+        while (n && n !== document.documentElement) {
+          const b = getComputedStyle(n).backgroundColor;
+          if (b && !/rgba\(0, 0, 0, 0\)|transparent/.test(b)) return b;
+          n = n.parentElement;}
+        return getComputedStyle(document.body).backgroundColor;};
+      const out = [];
+      document.querySelectorAll('.lockbar, .lockbar *').forEach(el => {
+        if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+        const s = getComputedStyle(el);
+        const L1 = lum(s.color), L2 = lum(bgOf(el));
+        const ratio = (Math.max(L1,L2)+0.05) / (Math.min(L1,L2)+0.05);
+        const size = parseFloat(s.fontSize), bold = parseInt(s.fontWeight) >= 700;
+        const need = (size >= 24 || (size >= 18.66 && bold)) ? 3 : 4.5;
+        out.push({what: (el.className || el.tagName) + '',
+                  ratio: Math.round(ratio*100)/100, need: need, ok: ratio >= need});
+      });
+      return out;}"""
+    LOCKED = dict(STORE)
+    LOCKED["days"] = dict(STORE["days"])
+    LOCKED["days"][Ts] = dict(STORE["days"][Ts])
+    LOCKED["days"][Ts]["gymLocked"] = True
+    LOCKED["days"][Ts]["lifts"] = [
+        {"id": "lk", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}]}]
+
+    for scheme in ("light", "dark"):
+        ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True, color_scheme=scheme)
+        p = ctx.new_page()
+        p.goto(BASE); p.wait_for_timeout(500)
+        p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", LOCKED)
+        p.reload(); p.wait_for_timeout(900)
+        try:
+            p.click("text=Got it", timeout=2500)
+        except Exception:
+            pass
+        p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(600)
+        rows = p.evaluate(CONTRAST)
+        # an empty list would pass silently — the whole point of this section
+        check("locked gym bar painted in %s" % scheme, len(rows) > 0, "%d text nodes" % len(rows))
+        bad = ["%s %.2f<%.1f" % (r["what"][:12], r["ratio"], r["need"]) for r in rows if not r["ok"]]
+        check("locked gym bar contrast in %s" % scheme, not bad, "; ".join(bad))
+        ctx.close()
+
     b.close()
 
 srv.shutdown()

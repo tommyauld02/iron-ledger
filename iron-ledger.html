@@ -1291,8 +1291,44 @@
     white-space: nowrap;
   }
   .set .x { color: var(--ink-3); margin: 0 1px; }
-  .set:hover { border-color: var(--danger); color: var(--danger); }
-  .set:hover .x { color: var(--danger); }
+  /* Scoped to buttons: a locked day renders its chips as spans, and a chip you
+     cannot remove must not offer the remove cue. */
+  button.set:hover { border-color: var(--danger); color: var(--danger); }
+  button.set:hover .x { color: var(--danger); }
+
+  .lockbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    /* accent, not --hit: the hit tokens mean "macro target met" on the
+       calendar, and a locked workout is a different thing entirely. --hit on
+       --hit-bg also came out at 4.37:1 here, under the 4.5 this size needs. */
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+  }
+  .lockbar .msg {
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .lockbar button {
+    min-height: 44px;
+    padding: 0 12px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    white-space: nowrap;
+  }
 
   .setadd {
     display: grid;
@@ -2936,6 +2972,8 @@
       return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
     }).join("");
 
+    var locked = !!d.gymLocked;
+
     var cards = d.lifts.map(function (l, i) {
       var lc = cat(l.cat);
       var v = volume(l);
@@ -2946,8 +2984,12 @@
         : 'First time logging this one.';
 
       var sets = l.sets.map(function (s, si) {
-        return '<button class="set" data-lift="' + i + '" data-set="' + si + '" title="Tap to remove">' +
-               s.w + '<span class="x">×</span>' + s.r + '</button>';
+        // Locked chips are spans, not disabled buttons: probe treats a control
+        // that does nothing as dead, and a span is honestly not a control.
+        return locked
+          ? '<span class="set">' + s.w + '<span class="x">×</span>' + s.r + '</span>'
+          : '<button class="set" data-lift="' + i + '" data-set="' + si + '" title="Tap to remove">' +
+            s.w + '<span class="x">×</span>' + s.r + '</button>';
       }).join("");
 
       return '<article class="lift" style="--catcolor:' + lc.color + '">' +
@@ -2960,20 +3002,25 @@
                      '</em> — a day you no longer train.</p>' : '') +
           '<p class="last">' + lastLine + '</p>' +
           (sets ? '<div class="sets">' + sets + '</div>' : '') +
-          '<div class="setadd">' +
-            '<input inputmode="decimal" placeholder="lb" data-w="' + i + '">' +
-            '<input inputmode="numeric" placeholder="reps" data-r="' + i + '">' +
-            '<button data-addset="' + i + '">Set</button>' +
-          '</div>' +
+          (locked ? '' :
+            '<div class="setadd">' +
+              '<input inputmode="decimal" placeholder="lb" data-w="' + i + '">' +
+              '<input inputmode="numeric" placeholder="reps" data-r="' + i + '">' +
+              '<button data-addset="' + i + '">Set</button>' +
+            '</div>') +
           '<div class="lift-foot">' +
             '<span>' + (v.sets
               ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
-              : 'Log your first set — tap a set chip to remove it') + '</span>' +
-            '<button data-rmlift="' + i + '">Remove</button>' +
+              : (locked ? 'No sets logged' : 'Log your first set — tap a set chip to remove it')) + '</span>' +
+            (locked ? '' : '<button data-rmlift="' + i + '">Remove</button>') +
           '</div>' +
         '</div>' +
       '</article>';
     }).join("");
+
+    var totals = d.lifts.reduce(function (a, l) {
+      var v = volume(l); a.sets += v.sets; a.reps += v.reps; return a;
+    }, { sets: 0, reps: 0 });
 
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:10px">' +
@@ -2981,37 +3028,82 @@
         '<div class="cats">' + chips + '</div>' +
       '</section>' +
 
-      '<section class="entry" style="--catcolor:' + c.color + '">' +
-        '<div class="field"><label for="mSel">Add movement · ' + esc(c.name) + '</label>' +
-          '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select></div>' +
-        '<input id="mNew" class="text" placeholder="Name the movement" hidden ' +
-          'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);border-radius:2px;font-size:15px;width:100%">' +
-        '<button class="btn" id="addLift">Add to today</button>' +
-      '</section>' +
+      // A locked day says so at the top, where you look first — the missing
+      // form further down is a consequence, not the announcement.
+      (locked
+        ? '<section class="lockbar">' +
+            '<span class="msg">Locked in · ' + d.lifts.length +
+              (d.lifts.length === 1 ? ' movement · ' : ' movements · ') +
+              totals.sets + (totals.sets === 1 ? ' set' : ' sets') + '</span>' +
+            '<button id="unlockDay">Unlock</button>' +
+          '</section>'
+        : '') +
 
       (cards
         ? '<section class="liftgroup">' + cards + '</section>'
-        : '<p class="empty">No movements logged for this day.<br>Pick a split above and add your first.</p>');
+        : '<p class="empty">No movements logged for this day.<br>Pick a split above and add your first below.</p>') +
+
+      // Add movement sits *under* the list, so the movements read in the order
+      // you trained them and the next one to add is always the next thing on
+      // screen rather than back up at the top.
+      (locked ? '' :
+        '<section class="entry" style="--catcolor:' + c.color + '">' +
+          '<div class="field"><label for="mSel">Add movement · ' + esc(c.name) + '</label>' +
+            '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select></div>' +
+          '<input id="mNew" class="text" placeholder="Name the movement" hidden ' +
+            'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);border-radius:2px;font-size:15px;width:100%">' +
+          '<button class="btn" id="addLift">Add to today</button>' +
+        '</section>') +
+
+      // Nothing logged yet is nothing to lock in.
+      (!locked && d.lifts.length
+        ? '<button class="btn ghost" id="lockDay" style="width:100%">Lock in the day</button>'
+        : '');
 
     view.querySelectorAll("[data-cat]").forEach(function (b) {
       b.addEventListener("click", function () { activeCat = b.dataset.cat; render(); });
     });
 
+    // The whole form is absent on a locked day, so every lookup here is
+    // guarded. Reaching through a null would throw mid-render and take the
+    // rest of the tab's handlers down with it.
     var sel = document.getElementById("mSel");
     var neu = document.getElementById("mNew");
-    sel.addEventListener("change", function () {
-      neu.hidden = sel.value !== "__new";
-      if (!neu.hidden) neu.focus();
-    });
+    if (sel && neu) {
+      sel.addEventListener("change", function () {
+        neu.hidden = sel.value !== "__new";
+        if (!neu.hidden) neu.focus();
+      });
+    }
 
-    document.getElementById("addLift").addEventListener("click", function () {
-      var name = sel.value === "__new" ? neu.value.trim() : sel.value;
-      if (!name) { neu.focus(); return; }
-      var mlist = store.moves[activeCat] || (store.moves[activeCat] = []);
-      if (mlist.indexOf(name) === -1) mlist.push(name);
-      d.lifts.push({ id: uid(), cat: activeCat, movement: name, sets: [] });
-      touch(key); save(); render();
-    });
+    var addLiftBtn = document.getElementById("addLift");
+    if (addLiftBtn) {
+      addLiftBtn.addEventListener("click", function () {
+        var name = sel.value === "__new" ? neu.value.trim() : sel.value;
+        if (!name) { neu.focus(); return; }
+        var mlist = store.moves[activeCat] || (store.moves[activeCat] = []);
+        if (mlist.indexOf(name) === -1) mlist.push(name);
+        d.lifts.push({ id: uid(), cat: activeCat, movement: name, sets: [] });
+        touch(key); save(); render();
+      });
+    }
+
+    // Locking is one tap each way, so it needs no undo — the way out is the
+    // button that replaces it.
+    var lockBtn = document.getElementById("lockDay");
+    if (lockBtn) {
+      lockBtn.addEventListener("click", function () {
+        d.gymLocked = true;
+        touch(key); save(); render();
+      });
+    }
+    var unlockBtn = document.getElementById("unlockDay");
+    if (unlockBtn) {
+      unlockBtn.addEventListener("click", function () {
+        delete d.gymLocked;
+        touch(key); save(); render();
+      });
+    }
 
     view.querySelectorAll("[data-addset]").forEach(function (b) {
       b.addEventListener("click", function () { addSet(Number(b.dataset.addset)); });
