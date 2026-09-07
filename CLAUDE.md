@@ -5,7 +5,7 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 18 suites, ~290 checks, 10
+**1. Nothing ships without `./verify.sh` passing.** 19 suites, ~300 checks, 11
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -49,7 +49,7 @@ manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              18 Playwright suites
+tests/              19 Playwright suites
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -196,7 +196,7 @@ is fixed, and it is worth keeping straight:
 
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
-  `handoff`.
+  `handoff`, `foods`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s
@@ -277,6 +277,19 @@ the ids happen to match. Remapping ids first fixes this too.
 - Rest days are not painted red on the calendar. Offered, declined.
 - Barcode scanning is the one genuine reason to go native. Nothing else found
   so far would have been prevented by a native build.
-- The food table is hand-built reference values. Rebuilding it from the USDA
-  FoodData Central bulk CSV is the open thread; live API calls are impossible
-  from a published artifact anyway (CSP blocks all outbound fetch).
+- The food table is hand-built reference values, 265 of them, weighted towards
+  what actually moves a calorie count: meats, grains, starches, fats, prepared
+  meals. Produce is covered but deliberately not expanded — a stick of celery
+  is not what breaks a day. Rebuilding it from the USDA FoodData Central bulk
+  CSV is the open thread; live API calls are impossible from a published
+  artifact anyway (CSP blocks all outbound fetch).
+
+  `tests/foods.py` guards it, because growing it broke twice in ways nothing
+  else caught. Adding an entry after the last one killed the whole script — the
+  final entry had no trailing comma. And `splitItems()` splits on the words
+  "and" and "with" *before* matching, so "mac and cheese" resolved to cheddar;
+  aliases containing those words are now stitched back together across the
+  split, using an underscore rather than a control character, because `and`
+  still matches across a non-word one. Unit keys are checked too: `medium`,
+  `large` and `small` are typed words that map to the key `each`, so a `u:` map
+  keyed by them is never read.

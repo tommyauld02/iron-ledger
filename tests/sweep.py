@@ -61,7 +61,10 @@ with sync_playwright() as pw:
     check("macros: goal cancel", p.evaluate("()=>!document.getElementById('gCal')"))
 
     # estimator: table + pantry + claude fallback in one
-    p.fill("#estText","200g chicken breast & 1 costco protein coffee & chipotle burrito bowl")
+    # "beef wellington" is deliberately absent from the table — the point of this
+    # check is the fallback path, and a query the table can answer tests coverage
+    # instead. "chipotle burrito bowl" used to be that query until the table grew.
+    p.fill("#estText","200g chicken breast & 1 costco protein coffee & beef wellington")
     p.click("#runEst"); p.wait_for_timeout(1200)
     rows=p.eval_on_selector_all(".rev-item",
       "e=>e.map(x=>x.querySelector('.food').textContent+'|'+x.querySelector('.amt').textContent.trim())")

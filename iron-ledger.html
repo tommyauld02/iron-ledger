@@ -1782,7 +1782,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.23";
+  var BUILD = "2026-09-07.24";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2188,6 +2188,45 @@
     { n: "Granola", k: 471, d: 60, p: 10, a: ["granola"], u: { cup: 122 } },
     { n: "Breakfast cereal", k: 379, d: 40, p: 7, a: ["cereal"], u: { cup: 40, serving: 40 } },
 
+    { n: "Brown rice, dry", k: 370, d: 45, p: 7.9, a: ["brown rice dry", "dry brown rice", "uncooked brown rice"], u: { cup: 190 } },
+    { n: "Basmati rice, cooked", k: 121, d: 158, p: 3.5, a: ["basmati", "basmati rice"], u: { cup: 158 } },
+    { n: "Wild rice, cooked", k: 101, d: 164, p: 4, a: ["wild rice"], u: { cup: 164 } },
+    { n: "Fried rice", k: 163, d: 198, p: 4.6, a: ["fried rice", "egg fried rice"], u: { cup: 198 } },
+    { n: "Rice noodles, cooked", k: 109, d: 176, p: 0.9, a: ["rice noodles", "vermicelli", "pho noodles"], u: { cup: 176 } },
+    { n: "Whole wheat pasta, cooked", k: 124, d: 140, p: 5.3, a: ["whole wheat pasta", "wholemeal pasta"], u: { cup: 140 } },
+    { n: "Egg noodles, cooked", k: 138, d: 160, p: 4.5, a: ["egg noodles"], u: { cup: 160 } },
+    { n: "Instant ramen noodles", k: 436, d: 85, p: 9.4, a: ["ramen", "instant ramen", "ramen noodles", "instant noodles"], u: { each: 85, packet: 85 } },
+    { n: "Mac and cheese", k: 164, d: 200, p: 6.3, a: ["mac and cheese", "macaroni and cheese", "mac n cheese"], u: { cup: 200 } },
+    { n: "Gnocchi", k: 133, d: 150, p: 3.2, a: ["gnocchi"], u: {} },
+    { n: "Lasagna", k: 132, d: 250, p: 8, a: ["lasagna", "lasagne"], u: { serving: 250 } },
+    { n: "Mashed potatoes", k: 113, d: 210, p: 2, a: ["mashed potato", "mashed potatoes", "mash"], u: { cup: 210 } },
+    { n: "Hash browns", k: 265, d: 100, p: 3, a: ["hash brown", "hash browns"], u: {} },
+    { n: "Tater tots", k: 216, d: 86, p: 2.5, a: ["tater tots", "potato gems"], u: { serving: 86 } },
+    { n: "Potato chips", k: 536, d: 28, p: 7, a: ["potato chips", "crisps"], u: { serving: 28 } },
+    { n: "Roast potatoes", k: 149, d: 150, p: 2.9, a: ["roast potato", "roast potatoes", "roasted potatoes"], u: {} },
+    { n: "Boiled potato", k: 87, d: 150, p: 1.9, a: ["boiled potato", "boiled potatoes"], u: {} },
+    { n: "Pita bread", k: 275, d: 60, p: 9, a: ["pita", "pitta", "pita bread"], u: { each: 60 } },
+    { n: "Naan", k: 310, d: 90, p: 9, a: ["naan", "naan bread"], u: { each: 90 } },
+    { n: "English muffin", k: 235, d: 57, p: 8, a: ["english muffin"], u: { each: 57 } },
+    { n: "Croissant", k: 406, d: 57, p: 8, a: ["croissant"], u: { each: 57 } },
+    { n: "Corn tortilla", k: 218, d: 26, p: 5.7, a: ["corn tortilla", "corn tortillas"], u: { each: 26 } },
+    { n: "Hamburger bun", k: 279, d: 52, p: 9, a: ["burger bun", "hamburger bun", "brioche bun"], u: { each: 52 } },
+    { n: "Hot dog bun", k: 279, d: 43, p: 9, a: ["hot dog bun"], u: { each: 43 } },
+    { n: "Sourdough bread", k: 270, d: 36, p: 11, a: ["sourdough"], u: { slice: 36, each: 36 } },
+    { n: "Rye bread", k: 259, d: 32, p: 8.5, a: ["rye bread", "rye"], u: { slice: 32, each: 32 } },
+    { n: "Pancakes", k: 227, d: 77, p: 6.4, a: ["pancake", "pancakes", "hotcakes"], u: { each: 77 } },
+    { n: "Waffle", k: 291, d: 75, p: 7.9, a: ["waffle", "waffles"], u: { each: 75 } },
+    { n: "French toast", k: 229, d: 65, p: 7.7, a: ["french toast"], u: { each: 65 } },
+    { n: "Biscuit", k: 353, d: 60, p: 7, a: ["biscuit", "biscuits"], u: { each: 60 } },
+    { n: "Muffin", k: 377, d: 113, p: 5.5, a: ["muffin", "blueberry muffin"], u: { each: 113 } },
+    { n: "Crackers", k: 502, d: 30, p: 9, a: ["cracker", "crackers", "saltines"], u: { serving: 30 } },
+    { n: "Pretzels", k: 384, d: 30, p: 10, a: ["pretzel", "pretzels"], u: { serving: 30 } },
+    { n: "Popcorn", k: 387, d: 30, p: 12, a: ["popcorn"], u: { serving: 30 } },
+    { n: "Cornbread", k: 330, d: 65, p: 7, a: ["cornbread"], u: { each: 65 } },
+    { n: "Stuffing", k: 177, d: 100, p: 3, a: ["stuffing"], u: {} },
+    { n: "Grits, cooked", k: 71, d: 242, p: 1.7, a: ["grits"], u: { cup: 242 } },
+    { n: "Donut", k: 421, d: 60, p: 4.9, a: ["donut", "doughnut", "donuts"], u: { each: 60 } },
+    { n: "Pop tart", k: 400, d: 52, p: 4, a: ["pop tart", "poptart"], u: { each: 52 } },
     // beef
     { n: "Top sirloin steak, cooked", k: 212, d: 170, p: 31, a: ["top sirloin", "sirloin", "sirloin steak", "steak"], u: {} },
     { n: "Ribeye steak, cooked", k: 291, d: 226, p: 24, a: ["ribeye", "rib eye", "ribeye steak"], u: {} },
@@ -2199,6 +2238,15 @@
     { n: "Ground beef 93/7, cooked", k: 172, d: 113, p: 26, a: ["93/7 beef", "extra lean ground beef"], u: { patty: 85 } },
     { n: "Beef jerky", k: 410, d: 28, p: 33, a: ["beef jerky", "jerky"], u: { serving: 28 } },
 
+    { n: "Ground beef 85/15, cooked", k: 250, d: 113, p: 26, a: ["ground beef 85", "85/15", "mince 85"], u: {} },
+    { n: "Beef burger patty, cooked", k: 254, d: 113, p: 26, a: ["burger patty", "beef patty", "hamburger patty"], u: { each: 113 } },
+    { n: "Brisket, cooked", k: 253, d: 113, p: 27, a: ["brisket", "beef brisket"], u: {} },
+    { n: "Chuck roast, cooked", k: 250, d: 113, p: 27, a: ["chuck roast", "pot roast", "beef chuck"], u: {} },
+    { n: "Prime rib, cooked", k: 338, d: 170, p: 24, a: ["prime rib"], u: {} },
+    { n: "Roast beef, deli", k: 128, d: 56, p: 22, a: ["roast beef", "deli beef"], u: { slice: 28 } },
+    { n: "Corned beef", k: 251, d: 100, p: 18, a: ["corned beef"], u: {} },
+    { n: "Meatballs, cooked", k: 286, d: 85, p: 15, a: ["meatball", "meatballs"], u: { each: 28 } },
+    { n: "Meatloaf", k: 200, d: 150, p: 15, a: ["meatloaf"], u: {} },
     // poultry
     { n: "Chicken breast, cooked", k: 165, d: 172, p: 31, a: ["chicken breast", "chicken breasts", "grilled chicken", "chicken"], u: { each: 174, breast: 174 } },
     { n: "Chicken breast, raw", k: 120, d: 174, p: 22.5, a: ["raw chicken breast", "uncooked chicken"], u: { each: 174 } },
@@ -2207,6 +2255,17 @@
     { n: "Turkey breast, cooked", k: 135, d: 84, p: 30, a: ["turkey breast", "turkey"], u: { slice: 28 } },
     { n: "Ground turkey 93/7, cooked", k: 176, d: 113, p: 27, a: ["ground turkey"], u: {} },
 
+    { n: "Chicken wing, cooked", k: 254, d: 34, p: 26, a: ["chicken wing", "chicken wings", "wings"], u: { each: 34 } },
+    { n: "Chicken drumstick, cooked", k: 172, d: 44, p: 28, a: ["drumstick", "drumsticks", "chicken leg"], u: { each: 44 } },
+    { n: "Rotisserie chicken", k: 190, d: 140, p: 25, a: ["rotisserie chicken", "roast chicken", "roasted chicken"], u: {} },
+    { n: "Fried chicken", k: 260, d: 100, p: 22, a: ["fried chicken"], u: {} },
+    { n: "Chicken tenders, breaded", k: 290, d: 100, p: 18, a: ["chicken tenders", "chicken strips", "chicken tender"], u: {} },
+    { n: "Ground chicken, cooked", k: 189, d: 112, p: 24, a: ["ground chicken", "chicken mince"], u: {} },
+    { n: "Chicken sausage", k: 172, d: 85, p: 15, a: ["chicken sausage"], u: { each: 85 } },
+    { n: "Turkey, deli sliced", k: 104, d: 56, p: 17, a: ["deli turkey", "turkey slices", "sliced turkey"], u: { slice: 28 } },
+    { n: "Ground turkey 85/15, cooked", k: 235, d: 112, p: 25, a: ["ground turkey 85", "turkey mince 85"], u: {} },
+    { n: "Turkey thigh, cooked", k: 170, d: 100, p: 28, a: ["turkey thigh", "turkey leg"], u: {} },
+    { n: "Buffalo wings", k: 290, d: 130, p: 24, a: ["buffalo wings", "hot wings"], u: {} },
     // pork
     { n: "Pork chop, cooked", k: 231, d: 130, p: 27, a: ["pork chop", "pork chops"], u: { each: 130 } },
     { n: "Pork tenderloin, cooked", k: 143, d: 113, p: 26, a: ["pork tenderloin", "pork loin"], u: {} },
@@ -2214,6 +2273,14 @@
     { n: "Ham, sliced", k: 145, d: 56, p: 21, a: ["ham", "deli ham"], u: { slice: 28 } },
     { n: "Sausage, cooked", k: 301, d: 68, p: 18, a: ["sausage", "sausages"], u: { each: 68, link: 68 } },
 
+    { n: "Pulled pork", k: 250, d: 140, p: 25, a: ["pulled pork"], u: {} },
+    { n: "Pork belly", k: 518, d: 85, p: 9.3, a: ["pork belly"], u: {} },
+    { n: "Pork ribs, cooked", k: 361, d: 140, p: 25, a: ["pork ribs", "ribs", "baby back ribs", "spare ribs"], u: {} },
+    { n: "Prosciutto", k: 195, d: 30, p: 26, a: ["prosciutto"], u: { slice: 15 } },
+    { n: "Salami", k: 336, d: 30, p: 22, a: ["salami"], u: { slice: 10 } },
+    { n: "Pepperoni", k: 504, d: 30, p: 20, a: ["pepperoni"], u: { slice: 2 } },
+    { n: "Hot dog", k: 290, d: 45, p: 11, a: ["hot dog", "hotdog", "frankfurter", "wiener"], u: { each: 45 } },
+    { n: "Chorizo", k: 455, d: 60, p: 24, a: ["chorizo"], u: {} },
     // fish + seafood
     { n: "Salmon, cooked", k: 208, d: 154, p: 22, a: ["salmon"], u: { fillet: 154 } },
     { n: "Tilapia, cooked", k: 129, d: 87, p: 26, a: ["tilapia"], u: { fillet: 87 } },
@@ -2221,8 +2288,19 @@
     { n: "Tuna, canned in water", k: 116, d: 142, p: 26, a: ["canned tuna", "tuna"], u: { can: 142, serving: 142 } },
     { n: "Shrimp, cooked", k: 99, d: 113, p: 24, a: ["shrimp", "prawns"], u: {} },
 
+    { n: "Tuna steak, cooked", k: 184, d: 113, p: 30, a: ["tuna steak", "ahi", "yellowfin"], u: {} },
+    { n: "Tuna, canned in oil", k: 198, d: 85, p: 29, a: ["tuna in oil"], u: {} },
+    { n: "Sardines, canned", k: 208, d: 92, p: 25, a: ["sardines", "sardine"], u: { can: 92 } },
+    { n: "Mackerel, cooked", k: 262, d: 100, p: 24, a: ["mackerel"], u: {} },
+    { n: "Halibut, cooked", k: 111, d: 159, p: 23, a: ["halibut"], u: {} },
+    { n: "Catfish, cooked", k: 105, d: 143, p: 18, a: ["catfish"], u: {} },
+    { n: "Crab", k: 97, d: 85, p: 19, a: ["crab", "crab meat"], u: {} },
+    { n: "Scallops, cooked", k: 111, d: 85, p: 20, a: ["scallops", "scallop"], u: {} },
+    { n: "Smoked salmon", k: 117, d: 56, p: 18, a: ["smoked salmon", "lox"], u: {} },
+    { n: "Fish sticks", k: 290, d: 100, p: 14, a: ["fish sticks", "fish fingers"], u: { each: 28 } },
+    { n: "Mahi mahi, cooked", k: 109, d: 113, p: 24, a: ["mahi mahi", "mahi"], u: {} },
     // eggs + dairy
-    { n: "Egg, whole", k: 143, d: 50, p: 12.6, a: ["egg", "eggs", "whole eggs"], u: { each: 50, large: 50 } },
+    { n: "Egg, whole", k: 143, d: 50, p: 12.6, a: ["egg", "eggs", "whole eggs"], u: { each: 50 } },
     { n: "Egg white", k: 52, d: 33, p: 11, a: ["egg white", "egg whites"], u: { each: 33, cup: 243 } },
     { n: "Greek yogurt, nonfat", k: 59, d: 170, p: 10, a: ["greek yogurt", "nonfat greek yogurt"], u: { cup: 245, container: 170 } },
     { n: "Greek yogurt, 2%", k: 73, d: 170, p: 9.9, a: ["2% greek yogurt", "low fat greek yogurt"], u: { cup: 245, container: 170 } },
@@ -2239,11 +2317,25 @@
     { n: "Cream cheese", k: 342, d: 28, p: 6, a: ["cream cheese"], u: { tbsp: 14 } },
     { n: "Butter", k: 717, d: 14, p: 0.9, a: ["butter"], u: { tbsp: 14, tsp: 5 } },
 
+    { n: "Ricotta", k: 174, d: 124, p: 11, a: ["ricotta"], u: { cup: 246 } },
+    { n: "Feta", k: 264, d: 28, p: 14, a: ["feta"], u: {} },
+    { n: "Swiss cheese", k: 380, d: 28, p: 27, a: ["swiss cheese", "swiss"], u: { slice: 28 } },
+    { n: "Provolone", k: 351, d: 28, p: 26, a: ["provolone"], u: { slice: 28 } },
+    { n: "American cheese", k: 330, d: 21, p: 18, a: ["american cheese", "cheese slice"], u: { slice: 21 } },
+    { n: "Heavy cream", k: 340, d: 30, p: 2.8, a: ["heavy cream", "double cream", "whipping cream"], u: { tbsp: 15, cup: 238 } },
+    { n: "Half and half", k: 130, d: 30, p: 3, a: ["half and half"], u: { tbsp: 15 } },
+    { n: "Sour cream", k: 198, d: 30, p: 2.4, a: ["sour cream"], u: { tbsp: 15, cup: 230 } },
+    { n: "Whipped cream", k: 257, d: 15, p: 2, a: ["whipped cream"], u: {} },
+    { n: "Chocolate milk", k: 83, d: 240, p: 3.2, a: ["chocolate milk"], u: { cup: 240 } },
+    { n: "Kefir", k: 55, d: 240, p: 3.3, a: ["kefir"], u: { cup: 240 } },
     // protein supplements
     { n: "Whey protein powder", k: 375, d: 30, p: 78, a: ["whey protein", "protein powder", "whey", "protein shake"], u: { scoop: 30, serving: 30 } },
     { n: "Protein bar", k: 350, d: 60, p: 27, a: ["protein bar"], u: { each: 60, bar: 60 } },
     { n: "Casein protein powder", k: 360, d: 33, p: 75, a: ["casein"], u: { scoop: 33 } },
 
+    { n: "Plant protein powder", k: 380, d: 30, p: 70, a: ["plant protein", "pea protein", "vegan protein"], u: { scoop: 30 } },
+    { n: "Mass gainer", k: 380, d: 100, p: 20, a: ["mass gainer", "weight gainer"], u: { scoop: 100 } },
+    { n: "Protein shake, bottled", k: 50, d: 330, p: 9, a: ["premier protein", "fairlife", "bottled protein shake", "protein drink"], u: { each: 330, bottle: 330 } },
     // legumes + plant protein
     { n: "Black beans, cooked", k: 132, d: 172, p: 8.9, a: ["black beans"], u: { cup: 172, can: 260 } },
     { n: "Chickpeas, cooked", k: 164, d: 164, p: 8.9, a: ["chickpeas", "garbanzo beans"], u: { cup: 164, can: 260 } },
@@ -2252,6 +2344,12 @@
     { n: "Tofu, firm", k: 144, d: 85, p: 17, a: ["tofu"], u: { serving: 85 } },
     { n: "Hummus", k: 166, d: 30, p: 8, a: ["hummus"], u: { tbsp: 15 } },
 
+    { n: "Pinto beans, cooked", k: 143, d: 171, p: 9, a: ["pinto beans", "pinto"], u: { cup: 171 } },
+    { n: "Refried beans", k: 90, d: 120, p: 5, a: ["refried beans"], u: {} },
+    { n: "Baked beans", k: 94, d: 130, p: 5, a: ["baked beans"], u: {} },
+    { n: "Edamame", k: 121, d: 155, p: 12, a: ["edamame"], u: { cup: 155 } },
+    { n: "Tempeh", k: 192, d: 84, p: 20, a: ["tempeh"], u: {} },
+    { n: "Soy milk", k: 54, d: 240, p: 3.3, a: ["soy milk", "soya milk"], u: { cup: 240 } },
     // fats + nuts
     { n: "Olive oil", k: 884, d: 13.5, p: 0, a: ["olive oil", "oil"], u: { tbsp: 13.5, tsp: 4.5 } },
     { n: "Peanut butter", k: 588, d: 32, p: 25, a: ["peanut butter"], u: { tbsp: 16 } },
@@ -2261,6 +2359,19 @@
     { n: "Cashews", k: 553, d: 28, p: 18, a: ["cashews"], u: { serving: 28 } },
     { n: "Avocado", k: 160, d: 150, p: 2, a: ["avocado"], u: { each: 150, half: 75 } },
 
+    { n: "Coconut oil", k: 862, d: 14, p: 0, a: ["coconut oil"], u: { tbsp: 14 } },
+    { n: "Vegetable oil", k: 884, d: 14, p: 0, a: ["vegetable oil", "canola oil", "sunflower oil", "cooking oil"], u: { tbsp: 14 } },
+    { n: "Almond butter", k: 614, d: 32, p: 21, a: ["almond butter"], u: { tbsp: 16 } },
+    { n: "Pistachios", k: 560, d: 28, p: 20, a: ["pistachio", "pistachios"], u: {} },
+    { n: "Pecans", k: 691, d: 28, p: 9, a: ["pecan", "pecans"], u: {} },
+    { n: "Sunflower seeds", k: 584, d: 28, p: 21, a: ["sunflower seeds"], u: {} },
+    { n: "Chia seeds", k: 486, d: 28, p: 17, a: ["chia", "chia seeds"], u: {} },
+    { n: "Flax seeds", k: 534, d: 28, p: 18, a: ["flax", "flaxseed", "flax seeds"], u: {} },
+    { n: "Macadamia nuts", k: 718, d: 28, p: 8, a: ["macadamia", "macadamias"], u: {} },
+    { n: "Trail mix", k: 462, d: 40, p: 14, a: ["trail mix"], u: {} },
+    { n: "Nutella", k: 539, d: 37, p: 6, a: ["nutella", "chocolate spread"], u: { tbsp: 18 } },
+    { n: "Tahini", k: 595, d: 30, p: 17, a: ["tahini"], u: { tbsp: 15 } },
+    { n: "Shredded coconut", k: 660, d: 28, p: 6.9, a: ["shredded coconut", "desiccated coconut"], u: {} },
     // vegetables
     { n: "Broccoli, cooked", k: 35, d: 156, p: 2.4, a: ["broccoli"], u: { cup: 156 } },
     { n: "Spinach, raw", k: 23, d: 30, p: 2.9, a: ["spinach"], u: { cup: 30 } },
@@ -2277,8 +2388,8 @@
     { n: "Peas", k: 81, d: 160, p: 5.4, a: ["peas"], u: { cup: 160 } },
 
     // fruit
-    { n: "Banana", k: 89, d: 118, p: 1.1, a: ["banana", "bananas"], u: { each: 118, medium: 118 } },
-    { n: "Apple", k: 52, d: 182, p: 0.3, a: ["apple", "apples"], u: { each: 182, medium: 182 } },
+    { n: "Banana", k: 89, d: 118, p: 1.1, a: ["banana", "bananas"], u: { each: 118 } },
+    { n: "Apple", k: 52, d: 182, p: 0.3, a: ["apple", "apples"], u: { each: 182 } },
     { n: "Orange", k: 47, d: 131, p: 0.9, a: ["orange", "oranges"], u: { each: 131 } },
     { n: "Strawberries", k: 32, d: 152, p: 0.7, a: ["strawberries", "strawberry"], u: { cup: 152 } },
     { n: "Blueberries", k: 57, d: 148, p: 0.7, a: ["blueberries"], u: { cup: 148 } },
@@ -2287,6 +2398,28 @@
     { n: "Mango", k: 60, d: 165, p: 0.8, a: ["mango"], u: { each: 336, cup: 165 } },
     { n: "Watermelon", k: 30, d: 152, p: 0.6, a: ["watermelon"], u: { cup: 152 } },
 
+    // prepared meals
+    { n: "Burrito", k: 206, d: 400, p: 9, a: ["burrito"], u: { each: 400 } },
+    { n: "Burrito bowl", k: 145, d: 500, p: 9, a: ["burrito bowl", "chipotle bowl"], u: { each: 500 } },
+    { n: "Taco", k: 226, d: 100, p: 12, a: ["taco", "tacos"], u: { each: 100 } },
+    { n: "Cheeseburger", k: 250, d: 200, p: 14, a: ["cheeseburger", "burger", "hamburger"], u: { each: 200 } },
+    { n: "Sub sandwich", k: 220, d: 250, p: 11, a: ["sub", "sandwich", "hoagie", "sub sandwich"], u: { each: 250 } },
+    { n: "Chicken sandwich", k: 250, d: 200, p: 14, a: ["chicken sandwich"], u: { each: 200 } },
+    { n: "Quesadilla", k: 300, d: 180, p: 14, a: ["quesadilla"], u: { each: 180 } },
+    { n: "Nachos", k: 306, d: 200, p: 8, a: ["nachos"], u: {} },
+    { n: "Pad thai", k: 154, d: 350, p: 7, a: ["pad thai"], u: {} },
+    { n: "Chicken curry", k: 130, d: 300, p: 9, a: ["curry", "chicken curry", "tikka masala"], u: {} },
+    { n: "Ramen bowl", k: 110, d: 500, p: 6, a: ["ramen bowl", "tonkotsu"], u: { each: 500 } },
+    { n: "Lo mein", k: 150, d: 300, p: 6, a: ["lo mein", "chow mein"], u: {} },
+    { n: "Chili", k: 110, d: 250, p: 8, a: ["chili", "chilli con carne"], u: { cup: 250 } },
+    { n: "Chicken noodle soup", k: 36, d: 245, p: 2.5, a: ["chicken soup", "chicken noodle soup"], u: { cup: 245 } },
+    { n: "Sushi roll", k: 150, d: 200, p: 6, a: ["sushi", "sushi roll", "maki"], u: { each: 200 } },
+    { n: "Pot pie", k: 230, d: 250, p: 7, a: ["pot pie"], u: { each: 250 } },
+    { n: "Enchilada", k: 170, d: 200, p: 9, a: ["enchilada", "enchiladas"], u: { each: 200 } },
+    { n: "Shepherds pie", k: 120, d: 300, p: 7, a: ["shepherds pie", "cottage pie"], u: {} },
+    { n: "Egg roll", k: 222, d: 89, p: 7, a: ["egg roll", "spring roll"], u: { each: 89 } },
+    { n: "Dumplings", k: 210, d: 100, p: 8, a: ["dumpling", "dumplings", "gyoza", "potstickers"], u: { each: 25 } },
+    { n: "Gyro", k: 215, d: 300, p: 12, a: ["gyro", "shawarma", "doner"], u: {} },
     // condiments + sweets + drinks
     { n: "Honey", k: 304, d: 21, p: 0.3, a: ["honey"], u: { tbsp: 21 } },
     { n: "Sugar", k: 387, d: 12.5, p: 0, a: ["sugar"], u: { tbsp: 12.5, tsp: 4.2 } },
@@ -2301,8 +2434,30 @@
     { n: "Orange juice", k: 45, d: 248, p: 0.7, a: ["orange juice"], u: { cup: 248 } },
     { n: "Beer", k: 43, d: 355, p: 0.5, a: ["beer"], u: { can: 355, bottle: 355, each: 355 } },
     { n: "Soda", k: 41, d: 355, p: 0, a: ["soda", "coke", "pepsi"], u: { can: 355, each: 355 } },
-    { n: "Coffee, black", k: 1, d: 237, p: 0.1, a: ["coffee", "black coffee"], u: { cup: 237 } }
-  ];
+    { n: "Coffee, black", k: 1, d: 237, p: 0.1, a: ["coffee", "black coffee"], u: { cup: 237 } },
+  
+    { n: "Cookie", k: 480, d: 30, p: 5, a: ["cookie", "cookies", "biscuit sweet"], u: { each: 30 } },
+    { n: "Brownie", k: 466, d: 60, p: 6, a: ["brownie", "brownies"], u: { each: 60 } },
+    { n: "Cake", k: 350, d: 100, p: 4, a: ["cake", "birthday cake"], u: { slice: 100 } },
+    { n: "Cheesecake", k: 321, d: 125, p: 5.5, a: ["cheesecake"], u: { slice: 125 } },
+    { n: "Pie", k: 260, d: 125, p: 2.5, a: ["pie", "apple pie"], u: { slice: 125 } },
+    { n: "Candy bar", k: 490, d: 50, p: 5, a: ["candy bar", "snickers", "chocolate bar"], u: { each: 50 } },
+    { n: "Gummy candy", k: 350, d: 40, p: 0, a: ["gummy", "gummies", "gummy bears", "haribo"], u: {} },
+    { n: "Tortilla chips", k: 489, d: 28, p: 7, a: ["tortilla chips", "doritos"], u: { serving: 28 } },
+    { n: "Granola bar", k: 471, d: 40, p: 8, a: ["granola bar", "cereal bar"], u: { each: 40 } },
+    { n: "Maple syrup", k: 260, d: 20, p: 0, a: ["maple syrup", "syrup"], u: { tbsp: 20 } },
+    { n: "Jam", k: 278, d: 20, p: 0.4, a: ["jam", "jelly", "preserves"], u: { tbsp: 20 } },
+    { n: "BBQ sauce", k: 172, d: 30, p: 0.8, a: ["bbq sauce", "barbecue sauce"], u: { tbsp: 17 } },
+    { n: "Mustard", k: 66, d: 15, p: 4, a: ["mustard"], u: { tbsp: 15 } },
+    { n: "Wine", k: 83, d: 148, p: 0.1, a: ["wine", "red wine", "white wine"], u: {} },
+    { n: "Spirits", k: 231, d: 44, p: 0, a: ["vodka", "whiskey", "whisky", "gin", "rum", "tequila", "spirits"], u: {} },
+    { n: "Energy drink", k: 45, d: 250, p: 0, a: ["energy drink", "red bull", "monster"], u: { can: 250 } },
+    { n: "Sports drink", k: 25, d: 350, p: 0, a: ["gatorade", "sports drink", "powerade"], u: { bottle: 350 } },
+    { n: "Latte", k: 55, d: 350, p: 3, a: ["latte", "flat white"], u: { cup: 350 } },
+    { n: "Cappuccino", k: 40, d: 240, p: 2.5, a: ["cappuccino"], u: { cup: 240 } },
+    { n: "Milkshake", k: 112, d: 300, p: 3, a: ["milkshake", "shake"], u: {} },
+    { n: "Smoothie", k: 60, d: 300, p: 1.5, a: ["smoothie"], u: {} },
+    { n: "Apple juice", k: 46, d: 248, p: 0.1, a: ["apple juice"], u: { cup: 248 } },];
 
   var WEIGHT_UNITS = { g: 1, gram: 1, grams: 1, gm: 1, gs: 1, kg: 1000, kilogram: 1000, kilograms: 1000,
     oz: 28.3495, ounce: 28.3495, ounces: 28.3495, ozs: 28.3495,
@@ -2431,10 +2586,33 @@
     return String(s).toLowerCase().replace(/[^a-z0-9/%.\s]/g, " ").replace(/\s+/g, " ").trim();
   }
 
+  // A handful of real food names contain the words this splits on — "mac and
+  // cheese", "half and half". Without protecting them the splitter tears them
+  // apart before any matching happens, and "mac and cheese" silently resolves
+  // to cheddar. Stitch those names back together across the split.
+  var JOINED = null;
+  function joinedAliases() {
+    if (JOINED) return JOINED;
+    JOINED = [];
+    FOODS.forEach(function (f) {
+      (f.a || []).forEach(function (a) { if (/\s(?:and|with)\s/.test(a)) JOINED.push(a); });
+    });
+    JOINED.sort(function (x, y) { return y.length - x.length; });   // longest first
+    return JOINED;
+  }
+
   function splitItems(text) {
-    return String(text).split(/\s*(?:&|,|\+|;|\band\b|\bwith\b|\n)\s*/i)
-      .map(function (s) { return s.trim(); })
-      .filter(function (s) { return s.length > 1; });
+    var s = String(text);
+    joinedAliases().forEach(function (a) {
+      // aliases are plain words and spaces, so only the spaces need loosening
+      var pattern = a.split(/\s+/).join("\\s+");
+      s = s.replace(new RegExp(pattern, "gi"), function (hit) {
+        return hit.replace(/\s+/g, "_");   // a word char, so and cannot match across it
+      });
+    });
+    return s.split(/\s*(?:&|,|\+|;|\band\b|\bwith\b|\n)\s*/i)
+      .map(function (x) { return x.replace(/_/g, " ").trim(); })
+      .filter(function (x) { return x.length > 1; });
   }
 
 
