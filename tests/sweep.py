@@ -339,6 +339,19 @@ with sync_playwright() as pw:
           "%d of %d pantry items" % (len(after.get("pantry",[])), len(payload.get("pantry",[]))))
     check("restore: goal comes back", after.get("goal")==payload.get("goal"),
           "got %s" % json.dumps(after.get("goal")))
+    # The routine and its movements are the part a shared plan would be made of,
+    # so a backup that drops them is a backup that cannot carry one.
+    check("restore: the routine comes back",
+          [x["name"] for x in after.get("routine",{}).get("days",[])] ==
+          [x["name"] for x in payload.get("routine",{}).get("days",[])],
+          str([x["name"] for x in after.get("routine",{}).get("days",[])]))
+    check("restore: each day keeps its movements",
+          all(sorted(after.get("moves",{}).get(k,[])) == sorted(v)
+              for k, v in (payload.get("moves") or {}).items()),
+          "%d day lists" % len(payload.get("moves") or {}))
+    check("restore: retired names come back",
+          all(k in after.get("retired",{}) for k in (payload.get("retired") or {})),
+          str(after.get("retired")))
     check("restore: region comes back", after.get("region")==payload.get("region"),
           "got %s want %s" % (after.get("region"), payload.get("region")))
 

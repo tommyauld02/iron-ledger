@@ -183,6 +183,39 @@ Two lessons paid for the hard way:
   everything against an old build. The suites now read `iron-ledger.html`
   directly, so there is nothing to go stale.
 
+## If routines are ever shared
+
+The Coach tab exists so someone else can set a routine for the owner — a
+brother, a friend. Nothing ships for that yet, and the groundwork matters more
+than the feature.
+
+**What already holds.** A routine is `store.routine` (the days) plus
+`store.moves` (what is in each day). Both survive a backup and restore
+round-trip, and `sweep` now asserts it, so the thing a shared plan would be
+made of is already portable.
+
+**Do not build sharing on `mergeInto`.** Restore and import are different
+operations wearing similar clothes. `mergeInto` does
+`store.routine = incoming.routine` — a wholesale replace, which is right for
+your own backup landing on your own phone and wrong for anything else.
+
+**The trap is day ids.** `DEFAULT_ROUTINE` uses fixed ids — `back`, `push`,
+`legs` — so two people who never renamed their days have *the same ids for
+different days*. Feeding another person's routine through restore today is
+demonstrably rule 7 broken: a workout logged under your `back` renders under
+their name for `back`, `store.retired` stays empty, and nothing records what
+the day was called when you trained it. Verified, not theorised.
+
+So an import path must **remap incoming day ids to fresh ones** before
+anything touches the store, and must add days rather than replace them.
+`addSplit()` already mints `"d" + uid()`, which is collision-safe; only the
+three seeded defaults are not, and they cannot be renamed retroactively
+without orphaning the history of everyone already using them.
+
+**Movements collide the same way.** `mergeInto` merges `incoming.moves[id]`
+into `store.moves[id]` by id, so their bench press lands in your back day if
+the ids happen to match. Remapping ids first fixes this too.
+
 ## Known and deliberate
 
 - The goal bar's centre divider does not line up with the T chart's stem. The
