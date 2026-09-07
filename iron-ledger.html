@@ -774,6 +774,21 @@
     flex-direction: column;
     gap: 8px;
   }
+  /* Naming a day or a movement, in place. Wraps on a narrow phone rather than
+     squeezing the field down to nothing. */
+  .rt-inline {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+  }
+  .rt-inline .text { min-width: 0; }
+  .rt-inline .btn { padding: 0 14px; }
+  @media (max-width: 359px) {
+    .rt-inline { grid-template-columns: 1fr auto; }
+    .rt-inline .text { grid-column: 1 / -1; }
+  }
+
   .rt-chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
   .rt-chip {
     display: inline-flex;
@@ -811,7 +826,12 @@
     background: var(--surface);
   }
   .rt-actions button:hover { color: var(--accent); border-color: var(--accent); }
-  .rt-actions button.danger:hover { color: var(--danger); border-color: var(--danger); }
+  /* Distinct at rest, not only on hover. There is no hover on a phone, and
+     these actions now sit at the top of the day where the thumb lands first —
+     a delete that looks exactly like a rename is a mis-tap waiting to happen,
+     even with undo behind it. */
+  .rt-actions button.danger { color: var(--danger); }
+  .rt-actions button.danger:hover { border-color: var(--danger); }
 
   .lib-group { border-top: 1px solid var(--rule); padding-top: 10px; }
   .lib-group h4 {
@@ -1799,6 +1819,11 @@
   // should show you your splits, not the half-finished act of renaming one.
   var splitEdit = false;
   var splitAdding = false;
+  // Coach inline editing, same idea: which day is being renamed, which is
+  // taking a custom movement, and whether a new day is being named.
+  var coachRename = null;
+  var coachNewMove = null;
+  var coachAdding = false;
   var pantryShot = null;
   var canSendImages = false;
   var imageTypes = "image/*";
@@ -3501,15 +3526,34 @@
           '<span class="tag">' + c.tag + '</span>' +
         '</button>' +
         (isOpen
+          // What you can do to the day sits at the top of the day, not buried
+          // under its movement list — you should not have to scroll past a
+          // library to rename the thing you just opened.
           ? '<div class="rt-moves">' +
-              (chips
-                ? '<div class="rt-chiprow">' + chips + '</div>'
-                : '<p class="est-note">No movements yet — add some from the library below.</p>') +
               '<div class="rt-actions">' +
                 '<button data-renameday="' + esc(c.id) + '">Rename day</button>' +
                 '<button data-newmove="' + esc(c.id) + '">Add your own</button>' +
                 (days.length > 1 ? '<button class="danger" data-rmday="' + esc(c.id) + '">Delete day</button>' : '') +
               '</div>' +
+              (coachRename === c.id
+                ? '<div class="rt-inline">' +
+                    '<input class="text" id="rtRename" value="' + esc(c.name) + '" ' +
+                      'aria-label="New name for ' + esc(c.name) + '">' +
+                    '<button class="btn" id="rtRenameSave">Save</button>' +
+                    '<button class="btn ghost" id="rtRenameCancel">Cancel</button>' +
+                  '</div>'
+                : '') +
+              (coachNewMove === c.id
+                ? '<div class="rt-inline">' +
+                    '<input class="text" id="rtNewMove" placeholder="Name the movement" ' +
+                      'aria-label="Name the movement">' +
+                    '<button class="btn" id="rtNewMoveSave">Add</button>' +
+                    '<button class="btn ghost" id="rtNewMoveCancel">Cancel</button>' +
+                  '</div>'
+                : '') +
+              (chips
+                ? '<div class="rt-chiprow">' + chips + '</div>'
+                : '<p class="est-note">No movements yet — add your own above, or take one from the library below.</p>') +
               lib +
             '</div>'
           : '') +
@@ -3526,6 +3570,15 @@
       '</section>' +
 
       '<section style="display:flex;flex-direction:column;gap:12px">' + dayCards + '</section>' +
+
+      (coachAdding
+        ? '<section class="rt-inline">' +
+            '<input class="text" id="rtNewDay" placeholder="Push, Legs, Walk, Yoga…" ' +
+              'aria-label="Name the new day">' +
+            '<button class="btn" id="rtNewDaySave">Add</button>' +
+            '<button class="btn ghost" id="rtNewDayCancel">Cancel</button>' +
+          '</section>'
+        : '') +
 
       '<section class="rt-actions">' +
         '<button id="addDay">+ Add a training day</button>' +
@@ -3571,23 +3624,66 @@
       });
     });
 
+    // Naming happens in a field, not a system dialog. window.prompt is a poor
+    // thing to meet on a phone, and it is the one modal this app had left.
     view.querySelectorAll("[data-newmove]").forEach(function (b) {
       b.addEventListener("click", function () {
-        var name = window.prompt("Name the movement");
-        if (!name || !name.trim()) return;
-        var list = store.moves[b.dataset.newmove] || (store.moves[b.dataset.newmove] = []);
-        if (list.indexOf(name.trim()) === -1) list.push(name.trim());
-        save(); render();
+        coachNewMove = (coachNewMove === b.dataset.newmove) ? null : b.dataset.newmove;
+        coachRename = null;
+        render();
+        var f = document.getElementById("rtNewMove");
+        if (f) f.focus();
       });
     });
 
     view.querySelectorAll("[data-renameday]").forEach(function (b) {
       b.addEventListener("click", function () {
-        var dy = store.routine.days.filter(function (x) { return x.id === b.dataset.renameday; })[0];
-        if (!dy) return;
-        var name = window.prompt("What do you call this day?", dy.name);
-        if (renameSplit(dy.id, name)) render();
+        coachRename = (coachRename === b.dataset.renameday) ? null : b.dataset.renameday;
+        coachNewMove = null;
+        render();
+        var f = document.getElementById("rtRename");
+        if (f) { f.focus(); f.select(); }
       });
+    });
+
+    function wire(inputId, saveId, cancelId, commit) {
+      var input = document.getElementById(inputId);
+      var saveBtn = document.getElementById(saveId);
+      var cancelBtn = document.getElementById(cancelId);
+      if (!input) return;
+      function go() { commit(input.value, input); }
+      if (saveBtn) saveBtn.addEventListener("click", go);
+      input.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
+      if (cancelBtn) {
+        cancelBtn.addEventListener("click", function () {
+          coachRename = null; coachNewMove = null; coachAdding = false; render();
+        });
+      }
+    }
+
+    wire("rtRename", "rtRenameSave", "rtRenameCancel", function (v, input) {
+      if (!renameSplit(coachRename, v)) { input.focus(); return; }
+      coachRename = null;
+      render();
+    });
+
+    wire("rtNewMove", "rtNewMoveSave", "rtNewMoveCancel", function (v, input) {
+      var name = (v || "").trim();
+      var id = coachNewMove;
+      if (!name || !id) { input.focus(); return; }
+      var list = store.moves[id] || (store.moves[id] = []);
+      if (list.indexOf(name) === -1) list.push(name);
+      coachNewMove = null;
+      save(); render();
+    });
+
+    wire("rtNewDay", "rtNewDaySave", "rtNewDayCancel", function (v, input) {
+      var id = addSplit(v);
+      if (!id) { input.focus(); return; }
+      coachAdding = false;
+      coachOpen = id;          // open it, ready to be stocked
+      activeCat = id;
+      render();
     });
 
     view.querySelectorAll("[data-rmday]").forEach(function (b) {
@@ -3595,11 +3691,11 @@
     });
 
     document.getElementById("addDay").addEventListener("click", function () {
-      var name = window.prompt("What do you call this day?", "Day " + (store.routine.days.length + 1));
-      var id = addSplit(name);
-      if (!id) return;
-      coachOpen = id;
+      coachAdding = !coachAdding;
+      coachRename = null; coachNewMove = null;
       render();
+      var f = document.getElementById("rtNewDay");
+      if (f) f.focus();
     });
 
     document.getElementById("resetRoutine").addEventListener("click", function () {

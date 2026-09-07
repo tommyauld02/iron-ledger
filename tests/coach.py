@@ -18,11 +18,12 @@ with sync_playwright() as pw:
     ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True)
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    # prompt() answers, popped in order
-    answers=[]
+    # Naming happens in fields, not system dialogs. Anything that opens one is
+    # a regression, so record it and assert none fired.
+    dialogs=[]
     def on_dialog(dlg):
-        p.wait_for_timeout(1)
-        dlg.accept(answers.pop(0) if answers else "")
+        dialogs.append(dlg.type)
+        dlg.dismiss()
     p.on("dialog", on_dialog)
 
     p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
@@ -65,15 +66,19 @@ with sync_playwright() as pw:
     p.click("#undoBtn"); p.wait_for_timeout(300)
     check("coach: undo restores movement", p.locator(".rt-chip").count()==n)
 
+    # ---------- what you can do to a day sits at the top of it ----------
+    order=p.evaluate("()=>[...document.querySelector('.rt-moves').children].map(e=>e.className||e.tagName)")
+    check("coach: day actions come first", order and order[0]=="rt-actions", str(order[:3]))
+
     # ---------- add your own movement ----------
-    answers.append("Meadows Row")
     p.locator("[data-newmove]").first.click(); p.wait_for_timeout(400)
+    p.fill("#rtNewMove","Meadows Row"); p.click("#rtNewMoveSave"); p.wait_for_timeout(400)
     check("coach: add your own movement",
           "Meadows Row" in p.locator(".rt-moves").first.inner_text())
 
     # ---------- rename a day, history must follow ----------
-    answers.append("Pull Day")
     p.locator("[data-renameday]").first.click(); p.wait_for_timeout(400)
+    p.fill("#rtRename","Pull Day"); p.click("#rtRenameSave"); p.wait_for_timeout(400)
     check("coach: rename day", "Pull Day" in p.locator(".rt-day").first.inner_text())
     p.click('[data-tab="gym"]'); p.wait_for_timeout(400)
     check("gym: renamed day shows on gym chips", "Pull Day" in p.locator("#view").inner_text())
@@ -87,8 +92,8 @@ with sync_playwright() as pw:
 
     # ---------- add a day ----------
     p.click('[data-tab="coach"]'); p.wait_for_timeout(300)
-    answers.append("Arms")
     p.click("#addDay"); p.wait_for_timeout(400)
+    p.fill("#rtNewDay","Arms"); p.click("#rtNewDaySave"); p.wait_for_timeout(500)
     check("coach: add a training day", p.locator(".rt-day").count()==4,
           str(p.locator(".rt-day").count())+" days")
     check("coach: new day opens for editing", p.locator(".rt-moves").count()==1)
@@ -129,7 +134,6 @@ with sync_playwright() as pw:
 
     # ---------- last day cannot be deleted ----------
     p.click('[data-tab="coach"]'); p.wait_for_timeout(300)
-    answers+= [""]
     p.click("#resetRoutine"); p.wait_for_timeout(400)
     check("coach: start over restores 3 days", p.locator(".rt-day").count()==3)
     check("coach: start over offers undo", p.locator("#undobar").is_visible())
@@ -155,6 +159,7 @@ with sync_playwright() as pw:
           bad.push((b.className||b.id||'button')+' '+Math.round(r.width)+'x'+Math.round(r.height));
       }); return bad;}""")
     check("coach: every tappable is 44px tall", len(small)==0, "; ".join(small))
+    check("coach: no system dialogs anywhere", not dialogs, str(dialogs))
 
     print()
     for s,n,dt in res: print("%-6s %-52s %s"%(s,n,dt))
