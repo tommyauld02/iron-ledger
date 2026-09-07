@@ -36,8 +36,10 @@ with sync_playwright() as pw:
     ctx=b.new_context(viewport={"width":393,"height":900}, has_touch=True, is_mobile=True)
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    ans=[]
-    p.on("dialog", lambda dl: dl.accept(ans.pop(0) if ans else ""))
+    # Naming happens in a field now, not a system dialog. Anything that opens
+    # one is a regression, so record it and assert none fired.
+    dialogs=[]
+    p.on("dialog", lambda dl: (dialogs.append(dl.type), dl.dismiss()))
     p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
 
     def reset():
@@ -135,8 +137,13 @@ with sync_playwright() as pw:
     # ---- naming ----
     reset(); hold_drag(p, "r1", "r2")
     open_meal(p)
-    ans.append("Dinner")
     p.click("[data-renamemeal]"); p.wait_for_timeout(400)
+    check("naming a meal opens a field, not a dialog",
+          p.evaluate("()=>!!document.getElementById('mealName')"))
+    mb=p.locator("#mealName").bounding_box()
+    check("the name field is a proper target", mb and mb["height"]>=44,
+          mb and "%dx%d"%(mb["width"],mb["height"]))
+    p.fill("#mealName","Dinner"); p.click("#mealNameSave"); p.wait_for_timeout(450)
     check("meal can be named", p.text_content(".meal-open .mn")=="Dinner",
           p.text_content(".meal-open .mn"))
 
@@ -189,6 +196,7 @@ with sync_playwright() as pw:
     for st,n,dt in res: print("%-6s %-52s %s"%(st,n,dt))
     print("\n%d passed, %d FAILED"%(sum(1 for r in res if r[0]=="PASS"),
                                     sum(1 for r in res if r[0]=="FAIL")))
+    check("no system dialogs anywhere", not dialogs, str(dialogs))
     print("pageerrors:", errs or "none")
     b.close()
 

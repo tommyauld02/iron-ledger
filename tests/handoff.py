@@ -506,6 +506,60 @@ with sync_playwright() as pw:
     check("the undo bar does not cover the tab bar either", p.evaluate(TABS_REACHABLE))
     ctx.close()
 
+    # ---- 8. every editor that hides behind a press ------------------------
+    # Third time a control that only exists after a tap has broken a rule with
+    # nothing watching: the finished-day card's contrast, the split editor's
+    # fit, and three naming fields that shipped 23px tall. Anything you have to
+    # press to reveal is opened and measured here.
+    MEAL = json.loads(json.dumps(STORE))
+    MEAL["days"][Ts]["food"] = [{"id": "m1", "note": "", "items": [
+        {"id": "a", "cal": 330, "pro": 52, "note": "Chicken breast"},
+        {"id": "b", "cal": 215, "pro": 4, "note": "White rice"}]}]
+    ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
+    p = ctx.new_page(); errs3 = []
+    p.on("pageerror", lambda e: errs3.append(str(e)))
+    p.goto(BASE); p.wait_for_timeout(500)
+    p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", MEAL)
+
+    EDITORS = [
+        ("meal name",      ['.tabs button[data-tab="macros"]', "[data-openmeal]", "[data-renamemeal]"], "#mealName"),
+        ("rename a day",   ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-renameday]"], "#rtRename"),
+        ("add a movement", ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-newmove]"], "#rtNewMove"),
+        ("add a day",      ['.tabs button[data-tab="coach"]', "#addDay"], "#rtNewDay"),
+        ("add a split",    ['.tabs button[data-tab="gym"]', "#addSplitChip"], "#newSplitName"),
+    ]
+    unopened, small, zoomy = [], [], []
+    for name, steps, field in EDITORS:
+        p.reload(); p.wait_for_timeout(900)
+        try:
+            p.click("text=Got it", timeout=1500)
+        except Exception:
+            pass
+        try:
+            for sel in steps:
+                p.click(sel, timeout=5000); p.wait_for_timeout(400)
+            box = p.locator(field).bounding_box()
+        except Exception as e:
+            unopened.append("%s (%s)" % (name, str(e).split(chr(10))[0][:40])); continue
+        if not box or box["height"] < 44:
+            small.append("%s %s" % (name, box and "%dx%d" % (box["width"], box["height"])))
+        fs = p.eval_on_selector(field, "e => parseFloat(getComputedStyle(e).fontSize)")
+        if fs < 16: zoomy.append("%s %gpx" % (name, fs))   # rule 4: iOS zooms under 16px
+        for x in p.evaluate("""(f) => {
+            const el = document.querySelector(f); if (!el) return [];
+            const out = [];
+            el.parentElement.querySelectorAll('button').forEach(b => {
+              const r = b.getBoundingClientRect();
+              if (r.height && r.height < 44) out.push((b.id || b.textContent.trim()) + ' ' + Math.round(r.height));
+            });
+            return out;}""", field): small.append("%s / %s" % (name, x))
+
+    check("every editor behind a press opens", not unopened, "; ".join(unopened[:3]))
+    check("their fields and buttons clear 44px", not small, "; ".join(small[:4]))
+    check("and none of them trigger the iOS zoom", not zoomy, "; ".join(zoomy[:4]))
+    check("no page errors opening them", not errs3, str(errs3[:2]))
+    ctx.close()
+
     b.close()
 
 srv.shutdown()

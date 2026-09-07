@@ -796,7 +796,11 @@
     gap: 8px;
     align-items: center;
   }
-  .rt-inline .text { min-width: 0; }
+  /* align-items:center stops these stretching to the row, so without a stated
+     height they came out 23px — rule 5 broken on three controls that shipped,
+     because a field that only exists after a press is a field nothing measures.
+     16px font as well: anything smaller and iOS zooms the page and stays there. */
+  .rt-inline .text { min-width: 0; height: 46px; padding: 0 10px; font-size: 16px; }
   .rt-inline .btn { padding: 0 14px; }
   @media (max-width: 359px) {
     .rt-inline { grid-template-columns: 1fr auto; }
@@ -1786,7 +1790,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.28";
+  var BUILD = "2026-09-07.29";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -1880,6 +1884,9 @@
   var coachRename = null;
   var coachNewMove = null;
   var coachAdding = false;
+  // Which meal is being renamed. Transient like the coach editors: reopening
+  // the app should show your meals, not a half-finished rename.
+  var mealRenaming = null;
   var pantryShot = null;
   var canSendImages = false;
   var imageTypes = "image/*";
@@ -3214,6 +3221,14 @@
             '<button data-renamemeal="' + esc(f.id) + '">Name this meal</button>' +
             '<button data-split="' + esc(f.id) + '">Split apart</button>' +
           '</div>' +
+          (mealRenaming === f.id
+            ? '<div class="rt-inline" style="margin-top:9px">' +
+                '<input class="text" id="mealName" value="' + esc(rowNote(f)) + '" ' +
+                  'aria-label="Name this meal">' +
+                '<button class="btn" id="mealNameSave">Save</button>' +
+                '<button class="btn ghost" id="mealNameCancel">Cancel</button>' +
+              '</div>'
+            : '') +
         '</div>';
       }
 
@@ -3493,6 +3508,17 @@
     var mealToggle = document.getElementById("estMeal");
     if (mealToggle) {
       mealToggle.addEventListener("click", function () { estAsMeal = !estAsMeal; render(); });
+    }
+
+    var mealNameEl = document.getElementById("mealName");
+    if (mealNameEl) {
+      document.getElementById("mealNameSave").addEventListener("click", commitMealName);
+      document.getElementById("mealNameCancel").addEventListener("click", function () {
+        mealRenaming = null; render();
+      });
+      mealNameEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") commitMealName();
+      });
     }
 
     var commit = document.getElementById("commitEst");
@@ -4703,16 +4729,31 @@
     }
   }
 
+  // Opens a field under the meal. This was the last window.prompt in the app:
+  // a system dialog is a poor thing to meet mid-meal on a phone, and it sat
+  // oddly beside rule 6's "nobody wants to dismiss a modal mid-set".
   function renameMeal(id) {
-    var key = ymd(cursor);
-    var d = day(key);
-    var at = locate(d, id);
+    var at = locate(day(ymd(cursor)), id);
     if (!at || !isMeal(at.row)) return;
-    var name = window.prompt("Name this meal", rowNote(at.row));
-    if (name === null) return;
-    name = name.trim();
-    at.row.note = name || "";
-    touch(key); save(); render();
+    mealRenaming = (mealRenaming === id) ? null : id;
+    render();
+    var f = document.getElementById("mealName");
+    if (f) { f.focus(); f.select(); }
+  }
+
+  function commitMealName() {
+    var el = document.getElementById("mealName");
+    if (!el || !mealRenaming) return;
+    var key = ymd(cursor);
+    var at = locate(day(key), mealRenaming);
+    if (at && isMeal(at.row)) {
+      // An empty name is allowed — the meal falls back to its auto name,
+      // which is what it had before anyone typed anything.
+      at.row.note = el.value.trim();
+      touch(key); save();
+    }
+    mealRenaming = null;
+    render();
   }
 
   function findAction(target) {

@@ -5,7 +5,7 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 20 suites, ~310 checks, 12
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~320 checks, 13
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -50,7 +50,7 @@ manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              20 Playwright suites
+tests/              21 Playwright suites
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -235,13 +235,29 @@ is fixed, and it is worth keeping straight:
 
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
-  `handoff`, `foods`, `label`.
+  `handoff`, `foods`, `label`, `hittest`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s
   standing "1 need a look" is the label photo button, which opens a native
   picker and so changes no DOM. It is alive; verified with the `filechooser`
   event.
+
+`hittest` came from the cowork project and asks what the size audit cannot:
+when you tap the middle of a control, does the tap reach it, or is something
+on top? It scrolls in viewport-sized steps because `elementFromPoint` only
+answers inside the viewport, and it ignores a corner clipped by an ordinary
+neighbour while flagging one taken by something floating over the layout. It
+was print-only as it arrived and now exits non-zero, because a control a tap
+cannot reach is a dead button by another name.
+
+**A control that only exists after a press is the blind spot this app keeps
+falling into.** Three times now: the finished-day card's contrast, the split
+editor's fit, and three naming fields that shipped 23px tall because
+`.rt-inline` centres its children and they never stretched. Nothing that walks
+the tabs as it finds them will ever paint these. `handoff` now opens every one
+of them — meal name, rename a day, add a movement, add a day, add a split —
+and measures it for 44px and the 16px iOS-zoom rule.
 
 When you add a suite, end it the way the gates do. A suite that reports FAIL
 and exits 0 is a report wearing a test's clothes, and rule 1 quietly stops
