@@ -68,6 +68,17 @@ opened inside Claude, never a dependency. Backup/restore is copyable JSON,
 and the Backup panel shows the build number and the last captured JS error —
 that pair has turned an unreproducible bug into a five-minute fix twice.
 
+**On a phone there is no second copy.** `db` only exists inside the Claude
+viewer, so on the Pages build `queueSync()` returns immediately and
+localStorage is the only place the log lives. Nothing else notices if it goes.
+The app therefore records `store.lastBackupAt` whenever a copy actually
+reaches the clipboard, and after 14 days — or if no copy has ever been taken —
+the header Backup button carries a dot and the panel says how long it has
+been. The dot uses the accent, not `--miss`: nothing is broken, there is just
+something worth doing. `lastBackupAt` is deliberately **not** merged on
+restore, because a phone you have just restored onto has not taken a copy of
+its own and should still be asked for one.
+
 **Offline answers first, Claude second.** The built-in ~115-food table and the
 user's pantry resolve most entries with no network and no account. `sample` is
 the fallback for what they can't handle. This has broken twice in the same way:

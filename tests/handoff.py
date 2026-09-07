@@ -350,6 +350,81 @@ with sync_playwright() as pw:
         check("split editor fits on %s" % name, not over, "; ".join(over[:4]))
         ctx.close()
 
+    # ---- 6. the backup safety net ----------------------------------------
+    # On a phone `db` is null, so queueSync() never runs and localStorage is
+    # the only copy of everything logged. The app has to know when a copy was
+    # last taken and say so, or the first anyone hears about it is after the
+    # phone is gone.
+    DAY = 86400000
+    now = int(datetime.datetime.now().timestamp() * 1000)
+
+    def seeded(last=None, with_data=True):
+        s = json.loads(json.dumps(STORE))
+        s["days"][Ts]["food"] = STORE["days"][Ts]["food"] if with_data else []
+        s["days"][Ts]["lifts"] = []
+        s["days"].pop(Y, None) if not with_data else None
+        if last is not None:
+            s["lastBackupAt"] = last
+        return s
+
+    for label, seed, want in [
+        ("nothing logged yet",   seeded(None, False), False),
+        ("never taken a copy",   seeded(None, True),  True),
+        ("copied today",         seeded(now),         False),
+        ("copied 13 days ago",   seeded(now - 13 * DAY), False),
+        ("copied 14 days ago",   seeded(now - 14 * DAY), True),
+    ]:
+        ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
+        p = ctx.new_page()
+        p.goto(BASE); p.wait_for_timeout(400)
+        p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", seed)
+        p.reload(); p.wait_for_timeout(800)
+        try:
+            p.click("text=Got it", timeout=2000)
+        except Exception:
+            pass
+        due = p.evaluate("() => !document.getElementById('backupDot').hidden")
+        check("backup nudge — %s" % label, due == want,
+              "showing=%s wanted=%s" % (due, want))
+        ctx.close()
+
+    # taking a copy has to actually clear it, and has to survive a reload
+    ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True,
+                        permissions=["clipboard-read", "clipboard-write"])
+    p = ctx.new_page()
+    p.goto(BASE); p.wait_for_timeout(400)
+    p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", seeded(None, True))
+    p.reload(); p.wait_for_timeout(800)
+    try:
+        p.click("text=Got it", timeout=2000)
+    except Exception:
+        pass
+    check("backup nudge shows before a copy is taken",
+          p.evaluate("() => !document.getElementById('backupDot').hidden"))
+    p.click("#backupBtn"); p.wait_for_timeout(400)
+    p.click("#copyBtn"); p.wait_for_timeout(800)
+    clip = p.evaluate("() => navigator.clipboard.readText()")
+    check("copy puts a real backup on the clipboard",
+          clip.startswith("{") and '"days"' in clip, clip[:40])
+    check("copying clears the nudge",
+          not p.evaluate("() => !document.getElementById('backupDot').hidden"))
+    p.click("#closeSheet"); p.reload(); p.wait_for_timeout(900)
+    check("and it stays cleared after a reload",
+          not p.evaluate("() => !document.getElementById('backupDot').hidden"))
+
+    # a restored phone has not taken a copy of its own, so it must still nudge
+    p.evaluate("() => localStorage.clear()")
+    p.reload(); p.wait_for_timeout(900)
+    try:
+        p.click("text=Got it", timeout=2000)
+    except Exception:
+        pass
+    p.click("#backupBtn"); p.wait_for_timeout(400)
+    p.fill("#backupText", clip); p.click("#restoreBtn"); p.wait_for_timeout(900)
+    check("a restored phone is still asked for its own copy",
+          p.evaluate("() => !document.getElementById('backupDot').hidden"))
+    ctx.close()
+
     b.close()
 
 srv.shutdown()

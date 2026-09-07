@@ -182,6 +182,20 @@
     border-radius: 2px;
   }
   .brand .backup-btn:hover { color: var(--accent); border-color: var(--accent); }
+  /* Shown when no copy has been taken in a while. Accent, not --miss: nothing
+     is broken, there is just something here worth doing. The button's
+     aria-label carries the same fact in words — the dot alone says nothing to
+     a screen reader. */
+  .brand .backup-btn .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    margin-left: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    vertical-align: middle;
+  }
+  .brand .backup-btn[data-due="1"] { color: var(--accent); border-color: var(--accent); }
 
   .datenav {
     display: grid;
@@ -1682,7 +1696,7 @@
   <header class="topbar">
     <div class="brand">
       <h1>The Iron Ledger <span id="buildTag"></span></h1>
-      <button class="backup-btn" id="backupBtn">Backup</button>
+      <button class="backup-btn" id="backupBtn">Backup<span class="dot" id="backupDot" hidden></span></button>
     </div>
     <div class="datenav">
       <button class="arrow" id="prevDay" aria-label="Previous day">‹</button>
@@ -1730,7 +1744,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-06.21";
+  var BUILD = "2026-09-07.22";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2679,6 +2693,8 @@
     var key = ymd(cursor);
     var d = day(key);
 
+    refreshBackupFlag();   // the header button lives outside #view, so it is
+                           // never redrawn by the render below
     document.getElementById("dow").textContent =
       cursor.toLocaleDateString("en-US", { weekday: "long" });
     document.getElementById("dateFull").textContent =
@@ -4472,9 +4488,66 @@
   var sheet = document.getElementById("sheet");
   var backupText = document.getElementById("backupText");
 
+  // ---------- backup safety net ----------
+  // On a phone there is no mirror: `db` only exists inside the Claude viewer,
+  // so queueSync() returns immediately and localStorage is the only copy of
+  // everything the owner has logged. Nothing else will notice if it is lost,
+  // so the app has to keep track of when a copy was last taken and say so.
+  var BACKUP_DUE_DAYS = 14;
+
+  function daysSinceBackup() {
+    if (!store.lastBackupAt) return null;              // never taken one
+    return Math.floor((Date.now() - store.lastBackupAt) / 86400000);
+  }
+
+  function hasSomethingToLose() {
+    return Object.keys(store.days || {}).some(function (k) {
+      var d = store.days[k];
+      return (d.food && d.food.length) || (d.lifts && d.lifts.length);
+    });
+  }
+
+  function backupDue() {
+    if (!hasSomethingToLose()) return false;           // nothing to nag about yet
+    var n = daysSinceBackup();
+    return n === null || n >= BACKUP_DUE_DAYS;
+  }
+
+  function refreshBackupFlag() {
+    var btn = document.getElementById("backupBtn");
+    var dot = document.getElementById("backupDot");
+    if (!btn || !dot) return;
+    var due = backupDue();
+    dot.hidden = !due;
+    btn.setAttribute("data-due", due ? "1" : "0");
+    var n = daysSinceBackup();
+    btn.setAttribute("aria-label", due
+      ? (n === null ? "Backup — you have never taken a copy"
+                    : "Backup — no copy taken in " + n + " days")
+      : "Backup");
+  }
+
+  function backupNote() {
+    var n = daysSinceBackup();
+    if (!hasSomethingToLose())
+      return "Your log lives on this device. Copy this text somewhere safe now and " +
+             "then — paste it back here on a new phone to restore everything.";
+    if (n === null)
+      return "This is the only copy of your log. Nothing is stored anywhere else, " +
+             "so if this phone is lost or its data cleared, it is gone. Copy this " +
+             "text somewhere safe — a note, an email to yourself.";
+    if (n >= BACKUP_DUE_DAYS)
+      return "Last copy taken " + n + " days ago, so up to " + n + " days of logging " +
+             "exists only on this phone. Copy this text somewhere safe.";
+    return "Last copy taken " + (n === 0 ? "today" : n === 1 ? "yesterday" : n + " days ago") +
+           ". Paste it back here on a new phone to restore everything.";
+  }
+
   document.getElementById("backupBtn").addEventListener("click", function () {
     backupText.value = JSON.stringify(store);
     sheet.hidden = false;
+    var note = document.getElementById("sheetNote");
+    if (note) note.textContent = backupNote();
     var diag = document.getElementById("diag");
     if (diag) {
       diag.hidden = false;
@@ -4489,8 +4562,19 @@
     var btn = this;
     backupText.select();
     var done = function () { btn.textContent = "Copied"; setTimeout(function () { btn.textContent = "Copy"; }, 1600); };
+    // Only counted when the text is known to have reached the clipboard. On the
+    // fallback path the user still has to press copy themselves, and recording
+    // a backup that may never have happened is worse than nagging twice.
+    var counted = function () {
+      store.lastBackupAt = Date.now();
+      save();
+      refreshBackupFlag();
+      var note = document.getElementById("sheetNote");
+      if (note) note.textContent = backupNote();
+      done();
+    };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(backupText.value).then(done, function () { btn.textContent = "Press ⌘C / long-press"; });
+      navigator.clipboard.writeText(backupText.value).then(counted, function () { btn.textContent = "Press ⌘C / long-press"; });
     } else { done(); }
   });
 
