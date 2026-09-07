@@ -144,7 +144,12 @@ with sync_playwright() as pw:
         // as the control being covered — that read as a bug until it was chased.
         const inView = cx >= 0 && cy >= 0 && cx < innerWidth && cy < innerHeight;
         const hit = inView ? document.elementFromPoint(cx, cy) : null;
-        const reachable = !inView || (!!hit && (hit === el || el.contains(hit) || hit.contains(el)));
+        // Sticky chrome sitting over scrollable content is expected — you
+        // scroll and it is there. What must never happen is the chrome itself
+        // being unreachable, which is asserted separately further down.
+        const underDock = !!(hit && hit.closest && hit.closest('.dock'));
+        const reachable = !inView || underDock ||
+                          (!!hit && (hit === el || el.contains(hit) || hit.contains(el)));
         out.push({
           id: el.id || el.className || el.tagName,
           w: Math.round(r.width), h: Math.round(r.height),

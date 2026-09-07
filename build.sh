@@ -26,6 +26,9 @@ assert "<title>The Iron Ledger</title>" in body, "wrapper strip went wrong"
 # manifest, so the PWA block is dropped from both generated copies.
 body = re.sub(r'<!-- pwa:start.*?<!-- pwa:end -->\s*', '', body, flags=re.S)
 assert "pwa:start" not in body
+# no manifest link means ocrAvailable() is false, so the artifact never
+# reaches for vendor/ files that are not published with it
+assert 'rel="manifest"' not in body.replace("querySelector('link[rel=\"manifest\"]')", "")
 io.open("dist/iron-ledger.artifact.html", "w", encoding="utf-8").write(body)
 
 # the copy handed to testers: different title, build tag marked, no cloud mirror

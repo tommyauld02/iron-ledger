@@ -47,7 +47,7 @@ jobs:
           mkdir -p _site
           cp iron-ledger.html _site/index.html
           cp manifest.webmanifest sw.js _site/
-          cp -r fonts icons _site/
+          cp -r fonts icons vendor _site/
           echo "built from $(grep -o 'BUILD = \"[^\"]*\"' iron-ledger.html | head -1)"
       - uses: actions/upload-pages-artifact@v3
         with:

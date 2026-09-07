@@ -5,7 +5,7 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 19 suites, ~300 checks, 11
+**1. Nothing ships without `./verify.sh` passing.** 20 suites, ~310 checks, 12
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -43,13 +43,14 @@ no longer train"* rather than being relabelled as a day the user still trains.
 
 ```
 iron-ledger.html    the whole app — source of truth, open it in any browser
+vendor/tesseract/   the on-device label reader (see Reading a label below)
 fonts/              self-hosted Archivo + IBM Plex Mono (see Fonts below)
 icons/              generated — run tools/make-icons.py, never hand-draw
 manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              19 Playwright suites
+tests/              20 Playwright suites
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -110,6 +111,34 @@ a run of words inside the saved name, two words minimum so a bare "coffee"
 still means coffee, and it tries a singular form so "2 protein coffees" lands.
 `parseQty()` drops a leading article too: "half a protein coffee" used to leave
 "a protein coffee" behind, which matched nothing.
+
+**Reading a nutrition label.** Inside the Claude viewer the `sample` capability
+reads the panel and can name the product. On the hosted copy there is no
+capability, so the panel is read on the device with Tesseract from
+`vendor/tesseract/` — 14.4 MB, and **the app's one dependency**. It is loaded
+lazily: nothing is fetched until the button is pressed, so the offline core
+stays at 150 KB, and the service worker keeps it afterwards so later scans work
+offline. It is deliberately absent from the worker's precache list.
+
+The calorie figure is found by **how it is printed**, not by reading order. It
+is set far larger than anything else on a panel, and OCR splits it into
+separate digit-words and scatters them through the text — a plain text scan
+pulled *609* out of a blurred panel, which is exactly the confident wrong
+number rule 3 exists to stop. `readPanel()` takes the tallest numeric words
+sitting on one line and reads them left to right.
+
+Nothing it cannot read is guessed. A panel carries plenty of numbers larger
+than the calories — sodium in mg, carbs, every % daily value — so a "take the
+biggest number" fallback would log sodium. Blank fields go into the form and
+the person fills them, which is safe because the reader fills the *form*, never
+the ledger. **The product name is not on the panel** — that is front-of-pack
+branding — so it is always left empty.
+
+The vendor files are downloaded, not written: the wrapper and worker from
+tesseract.js 5.1.1, the SIMD LSTM core, and the standard English model. The
+small `tessdata_fast` model is a third of the size and was rejected — it missed
+protein on a blurred panel, and protein is half of what this app tracks. Only
+the SIMD core is shipped, which needs iOS 16.4 or newer.
 
 **Offline answers first, Claude second.** The built-in ~115-food table and the
 user's pantry resolve most entries with no network and no account. `sample` is
@@ -206,7 +235,7 @@ is fixed, and it is worth keeping straight:
 
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
-  `handoff`, `foods`.
+  `handoff`, `foods`, `label`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s

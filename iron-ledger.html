@@ -1782,7 +1782,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.26";
+  var BUILD = "2026-09-07.27";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4092,13 +4092,18 @@
     var photoBlock = "";
     if (pantryShot && pantryShot.status === "loading") {
       photoBlock = '<div class="working"><i></i>Reading the label…</div>';
-    } else if (canSendImages) {
+    } else if (canReadLabel()) {
+      // On the phone the reader is downloaded on first use, so say so rather
+      // than leaving someone watching a spinner wondering what is happening.
+      var onDevice = !canSendImages;
       photoBlock =
         '<button class="photo-btn" id="shotBtn">📷 Read a nutrition label</button>' +
         '<input type="file" id="shotFile" accept="' + esc(imageTypes) + '" capture="environment" hidden>' +
         (pantryShot && pantryShot.status === "error"
           ? '<p class="est-note" style="color:var(--miss)">' + esc(pantryShot.message) + '</p>'
-          : '<p class="est-note">Photograph the nutrition panel and the numbers come back filled in below. Check them against the package before saving — small print and glare both cost accuracy.</p>');
+          : '<p class="est-note">Photograph the nutrition panel and the numbers come back filled in below. Check them against the package before saving — small print and glare both cost accuracy.' +
+            (onDevice ? ' The reader downloads once on first use, then works offline. The product name is not on the panel, so give it one yourself.' : '') +
+            '</p>');
     } else {
       photoBlock = '<p class="est-note">Photo reading isn’t available in this window — type the three numbers off the package instead. Once saved they work everywhere, offline.</p>';
     }
@@ -4291,8 +4296,115 @@
     });
   }
 
+  // ---------- reading a nutrition panel without Claude ----------
+  // Inside the Claude viewer the sample capability reads the panel and can even
+  // give the product name. On the phone there is no capability, so the panel is
+  // read on the device with Tesseract, lazily: nothing here is fetched until
+  // the button is actually pressed, so the app's offline core stays 150 KB.
+  // Once fetched the service worker keeps it, and scanning works offline too.
+  var OCR_DIR = "vendor/tesseract/";
+  var ocrLib = null;
+
+  function ocrAvailable() {
+    // same gate as the service worker: vendor/ only exists on the hosted copy
+    return /^https?:$/.test(location.protocol) &&
+           !!document.querySelector('link[rel="manifest"]');
+  }
+  function canReadLabel() { return canSendImages || ocrAvailable(); }
+
+  function loadOcr() {
+    if (ocrLib) return Promise.resolve(ocrLib);
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement("script");
+      s.src = OCR_DIR + "tesseract.min.js";
+      s.onload = function () { ocrLib = window.Tesseract; ocrLib ? resolve(ocrLib) : reject(new Error("load")); };
+      s.onerror = function () { reject(new Error("offline")); };
+      document.head.appendChild(s);
+    });
+  }
+
+  // The calorie figure is the one thing on a panel printed far larger than
+  // everything else, so it is found by size and position rather than by
+  // reading order — OCR splits "190" into separate digit-words and puts them
+  // wherever it likes in the text. Everything else is read off its own line.
+  function readPanel(words, text) {
+    var out = { calories: 0, protein: 0, servingGrams: 0 };
+    var nums = words.filter(function (w) { return /^\d{1,4}$/.test(w.t.replace(/,/g, "")); });
+    if (nums.length) {
+      var tall = nums.reduce(function (a, b) { return b.h > a.h ? b : a; });
+      var band = nums.filter(function (w) {
+        return w.h >= tall.h * 0.75 && Math.abs(w.y - tall.y) <= tall.h * 0.6;
+      }).sort(function (a, b) { return a.x - b.x; });
+      var joined = Number(band.map(function (w) { return w.t; }).join(""));
+      if (joined >= 5 && joined <= 2000) out.calories = joined;
+    }
+    var t = String(text || "").replace(/\r/g, "");
+    var pm = t.match(/protein[^0-9]{0,14}(\d+(?:\.\d+)?)\s*g/i);
+    if (pm) out.protein = Number(pm[1]);
+    // "(60g)" comes back as "(609)" on a blurry panel often enough to allow it
+    var sm = t.match(/serving size[^\n]*?\(\s*(\d+(?:\.\d+)?)\s*[g9]\s*\)/i);
+    if (sm) out.servingGrams = Number(sm[1]);
+    return out;
+  }
+
+  function readLabelOnDevice(file) {
+    pantryShot = { status: "loading" };
+    render();
+    var worker = null;
+    loadOcr().then(function (T) {
+      return T.createWorker("eng", 1, {
+        workerPath: OCR_DIR + "worker.min.js",
+        corePath: OCR_DIR,
+        langPath: OCR_DIR
+      });
+    }).then(function (w) {
+      worker = w;
+      return w.recognize(file, {}, { blocks: true });
+    }).then(function (r) {
+      var words = [];
+      (r.data.blocks || []).forEach(function (bl) {
+        (bl.paragraphs || []).forEach(function (pa) {
+          (pa.lines || []).forEach(function (ln) {
+            (ln.words || []).forEach(function (wd) {
+              words.push({ t: wd.text, x: wd.bbox.x0, y: wd.bbox.y0,
+                           h: wd.bbox.y1 - wd.bbox.y0 });
+            });
+          });
+        });
+      });
+      var got = readPanel(words, r.data.text);
+      if (worker) worker.terminate();
+      if (!got.calories && !got.protein) {
+        pantryShot = { status: "error", message: "Couldn't read that panel. Try a straighter, closer shot in better light — or type the numbers in below." };
+      } else {
+        // Anything it could not read is left empty rather than guessed at. A
+        // panel is full of numbers bigger than the calorie count — sodium in
+        // mg, carbs, every % daily value — so a "take the largest" fallback
+        // would confidently log the wrong one.
+        pantryForm = {
+          name: "",
+          servingG: got.servingGrams > 0 ? String(got.servingGrams) : "1",
+          unit: got.servingGrams > 0 ? "g" : "bottle",
+          cal: got.calories ? String(got.calories) : "",
+          pro: got.protein ? String(got.protein) : ""
+        };
+        pantryShot = (got.calories && got.protein) ? null
+          : { status: "error", message: "Read what it could — fill in the blanks and give it a name before saving." };
+      }
+      render();
+    }).catch(function (e) {
+      if (worker) { try { worker.terminate(); } catch (x) {} }
+      pantryShot = { status: "error", message: (e && e.message === "offline")
+        ? "The label reader needs a connection the first time. Once it has loaded once it works offline."
+        : "Couldn't read that panel. Type the numbers in below." };
+      render();
+    });
+  }
+
   function readLabel(file) {
-    if (!sampleFn) return;
+    // Claude reads it better and can name the product, so prefer it when the
+    // app is running somewhere that has it.
+    if (!sampleFn || !canSendImages) return readLabelOnDevice(file);
     pantryShot = { status: "loading" };
     render();
 
