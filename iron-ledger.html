@@ -946,6 +946,10 @@
   .photo-btn {
     display: block;
     width: 100%;
+    /* Padding alone left this at 43px on Linux and 44px on Windows — font
+       metrics differ per platform, so rule 5 was one pixel from being broken
+       on a device nobody was measuring. Height is stated, not inferred. */
+    min-height: 44px;
     padding: 13px;
     border: 1px dashed var(--accent);
     border-radius: 2px;
@@ -1782,7 +1786,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.27";
+  var BUILD = "2026-09-07.28";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4097,7 +4101,7 @@
       // than leaving someone watching a spinner wondering what is happening.
       var onDevice = !canSendImages;
       photoBlock =
-        '<button class="photo-btn" id="shotBtn">📷 Read a nutrition label</button>' +
+        '<button class="photo-btn" id="shotBtn">📷 Read this label</button>' +
         '<input type="file" id="shotFile" accept="' + esc(imageTypes) + '" capture="environment" hidden>' +
         (pantryShot && pantryShot.status === "error"
           ? '<p class="est-note" style="color:var(--miss)">' + esc(pantryShot.message) + '</p>'
