@@ -1782,7 +1782,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.24";
+  var BUILD = "2026-09-07.26";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2181,7 +2181,7 @@
     { n: "Flour tortilla", k: 306, d: 45, p: 8, a: ["tortilla", "flour tortilla", "wrap"], u: { each: 45 } },
     { n: "Potato, baked", k: 93, d: 173, p: 2.5, a: ["potato", "potatoes", "baked potato"], u: { each: 173, cup: 150 } },
     { n: "Sweet potato, baked", k: 90, d: 151, p: 2, a: ["sweet potato", "sweet potatoes", "yam"], u: { each: 151, cup: 200 } },
-    { n: "French fries", k: 312, d: 117, p: 3.4, a: ["fries", "french fries", "chips"], u: { serving: 117 } },
+    { n: "French fries", k: 312, d: 117, p: 3.4, a: ["fries", "french fries", "chips"], u: { serving: 117, each: 117 } },
     { n: "Quinoa, cooked", k: 120, d: 185, p: 4.4, a: ["quinoa"], u: { cup: 185 } },
     { n: "Couscous, cooked", k: 112, d: 157, p: 3.8, a: ["couscous"], u: { cup: 157 } },
     { n: "Rice cake", k: 387, d: 9, p: 8, a: ["rice cake", "rice cakes"], u: { each: 9 } },
@@ -2323,7 +2323,7 @@
     { n: "Provolone", k: 351, d: 28, p: 26, a: ["provolone"], u: { slice: 28 } },
     { n: "American cheese", k: 330, d: 21, p: 18, a: ["american cheese", "cheese slice"], u: { slice: 21 } },
     { n: "Heavy cream", k: 340, d: 30, p: 2.8, a: ["heavy cream", "double cream", "whipping cream"], u: { tbsp: 15, cup: 238 } },
-    { n: "Half and half", k: 130, d: 30, p: 3, a: ["half and half"], u: { tbsp: 15 } },
+    { n: "Half and half", k: 130, d: 30, p: 3, a: ["half and half"], u: { tbsp: 15, cup: 242 } },
     { n: "Sour cream", k: 198, d: 30, p: 2.4, a: ["sour cream"], u: { tbsp: 15, cup: 230 } },
     { n: "Whipped cream", k: 257, d: 15, p: 2, a: ["whipped cream"], u: {} },
     { n: "Chocolate milk", k: 83, d: 240, p: 3.2, a: ["chocolate milk"], u: { cup: 240 } },
@@ -2420,6 +2420,53 @@
     { n: "Egg roll", k: 222, d: 89, p: 7, a: ["egg roll", "spring roll"], u: { each: 89 } },
     { n: "Dumplings", k: 210, d: 100, p: 8, a: ["dumpling", "dumplings", "gyoza", "potstickers"], u: { each: 25 } },
     { n: "Gyro", k: 215, d: 300, p: 12, a: ["gyro", "shawarma", "doner"], u: {} },
+    // fast food — brand values are approximations and chains reformulate,
+    // so treat them as a close estimate rather than a label reading
+    { n: "Big Mac", k: 257.1, d: 219, p: 11.9, a: ["big mac", "big macs"], u: { each: 219 } },
+    { n: "Quarter Pounder with cheese", k: 257.4, d: 202, p: 14.9, a: ["quarter pounder"], u: { each: 202 } },
+    { n: "McDouble", k: 264.9, d: 151, p: 14.6, a: ["mcdouble", "mcdoubles"], u: { each: 151 } },
+    { n: "McDonalds cheeseburger", k: 263.2, d: 114, p: 13.2, a: ["mcdonalds cheeseburger", "mcd cheeseburger"], u: { each: 114 } },
+    { n: "McChicken", k: 279.7, d: 143, p: 9.8, a: ["mcchicken", "mcchickens"], u: { each: 143 } },
+    { n: "Chicken McNuggets", k: 259.3, d: 162, p: 14.2, a: ["mcnuggets", "chicken mcnuggets", "mcnugget"], u: { each: 16.2 } },
+    { n: "McDonalds fries, medium", k: 288.3, d: 111, p: 4.5, a: ["mcdonalds fries", "mcdonalds medium fries"], u: { each: 111 } },
+    { n: "McDonalds fries, large", k: 311.7, d: 154, p: 4.5, a: ["mcdonalds large fries"], u: { each: 154 } },
+    { n: "Egg McMuffin", k: 229.6, d: 135, p: 12.6, a: ["egg mcmuffin", "mcmuffin"], u: { each: 135 } },
+    { n: "Sausage McMuffin with egg", k: 294.5, d: 163, p: 12.3, a: ["sausage mcmuffin"], u: { each: 163 } },
+    { n: "McDonalds hash brown", k: 264.2, d: 53, p: 1.9, a: ["mcdonalds hash brown"], u: { each: 53 } },
+    { n: "McFlurry", k: 178.9, d: 285, p: 4.2, a: ["mcflurry"], u: { each: 285 } },
+    { n: "Whopper", k: 243.3, d: 270, p: 11.5, a: ["whopper", "whoppers"], u: { each: 270 } },
+    { n: "Whopper with cheese", k: 254.3, d: 291, p: 12, a: ["whopper with cheese", "whoppers with cheese"], u: { each: 291 } },
+    { n: "Daves Single", k: 270.6, d: 218, p: 13.3, a: ["daves single", "dave's single"], u: { each: 218 } },
+    { n: "Baconator", k: 319.9, d: 297, p: 19.2, a: ["baconator", "baconators"], u: { each: 297 } },
+    { n: "Wendys spicy chicken sandwich", k: 230, d: 213, p: 13.1, a: ["spicy chicken sandwich"], u: { each: 213 } },
+    { n: "Wendys chili", k: 105.7, d: 227, p: 7.5, a: ["wendys chili"], u: { each: 227 } },
+    { n: "Chick-fil-A chicken sandwich", k: 240.4, d: 183, p: 15.3, a: ["chick fil a sandwich", "chickfila sandwich", "chick-fil-a sandwich"], u: { each: 183 } },
+    { n: "Chick-fil-A spicy deluxe", k: 247.7, d: 222, p: 14.4, a: ["spicy deluxe"], u: { each: 222 } },
+    { n: "Chick-fil-A nuggets, 8 ct", k: 221.2, d: 113, p: 23.9, a: ["chick fil a nuggets", "chickfila nuggets"], u: { each: 14.1 } },
+    { n: "Waffle fries, medium", k: 336, d: 125, p: 4, a: ["waffle fries"], u: { each: 125, serving: 125 } },
+    { n: "Crunchy taco", k: 217.9, d: 78, p: 10.3, a: ["crunchy taco", "crunchy tacos", "taco bell taco"], u: { each: 78 } },
+    { n: "Burrito Supreme", k: 161.3, d: 248, p: 6.5, a: ["burrito supreme"], u: { each: 248 } },
+    { n: "Crunchwrap Supreme", k: 208.7, d: 254, p: 6.3, a: ["crunchwrap"], u: { each: 254 } },
+    { n: "Taco Bell chicken quesadilla", k: 277.2, d: 184, p: 14.1, a: ["taco bell quesadilla"], u: { each: 184 } },
+    { n: "Chipotle chicken burrito bowl", k: 133, d: 500, p: 9.4, a: ["chipotle chicken bowl", "chipotle burrito bowl"], u: { each: 500 } },
+    { n: "Chipotle chicken burrito", k: 152.3, d: 640, p: 8.3, a: ["chipotle burrito"], u: { each: 640 } },
+    { n: "Subway 6 inch turkey", k: 127.9, d: 219, p: 8.2, a: ["subway turkey", "6 inch turkey"], u: { each: 219 } },
+    { n: "Subway 6 inch Italian BMT", k: 176, d: 233, p: 8.2, a: ["italian bmt"], u: { each: 233 } },
+    { n: "Subway footlong steak and cheese", k: 162.8, d: 430, p: 9.8, a: ["footlong steak and cheese"], u: { each: 430 } },
+    { n: "KFC original chicken breast", k: 242.2, d: 161, p: 24.2, a: ["kfc breast", "original recipe breast"], u: { each: 161 } },
+    { n: "KFC chicken drumstick", k: 236.4, d: 55, p: 21.8, a: ["kfc drumstick"], u: { each: 55 } },
+    { n: "Pepperoni pizza slice", k: 265.5, d: 113, p: 11.5, a: ["pizza slice", "pepperoni pizza slice", "pepperoni slice"], u: { each: 113, slice: 113 } },
+    { n: "Orange chicken", k: 314.1, d: 156, p: 16, a: ["orange chicken", "panda express orange chicken"], u: { each: 156 } },
+    { n: "Panda Express chow mein", k: 189.6, d: 269, p: 4.8, a: ["panda chow mein", "panda express chow mein"], u: { each: 269 } },
+    { n: "Five Guys hamburger", k: 231, d: 303, p: 12.9, a: ["five guys burger", "five guys hamburger"], u: { each: 303 } },
+    { n: "In-N-Out Double-Double", k: 203, d: 330, p: 11.2, a: ["double double", "in n out double"], u: { each: 330 } },
+    { n: "Popeyes chicken sandwich", k: 291.7, d: 240, p: 11.7, a: ["popeyes sandwich"], u: { each: 240 } },
+    { n: "Starbucks grande latte", k: 40.4, d: 470, p: 2.8, a: ["grande latte", "starbucks latte"], u: { each: 470 } },
+    { n: "Caramel Frappuccino, grande", k: 80.3, d: 473, p: 1.1, a: ["frappuccino", "frappucino"], u: { each: 473 } },
+    { n: "Dunkin bacon egg and cheese", k: 291.9, d: 161, p: 12.4, a: ["bacon egg and cheese"], u: { each: 161 } },
+    { n: "Sausage egg and cheese biscuit", k: 325.2, d: 163, p: 11.7, a: ["sausage egg and cheese"], u: { each: 163 } },
+    { n: "Buffalo chicken wrap", k: 214.3, d: 280, p: 10.7, a: ["chicken wrap", "buffalo wrap"], u: { each: 280 } },
+    { n: "Philly cheesesteak", k: 220.6, d: 340, p: 11.8, a: ["cheesesteak", "philly cheesesteak"], u: { each: 340 } },
     // condiments + sweets + drinks
     { n: "Honey", k: 304, d: 21, p: 0.3, a: ["honey"], u: { tbsp: 21 } },
     { n: "Sugar", k: 387, d: 12.5, p: 0, a: ["sugar"], u: { tbsp: 12.5, tsp: 4.2 } },
@@ -2529,12 +2576,32 @@
   }
 
   function matchPantryItem(q) {
-    var norm = " " + normalize(q) + " ";
+    var typed = normalize(q);
+    var norm = " " + typed + " ";
     var best = null, bestLen = 0;
     pantryEntries().forEach(function (e) {
       e.a.forEach(function (alias) {
-        if (!alias || norm.indexOf(" " + alias + " ") === -1) return;
-        if (alias.length > bestLen) { bestLen = alias.length; best = e.raw; }
+        if (!alias) return;
+        // the saved name appearing in what you typed: "1 costco protein coffee"
+        if (norm.indexOf(" " + alias + " ") > -1) {
+          if (alias.length > bestLen) { bestLen = alias.length; best = e.raw; }
+          return;
+        }
+        // or what you typed appearing inside the saved name. You save "Costco
+        // protein coffee" and later just type "protein coffee"; without this it
+        // misses the pantry entirely and the built-in table answers "coffee"
+        // with 1 kcal, which is worse than saying nothing.
+        //
+        // Two words minimum, and only as a whole run of them: a bare "coffee"
+        // should still mean coffee, not whatever coffee-ish thing you once saved.
+        if (typed.indexOf(" ") === -1) return;
+        // you save it singular and say it plural: "2 protein coffees"
+        var forms = [typed, typed.replace(/(\w+)s$/, "$1")];
+        forms.forEach(function (form) {
+          if ((" " + alias + " ").indexOf(" " + form + " ") > -1 && form.length > bestLen) {
+            bestLen = form.length; best = e.raw;
+          }
+        });
       });
     });
     return best;
@@ -2666,6 +2733,10 @@
       if (WEIGHT_UNITS[word] !== undefined) { unit = { kind: "weight", grams: WEIGHT_UNITS[word] }; rest = u[2]; }
       else if (PORTION_WORDS[word]) { unit = { kind: "portion", key: PORTION_WORDS[word] }; rest = u[2]; }
     }
+    // "half a protein coffee" leaves "a protein coffee" behind once the
+    // quantity is taken, and that stray article is enough to miss the match.
+    var trimmed = rest.replace(/^(?:of\s+)?(?:an?|the)\s+/, "");
+    if (trimmed.trim()) rest = trimmed;
     return { qty: qty, unit: unit, name: rest.trim() || norm, whole: norm };
   }
 

@@ -101,6 +101,16 @@ something worth doing. `lastBackupAt` is deliberately **not** merged on
 restore, because a phone you have just restored onto has not taken a copy of
 its own and should still be asked for one.
 
+**Your pantry answers to part of its name.** A pantry entry used to be found
+only by its whole name, so someone who saved "Costco protein coffee" and later
+typed "protein coffee" missed the pantry entirely and got the table's black
+coffee — 1 kcal logged for a 130 kcal drink, with nothing to suggest anything
+was wrong. `matchPantryItem()` now also matches when what you typed appears as
+a run of words inside the saved name, two words minimum so a bare "coffee"
+still means coffee, and it tries a singular form so "2 protein coffees" lands.
+`parseQty()` drops a leading article too: "half a protein coffee" used to leave
+"a protein coffee" behind, which matched nothing.
+
 **Offline answers first, Claude second.** The built-in ~115-food table and the
 user's pantry resolve most entries with no network and no account. `sample` is
 the fallback for what they can't handle. This has broken twice in the same way:
@@ -277,12 +287,21 @@ the ids happen to match. Remapping ids first fixes this too.
 - Rest days are not painted red on the calendar. Offered, declined.
 - Barcode scanning is the one genuine reason to go native. Nothing else found
   so far would have been prevented by a native build.
-- The food table is hand-built reference values, 265 of them, weighted towards
+- The food table is hand-built reference values, 310 of them, weighted towards
   what actually moves a calorie count: meats, grains, starches, fats, prepared
   meals. Produce is covered but deliberately not expanded — a stick of celery
   is not what breaks a day. Rebuilding it from the USDA FoodData Central bulk
   CSV is the open thread; live API calls are impossible from a published
   artifact anyway (CSP blocks all outbound fetch).
+
+  Fast food is in there — 45 chain items, because "no time to cook" is when
+  someone least knows what they ate. Those are stored the same way as anything
+  else, per 100 g, with `k` derived from the published total and the serving
+  weight so that one serving reproduces the total even if the gram figure is
+  a little off. **Brand values drift** as chains reformulate; treat them as a
+  close estimate, not a label reading. A counted item must carry `each` as
+  *one piece*, not one box — a ten-piece nugget entry with `each: 162` turned
+  "10 mcnuggets" into 4,201 calories.
 
   `tests/foods.py` guards it, because growing it broke twice in ways nothing
   else caught. Adding an entry after the last one killed the whole script — the
