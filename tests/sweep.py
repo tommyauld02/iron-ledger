@@ -202,6 +202,57 @@ with sync_playwright() as pw:
           p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.sets.length)", Ts)==liftsWere,
           str(liftsWere))
 
+    # ---------- SPLITS ARE THE USER'S, NOT OURS ----------
+    NAMES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).routine.days.map(d=>d.name)"
+    check("splits: + sits in the chip row", p.evaluate("()=>!!document.getElementById('addSplitChip')"))
+    ab=p.locator("#addSplitChip").bounding_box()
+    check("splits: + is a proper target", ab and ab["height"]>=44,
+          ab and "%dx%d"%(ab["width"],ab["height"]))
+    n0=len(p.evaluate(NAMES))
+    p.click("#addSplitChip"); p.wait_for_timeout(400)
+    p.fill("#newSplitName","Walk"); p.press("#newSplitName","Enter"); p.wait_for_timeout(600)
+    check("splits: add a split", p.evaluate(NAMES)[-1]=="Walk", str(p.evaluate(NAMES)))
+    check("splits: lands on the one you just made",
+          "Walk" in p.eval_on_selector(".cat[aria-pressed=true]","e=>e.textContent"))
+    # a new split is a blank canvas: nothing assumed about what goes in it
+    check("splits: a new split starts empty",
+          p.eval_on_selector_all("#mSel option","e=>e.length")==1,
+          str(p.eval_on_selector_all("#mSel option","e=>e.map(x=>x.textContent)")))
+    p.select_option("#mSel","__new"); p.wait_for_timeout(250)
+    p.fill("#mNew","Evening walk"); p.click("#addLift"); p.wait_for_timeout(500)
+    check("splits: anything you do counts as a movement",
+          "Evening walk" in p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.movement)", Ts))
+
+    p.click("#editSplits"); p.wait_for_timeout(500)
+    check("splits: edit gives a row per split",
+          p.eval_on_selector_all(".split-row","e=>e.length")==n0+1)
+    nb=p.locator(".split-name").first.bounding_box()
+    rb=p.locator(".split-rm").first.bounding_box()
+    check("splits: rename field clears 44px", nb and nb["height"]>=44, nb and "%dx%d"%(nb["width"],nb["height"]))
+    check("splits: remove clears 44px", rb and rb["height"]>=44, rb and "%dx%d"%(rb["width"],rb["height"]))
+    first=p.locator("[data-splitname]").first
+    first.fill("Bi / Tri / RD"); first.dispatch_event("change"); p.wait_for_timeout(500)
+    check("splits: rename sticks", p.evaluate(NAMES)[0]=="Bi / Tri / RD", str(p.evaluate(NAMES)))
+    # an empty name is not a split; the field must snap back, not blank it
+    first=p.locator("[data-splitname]").first
+    first.fill("   "); first.dispatch_event("change"); p.wait_for_timeout(400)
+    check("splits: an empty name is refused", p.evaluate(NAMES)[0]=="Bi / Tri / RD", str(p.evaluate(NAMES)))
+
+    p.locator("[data-rmsplit]").first.click(); p.wait_for_timeout(600)
+    check("splits: remove drops it", "Bi / Tri / RD" not in p.evaluate(NAMES), str(p.evaluate(NAMES)))
+    check("splits: remove offers undo, never a dialog",
+          p.evaluate("()=>!document.getElementById('undobar').hidden"))
+    # rule 7: the workouts logged under it keep the name they were logged under
+    check("splits: the deleted name is remembered",
+          "Bi / Tri / RD" in str(p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).retired")),
+          str(p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).retired")))
+    p.click("#editSplits"); p.wait_for_timeout(500)
+    body=p.eval_on_selector_all(".lift .body","e=>e.map(x=>x.textContent).join(' ')")
+    check("splits: old workouts are not relabelled",
+          "no longer train" in body and "Bi / Tri / RD" in body, body[:90])
+    p.click("#undoBtn"); p.wait_for_timeout(600)
+    check("splits: undo brings it back", "Bi / Tri / RD" in p.evaluate(NAMES), str(p.evaluate(NAMES)))
+
     # ---------- PANTRY ----------
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
     check("pantry: photo button (sample avail)", p.evaluate("()=>!!document.getElementById('shotBtn')"))

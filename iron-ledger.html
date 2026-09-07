@@ -1223,6 +1223,85 @@
     box-shadow: inset 0 0 0 1px var(--catcolor);
     color: var(--ink);
   }
+  /* min-height keeps the + box the same size as the splits beside it even
+     though it carries one word instead of two lines. */
+  .cat { min-height: 52px; }
+  .cat-add {
+    --catcolor: var(--accent);
+    border-style: dashed;
+    color: var(--accent);
+  }
+  .cat-add .tag { font-size: 13px; letter-spacing: 0; }
+
+  .split-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .split-head button {
+    min-height: 44px;
+    padding: 0 10px;
+    margin-right: -10px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border: 1px solid transparent;
+    border-radius: 2px;
+  }
+  .split-head button:hover { color: var(--accent); border-color: var(--rule); }
+
+  .split-list { display: flex; flex-direction: column; gap: 8px; }
+  .split-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+  }
+  .split-tag {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    color: var(--catcolor);
+    min-width: 12px;
+  }
+  .split-name {
+    height: 46px;              /* 16px font: never lets iOS zoom the page */
+    padding: 0 10px;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    min-width: 0;
+  }
+  .split-rm {
+    min-height: 44px;
+    padding: 0 12px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .split-rm:hover { color: var(--danger); border-color: var(--danger); }
+  /* The last split cannot go: with none left there is nothing to log under. */
+  .split-keep {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    white-space: nowrap;
+  }
+
+  .split-new { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+  .split-new .btn { padding: 0 14px; }
 
   .liftgroup { display: flex; flex-direction: column; gap: 12px; }
 
@@ -1631,7 +1710,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-06.20";
+  var BUILD = "2026-09-06.21";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -1716,6 +1795,10 @@
   var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
   var pantryForm = null;
   var coachOpen = null;
+  // Gym split editing. Transient view state, never saved: reopening the app
+  // should show you your splits, not the half-finished act of renaming one.
+  var splitEdit = false;
+  var splitAdding = false;
   var pantryShot = null;
   var canSendImages = false;
   var imageTypes = "image/*";
@@ -1807,6 +1890,57 @@
     var was = (store.retired && store.retired[id]) || "Removed day";
     return { id: id, tag: "–", name: was, short: was,
              color: "var(--ink-3)", gone: true };
+  }
+
+  // Splits are edited from two places — the chips on the Gym tab and the
+  // builder on Coach — so the three operations live here once. A second
+  // implementation is how the two would quietly drift apart, and only one of
+  // them would remember to write store.retired.
+  function shortName(n) { return n.length > 18 ? n.slice(0, 17) + "…" : n; }
+
+  function addSplit(name) {
+    var n = (name || "").trim();
+    if (!n) return null;
+    var id = "d" + uid();
+    store.routine.days.push({ id: id, name: n, short: shortName(n) });
+    store.moves[id] = [];       // a new split starts empty; nothing is assumed
+    save();
+    return id;
+  }
+
+  function renameSplit(id, name) {
+    var n = (name || "").trim();
+    var dy = store.routine.days.filter(function (x) { return x.id === id; })[0];
+    if (!n || !dy || dy.name === n) return false;
+    dy.name = n;
+    dy.short = shortName(n);
+    // Not touching store.retired: the split still exists, so every workout
+    // logged under it follows the new name. Rule 7 only bites on deletion.
+    save();
+    return true;
+  }
+
+  function removeSplit(id) {
+    var idx = -1;
+    store.routine.days.forEach(function (x, i) { if (x.id === id) idx = i; });
+    if (idx === -1) return false;
+    var gone = store.routine.days[idx];
+    var goneMoves = store.moves[id];
+    store.routine.days.splice(idx, 1);
+    // Remember what it was called so workouts logged under it stay readable
+    // instead of being relabelled as a day you still train.
+    store.retired[id] = gone.name;
+    if (coachOpen === id) coachOpen = null;
+    if (activeCat === id && store.routine.days.length) activeCat = store.routine.days[0].id;
+    save(); render();
+    offerUndo("Deleted " + gone.name, function () {
+      store.routine.days.splice(Math.min(idx, store.routine.days.length), 0, gone);
+      if (goneMoves) store.moves[id] = goneMoves;
+      delete store.retired[id];
+      activeCat = id;
+      save(); render();
+    });
+    return true;
   }
 
   // A meal is a row that holds other rows. Its numbers are always read through
@@ -3039,9 +3173,32 @@
     }
     var c = cat(activeCat);
 
-    var chips = cats().map(function (x) {
+    var live = cats();
+
+    var chips = live.map(function (x) {
       return '<button class="cat" data-cat="' + x.id + '" aria-pressed="' + (x.id === activeCat) + '" ' +
              'style="--catcolor:' + x.color + '"><span class="tag">' + x.tag + '</span>' + esc(x.short) + '</button>';
+    }).join("") +
+      // Same box as the splits it sits beside, so it reads as "one more of
+      // these" rather than as a control bolted on beneath them.
+      '<button class="cat cat-add" id="addSplitChip" aria-label="Add a split">' +
+        '<span class="tag">+</span>Add' +
+      '</button>';
+
+    // Renaming and removing get full-size controls rather than a corner ×.
+    // Every small destructive target this app has shipped has come back as a
+    // bug — a delete X at 30×30, set chips at 69×29 — so they get their own
+    // mode with room to be 44px.
+    var editRows = live.map(function (x) {
+      return '<div class="split-row" style="--catcolor:' + x.color + '">' +
+        '<span class="split-tag">' + x.tag + '</span>' +
+        '<input class="split-name" data-splitname="' + x.id + '" value="' + esc(x.name) +
+          '" aria-label="Name of split ' + x.tag + '">' +
+        (live.length > 1
+          ? '<button class="split-rm" data-rmsplit="' + x.id + '" aria-label="Remove ' +
+            esc(x.name) + '">Remove</button>'
+          : '<span class="split-keep">last one</span>') +
+      '</div>';
     }).join("");
 
     var opts = (store.moves[activeCat] || []).slice().sort().map(function (m) {
@@ -3100,8 +3257,21 @@
 
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:10px">' +
-        '<span class="eyebrow">Today’s split</span>' +
-        '<div class="cats">' + chips + '</div>' +
+        '<div class="split-head">' +
+          '<span class="eyebrow">Today’s split</span>' +
+          '<button id="editSplits">' + (splitEdit ? "Done" : "Edit splits") + '</button>' +
+        '</div>' +
+        (splitEdit
+          ? '<div class="split-list">' + editRows + '</div>'
+          : '<div class="cats">' + chips + '</div>') +
+        (splitAdding
+          ? '<div class="split-new">' +
+              '<input id="newSplitName" class="text" placeholder="Push, Legs, Walk, Yoga…" ' +
+                'aria-label="Name your new split">' +
+              '<button class="btn" id="saveSplit">Add</button>' +
+              '<button class="btn ghost" id="cancelSplit">Cancel</button>' +
+            '</div>'
+          : '') +
       '</section>' +
 
       // A locked day says so at the top, where you look first — the missing
@@ -3146,6 +3316,61 @@
 
     view.querySelectorAll("[data-cat]").forEach(function (b) {
       b.addEventListener("click", function () { activeCat = b.dataset.cat; render(); });
+    });
+
+    var editSplitsBtn = document.getElementById("editSplits");
+    if (editSplitsBtn) {
+      editSplitsBtn.addEventListener("click", function () {
+        splitEdit = !splitEdit;
+        splitAdding = false;      // one thing at a time
+        render();
+      });
+    }
+
+    var addChip = document.getElementById("addSplitChip");
+    if (addChip) {
+      addChip.addEventListener("click", function () {
+        splitAdding = true;
+        render();
+        var f = document.getElementById("newSplitName");
+        if (f) f.focus();
+      });
+    }
+
+    var cancelSplitBtn = document.getElementById("cancelSplit");
+    if (cancelSplitBtn) {
+      cancelSplitBtn.addEventListener("click", function () { splitAdding = false; render(); });
+    }
+
+    var newSplitEl = document.getElementById("newSplitName");
+    var saveSplitBtn = document.getElementById("saveSplit");
+    function commitNewSplit() {
+      if (!newSplitEl) return;
+      var id = addSplit(newSplitEl.value);
+      if (!id) { newSplitEl.focus(); return; }   // an empty name is not a split
+      // Land on what you just made, ready to add the first movement to it.
+      activeCat = id;
+      splitAdding = false;
+      render();
+    }
+    if (saveSplitBtn) saveSplitBtn.addEventListener("click", commitNewSplit);
+    if (newSplitEl) {
+      newSplitEl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") commitNewSplit();
+      });
+    }
+
+    // Rename commits on change, the way the routine name on Coach does, so
+    // there is no separate save to forget.
+    view.querySelectorAll("[data-splitname]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        if (renameSplit(el.dataset.splitname, el.value)) render();
+        else el.value = cat(el.dataset.splitname).name;   // reject an empty name
+      });
+    });
+
+    view.querySelectorAll("[data-rmsplit]").forEach(function (b) {
+      b.addEventListener("click", function () { removeSplit(b.dataset.rmsplit); });
     });
 
     // The whole form is absent on a locked day, so every lookup here is
@@ -3358,54 +3583,23 @@
 
     view.querySelectorAll("[data-renameday]").forEach(function (b) {
       b.addEventListener("click", function () {
-        var day = store.routine.days.filter(function (x) { return x.id === b.dataset.renameday; })[0];
-        if (!day) return;
-        var name = window.prompt("What do you call this day?", day.name);
-        if (!name || !name.trim()) return;
-        day.name = name.trim();
-        day.short = day.name.length > 18 ? day.name.slice(0, 17) + "…" : day.name;
-        save(); render();
+        var dy = store.routine.days.filter(function (x) { return x.id === b.dataset.renameday; })[0];
+        if (!dy) return;
+        var name = window.prompt("What do you call this day?", dy.name);
+        if (renameSplit(dy.id, name)) render();
       });
     });
 
     view.querySelectorAll("[data-rmday]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var id = b.dataset.rmday;
-        var idx = -1;
-        store.routine.days.forEach(function (x, i) { if (x.id === id) idx = i; });
-        if (idx === -1) return;
-        var gone = store.routine.days[idx];
-        var goneMoves = store.moves[id];
-        store.routine.days.splice(idx, 1);
-        // Remember what it was called so workouts logged under it stay readable.
-        store.retired[id] = gone.name;
-        if (coachOpen === id) coachOpen = null;
-        // Never leave the Gym tab pointed at a day that no longer exists.
-        if (activeCat === id && store.routine.days.length) activeCat = store.routine.days[0].id;
-        save(); render();
-        // Workouts already logged under this day keep their own label.
-        offerUndo("Deleted " + gone.name, function () {
-          store.routine.days.splice(Math.min(idx, store.routine.days.length), 0, gone);
-          if (goneMoves) store.moves[id] = goneMoves;
-          delete store.retired[id];
-          activeCat = id;
-          save(); render();
-        });
-      });
+      b.addEventListener("click", function () { removeSplit(b.dataset.rmday); });
     });
 
     document.getElementById("addDay").addEventListener("click", function () {
       var name = window.prompt("What do you call this day?", "Day " + (store.routine.days.length + 1));
-      if (!name || !name.trim()) return;
-      var id = "d" + uid();
-      store.routine.days.push({
-        id: id,
-        name: name.trim(),
-        short: name.trim().length > 18 ? name.trim().slice(0, 17) + "…" : name.trim()
-      });
-      store.moves[id] = [];
+      var id = addSplit(name);
+      if (!id) return;
       coachOpen = id;
-      save(); render();
+      render();
     });
 
     document.getElementById("resetRoutine").addEventListener("click", function () {

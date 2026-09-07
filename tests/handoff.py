@@ -312,6 +312,44 @@ with sync_playwright() as pw:
                                            p.evaluate("()=>window.innerWidth")))
         ctx.close()
 
+    # The split editor is the same shape of blind spot: it exists only after
+    # you press "Edit splits", so no suite that walks the tabs ever paints it.
+    for scheme, w, h, name in [("light", 320, 568, "SE light"), ("dark", 402, 874, "Pro dark")]:
+        ctx = b.new_context(viewport={"width": w, "height": h}, has_touch=True,
+                            is_mobile=True, color_scheme=scheme)
+        p = ctx.new_page()
+        p.goto(BASE); p.wait_for_timeout(500)
+        p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", STORE)
+        p.reload(); p.wait_for_timeout(900)
+        try:
+            p.click("text=Got it", timeout=2500)
+        except Exception:
+            pass
+        p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(500)
+        p.click("#editSplits"); p.wait_for_timeout(500)
+
+        rows = p.eval_on_selector_all(".split-row", "e => e.length")
+        check("split editor opens on %s" % name, rows > 0, "%d rows" % rows)
+        small = p.evaluate("""() => {
+          const bad = [];
+          document.querySelectorAll('.split-name, .split-rm, #editSplits').forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width && r.height && r.height < 44)
+              bad.push((el.className || el.id) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          });
+          return bad;}""")
+        check("split editor controls are 44px on %s" % name, not small, "; ".join(small[:4]))
+        over = p.evaluate("""() => {
+          const bad = [];
+          document.querySelectorAll('.split-row, .split-row *').forEach(el => {
+            const r = el.getBoundingClientRect();
+            if (r.width && (r.left < -1 || r.right > window.innerWidth + 1))
+              bad.push((el.className || el.tagName) + ' ' + Math.round(r.right));
+          });
+          return bad;}""")
+        check("split editor fits on %s" % name, not over, "; ".join(over[:4]))
+        ctx.close()
+
     b.close()
 
 srv.shutdown()
