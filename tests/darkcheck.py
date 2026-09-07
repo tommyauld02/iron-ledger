@@ -27,6 +27,8 @@ LOW = """() => {
   });
   return [...new Set(bad)];
 }"""
+FAILS=[]
+
 with sync_playwright() as pw:
     b=pw.chromium.launch()
     for scheme in ["light","dark"]:
@@ -45,8 +47,15 @@ with sync_playwright() as pw:
                 p.locator("[data-openday]").first.click(); p.wait_for_timeout(400)
             low=p.evaluate(LOW)
             print("  %-8s contrast issues: %s" % (tab, low if low else "none"))
+            if low: FAILS.append("%s/%s: %s" % (scheme, tab, str(low)[:90]))
             bg=p.evaluate("()=>getComputedStyle(document.body).backgroundColor")
             if tab=="macros": print("  body bg:", bg)
         print("  errors:", errs if errs else "none")
+        if errs: FAILS.append("%s: page errors %s" % (scheme, str(errs[:2])[:80]))
         ctx.close()
     b.close()
+
+print('\n' + "=== VERDICT ===")
+for x in FAILS: print("  FAIL", x)
+print("  %d contrast problems" % len(FAILS))
+raise SystemExit(1 if FAILS else 0)

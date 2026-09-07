@@ -41,6 +41,8 @@ SMALL="""()=>{const bad=[];
       bad.push((b.id||b.className||'btn')+' '+Math.round(r.width)+'x'+Math.round(r.height));});
   return [...new Set(bad)];}"""
 
+FAILS=[]
+
 with sync_playwright() as pw:
     b=pw.chromium.launch()
     print("=== fit and field sizes, per device ===")
@@ -62,6 +64,13 @@ with sync_playwright() as pw:
             o=p.evaluate(OVERFLOW)
             if o: over.append(t+": "+"; ".join(o))
         hscroll=p.evaluate("()=>document.documentElement.scrollWidth>window.innerWidth+1")
+        # Rules 4 and 5 are enforced here. Reporting them and exiting 0 made
+        # this a report, not a gate.
+        if hscroll: FAILS.append("%s: page scrolls sideways" % name)
+        if over:    FAILS.append("%s: off-screen %s" % (name, "; ".join(over)[:80]))
+        if small:   FAILS.append("%s: under 44px %s" % (name, "; ".join(sorted(small))[:80]))
+        if zoom:    FAILS.append("%s: iOS-zoom fields %s" % (name, "; ".join(sorted(zoom))[:80]))
+        if errs:    FAILS.append("%s: page errors %s" % (name, str(errs[:2])[:80]))
         print("\n  %-18s %dx%d" % (name,w,h))
         print("     horizontal scroll:", "YES — BAD" if hscroll else "no")
         print("     off-screen:", over or "none")
@@ -70,3 +79,8 @@ with sync_playwright() as pw:
         print("     errors:", errs or "none")
         ctx.close()
     b.close()
+
+print('\n' + "=== VERDICT ===")
+for x in FAILS: print("  FAIL", x)
+print("  %d device/size combinations, %d problems" % (len(DEVICES), len(FAILS)))
+raise SystemExit(1 if FAILS else 0)

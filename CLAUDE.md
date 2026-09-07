@@ -5,7 +5,8 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 18 suites, ~220 checks. Run
+**1. Nothing ships without `./verify.sh` passing.** 18 suites, ~290 checks, 10
+of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
 
@@ -154,6 +155,26 @@ probe candidates by running them, and `verify.sh` forces UTF-8 on the children �
 a cp1252 console dies on the `✕` the suites print. The suites normalise
 `os.getcwd()` into a `file:///C:/...` URL; that is a no-op on POSIX.
 
+**Which suites can actually fail the build.** For a long time the answer was
+"two". Every other suite printed `N passed, M FAILED` and exited 0, so
+`verify.sh` said ALL SUITES PASSED with failures on screen — proven by
+injecting a deliberate failure into `sweep` and watching CI stay green. That
+is fixed, and it is worth keeping straight:
+
+- **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
+  `days`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
+  `handoff`.
+- **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
+  `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
+  Converting them needs judgement about what counts as a failure — `probe`'s
+  standing "1 need a look" is the label photo button, which opens a native
+  picker and so changes no DOM. It is alive; verified with the `filechooser`
+  event.
+
+When you add a suite, end it the way the gates do. A suite that reports FAIL
+and exits 0 is a report wearing a test's clothes, and rule 1 quietly stops
+meaning anything.
+
 A suite exiting **77** means it could not run at all, which is not the same as
 the app being broken. `verify.sh` names those separately at the end and still
 exits 0. `audit2` is skipped this way right now: it reads its `MEASURE` snippet
@@ -163,7 +184,7 @@ cowork project and the suite comes back by itself.
 
 Suites: `sweep` features · `days` date rollover and month/year boundaries ·
 `probe` clicks every tappable and asserts something changed · `darkcheck` WCAG
-contrast in both themes · `audit2` touch targets and undo · `coach` routine
+contrast in both themes · `audit2` a printed touch-target and undo report, not an asserting suite · `coach` routine
 builder and history preservation · `meals` combine/split/take out ·
 `estmeal` the estimate-as-one-meal path · `pwa` the offline shell, served the
 way Pages serves it, with the network cut · `handoff` safe-area opt-in, all

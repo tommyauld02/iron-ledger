@@ -154,3 +154,9 @@ with sync_playwright() as pw:
                                     sum(1 for r in res if r[0]=="FAIL")))
     print("pageerrors:", errs or "none")
     b.close()
+
+    # A suite that prints FAIL and exits 0 cannot gate anything — verify.sh
+    # says ALL SUITES PASSED and CI deploys anyway. Page errors count too: a
+    # thrown exception is what leaves the buttons after it dead and silent.
+    _bad = sum(1 for r in res if r[0] == "FAIL")
+    raise SystemExit(1 if (_bad or errs) else 0)
