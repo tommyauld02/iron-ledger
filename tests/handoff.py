@@ -425,6 +425,82 @@ with sync_playwright() as pw:
           p.evaluate("() => !document.getElementById('backupDot').hidden"))
     ctx.close()
 
+    # ---- 7. a write that fails must never look like one that worked -------
+    # save() used to swallow the error, so the app printed "✓ Added" for
+    # entries that were never written and vanished on the next load. A silent
+    # success reads like a dead button; a confirmed success that silently
+    # failed is worse, because nothing looks wrong until the data is gone.
+    FILL = """() => {let n = 0;
+      for (const size of [65536, 4096, 256, 16, 1]) {
+        const blob = 'x'.repeat(size);
+        for (;;) { try { localStorage.setItem('f' + (n++), blob); } catch (e) { break; } }
+      }
+      let head = 0;
+      try { localStorage.setItem('probe','y'); head = 1; localStorage.removeItem('probe'); } catch (e) {}
+      return head;}"""
+    TABS_REACHABLE = """() => {
+      const t = document.querySelector('.tabs').getBoundingClientRect();
+      const hit = document.elementFromPoint(t.left + t.width / 2, t.top + t.height / 2);
+      return !!hit && hit.closest('.tabs') !== null;}"""
+
+    ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
+    p = ctx.new_page(); errs = []
+    p.on("pageerror", lambda e: errs.append(str(e)))
+    p.goto(BASE); p.wait_for_timeout(500)
+    p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", STORE)
+    check("storage can be packed with no headroom", p.evaluate(FILL) == 0)
+    p.reload(); p.wait_for_timeout(1100)
+    try:
+        p.click("text=Got it", timeout=2500)
+    except Exception:
+        pass
+
+    p.fill("#fCal", "999"); p.fill("#fPro", "99"); p.fill("#fNote", "CANARY")
+    p.click("#addFood"); p.wait_for_timeout(700)
+    check("a failed write says so", not p.evaluate("() => document.getElementById('savebar').hidden"))
+    check("and does not claim success",
+          not p.evaluate("() => !!document.querySelector('.added-flash')"))
+    check("the button admits it", p.eval_on_selector("#addFood", "e => e.textContent") == "Not saved",
+          p.eval_on_selector("#addFood", "e => e.textContent"))
+    check("nothing was actually written",
+          not p.evaluate("() => (localStorage.getItem('iron-ledger-v1') || '').includes('CANARY')"))
+    p.click("#backupBtn"); p.wait_for_timeout(400)
+    check("the Backup panel names the reason",
+          "NOT SAVING" in p.eval_on_selector("#diag", "e => e.textContent"),
+          p.eval_on_selector("#diag", "e => e.textContent")[:70])
+    p.click("#closeSheet"); p.wait_for_timeout(300)
+    # a bar that blocks navigation is its own bug — this one is persistent
+    check("the warning does not cover the tab bar", p.evaluate(TABS_REACHABLE))
+
+    # and it has to get out of the way once writing works again
+    p.evaluate("() => { for (let i = 0; i < 400; i++) localStorage.removeItem('f' + i); }")
+    p.fill("#fCal", "100"); p.fill("#fPro", "10"); p.fill("#fNote", "after space freed")
+    p.click("#addFood"); p.wait_for_timeout(700)
+    check("the warning clears once writes work",
+          p.evaluate("() => document.getElementById('savebar').hidden"))
+    check("and normal confirmation returns",
+          p.evaluate("() => !!document.querySelector('.added-flash')"))
+    check("and it really wrote this time",
+          p.evaluate("() => (localStorage.getItem('iron-ledger-v1') || '').includes('after space freed')"))
+    check("no page errors through any of it", not errs, str(errs[:2]))
+    ctx.close()
+
+    # the undo bar had always covered the tab bar too — same docking fix
+    ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
+    p = ctx.new_page()
+    p.goto(BASE); p.wait_for_timeout(500)
+    p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", STORE)
+    p.reload(); p.wait_for_timeout(1000)
+    try:
+        p.click("text=Got it", timeout=2500)
+    except Exception:
+        pass
+    p.eval_on_selector_all(".t-del", "e => e[0].click()"); p.wait_for_timeout(500)
+    check("undo bar is showing for this check",
+          not p.evaluate("() => document.getElementById('undobar').hidden"))
+    check("the undo bar does not cover the tab bar either", p.evaluate(TABS_REACHABLE))
+    ctx.close()
+
     b.close()
 
 srv.shutdown()

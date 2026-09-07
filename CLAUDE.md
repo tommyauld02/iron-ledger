@@ -68,6 +68,28 @@ opened inside Claude, never a dependency. Backup/restore is copyable JSON,
 and the Backup panel shows the build number and the last captured JS error —
 that pair has turned an unreproducible bug into a five-minute fix twice.
 
+**A failed write must never look like a successful one.** `save()` returns a
+boolean and sets `saveError`; it used to be `catch (e) { /* quota */ }`, which
+meant the app rendered the row, printed "✓ Added" and lost the entry on the
+next load. Every caller that claims success — the add-food flash, the Add
+button, the pantry `+` tick — is gated on that boolean, and while writes are
+failing the `#savebar` says so until one succeeds. The reason is also written
+into `lastError`, so the Backup panel names it. Storage being full is only one
+trigger: the same path fires in private browsing and under iOS storage
+pressure, which arrive long before the quota does.
+
+**The bottom bars are docked, not stacked.** `.savebar`, `.undobar` and
+`.tabs` were each `position: sticky; bottom: 0`, so they sat on top of one
+another — `elementFromPoint` at the tab bar's centre returned the undo bar,
+meaning undo had always been covering navigation. They now live inside one
+sticky `.dock` and stack. `handoff` asserts the tab bar is reachable with each
+bar showing.
+
+**Nothing expires, and there is no cap.** No pruning, no cutoff, no bound on
+the date or year arrows — `store.days` keeps every day forever. A fully logged
+day costs about 1.1 KB, so a 5 MB origin holds roughly 4,700 days, about
+thirteen years. Capacity is not the constraint; the write path is.
+
 **On a phone there is no second copy.** `db` only exists inside the Claude
 viewer, so on the Pages build `queueSync()` returns immediately and
 localStorage is the only place the log lives. Nothing else notices if it goes.

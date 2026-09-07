@@ -1629,10 +1629,44 @@
   .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   /* ---------- undo ---------- */
+  /* One sticky dock at the bottom. The savebar, the undo bar and the tab bar
+     were each sticky at bottom:0, which stacked them on top of one another —
+     elementFromPoint at the tab bar's centre returned the undo bar, so undo
+     had always been covering navigation. Docking them makes them stack. */
+  .dock { position: sticky; bottom: 0; z-index: 25; }
+
+  /* Shown while writes are failing. Sits above the undo bar because it is not
+     an offer, it is a warning: nothing logged from here survives closing the
+     app. It stays put until a write succeeds — a toast would be missed, and
+     this is the one thing in the app that must not be missed. */
+  .savebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--miss);
+    color: #FFFFFF;
+    font-family: var(--font-num);
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .savebar[hidden] { display: none !important; }
+  .savebar button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid #FFFFFF;
+    border-radius: 2px;
+    color: #FFFFFF;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
   .undobar {
-    position: sticky;
-    bottom: 0;
-    z-index: 25;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -1661,9 +1695,6 @@
 
   /* ---------- tabs ---------- */
   .tabs {
-    position: sticky;
-    bottom: 0;
-    z-index: 20;
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     background: var(--surface);
@@ -1711,6 +1742,12 @@
 
   <main id="view"></main>
 
+  <div class="dock">
+  <div class="savebar" id="savebar" hidden>
+    <span id="saveLabel"></span>
+    <button id="saveBackupBtn">Back up</button>
+  </div>
+
   <div class="undobar" id="undobar" hidden>
     <span id="undoLabel"></span>
     <button id="undoBtn">Undo</button>
@@ -1723,6 +1760,7 @@
     <button role="tab" data-tab="coach" aria-selected="false">Coach</button>
     <button role="tab" data-tab="log" aria-selected="false">Log</button>
   </nav>
+  </div>
 </div>
 
 <div class="sheet" id="sheet" hidden>
@@ -1744,7 +1782,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.22";
+  var BUILD = "2026-09-07.23";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -1887,10 +1925,42 @@
     });
   }
 
+  // Set while writes are failing, cleared the moment one succeeds. This used
+  // to be an empty catch, which meant the app confirmed "✓ Added" for entries
+  // that were never written and vanished on the next load. A silent success
+  // reads like a dead button; a *confirmed* success that silently failed is
+  // worse, because nothing looks wrong until the data is already gone.
+  var saveError = null;
+
   function save() {
     store.build = BUILD;   // so a backup always says which version wrote it
-    try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* quota */ }
+    try {
+      localStorage.setItem(KEY, JSON.stringify(store));
+      saveError = null;
+    } catch (e) {
+      // Quota, private browsing, storage restrictions — the reason does not
+      // matter to the caller. The write did not happen.
+      saveError = (e && e.name) ? e.name : "storage unavailable";
+      lastError = "save failed (" + saveError + ")";
+      queueSync();           // the cloud mirror may still be reachable
+      refreshSaveBar();
+      return false;
+    }
     queueSync();
+    refreshSaveBar();
+    return true;
+  }
+
+  function refreshSaveBar() {
+    var bar = document.getElementById("savebar");
+    var label = document.getElementById("saveLabel");
+    if (!bar || !label) return;
+    bar.hidden = !saveError;
+    if (saveError) {
+      label.textContent = saveError === "QuotaExceededError"
+        ? "Storage on this phone is full — nothing is being saved. Copy your backup out now."
+        : "This phone is not letting the app save — nothing you log now will be kept.";
+    }
   }
 
   function day(key) {
@@ -2672,18 +2742,22 @@
     d.food.push({ id: uid(), cal: c, pro: p, note: noteEl ? noteEl.value.trim() : "" });
     stampGoal(key);
     touch(key);
-    save();
-    lastAdded = { label: label, cal: c, pro: p, at: Date.now() };
+    var ok = save();
+    // Only claim it went in if it actually did. The row still renders — it is
+    // real for this session — but the savebar says it will not survive.
+    lastAdded = ok ? { label: label, cal: c, pro: p, at: Date.now() } : null;
     render();
 
     // The new row lands above the fold, so confirm it down here where the thumb is.
     var btn = document.getElementById("addFood");
     if (btn) {
-      btn.textContent = "Added";
+      btn.textContent = ok ? "Added" : "Not saved";
       setTimeout(function () {
         var b2 = document.getElementById("addFood");
-        if (b2 && b2.textContent === "Added") b2.textContent = "Add to ledger";
-      }, 1400);
+        if (b2 && (b2.textContent === "Added" || b2.textContent === "Not saved")) {
+          b2.textContent = "Add to ledger";
+        }
+      }, ok ? 1400 : 2600);
     }
     var again = document.getElementById("fCal");
     if (again) again.focus();
@@ -2694,7 +2768,8 @@
     var d = day(key);
 
     refreshBackupFlag();   // the header button lives outside #view, so it is
-                           // never redrawn by the render below
+    refreshSaveBar();      // never redrawn by the render below, and nor is the
+                           // savebar — both have to be refreshed by hand
     document.getElementById("dow").textContent =
       cursor.toLocaleDateString("en-US", { weekday: "long" });
     document.getElementById("dateFull").textContent =
@@ -3929,19 +4004,19 @@
         day(key).food.push({ id: uid(), cal: c, pro: p, note: raw.name });
         stampGoal(key);
         touch(key);
-        save();
-        lastAdded = { label: raw.name, cal: c, pro: p, at: Date.now() };
+        var wrote = save();
+        lastAdded = wrote ? { label: raw.name, cal: c, pro: p, at: Date.now() } : null;
         render();
 
         // render() has just replaced this button, so confirm on the new one.
         // Without this the tap is silent and reads exactly like a dead control.
         var fresh = view.querySelector('[data-addpan="' + id + '"]');
         if (fresh) {
-          fresh.textContent = "✓";
-          fresh.classList.add("is-done");
+          fresh.textContent = wrote ? "✓" : "!";
+          if (wrote) fresh.classList.add("is-done");
           setTimeout(function () {
             var later = view.querySelector('[data-addpan="' + id + '"]');
-            if (later && later.textContent === "✓") {
+            if (later && (later.textContent === "✓" || later.textContent === "!")) {
               later.textContent = "+";
               later.classList.remove("is-done");
             }
@@ -4450,6 +4525,12 @@
   window.addEventListener("focus", checkDayRollover);
   window.addEventListener("pageshow", checkDayRollover);
 
+  // The bar's own button goes straight to the one thing that helps: get the
+  // data off the phone while it is still in memory.
+  document.getElementById("saveBackupBtn").addEventListener("click", function () {
+    document.getElementById("backupBtn").click();
+  });
+
   document.getElementById("undoBtn").addEventListener("click", function () {
     var fn = pendingUndo;
     hideUndo();
@@ -4551,8 +4632,10 @@
     var diag = document.getElementById("diag");
     if (diag) {
       diag.hidden = false;
-      diag.textContent = "Build " + BUILD + (lastError ? " · last error: " + lastError : "");
-      diag.style.color = lastError ? "var(--miss)" : "var(--ink-3)";
+      diag.textContent = "Build " + BUILD +
+        (saveError ? " · NOT SAVING (" + saveError + ") — copy this text out now" : "") +
+        (lastError ? " · last error: " + lastError : "");
+      diag.style.color = (lastError || saveError) ? "var(--miss)" : "var(--ink-3)";
     }
   });
   document.getElementById("closeSheet").addEventListener("click", function () { sheet.hidden = true; });
