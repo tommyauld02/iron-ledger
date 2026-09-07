@@ -4,3 +4,8 @@
 *.html text eol=lf
 *.md   text eol=lf
 *.json text eol=lf
+
+# Vendored, downloaded, never hand-edited. Normalising line endings in a
+# wasm loader or a trained model is a corruption nobody would notice until
+# a fresh checkout failed to read a label.
+vendor/** -text
