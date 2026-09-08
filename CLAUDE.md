@@ -5,7 +5,7 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~320 checks, 13
+**1. Nothing ships without `./verify.sh` passing.** 22 suites, ~340 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -50,7 +50,7 @@ manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              21 Playwright suites
+tests/              22 Playwright suites
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -235,7 +235,7 @@ is fixed, and it is worth keeping straight:
 
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
-  `handoff`, `foods`, `label`, `hittest`.
+  `handoff`, `foods`, `label`, `hittest`, `share`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s
@@ -292,18 +292,31 @@ Two lessons paid for the hard way:
   everything against an old build. The suites now read `iron-ledger.html`
   directly, so there is nothing to go stale.
 
-## If routines are ever shared
+## Sharing a routine
 
 The Coach tab exists so someone else can set a routine for the owner — a
 brother, a friend. Nothing ships for that yet, and the groundwork matters more
 than the feature.
 
-**What already holds.** A routine is `store.routine` (the days) plus
-`store.moves` (what is in each day). Both survive a backup and restore
-round-trip, and `sweep` now asserts it, so the thing a shared plan would be
-made of is already portable.
+**Built, and built to the shape below.** Coach has *Share this routine* and
+*Load a routine*. Sharing produces `ILROUTINE1:` followed by base64 — base64
+rather than raw JSON because the code gets sent through messaging apps, where
+JSON meets smart quotes and line wrapping. `parseRoutineCode()` is liberal in
+return: tagged or untagged, wrapped over lines, or plain JSON if that is what
+someone pasted.
 
-**Do not build sharing on `mergeInto`.** Restore and import are different
+**The export carries no ids at all.** That is the whole design. Rather than
+guarding against a collision, `exportRoutine()` sends only names and movements,
+and `importRoutine()` mints a fresh `"d" + uid()` for every incoming day — so
+two people who both still have `back`, `push` and `legs` cannot collide,
+because nothing of theirs is ever adopted. Days are **added**, never swapped
+in, and the whole import is one `offerUndo()`.
+
+It carries the routine and nothing else: no food, no lifts, no pantry, no goal,
+no dates. `tests/share.py` asserts that by looking for those keys in the
+decoded payload.
+
+**Do not route sharing through `mergeInto`.** Restore and import are different
 operations wearing similar clothes. `mergeInto` does
 `store.routine = incoming.routine` — a wholesale replace, which is right for
 your own backup landing on your own phone and wrong for anything else.

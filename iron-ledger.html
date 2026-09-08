@@ -807,6 +807,22 @@
     .rt-inline .text { grid-column: 1 / -1; }
   }
 
+  .rt-share { display: flex; flex-direction: column; gap: 9px; }
+  .rt-share textarea {
+    width: 100%;
+    min-height: 92px;
+    padding: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-size: 16px;          /* under 16px iOS zooms the page and stays there */
+    line-height: 1.4;
+    color: var(--ink);
+    resize: vertical;
+    word-break: break-all;    /* the code is one long unbroken run of base64 */
+  }
+
   .rt-chiprow { display: flex; flex-wrap: wrap; gap: 6px; }
   .rt-chip {
     display: inline-flex;
@@ -1790,7 +1806,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.29";
+  var BUILD = "2026-09-07.30";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -1887,6 +1903,9 @@
   // Which meal is being renamed. Transient like the coach editors: reopening
   // the app should show your meals, not a half-finished rename.
   var mealRenaming = null;
+  // null, "share" or "load" — which routine-sharing panel is open on Coach
+  var coachShare = null;
+  var coachShareMsg = "";
   var pantryShot = null;
   var canSendImages = false;
   var imageTypes = "image/*";
@@ -2061,6 +2080,76 @@
       save(); render();
     });
     return true;
+  }
+
+  // ---------- sharing a routine ----------
+  // A routine is the days plus what is in each day. Sharing one must never
+  // touch the log, and must never carry ids across. DEFAULT_ROUTINE uses fixed
+  // ones — back, push, legs — so two people who never renamed their days hold
+  // the same ids for different days; importing under those ids would relabel
+  // the recipient's own history, which is rule 7 broken silently. The export
+  // therefore carries no ids at all and the importer mints fresh ones, so a
+  // collision is not guarded against, it is impossible.
+  var ROUTINE_TAG = "ILROUTINE1:";
+
+  function exportRoutine() {
+    var days = (store.routine.days || []).map(function (dy) {
+      return { name: dy.name, moves: (store.moves[dy.id] || []).slice() };
+    });
+    var payload = { name: store.routine.name || "My split", days: days };
+    var json = JSON.stringify(payload);
+    try {
+      // base64 so it survives being sent through a messaging app, where raw
+      // JSON meets smart quotes and line wrapping
+      return ROUTINE_TAG + btoa(unescape(encodeURIComponent(json)));
+    } catch (e) {
+      return json;
+    }
+  }
+
+  // Liberal about what it accepts: the code with or without its tag, wrapped
+  // over several lines, or plain JSON if someone pasted that instead.
+  function parseRoutineCode(text) {
+    var raw = String(text || "").trim();
+    if (!raw) return null;
+    var body = raw.indexOf(ROUTINE_TAG) === 0 ? raw.slice(ROUTINE_TAG.length) : raw;
+    var tries = [];
+    try { tries.push(JSON.parse(decodeURIComponent(escape(atob(body.replace(/\s+/g, "")))))); } catch (e) {}
+    try { tries.push(JSON.parse(raw)); } catch (e) {}
+    for (var i = 0; i < tries.length; i++) {
+      var got = tries[i];
+      if (got && got.days && got.days.length) return got;
+    }
+    return null;
+  }
+
+  function importRoutine(payload) {
+    var before = {
+      days: store.routine.days.slice(),
+      moves: JSON.parse(JSON.stringify(store.moves))
+    };
+    var added = 0;
+    (payload.days || []).forEach(function (dy) {
+      var name = String(dy.name || "").trim();
+      if (!name) return;
+      var id = "d" + uid();                 // fresh, never theirs
+      store.routine.days.push({ id: id, name: name, short: shortName(name) });
+      store.moves[id] = (dy.moves || [])
+        .filter(function (m) { return m && String(m).trim(); })
+        .map(function (m) { return String(m).trim(); });
+      added++;
+    });
+    if (!added) return 0;
+    save(); render();
+    // Added, not replaced — your own days are untouched, and this is undoable
+    // like anything else that changes the routine.
+    offerUndo("Added " + added + (added === 1 ? " day" : " days") + " from a shared routine",
+      function () {
+        store.routine.days = before.days;
+        store.moves = before.moves;
+        save(); render();
+      });
+    return added;
   }
 
   // A meal is a row that holds other rows. Its numbers are always read through
@@ -3952,8 +4041,31 @@
 
       '<section class="rt-actions">' +
         '<button id="addDay">+ Add a training day</button>' +
+        '<button id="shareRoutine">Share this routine</button>' +
+        '<button id="loadRoutine">Load a routine</button>' +
         '<button id="resetRoutine">Start over</button>' +
-      '</section>';
+      '</section>' +
+
+      (coachShare
+        ? '<section class="rt-share">' +
+            '<p class="est-note">' +
+              (coachShare === "share"
+                ? 'Send this to whoever is following the routine. They paste it into Load a routine. It carries the days and their movements — never your log.'
+                : 'Paste a routine someone sent you. Its days are added to yours, never swapped in, and your own history is untouched.') +
+            '</p>' +
+            '<textarea id="routineCode" spellcheck="false" ' +
+              'placeholder="' + (coachShare === "load" ? "Paste the code here" : "") + '">' +
+              (coachShare === "share" ? esc(exportRoutine()) : "") +
+            '</textarea>' +
+            (coachShareMsg ? '<p class="est-note" id="shareMsg">' + esc(coachShareMsg) + '</p>' : '') +
+            '<div class="rt-actions">' +
+              (coachShare === "share"
+                ? '<button id="copyRoutine">Copy</button>'
+                : '<button id="applyRoutine">Add these days</button>') +
+              '<button id="closeShare">Close</button>' +
+            '</div>' +
+          '</section>'
+        : '');
 
     var nameEl = document.getElementById("rtName");
     if (nameEl) {
@@ -4066,6 +4178,55 @@
       render();
       var f = document.getElementById("rtNewDay");
       if (f) f.focus();
+    });
+
+    var shareBtn = document.getElementById("shareRoutine");
+    if (shareBtn) shareBtn.addEventListener("click", function () {
+      coachShare = coachShare === "share" ? null : "share";
+      coachShareMsg = ""; render();
+    });
+    var loadBtn = document.getElementById("loadRoutine");
+    if (loadBtn) loadBtn.addEventListener("click", function () {
+      coachShare = coachShare === "load" ? null : "load";
+      coachShareMsg = ""; render();
+      var f = document.getElementById("routineCode");
+      if (f) f.focus();
+    });
+    var closeShare = document.getElementById("closeShare");
+    if (closeShare) closeShare.addEventListener("click", function () {
+      coachShare = null; coachShareMsg = ""; render();
+    });
+
+    var copyRoutine = document.getElementById("copyRoutine");
+    if (copyRoutine) copyRoutine.addEventListener("click", function () {
+      var box = document.getElementById("routineCode");
+      box.select();
+      var done = function () {
+        copyRoutine.textContent = "Copied";
+        setTimeout(function () { copyRoutine.textContent = "Copy"; }, 1600);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(box.value).then(done, function () {
+          copyRoutine.textContent = "Press ⌘C / long-press";
+        });
+      } else { done(); }
+    });
+
+    var applyRoutine = document.getElementById("applyRoutine");
+    if (applyRoutine) applyRoutine.addEventListener("click", function () {
+      var box = document.getElementById("routineCode");
+      var payload = parseRoutineCode(box ? box.value : "");
+      if (!payload) {
+        // Say what is wrong where they are looking, rather than silently doing
+        // nothing and leaving them to guess.
+        coachShareMsg = "That isn't a routine code. It should start with ILROUTINE1: — copy the whole thing.";
+        render();
+        return;
+      }
+      var n = importRoutine(payload);
+      if (!n) { coachShareMsg = "That code has no days in it."; render(); return; }
+      coachShare = null; coachShareMsg = "";
+      render();
     });
 
     document.getElementById("resetRoutine").addEventListener("click", function () {
