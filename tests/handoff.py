@@ -9,10 +9,9 @@ Four things nothing else covers:
    focus and pageshow; days.py only ever fires the first. iOS picks a
    different one depending on how you come back to the app, so a rollover
    that works on one and not the others fails in the field and nowhere else.
-3. Touch targets, measured, on Tommy's own phone size. tests/audit.py was not
-   in the archive, so audit2 is skipped and this is currently the only thing
-   holding rule 5 up besides mobile.py. Every element is asserted on screen
-   before it is measured — a hidden element measures nothing and passes.
+3. Touch targets, measured, on Tommy's own phone size. Together with mobile.py
+   this is what holds rule 5 up. Every element is asserted on screen before it
+   is measured — a hidden element measures nothing and passes.
 4. The GitHub Pages reality: no window.claude AND no network at once. That is
    the mode Tommy's phone actually runs in, and it is the combination no
    other suite exercises together.

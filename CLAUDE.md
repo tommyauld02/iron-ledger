@@ -5,7 +5,7 @@ file, no build step, no server, no dependencies. Currently build `2026-09-05.19`
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 22 suites, ~340 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~340 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -23,9 +23,9 @@ is a `@media (pointer: coarse)` rule forcing 16px. Any new input must not
 escape it. `tests/mobile.py` checks this.
 
 **5. 44px minimum on anything tappable, 48px in the tab bar.** Measured, not
-eyeballed — `tests/audit2.py`, `tests/mobile.py` and `tests/handoff.py` enforce
-it. **`audit2` is skipped right now** (see Testing); `handoff` measures every
-visible control at 402x874 and covers most of that gap. Calendar day cells are
+eyeballed — `tests/mobile.py` and `tests/handoff.py` enforce it, and
+`tests/hittest.py` checks the tap actually reaches the control rather than
+something on top of it. Calendar day cells are
 the one exemption — a 12-month grid cannot give each day 44px — and both
 `mobile` and `handoff` skip them deliberately rather than by accident. Destructive
 controls have been the repeat offenders: a delete X at 30×30 near the screen
@@ -50,7 +50,7 @@ manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              22 Playwright suites
+tests/              21 Playwright suites
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -265,14 +265,21 @@ meaning anything.
 
 A suite exiting **77** means it could not run at all, which is not the same as
 the app being broken. `verify.sh` names those separately at the end and still
-exits 0. `audit2` is skipped this way right now: it reads its `MEASURE` snippet
-from `audit.py`, which was not in the archive this repo was seeded from. **That
-is real missing coverage on the 44px rule** — restore `tests/audit.py` from the
-cowork project and the suite comes back by itself.
+exits 0. Nothing uses it at the moment.
+
+**`audit2.py` was deleted rather than repaired.** It read a `MEASURE` snippet
+from an `audit.py` that only ever existed in the original author's working
+directory, so from the day this repo was seeded it did nothing — and the old
+`verify.sh` piped every suite into `tail`, which threw away the exit code, so
+the traceback scrolled past looking like an empty section. Its job is done
+twice over now: `mobile` and `handoff` measure every control against the 44px
+rule and gate on it, and `hittest` checks the tap reaches the control. Two
+lessons worth keeping: a helper outside the repo is a suite that only works on
+one machine, and a suite whose exit code is discarded is not a test.
 
 Suites: `sweep` features · `days` date rollover and month/year boundaries ·
 `probe` clicks every tappable and asserts something changed · `darkcheck` WCAG
-contrast in both themes · `audit2` a printed touch-target and undo report, not an asserting suite · `coach` routine
+contrast in both themes · `coach` routine
 builder and history preservation · `meals` combine/split/take out ·
 `estmeal` the estimate-as-one-meal path · `pwa` the offline shell, served the
 way Pages serves it, with the network cut · `handoff` safe-area opt-in, all

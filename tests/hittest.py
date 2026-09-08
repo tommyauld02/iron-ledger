@@ -1,9 +1,9 @@
 """Hit-test every control on every tab.
 
-audit2.py measures whether controls are big enough. This one asks a different
-question: when you tap the middle of a control, does the tap actually reach it,
-or is something sitting on top? A sticky tab bar, the undo bar, or an expanded
-panel can cover a button that measures perfectly.
+mobile.py and handoff.py measure whether controls are big enough. This one asks
+a different question: when you tap the middle of a control, does the tap
+actually reach it, or is something sitting on top? A sticky tab bar, the undo
+bar, or an expanded panel can cover a button that measures perfectly.
 
 elementFromPoint only works inside the viewport, so the page is scrolled in
 viewport-sized steps and each pass tests only what is fully on screen at that
