@@ -167,6 +167,27 @@ or zero items dissolves back into plain rows — call it after anything that can
 remove an item. `locate(d, id)` finds a row at the top level *or* inside a meal;
 use it anywhere food is looked up by id.
 
+**Grams are the basis; the unit is only how it is shown.** The whole food
+table is keyed per 100 g and every macro is derived from `it.grams`, so that
+is what gets stored and nothing downstream has to know what unit you like.
+`WEIGH` maps g/oz/lb to grams, `fromG()`/`toG()` convert at the edges, and
+`store.wunit` is the standing choice — set it under *Weigh food in* on the
+estimate form, or from the picker on any review row.
+
+Two rules make it safe. **Switching a unit converts, it never re-reads**: 150 g
+becoming 150 oz is a four kilogram chicken breast logged in one tap, so the
+food stays the same size and only the reading changes; you then type over it if
+you meant something else. And **a weight you typed comes back in the unit you
+typed it in** — someone who entered "6 oz" and is shown 170 g has to do
+arithmetic to check their own entry, so `resolveTable()` and `resolvePantry()`
+carry the typed unit through as `it.unit`. A row with no unit of its own
+follows `store.wunit`, which is why changing one row redraws the review rather
+than patching one field.
+
+The standing picker and a review are never on screen together — the review
+replaces the form — so there is deliberately no "update the open review" branch
+on it. Mid-review, the row picker is the way.
+
 **Days are judged against the goal in force when they were logged.**
 `stampGoal()` snapshots it, so changing your target today never rewrites last
 month's calendar.
@@ -204,6 +225,10 @@ the app the moment you put the phone in your pocket, and a counter would come
 back reading two minutes for a ninety minute session. `d.workoutMs` is what has
 been banked, and the two **add**, so a second session on the same day tops up
 the first rather than replacing it.
+
+The clock sits **above** *Today's split*, not below it. It is the first thing
+you touch walking in and the last before you leave; it should not be something
+you scroll to find.
 
 *Lock in the day* is what stops it: `lockDay` calls `stopWorkout(d)` before
 anything else, so the number the card shows is the number that gets stored. The

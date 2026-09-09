@@ -107,7 +107,61 @@ with sync_playwright() as pw:
     head=p.eval_on_selector(".review > header span","e=>e.textContent").replace(",","")
     check("serving: the running total follows", ("%d kcal"%rowsum) in head,
           "rows=%d head=%r" % (rowsum, head))
+    # ---------- WEIGH IT HOWEVER YOU WEIGH IT ----------
+    # Grams are the basis the food table is keyed on, but a US kitchen scale
+    # reads ounces and nobody is re-teaching it for this app.
     p.click("#commitEst"); p.wait_for_timeout(600)
+    STORE = "()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
+    ROW = """()=>({g:document.querySelector('[data-ig]').value,
+                   u:document.querySelector('[data-iu]').value,
+                   cal:Number(document.querySelector('[data-ic]').value)})"""
+    check("units: grams is what you get until you say otherwise",
+          p.eval_on_selector("#wUnitIn","e=>e.value")=="g")
+    ub=p.locator("#wUnitIn").bounding_box()
+    check("units: the picker is a proper target", ub and ub["height"]>=44,
+          ub and "%dx%d"%(ub["width"],ub["height"]))
+
+    p.fill("#estText","200 g chicken breast"); p.click("#runEst"); p.wait_for_timeout(1200)
+    r0=p.evaluate(ROW)
+    check("units: a weight you typed comes back in the unit you typed", r0["u"]=="g", json.dumps(r0))
+    rb=p.locator("[data-iu]").first.bounding_box()
+    check("units: the row picker is a proper target", rb and rb["height"]>=44,
+          rb and "%dx%d"%(rb["width"],rb["height"]))
+    p.select_option("[data-iu]","oz"); p.wait_for_timeout(600)
+    r1=p.evaluate(ROW)
+    # the food did not change size, so the macros must not move
+    check("units: switching converts rather than re-reads",
+          r1["u"]=="oz" and abs(float(r1["g"])-7.05)<0.1 and r1["cal"]==r0["cal"],
+          "%s g -> %s %s, %d kcal" % (r0["g"], r1["g"], r1["u"], r1["cal"]))
+    check("units: the choice is remembered", p.evaluate(STORE).get("wunit")=="oz")
+    p.fill("[data-ig]","8"); p.wait_for_timeout(500)
+    r2=p.evaluate(ROW)
+    check("units: a number you type is read in that unit",
+          abs(r2["cal"]-374)<=6, "8 oz -> %d kcal" % r2["cal"])
+    p.click("#commitEst"); p.wait_for_timeout(700)
+    saved=p.evaluate("""()=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{};
+        const out=[]; for(const k of Object.keys(d)) for(const f of (d[k].food||[])) out.push(f.note||"");
+        return out;}""")
+    check("units: the ledger records the portion you logged, in your unit",
+          any("8 oz" in n for n in saved), " | ".join(saved[-3:]))
+
+    # it has to survive a reload, or it is a setting that resets every morning
+    p.reload(); p.wait_for_timeout(1000)
+    check("units: and it survives a reload", p.eval_on_selector("#wUnitIn","e=>e.value")=="oz")
+    p.fill("#estText","chicken breast and white rice"); p.click("#runEst"); p.wait_for_timeout(1300)
+    check("units: rows you did not weigh follow the setting",
+          p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value).join(',')")=="oz,oz",
+          p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value).join(',')"))
+    cals=p.eval_on_selector_all("[data-ic]","e=>e.map(x=>Number(x.value))")
+    p.select_option("[data-iu] >> nth=0","g"); p.wait_for_timeout(700)
+    check("units: changing one row changes the rest that have no unit of their own",
+          p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value).join(',')")=="g,g",
+          p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value).join(',')"))
+    check("units: and none of that moves a single calorie",
+          p.eval_on_selector_all("[data-ic]","e=>e.map(x=>Number(x.value))")==cals,
+          "%s -> %s" % (cals, p.eval_on_selector_all("[data-ic]","e=>e.map(x=>Number(x.value))")))
+    p.click("#discardEst"); p.wait_for_timeout(600)
+
     # the note is built from `amount`; if that does not move with the weight the
     # ledger permanently records a portion you never logged
     notes=p.evaluate("""()=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{};
@@ -209,6 +263,10 @@ with sync_playwright() as pw:
     REC = "k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]"
     check("timer: offered before you start",
           p.evaluate("()=>!!document.getElementById('startWorkout')"))
+    check("timer: it sits above Today's split, not below it",
+          p.evaluate("""()=>{
+            const b=document.getElementById('startWorkout'), h=document.querySelector('.split-head');
+            return !!b && !!h && b.getBoundingClientRect().top < h.getBoundingClientRect().top;}"""))
     sb=p.locator("#startWorkout").bounding_box()
     check("timer: start is a proper target", sb and sb["height"]>=44,
           sb and "%dx%d"%(sb["width"],sb["height"]))

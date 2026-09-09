@@ -647,7 +647,21 @@
     font-size: 14px;
     color: var(--ink);
   }
-  .rev-item .amt.editable .g-unit { margin-left: -2px; }
+  .rev-item .amt.editable .g-unit {
+    margin-left: -2px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .rev-item .amt.editable .g-unit select {
+    height: 44px;          /* rule 5: it is tappable, so it is 44px */
+    padding: 0 4px;
+    font-family: var(--font-num);
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
   .rev-item input {
     width: 66px;
     height: 44px;
@@ -1862,7 +1876,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-08.31";
+  var BUILD = "2026-09-09.32";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2824,9 +2838,12 @@
     var qty = q.qty || 1;
     var cal, pro, amount;
 
+    var typedUnit = null;
     if (q.unit && q.unit.kind === "weight") {
       if (!n.k) return null;                   // count-only item — can't answer by weight
       var grams = qty * q.unit.grams;
+      typedUnit = q.unit.grams === 1 ? "g" : q.unit.grams === 28.3495 ? "oz"
+                : q.unit.grams === 453.592 ? "lb" : null;
       cal = n.k * grams / 100;
       pro = n.p * grams / 100;
       amount = Math.round(grams) + " g";
@@ -2844,6 +2861,7 @@
       // Only weight-resolved pantry rows have a gram basis to edit. A count
       // ("2 × bottle") has no grams to change, so it stays as typed.
       grams: (q.unit && q.unit.kind === "weight" && n.k) ? Math.round(qty * q.unit.grams) : null,
+      unit: typedUnit,
       per100: n.k ? { k: n.k, p: n.p } : null,
       pre: "",
       calories: Math.round(cal),
@@ -2947,6 +2965,28 @@
     return { qty: qty, unit: unit, name: rest.trim() || norm, whole: norm };
   }
 
+  // ---------- how food gets weighed ----------
+  // Grams are the basis the whole food table is keyed on, so grams stay the
+  // stored truth and a unit is only ever how the number is shown. Weighing in
+  // grams is a habit, not a law: most US packaging reads in ounces, and a
+  // kitchen scale set to oz is not going to be re-taught for this app.
+  var WEIGH = { g: 1, oz: 28.3495, lb: 453.592 };
+  var WEIGH_LABEL = { g: "Grams (g)", oz: "Ounces (oz)", lb: "Pounds (lb)" };
+
+  function wunit() { return WEIGH[store.wunit] ? store.wunit : "g"; }
+  function fromG(g, u) {
+    var n = (Number(g) || 0) / (WEIGH[u] || 1);
+    // Grams land on whole numbers; anything bigger needs a decimal or a
+    // six ounce chicken breast rounds to 6 and stops being six ounces.
+    return u === "g" ? String(Math.round(n)) : String(Math.round(n * 100) / 100);
+  }
+  function toG(n, u) { return (Number(n) || 0) * (WEIGH[u] || 1); }
+  function unitOptions(sel) {
+    return Object.keys(WEIGH).map(function (u) {
+      return '<option value="' + u + '"' + (u === sel ? ' selected' : '') + '>' + u + '</option>';
+    }).join("");
+  }
+
   // Your own pantry answers first; the built-in table is the fallback.
   function resolveLocal(chunk) {
     return resolvePantry(chunk) || resolveTable(chunk);
@@ -2958,11 +2998,14 @@
     var food = matchFood(p.name) || matchFood(p.whole);
     if (!food) return null;
 
-    var grams = null, amount = "", showGrams = true, assumed = false;
+    var grams = null, amount = "", showGrams = true, assumed = false, typedUnit = null;
     if (p.unit && p.unit.kind === "weight") {
       grams = (p.qty || 1) * p.unit.grams;
       var label = p.unit.grams === 1 ? "g" : p.unit.grams === 28.3495 ? "oz"
                 : p.unit.grams === 453.592 ? "lb" : "kg";
+      // Say it back in the unit it was said in. Someone who typed "6 oz" and
+      // is shown 170 g has to do arithmetic to check their own entry.
+      if (WEIGH[label]) typedUnit = label;
       amount = (p.qty || 1) + " " + label;
       showGrams = label !== "g";                   // don't print grams twice
     } else if (p.unit && p.unit.kind === "portion") {
@@ -3004,6 +3047,7 @@
       // be correctable. Editing it re-derives the macros, which needs the basis
       // rather than the rendered string: the grams, and the per-100 g figures.
       grams: Math.round(grams),
+      unit: typedUnit,                  // null means "whatever you weigh in"
       per100: { k: food.k, p: food.p },
       pre: showGrams ? amount : "",     // "1 cup", "2 ×" — describes the weight
       calories: Math.round((food.k * grams) / 100),
@@ -3295,14 +3339,21 @@
         var tag = '<span class="src-tag ' + it.src + '">' + SRC[it.src || "claude"] + '</span>';
         // Anything with a gram basis gets its weight as a field rather than as
         // text, so a portion you did not choose can be corrected to one you did.
+        var u = it.unit || wunit();
         var amt = (it.grams && it.per100)
           ? '<span class="amt editable">' +
               '<span class="pre">' + (it.pre ? esc(it.pre) + " · " : "") + '</span>' +
-              '<input inputmode="decimal" class="g" data-ig="' + i + '" value="' + it.grams +
-                '" aria-label="Grams of ' + esc(it.food) + '">' +
-              // the separator rides with the unit so it can never wrap onto a
-              // line by itself, the way a standalone "·" span would
-              '<span class="g-unit">g ·</span>' + tag +
+              '<input inputmode="decimal" class="g" data-ig="' + i + '" value="' + fromG(it.grams, u) +
+                '" aria-label="Amount of ' + esc(it.food) + '">' +
+              // No "·" here. It used to ride with the unit so it could not wrap
+              // onto a line alone, but a boxed picker separates itself, and
+              // the wider control pushes the tag to its own line — which left
+              // the separator dangling at the end of the one above.
+              '<span class="g-unit">' +
+                '<select data-iu="' + i + '" aria-label="Weigh ' + esc(it.food) + ' in">' +
+                  unitOptions(u) +
+                '</select>' +
+              '</span>' + tag +
             '</span>'
           : '<span class="amt">' + (it.amount ? esc(it.amount) + " · " : "") + tag + '</span>';
         return '<div class="rev-item">' +
@@ -3358,6 +3409,13 @@
         '<datalist id="regionList">' +
           REGIONS.map(function (r) { return '<option value="' + esc(r) + '"></option>'; }).join("") +
         '</datalist></div>' +
+      '<div class="field"><label for="wUnitIn">Weigh food in</label>' +
+        '<select id="wUnitIn">' +
+          Object.keys(WEIGH).map(function (u) {
+            return '<option value="' + u + '"' + (u === wunit() ? ' selected' : '') + '>' +
+                   WEIGH_LABEL[u] + '</option>';
+          }).join("") +
+        '</select></div>' +
       errHtml +
       '<button class="btn" id="runEst">Work out the macros</button>' +
       '<p class="est-note">' +
@@ -3615,6 +3673,19 @@
       regionIn.addEventListener("blur", saveRegion);
     }
 
+    // The picker showing its own new value is the confirmation, the same way
+    // the region field above it works. There is deliberately no redraw here:
+    // this control and the review are never on screen at the same time, so a
+    // branch for "update the open review" would be a line that can never run.
+    // Mid-review the per-row picker is the way to change it.
+    var wUnitIn = document.getElementById("wUnitIn");
+    if (wUnitIn) {
+      wUnitIn.addEventListener("change", function () {
+        store.wunit = WEIGH[wUnitIn.value] ? wUnitIn.value : "g";
+        save();
+      });
+    }
+
     var runEst = document.getElementById("runEst");
     if (runEst) {
       runEst.addEventListener("click", function () {
@@ -3649,8 +3720,12 @@
         var it = est.items[Number(input.dataset.ig)];
         if (!it || !it.per100) return;
 
-        var g = Math.max(0, Number(input.value) || 0);
+        // The number is in whatever the row's picker says. Grams remain the
+        // basis the macros are computed from, so convert on the way in.
+        var u = it.unit || wunit();
+        var g = Math.max(0, toG(input.value, u));
         it.grams = g;
+        it.unit = u;
         it.calories = Math.round((it.per100.k * g) / 100);
         it.protein = Math.round((it.per100.p * g) / 100);
         // The portion is yours now, so it is no longer an assumption, and any
@@ -3661,7 +3736,7 @@
         it.pre = "";
         // commitEstimate writes `amount` into the row's note, so it has to move
         // with the weight or the ledger records a portion you did not log.
-        it.amount = g ? g + " g" : "";
+        it.amount = g ? fromG(g, u) + " " + u : "";
 
         var row = input.closest(".rev-item");
         if (row) {
@@ -3681,6 +3756,28 @@
         est.items.forEach(function (x) { gc += x.calories; gp += x.protein; });
         var gHead = view.querySelector(".review > header span");
         if (gHead) gHead.textContent = fmt(gc) + " kcal · " + fmt(gp) + " g";
+      });
+    });
+
+    // Switching the unit converts what is there rather than re-reading it.
+    // 150 g becoming 150 oz would be a four kilogram chicken breast logged in
+    // one tap, so the food stays the same size and only the reading changes —
+    // then you type over it if you meant a different amount.
+    view.querySelectorAll("[data-iu]").forEach(function (sel) {
+      sel.addEventListener("change", function () {
+        if (!est || est.status !== "review") return;
+        var it = est.items[Number(sel.dataset.iu)];
+        if (!it) return;
+        it.unit = WEIGH[sel.value] ? sel.value : "g";
+        if (it.amount) it.amount = fromG(it.grams, it.unit) + " " + it.unit;
+        // The choice sticks: someone who works in ounces works in ounces for
+        // every row that has not been given a unit of its own — the rest of
+        // this review included, which is why this redraws rather than patching
+        // the one field. The typed numbers live in est.items, not in the DOM,
+        // so nothing is lost.
+        store.wunit = it.unit;
+        save();
+        render();
       });
     });
 
@@ -3842,12 +3939,33 @@
       '</article>';
     }).join("");
 
+    // The clock goes above everything, because it is the first thing you touch
+    // when you walk in and the last thing before you leave — it should not be
+    // somewhere you scroll to find.
+    var stale = d.workoutStart && workoutMs(d) > MAX_SESSION_MS;
+    var clock = locked || splitEdit ? ''
+      : d.workoutStart
+        ? '<div class="workout is-running' + (stale ? ' is-stale' : '') + '">' +
+            '<span class="wo-label">' + (stale ? 'Left running' : 'Workout') + '</span>' +
+            '<span class="wo-clock" id="workoutClock">' + fmtDur(workoutMs(d)) + '</span>' +
+            '<button id="discardWorkout">Discard</button>' +
+          '</div>' +
+          (stale ? '<p class="wo-note">Longer than a session — this will not be saved.</p>' : '')
+        : d.workoutMs
+          ? '<div class="workout">' +
+              '<span class="wo-label">Logged</span>' +
+              '<span class="wo-clock">' + fmtDur(d.workoutMs) + '</span>' +
+              '<button id="startWorkout">Start again</button>' +
+            '</div>'
+          : '<button class="btn ghost" id="startWorkout" style="width:100%">Start workout</button>';
+
     var totals = d.lifts.reduce(function (a, l) {
       var v = volume(l); a.sets += v.sets; a.reps += v.reps; a.vol += v.vol; return a;
     }, { sets: 0, reps: 0, vol: 0 });
 
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:10px">' +
+        clock +
         '<div class="split-head">' +
           '<span class="eyebrow">Today’s split</span>' +
           '<button id="editSplits">' + (splitEdit ? "Done" : "Edit splits") + '</button>' +
@@ -3855,24 +3973,6 @@
         (splitEdit
           ? '<div class="split-list">' + editRows + '</div>'
           : '<div class="cats">' + chips + '</div>') +
-        (locked || splitEdit ? '' :
-          (d.workoutStart
-            ? '<div class="workout is-running' + (workoutMs(d) > MAX_SESSION_MS ? ' is-stale' : '') + '">' +
-                '<span class="wo-label">' +
-                  (workoutMs(d) > MAX_SESSION_MS ? 'Left running' : 'Workout') + '</span>' +
-                '<span class="wo-clock" id="workoutClock">' + fmtDur(workoutMs(d)) + '</span>' +
-                '<button id="discardWorkout">Discard</button>' +
-              '</div>' +
-              (workoutMs(d) > MAX_SESSION_MS
-                ? '<p class="wo-note">Longer than a session — this will not be saved.</p>'
-                : '')
-            : (d.workoutMs
-                ? '<div class="workout">' +
-                    '<span class="wo-label">Logged</span>' +
-                    '<span class="wo-clock">' + fmtDur(d.workoutMs) + '</span>' +
-                    '<button id="startWorkout">Start again</button>' +
-                  '</div>'
-                : '<button class="btn ghost" id="startWorkout" style="width:100%">Start workout</button>'))) +
         (splitAdding
           ? '<div class="split-new">' +
               '<input id="newSplitName" class="text" placeholder="Push, Legs, Walk, Yoga…" ' +
@@ -5452,6 +5552,8 @@
     }
     if (incoming.goal) store.goal = normGoal(incoming.goal);
     if (incoming.region) store.region = incoming.region;
+    // A restored phone should weigh food the way the old one did.
+    if (WEIGH[incoming.wunit]) store.wunit = incoming.wunit;
 
     Object.keys(store.days).forEach(function (k) {
       (store.days[k].food || []).forEach(function (f) {
