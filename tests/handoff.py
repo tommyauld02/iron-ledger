@@ -20,6 +20,13 @@ from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools
 
+# The Macros tab now opens on the fill-in table; the plain-words box is behind
+# "Or just describe it in words". This suite is about what the resolver makes
+# of a phrase, not about how it was entered, so it opens the box and types.
+def words(p):
+    if not p.locator("#estText").count():
+        p.click("#estSwap"); p.wait_for_timeout(250)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 d = ROOT.replace("\\", "/"); d = "/" + d if d[1:2] == ":" else d
 res = []
@@ -206,7 +213,7 @@ with sync_playwright() as pw:
 
     # the offline food table must answer without any network or capability
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
-    p.fill("#estText", "2 eggs"); p.click("#runEst"); p.wait_for_timeout(900)
+    words(p); p.fill("#estText", "2 eggs"); p.click("#runEst"); p.wait_for_timeout(900)
     got = p.eval_on_selector_all(".rev-item", "e => e.length")
     check("offline food table still answers", got > 0, "%d rows for '2 eggs'" % got)
     if got:

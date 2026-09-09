@@ -167,6 +167,37 @@ or zero items dissolves back into plain rows — call it after anything that can
 remove an item. `locate(d, id)` finds a row at the top level *or* inside a meal;
 use it anywhere food is looked up by id.
 
+**The way in is a table, not a blank box.** "What did you eat?" over an empty
+textarea tells someone opening the app for the first time nothing about what it
+accepts — the owner said so, and he was right. Macros now opens on labelled
+fields with examples in them, the shape the pantry form already uses: Amount /
+Unit / Food, one row per item, `+ Add another`, and a datalist on the food field
+carrying every name in `FOODS` plus the pantry, so "what does it know?" is
+answered by typing rather than by guessing and being told no.
+
+The plain-words box did **not** go away. It is what makes "half a protein
+coffee" and "chicken and rice" work in one line, and it is faster once you know
+the shape, so it sits behind *Or just describe it in words* and takes over the
+form when opened. Swapping to it carries the table across as text — but never
+over the top of words already in the box.
+
+The table is a way to **compose** the same sentence, not a second code path:
+`rowChunk()` turns one row into `"6 oz chicken breast"` and `rowsText()` joins
+them with `&`, which is exactly what `splitItems()` already splits on. Pantry,
+the built-in table and Claude resolve it unchanged. Every unit the picker offers
+is a word `parseQty()` knows, so the picker cannot produce a chunk the parser
+then shrugs at.
+
+Two things that are easy to get wrong here. `estRows` empties on commit along
+with `estDraft` — leaving the rows filled in is how someone logs the same meal
+twice without noticing. And pressing *Work out the macros* with nothing filled
+in sets `estHint` and says so; doing nothing at all would read exactly like a
+dead button.
+
+The suites feed the resolver through the words box, so the ones testing food
+matching rather than entry call a local `words(p)` helper first. `sweep` and
+`estmeal` drive the table itself, because that is the front door now.
+
 **Grams are the basis; the unit is only how it is shown.** The whole food
 table is keyed per 100 g and every macro is derived from `it.grams`, so that
 is what gets stored and nothing downstream has to know what unit you like.

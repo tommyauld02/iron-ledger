@@ -1,5 +1,10 @@
 from playwright.sync_api import sync_playwright
 import os, json, datetime
+
+def words(p):
+    """Open the plain-words box; it lives behind the fill-in table now."""
+    if not p.locator("#estText").count():
+        p.click("#estSwap"); p.wait_for_timeout(250)
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
 T=datetime.date.today(); Ts=T.isoformat()
 Y=(T-datetime.timedelta(days=2)).isoformat()
@@ -64,7 +69,7 @@ with sync_playwright() as pw:
     # "beef wellington" is deliberately absent from the table — the point of this
     # check is the fallback path, and a query the table can answer tests coverage
     # instead. "chipotle burrito bowl" used to be that query until the table grew.
-    p.fill("#estText","200g chicken breast & 1 costco protein coffee & beef wellington")
+    words(p);p.fill("#estText","200g chicken breast & 1 costco protein coffee & beef wellington")
     p.click("#runEst"); p.wait_for_timeout(1200)
     rows=p.eval_on_selector_all(".rev-item",
       "e=>e.map(x=>x.querySelector('.food').textContent+'|'+x.querySelector('.amt').textContent.trim())")
@@ -78,7 +83,7 @@ with sync_playwright() as pw:
 
     # ---------- correcting an assumed portion ----------
     # A typical serving is a guess about your plate, so the weight is a field.
-    p.fill("#estText","white rice & 1 costco protein coffee")
+    words(p);p.fill("#estText","white rice & 1 costco protein coffee")
     p.click("#runEst"); p.wait_for_timeout(1200)
     SNAP="""()=>[...document.querySelectorAll('.rev-item')].map(x=>({
         food:x.querySelector('.food').textContent,
@@ -107,10 +112,80 @@ with sync_playwright() as pw:
     head=p.eval_on_selector(".review > header span","e=>e.textContent").replace(",","")
     check("serving: the running total follows", ("%d kcal"%rowsum) in head,
           "rows=%d head=%r" % (rowsum, head))
+    # ---------- THE WAY IN IS A TABLE, NOT A BLANK BOX ----------
+    # "What did you eat?" over an empty textarea tells a first-time user
+    # nothing about what it accepts. Labelled fields with examples do.
+    # Committing here also closes the review the section above left open, and
+    # a later check reads the corrected weight back out of the ledger.
+    p.click("#commitEst"); p.wait_for_timeout(600)
+    if p.locator("#estText").count(): p.click("#estSwap"); p.wait_for_timeout(300)
+    check("entry: you land on a table, not a blank box",
+          p.locator(".et-row").count()==1 and p.locator("#estText").count()==0)
+    # the labels are set in uppercase by CSS, so compare what is on screen
+    check("entry: the fields say what goes in them",
+          [x.strip().upper() for x in p.locator(".et-lab").all_inner_texts()]==["AMOUNT","UNIT","FOOD"],
+          str(p.locator(".et-lab").all_inner_texts()))
+    check("entry: and carry an example",
+          p.get_attribute('[data-ef="0"]',"placeholder")=="chicken breast",
+          p.get_attribute('[data-ef="0"]',"placeholder"))
+    check("entry: the food field offers what the app already knows",
+          p.locator("#estFoods option").count() > 250,
+          "%d suggestions" % p.locator("#estFoods option").count())
+    for sel in ('[data-eq="0"]', '[data-eu="0"]', '[data-ef="0"]', "#estAddRow", "#estSwap"):
+        bb=p.locator(sel).bounding_box()
+        check("entry: %s clears 44px" % sel, bb and bb["height"]>=44,
+              bb and "%dx%d"%(bb["width"],bb["height"]))
+
+    # pressing it with nothing filled in must not read as a dead button
+    p.click("#runEst"); p.wait_for_timeout(500)
+    check("entry: an empty press says so rather than doing nothing",
+          "Nothing to work out" in p.locator(".est").inner_text(),
+          " / ".join(x.strip() for x in p.locator(".est .est-note").all_inner_texts())[:80])
+    check("entry: and no review opened", p.locator(".review").count()==0)
+
+    p.fill('[data-eq="0"]',"6"); p.select_option('[data-eu="0"]',"oz")
+    p.fill('[data-ef="0"]',"chicken breast"); p.wait_for_timeout(200)
+    p.click("#estAddRow"); p.wait_for_timeout(500)
+    check("entry: adding a row adds a row", p.locator(".et-row").count()==2)
+    check("entry: and puts you in it",
+          p.evaluate("()=>document.activeElement.dataset.ef")=="1")
+    check("entry: the first row survived it",
+          p.input_value('[data-ef="0"]')=="chicken breast")
+    p.fill('[data-eq="1"]',"1"); p.select_option('[data-eu="1"]',"cup"); p.fill('[data-ef="1"]',"white rice")
+    p.click("#runEst"); p.wait_for_timeout(1400)
+    foods=p.eval_on_selector_all(".rev-item .food","e=>e.map(x=>x.textContent)")
+    check("entry: both rows resolve", len(foods)==2, " | ".join(foods))
+    check("entry: the unit you picked is the unit it used",
+          p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value)")[0]=="oz",
+          str(p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value)")))
+    p.click("#commitEst"); p.wait_for_timeout(800)
+    check("entry: the table empties after it is logged",
+          p.locator(".et-row").count()==1 and p.input_value('[data-ef="0"]')=="",
+          "rows=%d first=%r" % (p.locator(".et-row").count(), p.input_value('[data-ef="0"]')))
+
+    # removing a row, and the words box behind it
+    p.fill('[data-ef="0"]',"eggs"); p.click("#estAddRow"); p.wait_for_timeout(500)
+    p.fill('[data-ef="1"]',"toast"); p.wait_for_timeout(200)
+    rb=p.locator("[data-erm]").first.bounding_box()
+    check("entry: remove is a proper target", rb and rb["height"]>=44,
+          rb and "%dx%d"%(rb["width"],rb["height"]))
+    p.click('[data-erm="0"]'); p.wait_for_timeout(500)
+    check("entry: removing a row removes the right one",
+          p.locator(".et-row").count()==1 and p.input_value('[data-ef="0"]')=="toast",
+          p.input_value('[data-ef="0"]'))
+    p.click("#estSwap"); p.wait_for_timeout(500)
+    check("entry: the words box is still there behind it",
+          p.locator("#estText").count()==1 and p.locator(".et-row").count()==0)
+    check("entry: and the table came with it rather than being retyped",
+          p.input_value("#estText")=="toast", repr(p.input_value("#estText")))
+    p.click("#estSwap"); p.wait_for_timeout(500)
+    check("entry: swapping back keeps the table",
+          p.input_value('[data-ef="0"]')=="toast")
+    p.fill('[data-ef="0"]',""); p.wait_for_timeout(200)
+
     # ---------- WEIGH IT HOWEVER YOU WEIGH IT ----------
     # Grams are the basis the food table is keyed on, but a US kitchen scale
     # reads ounces and nobody is re-teaching it for this app.
-    p.click("#commitEst"); p.wait_for_timeout(600)
     STORE = "()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
     ROW = """()=>({g:document.querySelector('[data-ig]').value,
                    u:document.querySelector('[data-iu]').value,
@@ -121,7 +196,7 @@ with sync_playwright() as pw:
     check("units: the picker is a proper target", ub and ub["height"]>=44,
           ub and "%dx%d"%(ub["width"],ub["height"]))
 
-    p.fill("#estText","200 g chicken breast"); p.click("#runEst"); p.wait_for_timeout(1200)
+    words(p);p.fill("#estText","200 g chicken breast"); p.click("#runEst"); p.wait_for_timeout(1200)
     r0=p.evaluate(ROW)
     check("units: a weight you typed comes back in the unit you typed", r0["u"]=="g", json.dumps(r0))
     rb=p.locator("[data-iu]").first.bounding_box()
@@ -148,7 +223,7 @@ with sync_playwright() as pw:
     # it has to survive a reload, or it is a setting that resets every morning
     p.reload(); p.wait_for_timeout(1000)
     check("units: and it survives a reload", p.eval_on_selector("#wUnitIn","e=>e.value")=="oz")
-    p.fill("#estText","chicken breast and white rice"); p.click("#runEst"); p.wait_for_timeout(1300)
+    words(p);p.fill("#estText","chicken breast and white rice"); p.click("#runEst"); p.wait_for_timeout(1300)
     check("units: rows you did not weigh follow the setting",
           p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value).join(',')")=="oz,oz",
           p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value).join(',')"))
@@ -182,7 +257,8 @@ with sync_playwright() as pw:
     check("macros: back to today works", p.evaluate("()=>document.getElementById('todayBtn').hidden"))
 
     # region persists
-    p.fill("#regionIn","Canada"); p.click("#estText"); p.wait_for_timeout(300)
+    # blur onto something that exists in both entry modes
+    p.fill("#regionIn","Canada"); p.click(".est .eyebrow"); p.wait_for_timeout(300)
     check("macros: region persists", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).region")=="Canada")
 
     # ---------- GYM ----------

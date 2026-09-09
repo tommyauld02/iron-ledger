@@ -14,6 +14,13 @@ So this checks the shape of the data as well as the answers it gives.
 from playwright.sync_api import sync_playwright
 import os, io, re, json
 
+# The Macros tab now opens on the fill-in table; the plain-words box is behind
+# "Or just describe it in words". This suite is about what the resolver makes
+# of a phrase, not about how it was entered, so it opens the box and types.
+def words(p):
+    if not p.locator("#estText").count():
+        p.click("#estSwap"); p.wait_for_timeout(250)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 d = ROOT.replace("\\", "/"); d = "/" + d if d[1:2] == ":" else d
 res = []
@@ -139,7 +146,7 @@ with sync_playwright() as pw:
 
     wrong = []
     for q, want in CASES:
-        p.fill("#estText", q); p.click("#runEst"); p.wait_for_timeout(600)
+        words(p); p.fill("#estText", q); p.click("#runEst"); p.wait_for_timeout(600)
         rows = p.evaluate("""() => [...document.querySelectorAll('.rev-item')].map(x => ({
             food: x.querySelector('.food').textContent,
             cal: Number(x.querySelector('[data-ic]').value),
@@ -151,7 +158,7 @@ with sync_playwright() as pw:
 
     off = []
     for q, want in COUNTED:
-        p.fill("#estText", q); p.click("#runEst"); p.wait_for_timeout(600)
+        words(p); p.fill("#estText", q); p.click("#runEst"); p.wait_for_timeout(600)
         got = p.evaluate("() => {const x = document.querySelector('.rev-item');"
                          "return x ? Number(x.querySelector('[data-ic]').value) : 0;}")
         if abs(got - want) > 12: off.append("%s -> %d (wanted ~%d)" % (q, got, want))
@@ -159,7 +166,7 @@ with sync_playwright() as pw:
     check("a count means that many, not that many boxes", not off, "; ".join(off))
 
     # splitting must still work on genuinely separate foods
-    p.fill("#estText", "chicken and rice"); p.click("#runEst"); p.wait_for_timeout(700)
+    words(p); p.fill("#estText", "chicken and rice"); p.click("#runEst"); p.wait_for_timeout(700)
     two = p.eval_on_selector_all(".rev-item", "e => e.length")
     check("a real 'and' still separates two foods", two == 2, "%d rows" % two)
     ctx.close()
@@ -199,7 +206,7 @@ with sync_playwright() as pw:
     ]
     off = []
     for q, food, kcal in FRACTIONS:
-        p.fill("#estText", q); p.click("#runEst"); p.wait_for_timeout(620)
+        words(p); p.fill("#estText", q); p.click("#runEst"); p.wait_for_timeout(620)
         got = p.evaluate("""() => {const x = document.querySelector('.rev-item');
             return x ? {f: x.querySelector('.food').textContent,
                         c: Number(x.querySelector('[data-ic]').value)} : null;}""")

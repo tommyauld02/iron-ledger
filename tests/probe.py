@@ -34,7 +34,7 @@ PROBES=[
  ("macros",".t-del:nth-of-type(1)","delete a row",None),
  ("macros","#openGoal","open target editor",None),
  ("macros","#addFood","add entry",[("#fCal","300"),("#fPro","30")]),
- ("macros","#runEst","run estimate",[("#estText","200g chicken breast")]),
+ ("macros","#runEst","run estimate",[('[data-eq="0"]',"200"),('[data-ef="0"]',"chicken breast")]),
  ("macros",".pending-chip","resolve pending entry",None),
  ("gym",".cat:nth-child(2)","switch split",None),
  ("gym",".cat:nth-child(3)","switch split (legs)",None),

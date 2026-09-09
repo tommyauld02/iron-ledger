@@ -1,5 +1,12 @@
 from playwright.sync_api import sync_playwright
 import os, datetime
+
+# The Macros tab now opens on the fill-in table; the plain-words box is behind
+# "Or just describe it in words". This suite is about what the resolver makes
+# of a phrase, not about how it was entered, so it opens the box and types.
+def words(p):
+    if not p.locator("#estText").count():
+        p.click("#estSwap"); p.wait_for_timeout(250)
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 S={"days":{T:{"food":[],"lifts":[],"updated":1,"goal":G}},"moves":None,"goal":G,
@@ -12,7 +19,7 @@ with sync_playwright() as pw:
     p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", S)
     p.reload(); p.wait_for_timeout(800)
-    p.fill("#estText","chicken and rice"); p.click("#runEst"); p.wait_for_timeout(700)
+    words(p); p.fill("#estText","chicken and rice"); p.click("#runEst"); p.wait_for_timeout(700)
     # edit an assumed number before committing, the way he would
     p.fill('[data-ic="1"]',"410"); p.fill('[data-ip="1"]',"8"); p.wait_for_timeout(200)
     print("header after editing rice up:", p.text_content(".review > header span"))

@@ -565,6 +565,65 @@
   }
   .est textarea::placeholder { color: var(--ink-3); }
 
+  /* Labelled fields with examples in them, the shape the pantry form uses.
+     Amount and Unit share a line because they are one thought; the food gets
+     the full width because a name is the longest thing here. Labels are on the
+     first row only — every row after it lines up under them. */
+  .est-table { display: flex; flex-direction: column; gap: 10px; }
+  .et-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 44px;
+    gap: 4px 8px;
+    align-items: center;
+  }
+  .et-row + .et-row { padding-top: 10px; border-top: 1px solid var(--rule); }
+  .et-lab {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .et-wide, .et-f { grid-column: 1 / -1; }
+  .et-row input, .et-row select {
+    /* A grid item is min-content wide by default, and a select's min-content
+       is its longest option — "Pre-made — no weighing" pushed the Unit column
+       clean off the right edge of the phone. */
+    min-width: 0;
+    height: 46px;
+    padding: 0 10px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+  }
+  .et-row .et-f { font-family: var(--font-ui); }
+  .et-row .et-u { padding: 0 4px; }
+  .et-rm {
+    height: 44px;
+    width: 44px;
+    color: var(--ink-3);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 2px;
+  }
+  .et-rm:hover { color: var(--miss); border-color: var(--rule); }
+  .et-add, .et-swap {
+    min-height: 44px;
+    padding: 0 12px;
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .06em;
+    color: var(--accent);
+    background: none;
+    border: 1px dashed var(--rule);
+    border-radius: 2px;
+  }
+  .et-swap { border-style: none; text-align: left; padding: 0; }
+  .et-add:hover, .et-swap:hover { border-color: var(--accent); }
+
   .est-note {
     margin: 0;
     font-size: 12px;
@@ -1876,7 +1935,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-09.32";
+  var BUILD = "2026-09-09.33";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -1958,6 +2017,16 @@
   // { status: 'loading' | 'review' | 'error', text, items, note, message, replacing }
   var est = null;
   var estDraft = "";
+  // The entry table. A blank box asking "what did you eat?" tells a first-time
+  // user nothing about what it accepts, so the default way in is labelled
+  // fields with examples in them, the way the pantry form works. The plain
+  // words box is still there behind "Or just describe it in words" — it is
+  // what makes "half a protein coffee" work, and it is faster once you know
+  // the shape. Transient like estDraft: reopening the app should show an empty
+  // form, not yesterday's half-finished thought.
+  var estRows = [{ qty: "", unit: "", food: "" }];
+  var estWords = false;    // true while the plain-words box has taken over
+  var estHint = "";        // "you have not filled anything in yet"
   var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
   var pantryForm = null;
   var coachOpen = null;
@@ -3057,6 +3126,41 @@
   }
 
   // ---------- macro estimator ----------
+  // Every unit here is a word parseQty already understands, so nothing the
+  // picker offers can produce a chunk the parser then shrugs at.
+  function entryUnitOptions(sel) {
+    function opts(list) {
+      return list.map(function (u) {
+        return '<option value="' + u + '"' + (u === sel ? ' selected' : '') + '>' + u + '</option>';
+      }).join("");
+    }
+    return '<option value=""' + (sel ? '' : ' selected') + '>—</option>' +
+      '<optgroup label="By weight">' + opts(["g", "oz", "lb"]) + '</optgroup>' +
+      '<optgroup label="By volume">' + opts(["ml", "fl oz"]) + '</optgroup>' +
+      '<optgroup label="By spoon or cup">' + opts(["tsp", "tbsp", "cup"]) + '</optgroup>' +
+      '<optgroup label="Pre-made — no weighing">' +
+        opts(["bottle", "can", "bar", "packet", "pouch", "container", "tub",
+              "carton", "box", "bag", "stick", "slice", "piece", "scoop", "serving"]) +
+      '</optgroup>';
+  }
+
+  // One table row becomes one chunk of the same sentence the words box would
+  // have produced, so the table is a way to *compose* the input rather than a
+  // second code path — pantry, the built-in table and Claude all resolve it
+  // exactly as before.
+  function rowChunk(r) {
+    var food = String((r && r.food) || "").trim();
+    if (!food) return "";
+    var qty = String((r && r.qty) || "").trim();
+    var unit = String((r && r.unit) || "").trim();
+    if (!qty && !unit) return food;
+    if (!qty) qty = "1";
+    return unit ? qty + " " + unit + " " + food : qty + " " + food;
+  }
+  function rowsText() {
+    return estRows.map(rowChunk).filter(Boolean).join(" & ");
+  }
+
   function estimatePrompt(text) {
     var region = store.region || "United States";
     return "You estimate calories and protein for food descriptions. Reply with JSON only.\n\n" +
@@ -3192,6 +3296,10 @@
     stampGoal(key);
     est = null;
     estDraft = "";
+    // The table has to empty with the draft. Leaving the rows filled in is how
+    // someone logs the same meal twice without noticing.
+    estRows = [{ qty: "", unit: "", food: "" }];
+    estHint = "";
     estAsMeal = false;
     touch(key); save(); render();
   }
@@ -3399,10 +3507,43 @@
     var errHtml = (est && est.status === "error")
       ? '<p class="est-note" style="color:var(--miss)">' + esc(est.message) + '</p>' : '';
 
+    // The food field offers everything the app can already answer offline, so
+    // the question "what does it know?" is answered by typing rather than by
+    // guessing and being told no.
+    var known = FOODS.map(function (f) { return f.n; })
+      .concat((store.pantry || []).map(function (x) { return x.name; }));
+    var foodList = '<datalist id="estFoods">' +
+      known.map(function (n) { return '<option value="' + esc(n) + '"></option>'; }).join("") +
+      '</datalist>';
+
+    var etRows = estRows.map(function (r, i) {
+      var head = i === 0;
+      var n = String(i + 1);
+      return '<div class="et-row">' +
+        (head ? '<span class="et-lab">Amount</span><span class="et-lab">Unit</span><span></span>' : '') +
+        '<input inputmode="decimal" class="et-q" data-eq="' + i + '" value="' + esc(r.qty) +
+          '" placeholder="6" aria-label="Amount for item ' + n + '">' +
+        '<select class="et-u" data-eu="' + i + '" aria-label="Unit for item ' + n + '">' +
+          entryUnitOptions(r.unit) +
+        '</select>' +
+        (estRows.length > 1
+          ? '<button class="et-rm" data-erm="' + i + '" aria-label="Remove item ' + n + '">✕</button>'
+          : '<span class="et-rm-gap" aria-hidden="true"></span>') +
+        (head ? '<span class="et-lab et-wide">Food</span>' : '') +
+        '<input class="text et-f" data-ef="' + i + '" list="estFoods" value="' + esc(r.food) +
+          '" placeholder="chicken breast" aria-label="Food for item ' + n + '">' +
+      '</div>';
+    }).join("");
+
     return '<section class="entry est">' +
       '<span class="eyebrow">Need help counting?</span>' +
-      '<textarea id="estText" placeholder="What did you eat?" ' +
-        'spellcheck="false">' + esc(estDraft) + '</textarea>' +
+      (estWords
+        ? '<textarea id="estText" placeholder="Half a protein coffee, 6 oz sirloin and a cup of rice" ' +
+            'spellcheck="false">' + esc(estDraft) + '</textarea>'
+        : foodList +
+          '<div class="est-table">' + etRows +
+            '<button class="et-add" id="estAddRow">+ Add another</button>' +
+          '</div>') +
       '<div class="field"><label for="regionIn">Estimate for food sold in</label>' +
         '<input id="regionIn" class="text" list="regionList" autocomplete="country-name" ' +
           'value="' + esc(store.region || "") + '" placeholder="United States">' +
@@ -3417,7 +3558,11 @@
           }).join("") +
         '</select></div>' +
       errHtml +
+      (estHint ? '<p class="est-note" style="color:var(--miss)">' + esc(estHint) + '</p>' : '') +
       '<button class="btn" id="runEst">Work out the macros</button>' +
+      '<button class="et-swap" id="estSwap">' +
+        (estWords ? '◂ Back to the table' : '▸ Or just describe it in words') +
+      '</button>' +
       '<p class="est-note">' +
         (sampleFn
           ? 'Describe the meal in plain words. Your pantry and the built-in food table answer first; anything they don’t recognise goes to Claude. The country above decides which version of a product gets used. You’ll see the breakdown and can edit it before it goes in the ledger.'
@@ -3686,11 +3831,75 @@
       });
     }
 
+    // ---- the entry table ----
+    // Every field writes straight into estRows so a redraw never loses what is
+    // half typed, and so the run button reads state rather than the DOM.
+    view.querySelectorAll("[data-eq], [data-eu], [data-ef]").forEach(function (el) {
+      var key = el.dataset.eq !== undefined ? "qty"
+              : el.dataset.eu !== undefined ? "unit" : "food";
+      var i = Number(el.dataset.eq !== undefined ? el.dataset.eq
+                   : el.dataset.eu !== undefined ? el.dataset.eu : el.dataset.ef);
+      el.addEventListener("input", function () {
+        if (!estRows[i]) return;
+        estRows[i][key] = el.value;
+        estHint = "";
+      });
+    });
+
+    var addRow = document.getElementById("estAddRow");
+    if (addRow) {
+      addRow.addEventListener("click", function () {
+        estRows.push({ qty: "", unit: "", food: "" });
+        estHint = "";
+        render();
+        // Land on the new row rather than making someone hunt for it — the
+        // press has to visibly go somewhere.
+        var fields = view.querySelectorAll("[data-ef]");
+        if (fields.length) fields[fields.length - 1].focus();
+      });
+    }
+
+    view.querySelectorAll("[data-erm]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = Number(b.dataset.erm);
+        // A blank row you are still filling in is not saved data, so this is
+        // not the kind of delete rule 6 is about — there is nothing to undo to.
+        estRows.splice(i, 1);
+        if (!estRows.length) estRows = [{ qty: "", unit: "", food: "" }];
+        render();
+      });
+    });
+
+    var swap = document.getElementById("estSwap");
+    if (swap) {
+      swap.addEventListener("click", function () {
+        if (!estWords) {
+          // Carry the table across rather than making someone retype it, but
+          // never over the top of words already sitting in the box.
+          var composed = rowsText();
+          if (composed && !estDraft.trim()) estDraft = composed;
+        }
+        estWords = !estWords;
+        estHint = "";
+        render();
+      });
+    }
+
     var runEst = document.getElementById("runEst");
     if (runEst) {
       runEst.addEventListener("click", function () {
-        var text = (estText ? estText.value : "").trim();
-        if (!text) { if (estText) estText.focus(); return; }
+        var text = estWords ? (estText ? estText.value : "").trim() : rowsText();
+        if (!text) {
+          // Doing nothing at all here would read exactly like a dead button.
+          estHint = estWords
+            ? "Nothing to work out yet — describe the meal above."
+            : "Nothing to work out yet — put a food in the table above.";
+          render();
+          var first = view.querySelector(estWords ? "#estText" : "[data-ef]");
+          if (first) first.focus();
+          return;
+        }
+        estHint = "";
         // Pick up a country typed but not yet committed by a blur.
         if (regionIn && regionIn.value.trim()) store.region = regionIn.value.trim();
         // Always try the built-in table and your pantry first — that works

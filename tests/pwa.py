@@ -11,6 +11,13 @@ from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, threading, functools
 
+# The Macros tab now opens on the fill-in table; the plain-words box is behind
+# "Or just describe it in words". This suite is about what the resolver makes
+# of a phrase, not about how it was entered, so it opens the box and types.
+def words(p):
+    if not p.locator("#estText").count():
+        p.click("#estSwap"); p.wait_for_timeout(250)
+
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 res = []
 def check(n, ok, d=""): res.append(("PASS" if ok else "FAIL", n, d))
@@ -82,7 +89,7 @@ with sync_playwright() as pw:
     # logging still has to work with no network at all
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
     before = p.evaluate("() => (JSON.parse(localStorage.getItem('iron-ledger-v1')||'{}').days)||{}")
-    p.fill("#estText", "2 eggs"); p.wait_for_timeout(150)
+    words(p); p.fill("#estText", "2 eggs"); p.wait_for_timeout(150)
     check("can type a food entry offline", p.input_value("#estText") == "2 eggs")
 
     check("no page errors", not errs, str(errs))

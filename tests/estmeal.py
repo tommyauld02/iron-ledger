@@ -1,5 +1,12 @@
 from playwright.sync_api import sync_playwright
 import os, datetime
+
+# The Macros tab now opens on the fill-in table; the plain-words box is behind
+# "Or just describe it in words". This suite is about what the resolver makes
+# of a phrase, not about how it was entered, so it opens the box and types.
+def words(p):
+    if not p.locator("#estText").count():
+        p.click("#estSwap"); p.wait_for_timeout(250)
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 base={"days":{},"moves":None,"goal":G,"region":"United States","pantry":[],"v":1}
@@ -17,15 +24,22 @@ with sync_playwright() as pw:
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", base)
         p.reload(); p.wait_for_timeout(800)
     def estimate(text):
-        p.fill("#estText", text)
+        words(p); p.fill("#estText", text)
         p.click("#runEst"); p.wait_for_timeout(700)
     def food(): return p.evaluate("()=>(JSON.parse(localStorage['iron-ledger-v1']).days['%s']||{}).food||[]"%T)
 
     reset()
     check("heading is 'Need help counting?'",
           "NEED HELP COUNTING" in p.locator("#view").inner_text().upper())
-    check("textarea prompts 'What did you eat?'",
-          p.get_attribute("#estText","placeholder")=="What did you eat?",
+    check("the way in is a table you fill in, not a blank box",
+          p.locator(".et-row").count()==1 and p.locator("#estText").count()==0,
+          "rows=%d box=%d" % (p.locator(".et-row").count(), p.locator("#estText").count()))
+    check("its fields say what goes in them",
+          [x.strip().upper() for x in p.locator(".et-lab").all_inner_texts()]==["AMOUNT","UNIT","FOOD"],
+          str(p.locator(".et-lab").all_inner_texts()))
+    words(p)
+    check("and the words box shows the shorthand rather than asking a bare question",
+          "oz" in (p.get_attribute("#estText","placeholder") or ""),
           p.get_attribute("#estText","placeholder"))
 
     # ---- multi-item estimate offers the toggle ----
