@@ -205,6 +205,82 @@ with sync_playwright() as pw:
           p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.sets.length)", Ts)==liftsWere,
           str(liftsWere))
 
+    # ---------- HOW LONG IT TOOK ----------
+    REC = "k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]"
+    check("timer: offered before you start",
+          p.evaluate("()=>!!document.getElementById('startWorkout')"))
+    sb=p.locator("#startWorkout").bounding_box()
+    check("timer: start is a proper target", sb and sb["height"]>=44,
+          sb and "%dx%d"%(sb["width"],sb["height"]))
+    p.click("#startWorkout"); p.wait_for_timeout(500)
+    check("timer: starting shows a clock",
+          p.evaluate("()=>!!document.getElementById('workoutClock')"))
+    check("timer: the start time is stored, not a counter",
+          bool(p.evaluate(REC, Ts).get("workoutStart")))
+    db=p.locator("#discardWorkout").bounding_box()
+    check("timer: discard is a proper target", db and db["height"]>=44,
+          db and "%dx%d"%(db["width"],db["height"]))
+    # a phone suspends the app mid-session; elapsed must come from the clock,
+    # not from an interval that stopped counting
+    p.wait_for_timeout(2200)
+    p.reload(); p.wait_for_timeout(1000)
+    p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(500)
+    ticked=p.eval_on_selector("#workoutClock","e=>e.textContent")
+    check("timer: still running after a reload", ticked not in ("0:00",""), ticked)
+
+    p.click("#lockDay"); p.wait_for_timeout(700)
+    banked=p.evaluate(REC, Ts)
+    check("timer: locking the day banks the time", (banked.get("workoutMs") or 0) > 0,
+          "%s ms" % banked.get("workoutMs"))
+    check("timer: and stops the clock", "workoutStart" not in banked)
+    check("timer: the finished card reports it",
+          "Took" in p.eval_on_selector(".dd-time","e=>e.textContent"),
+          p.eval_on_selector(".dd-time","e=>e.textContent"))
+    first=banked["workoutMs"]
+    p.click("#unlockDay"); p.wait_for_timeout(600)
+    check("timer: unlocking keeps the time", p.evaluate(REC, Ts).get("workoutMs")==first)
+    check("timer: and offers a second session",
+          "again" in p.eval_on_selector("#startWorkout","e=>e.textContent").lower(),
+          p.eval_on_selector("#startWorkout","e=>e.textContent"))
+    p.click("#startWorkout"); p.wait_for_timeout(1600)
+    p.click("#lockDay"); p.wait_for_timeout(700)
+    second=p.evaluate(REC, Ts)["workoutMs"]
+    check("timer: a second session tops up rather than replacing",
+          second > first, "%d -> %d ms" % (first, second))
+    p.click("#unlockDay"); p.wait_for_timeout(600)
+
+    # a mis-tap must be throwable away, with undo like everything destructive
+    p.click("#startWorkout"); p.wait_for_timeout(500)
+    p.click("#discardWorkout"); p.wait_for_timeout(600)
+    check("timer: a running clock can be discarded",
+          "workoutStart" not in p.evaluate(REC, Ts))
+    check("timer: discarding offers undo",
+          p.evaluate("()=>!document.getElementById('undobar').hidden"))
+    p.click("#undoBtn"); p.wait_for_timeout(600)
+    check("timer: undo brings the clock back",
+          "workoutStart" in p.evaluate(REC, Ts))
+    p.click("#discardWorkout"); p.wait_for_timeout(500)
+
+    # A clock running for seven hours will not be banked when the day is
+    # locked in, so the bar has to say so first. Locking in and silently
+    # keeping nothing is rule 3 wearing a different hat.
+    p.evaluate("""k=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));
+                      s.days[k].workoutStart = Date.now() - 7*3600*1000;
+                      delete s.days[k].workoutMs;
+                      localStorage.setItem('iron-ledger-v1', JSON.stringify(s));}""", Ts)
+    p.reload(); p.wait_for_timeout(1000)
+    p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(500)
+    check("timer: a clock past saving stops looking live",
+          p.evaluate("()=>!!document.querySelector('.workout.is-stale')"))
+    note = p.eval_on_selector_all(".wo-note", "e=>e.map(x=>x.textContent).join('')")
+    check("timer: and says it will not be saved", "not be saved" in note, note)
+    p.click("#lockDay"); p.wait_for_timeout(700)
+    check("timer: locking in does not invent a seven hour session",
+          not p.evaluate(REC, Ts).get("workoutMs"),
+          "workoutMs=%s" % p.evaluate(REC, Ts).get("workoutMs"))
+    check("timer: and the day keeps its lifts", len(p.evaluate(REC, Ts)["lifts"]) > 0)
+    p.click("#unlockDay"); p.wait_for_timeout(600)
+
     # ---------- SPLITS ARE THE USER'S, NOT OURS ----------
     NAMES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).routine.days.map(d=>d.name)"
     check("splits: + sits in the chip row", p.evaluate("()=>!!document.getElementById('addSplitChip')"))
@@ -314,7 +390,10 @@ with sync_playwright() as pw:
     p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(600)
     check("log: 12 months render", p.eval_on_selector_all(".month","e=>e.length")==12)
     check("log: today ringed", p.eval_on_selector_all(".cal-cell.is-today","e=>e.length")==1)
-    check("log: stats row", p.eval_on_selector_all(".yearstats b","e=>e.length")==3)
+    check("log: stats row", p.eval_on_selector_all(".yearstats b","e=>e.length")==4,
+          " | ".join(p.eval_on_selector_all(".yearstats div","e=>e.map(x=>x.textContent)")))
+    check("log: the year knows how long you trained",
+          "Avg session" in " ".join(p.eval_on_selector_all(".yearstats span","e=>e.map(x=>x.textContent)")))
     yr0=p.text_content(".yearnav .y")
     p.click("#nextYear"); p.wait_for_timeout(500)
     check("log: year nav", p.text_content(".yearnav .y")!=yr0)

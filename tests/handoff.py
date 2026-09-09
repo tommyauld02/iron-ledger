@@ -553,6 +553,33 @@ with sync_playwright() as pw:
             });
             return out;}""", field): small.append("%s / %s" % (name, x))
 
+    # The running workout bar is the same shape of thing: it does not exist
+    # until Start is pressed, so nothing walking the tabs ever paints it.
+    for scheme in ("light", "dark"):
+        c2 = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True, color_scheme=scheme)
+        q = c2.new_page()
+        q.goto(BASE); q.wait_for_timeout(500)
+        RUNNING = json.loads(json.dumps(STORE))
+        RUNNING["days"][Ts]["lifts"] = [{"id": "l1", "cat": "back",
+                                         "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}]}]
+        q.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", RUNNING)
+        q.reload(); q.wait_for_timeout(900)
+        try:
+            q.click("text=Got it", timeout=2000)
+        except Exception:
+            pass
+        q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(500)
+        q.click("#startWorkout"); q.wait_for_timeout(600)
+        bad = q.evaluate(CONTRAST.replace(".daydone", ".workout"))
+        check("running timer painted in %s" % scheme, len(bad) > 0, "%d text nodes" % len(bad))
+        low = ["%s %.2f<%.1f" % (r["what"][:12], r["ratio"], r["need"]) for r in bad if not r["ok"]]
+        check("running timer contrast in %s" % scheme, not low, "; ".join(low))
+        if scheme == "light":
+            db = q.locator("#discardWorkout").bounding_box()
+            check("discard clears 44px", db and db["height"] >= 44,
+                  db and "%dx%d" % (db["width"], db["height"]))
+        c2.close()
+
     check("every editor behind a press opens", not unopened, "; ".join(unopened[:3]))
     check("their fields and buttons clear 44px", not small, "; ".join(small[:4]))
     check("and none of them trigger the iOS zoom", not zoomy, "; ".join(zoomy[:4]))

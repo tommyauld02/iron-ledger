@@ -1,11 +1,16 @@
 # The Iron Ledger
 
 A gym and macro log that runs as a web app on a phone home screen. One HTML
-file, no build step, no server, no dependencies. Currently build `2026-09-05.19`.
+file, no build step, no server, no dependencies.
+
+Started in cowork; it arrived in this repo at build `2026-09-05.19`. The
+current build is whatever `BUILD` says in `iron-ledger.html` — do not restate
+it here, because a stale number in the first file anyone reads is exactly what
+sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~340 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~395 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -191,6 +196,45 @@ Latin and latin-ext only.
 **Dates re-check on wake.** iOS suspends a home-screen app rather than closing
 it, so `TODAY` computed once at load meant food logged after midnight landed on
 yesterday. `checkDayRollover()` runs on visibilitychange, focus and pageshow.
+
+**The workout clock is a timestamp, not a counter.** `d.workoutStart` is when
+you pressed Start; the elapsed time is always `now - workoutStart`, computed
+fresh. Nothing counts up in a variable, which is the whole point — iOS suspends
+the app the moment you put the phone in your pocket, and a counter would come
+back reading two minutes for a ninety minute session. `d.workoutMs` is what has
+been banked, and the two **add**, so a second session on the same day tops up
+the first rather than replacing it.
+
+*Lock in the day* is what stops it: `lockDay` calls `stopWorkout(d)` before
+anything else, so the number the card shows is the number that gets stored. The
+running clock is redrawn by a `setInterval` that writes into `#workoutClock`
+directly rather than calling `render()` — a full redraw once a second would
+fight anything being typed into a weight field. One interval, cleared and
+restarted on every draw, and it clears itself if the element it writes to is
+gone.
+
+Discard exists because a mis-tap at nine in the morning otherwise becomes a six
+hour session, and it goes through `offerUndo()` like everything else
+destructive. The calendar and the Log tab's *Avg session* read **banked** time
+only: a clock still running is not a finished session and must not drag the
+average down all afternoon.
+
+**A forgotten clock records nothing rather than a lie.** Nobody locks in the
+day from the car park, so a clock is going to be left running overnight — and
+`14:32:07` on a calendar day is precisely the confident wrong number rule 3
+exists to stop. Two things handle it. `checkDayRollover()` stops the clock on
+the day it started on, because a session belongs to the day you trained, not
+the day you next opened the app. And `stopWorkout()` banks a run only if it is
+under `MAX_SESSION_MS` — six hours, generous for the longest real day anyone
+has in a gym. Past that the time is dropped, the way the label reader leaves a
+field it could not read empty. The lifts are untouched; the day simply does not
+claim a duration.
+
+Dropping it silently would be the same bug from the other end, so the running
+bar names the state before you get there: past the bound it goes `.is-stale`,
+loses the accent, reads *Left running*, and says the time will not be saved.
+The once-a-second tick only writes digits, so it hands over to one `render()`
+at the moment the bound is crossed and stops.
 
 ## Publishing
 

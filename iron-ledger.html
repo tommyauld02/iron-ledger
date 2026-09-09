@@ -1090,9 +1090,11 @@
     letter-spacing: .04em;
   }
 
+  /* Four tiles, so two rows of two. Three columns left the fourth sitting
+     alone against two thirds of bare grid. */
   .yearstats {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 1px;
     background: var(--rule);
     border: 1px solid var(--rule);
@@ -1479,6 +1481,60 @@
     gap: 8px;
   }
   .daydone .dd-stats div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .daydone .dd-time {
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  /* The running clock. Reads as a state you are in, not a button to press —
+     the only control on it is the way out. */
+  .workout {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--surface-2);
+  }
+  .workout.is-running { border-color: var(--accent); background: var(--accent-soft); }
+  /* Past saving. Not an error — nothing broke, there is just nothing worth
+     keeping — so it drops back to the resting surface rather than going red. */
+  .workout.is-stale { border-color: var(--rule); background: var(--surface-2); }
+  .workout.is-stale .wo-clock { color: var(--ink-2); }
+  .wo-note { margin: 6px 2px 0; font-size: 12px; color: var(--ink-2); }
+  .workout .wo-label {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .workout .wo-clock {
+    flex: 1;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 20px;
+    color: var(--ink);
+  }
+  .workout button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 12px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+  .workout button:hover { color: var(--accent); border-color: var(--accent); }
   .daydone .dd-stats b {
     font-family: var(--font-num);
     font-variant-numeric: tabular-nums;
@@ -1806,7 +1862,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-07.30";
+  var BUILD = "2026-09-08.31";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -1903,6 +1959,10 @@
   // Which meal is being renamed. Transient like the coach editors: reopening
   // the app should show your meals, not a half-finished rename.
   var mealRenaming = null;
+  // The running clock's interval. The elapsed time itself is never held in a
+  // variable — it is always (now - workoutStart), so a phone that suspends the
+  // app mid-session comes back with the right number instead of a stopped one.
+  var workoutTick = null;
   // null, "share" or "load" — which routine-sharing panel is open on Coach
   var coachShare = null;
   var coachShareMsg = "";
@@ -2036,6 +2096,53 @@
   // implementation is how the two would quietly drift apart, and only one of
   // them would remember to write store.retired.
   function shortName(n) { return n.length > 18 ? n.slice(0, 17) + "…" : n; }
+
+  // ---------- how long the workout took ----------
+  // d.workoutStart is a timestamp while it runs; d.workoutMs is what has been
+  // banked. They add, so a second session on the same day tops up the first
+  // rather than replacing it.
+  function workoutMs(d) {
+    var banked = Number(d && d.workoutMs) || 0;
+    if (d && d.workoutStart) banked += Math.max(0, Date.now() - d.workoutStart);
+    return banked;
+  }
+
+  function fmtDur(ms) {
+    var total = Math.round(ms / 1000);
+    var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), sec = total % 60;
+    function pad(n) { return n < 10 ? "0" + n : String(n); }
+    return h ? h + ":" + pad(m) + ":" + pad(sec) : m + ":" + pad(sec);
+  }
+
+  // Short form for places with no room for a ticking clock — a calendar
+  // tooltip, a stat tile.
+  function fmtDurShort(ms) {
+    var mins = Math.round(ms / 60000);
+    if (mins < 60) return mins + " min";
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return m ? h + "h " + m + "m" : h + "h";
+  }
+
+  // Banks whatever is running. Called when the day is locked in, and before
+  // anything else that needs a final number.
+  // Longer than this and the clock was forgotten, not trained. Six hours is
+  // generous for the longest real day anyone has in a gym.
+  var MAX_SESSION_MS = 6 * 3600 * 1000;
+
+  // Banks whatever is running. Called when the day is locked in, and when
+  // midnight moves on without anyone having pressed anything.
+  //
+  // A clock left running overnight is not a twenty hour workout. Banking one
+  // would put a confident wrong number on the calendar and drag the year's
+  // average with it, so an implausible run is dropped rather than written —
+  // the same call the label reader makes when it leaves a field it could not
+  // read empty. The day keeps its lifts; it just does not claim a duration.
+  function stopWorkout(d) {
+    if (!d || !d.workoutStart) return;
+    var ran = Math.max(0, Date.now() - d.workoutStart);
+    delete d.workoutStart;
+    if (ran <= MAX_SESSION_MS) d.workoutMs = (Number(d.workoutMs) || 0) + ran;
+  }
 
   function addSplit(name) {
     var n = (name || "").trim();
@@ -3748,6 +3855,24 @@
         (splitEdit
           ? '<div class="split-list">' + editRows + '</div>'
           : '<div class="cats">' + chips + '</div>') +
+        (locked || splitEdit ? '' :
+          (d.workoutStart
+            ? '<div class="workout is-running' + (workoutMs(d) > MAX_SESSION_MS ? ' is-stale' : '') + '">' +
+                '<span class="wo-label">' +
+                  (workoutMs(d) > MAX_SESSION_MS ? 'Left running' : 'Workout') + '</span>' +
+                '<span class="wo-clock" id="workoutClock">' + fmtDur(workoutMs(d)) + '</span>' +
+                '<button id="discardWorkout">Discard</button>' +
+              '</div>' +
+              (workoutMs(d) > MAX_SESSION_MS
+                ? '<p class="wo-note">Longer than a session — this will not be saved.</p>'
+                : '')
+            : (d.workoutMs
+                ? '<div class="workout">' +
+                    '<span class="wo-label">Logged</span>' +
+                    '<span class="wo-clock">' + fmtDur(d.workoutMs) + '</span>' +
+                    '<button id="startWorkout">Start again</button>' +
+                  '</div>'
+                : '<button class="btn ghost" id="startWorkout" style="width:100%">Start workout</button>'))) +
         (splitAdding
           ? '<div class="split-new">' +
               '<input id="newSplitName" class="text" placeholder="Push, Legs, Walk, Yoga…" ' +
@@ -3774,6 +3899,9 @@
               '<div><b>' + totals.reps + '</b><span>reps</span></div>' +
               '<div><b>' + fmt(totals.vol) + '</b><span>lb volume</span></div>' +
             '</div>' +
+            (d.workoutMs
+              ? '<div class="dd-time">Took ' + fmtDur(d.workoutMs) + '</div>'
+              : '') +
           '</section>'
         : '') +
 
@@ -3885,9 +4013,52 @@
     // button that replaces it. The card persists; the confetti does not, so
     // reopening the app on a finished day does not replay someone else's
     // celebration, and a second session that day can unlock, add and re-lock.
+    var startBtn = document.getElementById("startWorkout");
+    if (startBtn) {
+      startBtn.addEventListener("click", function () {
+        d.workoutStart = Date.now();
+        touch(key); save(); render();
+      });
+    }
+
+    // A mis-tap at nine in the morning should not become a six hour session,
+    // so a running clock can be thrown away — with undo, like every other
+    // destructive thing in the app.
+    var discardBtn = document.getElementById("discardWorkout");
+    if (discardBtn) {
+      discardBtn.addEventListener("click", function () {
+        var was = d.workoutStart;
+        delete d.workoutStart;
+        touch(key); save(); render();
+        offerUndo("Discarded the running timer", function () {
+          day(key).workoutStart = was;
+          touch(key); save(); render();
+        });
+      });
+    }
+
+    // One interval, restarted on every draw and stopped when nothing needs it.
+    // It writes into the clock element rather than calling render(), because a
+    // full redraw once a second would fight anything being typed.
+    if (workoutTick) { clearInterval(workoutTick); workoutTick = null; }
+    if (d.workoutStart) {
+      workoutTick = setInterval(function () {
+        var el = document.getElementById("workoutClock");
+        if (!el) { clearInterval(workoutTick); workoutTick = null; return; }
+        var run = workoutMs(day(key));
+        // Crossing the bound changes the bar, not just the digits, so hand
+        // over to a redraw exactly once instead of every second.
+        if (run > MAX_SESSION_MS && !el.closest(".workout").classList.contains("is-stale")) {
+          clearInterval(workoutTick); workoutTick = null; render(); return;
+        }
+        el.textContent = fmtDur(run);
+      }, 1000);
+    }
+
     var lockBtn = document.getElementById("lockDay");
     if (lockBtn) {
       lockBtn.addEventListener("click", function () {
+        stopWorkout(d);          // the clock stops when the day is called done
         d.gymLocked = true;
         touch(key); save(); render();
         celebrate();
@@ -4644,11 +4815,13 @@
                   "July", "August", "September", "October", "November", "December"];
     var DOW = ["S", "M", "T", "W", "T", "F", "S"];
 
-    var trained = 0, hits = 0, judged = 0;
+    var trained = 0, hits = 0, judged = 0, timeMs = 0, timedDays = 0;
     Object.keys(store.days).forEach(function (k) {
       if (k.slice(0, 4) !== String(logYear)) return;
       var d = store.days[k];
       if (d.lifts && d.lifts.length) trained++;
+      // banked time only: a clock still running is not a finished session
+      if (d.workoutMs) { timeMs += d.workoutMs; timedDays++; }
       var v = verdict(k);
       if (v !== "none") { judged++; if (v === "hit") hits++; }
     });
@@ -4666,7 +4839,8 @@
         var cats = [];
         d.lifts.forEach(function (l) { if (cats.indexOf(l.cat) === -1) cats.push(l.cat); });
         var sets = d.lifts.reduce(function (a, l) { return a + l.sets.length; }, 0);
-        bits.push(cats.map(function (id) { return cat(id).short; }).join(" + ") + " · " + sets + " sets");
+        bits.push(cats.map(function (id) { return cat(id).short; }).join(" + ") + " · " + sets + " sets" +
+                  (d.workoutMs ? " · " + fmtDurShort(d.workoutMs) : ""));
       } else {
         bits.push("no gym");
       }
@@ -4720,6 +4894,8 @@
           '<div><b>' + trained + '</b><span>Gym days</span></div>' +
           '<div><b>' + hits + '</b><span>Targets hit</span></div>' +
           '<div><b>' + (judged ? Math.round((hits / judged) * 100) + "%" : "—") + '</b><span>Hit rate</span></div>' +
+          '<div><b>' + (timedDays ? fmtDurShort(timeMs / timedDays) : "—") +
+            '</b><span>Avg session</span></div>' +
         '</div>' +
         legend +
         '<div class="months">' + months + '</div>' +
@@ -5080,6 +5256,11 @@
     var nowKey = ymd(new Date());
     if (nowKey === TODAY) return;
     var wasOnToday = ymd(cursor) === TODAY;
+    // A clock left running across midnight belongs to the day it started on,
+    // and it has to stop there. Left alone it would still be counting a week
+    // later and offer to bank 160 hours the moment that day was locked in.
+    var leaving = store.days[TODAY];
+    if (leaving && leaving.workoutStart) { stopWorkout(leaving); save(); }
     TODAY = nowKey;
     if (wasOnToday) cursor = new Date();
     hideUndo();

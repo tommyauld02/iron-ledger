@@ -86,7 +86,7 @@ with sync_playwright() as pw:
     ck("calendar: one hit + one miss", hit==1 and miss==1, "hit=%d miss=%d"%(hit,miss))
     ck("calendar: exactly one today ring", today_ring==1)
     stats=p.eval_on_selector_all(".yearstats b","e=>e.map(x=>x.textContent)")
-    ck("calendar: stats count both gym days", stats[0]=="2", "gym days=%s hits=%s rate=%s"%tuple(stats))
+    ck("calendar: stats count both gym days", stats[0]=="2", "stats=%s"%(" | ".join(stats)))
     ctx.close()
 
     # ---- viewing a PAST day when midnight hits: cursor must stay put ----
@@ -129,6 +129,43 @@ with sync_playwright() as pw:
             p.click("#prevYear"); p.wait_for_timeout(500)
             ck("year boundary: previous year still reachable",
                p.eval_on_selector_all(".cal-cell.hit, .cal-cell.miss","e=>e.length")>=1)
+        ctx.close()
+
+    # ---- a workout clock still running when midnight passes ----
+    # Nobody locks in the day from the car park. The clock has to stop on the
+    # day it started on, and a clock left running all night has to not become
+    # a fourteen hour session on the calendar.
+    NEARMIDNIGHT = """
+     const REAL = Date;
+     const n0 = new REAL();
+     const target = new REAL(n0.getFullYear(), n0.getMonth(), n0.getDate(), 23, 58, 0);
+     let off = target.getTime() - n0.getTime();
+     window.__bump = ms => { off += ms; };
+     class FD extends REAL { constructor(...a){ if(!a.length) super(REAL.now()+off); else super(...a);} static now(){return REAL.now()+off;} }
+     window.Date = FD;
+    """
+    for label, jump, expect in (("a session that runs past midnight", 4*60000, True),
+                                ("a clock left running all night", 7*3600*1000, False)):
+        ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True)
+        ctx.add_init_script("delete window.claude;")
+        ctx.add_init_script(NEARMIDNIGHT)
+        p=ctx.new_page()
+        p.on("pageerror", lambda e: errs.append(str(e)))
+        p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(900)
+        p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(450)
+        p.select_option("#mSel","Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
+        p.fill('[data-w="0"]',"135"); p.fill('[data-r="0"]',"10"); p.click('[data-addset="0"]'); p.wait_for_timeout(350)
+        p.click("#startWorkout"); p.wait_for_timeout(500)
+        started=keys(p)[0]
+        p.evaluate("ms=>window.__bump(ms)", jump); resume(p)
+        rec=p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]", started)
+        ck("midnight: %s stops the clock" % label, "workoutStart" not in rec,
+           "workoutStart=%s" % rec.get("workoutStart"))
+        ck("midnight: %s is %s" % (label, "banked" if expect else "dropped, not invented"),
+           bool(rec.get("workoutMs")) == expect, "workoutMs=%s" % rec.get("workoutMs"))
+        ck("midnight: %s leaves the lifts alone" % label, len(rec.get("lifts") or [])==1)
+        ck("midnight: today gets a clean clock",
+           p.evaluate("()=>!!document.getElementById('startWorkout') && !document.getElementById('workoutClock')"))
         ctx.close()
 
     for st,n,det in res: print("%-6s %-46s %s" % (st,n,det))
