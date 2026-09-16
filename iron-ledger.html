@@ -384,6 +384,11 @@
 
   /* A press-and-hold picks a row up; a plain swipe still scrolls the list. */
   .t-row { -webkit-touch-callout: none; }
+  /* Same bubble, different cause. iOS pops a copy / look-up menu on a long
+     press; on a row that is the selection magnifier, on a button it is a menu
+     over a control you were only holding a beat too long with a wet thumb.
+     Inputs are deliberately left alone — the backup box has to be selectable. */
+  button, [role="tab"] { -webkit-touch-callout: none; }
   body.dragging { -webkit-user-select: none; user-select: none; }
   body.dragging .t-row { cursor: grabbing; }
 
@@ -1922,6 +1927,7 @@
     <p id="sheetNote">Your log lives on this device. Copy this text somewhere safe now and then — paste it back here on a new phone to restore everything.</p>
     <p id="diag" hidden style="font-family:var(--font-num);font-size:11px;color:var(--miss);margin:0"></p>
     <textarea id="backupText" spellcheck="false"></textarea>
+    <button class="btn" id="shareBtn" hidden>Send a copy</button>
     <div class="sheet-actions">
       <button class="btn" id="copyBtn">Copy</button>
       <button class="btn ghost" id="restoreBtn">Restore from text</button>
@@ -1935,7 +1941,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-09.33";
+  var BUILD = "2026-09-15.34";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -5665,18 +5671,26 @@
       : "Backup");
   }
 
+  // The sheet used to say "Copy this text" everywhere. On a phone with a share
+  // sheet that is no longer the shortest way out, and instructions that name a
+  // button the person is not going to press are worse than no instructions.
+  function saveWord(cap) {
+    var w = navigator.share ? "send a copy of it" : "copy this text";
+    return cap ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  }
+
   function backupNote() {
     var n = daysSinceBackup();
     if (!hasSomethingToLose())
-      return "Your log lives on this device. Copy this text somewhere safe now and " +
-             "then — paste it back here on a new phone to restore everything.";
+      return "Your log lives on this device. " + saveWord(true) + " somewhere safe now " +
+             "and then — paste it back here on a new phone to restore everything.";
     if (n === null)
       return "This is the only copy of your log. Nothing is stored anywhere else, " +
-             "so if this phone is lost or its data cleared, it is gone. Copy this " +
-             "text somewhere safe — a note, an email to yourself.";
+             "so if this phone is lost or its data cleared, it is gone. " +
+             saveWord(true) + " somewhere safe — Files, a note, a message to yourself.";
     if (n >= BACKUP_DUE_DAYS)
       return "Last copy taken " + n + " days ago, so up to " + n + " days of logging " +
-             "exists only on this phone. Copy this text somewhere safe.";
+             "exists only on this phone. " + saveWord(true) + " somewhere safe.";
     return "Last copy taken " + (n === 0 ? "today" : n === 1 ? "yesterday" : n + " days ago") +
            ". Paste it back here on a new phone to restore everything.";
   }
@@ -5697,6 +5711,54 @@
   });
   document.getElementById("closeSheet").addEventListener("click", function () { sheet.hidden = true; });
   sheet.addEventListener("click", function (e) { if (e.target === sheet) sheet.hidden = true; });
+
+  // Copying is three steps on a phone: copy, leave the app, find somewhere to
+  // paste. The share sheet is one — Files, Notes, AirDrop to a laptop, a
+  // message to yourself — and it hands over a real .json file rather than a
+  // wall of text. Only offered where it exists; the clipboard stays the path
+  // everywhere else, and stays visible here too so nothing is taken away.
+  var shareBtn = document.getElementById("shareBtn");
+  if (shareBtn && navigator.share) {
+    shareBtn.hidden = false;
+    // Two filled buttons side by side name no winner. Where sharing exists it
+    // is the shorter path, so Copy steps back to being the fallback it now is.
+    var cb = document.getElementById("copyBtn");
+    if (cb) cb.classList.add("ghost");
+    shareBtn.addEventListener("click", function () {
+      var btn = this;
+      var name = "iron-ledger-" + TODAY + ".json";
+      var text = backupText.value;
+      var reset = function (msg) {
+        btn.textContent = msg;
+        setTimeout(function () { btn.textContent = "Send a copy"; }, 1800);
+      };
+      // Counted the same way Copy is: only when the share actually completed.
+      // iOS rejects with AbortError if you back out of the sheet, and a backup
+      // recorded for a copy that was never taken is worse than nagging twice.
+      var counted = function () {
+        store.lastBackupAt = Date.now();
+        save();
+        refreshBackupFlag();
+        var note = document.getElementById("sheetNote");
+        if (note) note.textContent = backupNote();
+        reset("Sent");
+      };
+      var failed = function (e) {
+        if (e && e.name === "AbortError") return;   // you changed your mind
+        reset("Couldn't send — use Copy");
+      };
+
+      var payload = { title: "Iron Ledger backup" };
+      try {
+        var file = new File([text], name, { type: "application/json" });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) payload.files = [file];
+        else payload.text = text;
+      } catch (e) { payload.text = text; }
+
+      try { navigator.share(payload).then(counted, failed); }
+      catch (e) { failed(e); }
+    });
+  }
 
   document.getElementById("copyBtn").addEventListener("click", function () {
     var btn = this;

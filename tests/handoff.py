@@ -436,6 +436,105 @@ with sync_playwright() as pw:
           p.evaluate("() => !document.getElementById('backupDot').hidden"))
     ctx.close()
 
+    # ---- 6b. one tap out to the share sheet ------------------------------
+    # Copying is three steps on a phone: copy, leave the app, find somewhere
+    # to paste. Where navigator.share exists this is one. The share must be
+    # counted as a backup ONLY when it completed — backing out of the sheet
+    # recording a copy that was never taken is the same class of lie as a
+    # failed write that says it worked.
+    SHARE = """(mode) => {
+      window.__shared = null;
+      navigator.share = (data) => {
+        window.__shared = {
+          title: data.title || null,
+          hasFiles: !!(data.files && data.files.length),
+          name: data.files && data.files[0] ? data.files[0].name : null,
+          type: data.files && data.files[0] ? data.files[0].type : null,
+          text: data.text || null};
+        if (mode === "cancel") { const e = new Error("x"); e.name = "AbortError"; return Promise.reject(e); }
+        if (mode === "fail") return Promise.reject(new Error("nope"));
+        return Promise.resolve();
+      };
+      // Headless Chromium has no Web Share at all, so the capability probe the
+      // app makes has to be stood up here too — otherwise every mode silently
+      // takes the text fallback and the file path is never actually tested.
+      navigator.canShare = (d) => mode !== "notext" && !!(d && d.files && d.files.length);
+    }"""
+
+    for mode, label in (("ok", "a completed share"), ("cancel", "backing out"),
+                        ("fail", "a share that errors"), ("notext", "no file support")):
+        ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
+        q = ctx.new_page()
+        q.add_init_script("navigator.share = () => Promise.resolve();")   # make the button appear
+        q.goto(BASE); q.wait_for_timeout(400)
+        q.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", seeded(None, True))
+        q.reload(); q.wait_for_timeout(800)
+        try:
+            q.click("text=Got it", timeout=2000)
+        except Exception:
+            pass
+        q.click("#backupBtn"); q.wait_for_timeout(400)
+        if mode == "ok":
+            check("share is offered where the phone has a share sheet",
+                  q.evaluate("() => !document.getElementById('shareBtn').hidden"))
+            sb = q.locator("#shareBtn").bounding_box()
+            check("and it is a proper target", sb and sb["height"] >= 44,
+                  sb and "%dx%d" % (sb["width"], sb["height"]))
+            check("copy is still there beside it", q.locator("#copyBtn").count() == 1)
+        q.evaluate(SHARE, mode)
+        q.click("#shareBtn"); q.wait_for_timeout(700)
+        shared = q.evaluate("() => window.__shared")
+        dot = q.evaluate("() => !document.getElementById('backupDot').hidden")
+        if mode == "ok":
+            check("share hands over a real .json file, not a wall of text",
+                  shared and shared["hasFiles"] and shared["name"].endswith(".json")
+                  and shared["type"] == "application/json", json.dumps(shared)[:90])
+            check("the file carries the day in its name",
+                  shared["name"].startswith("iron-ledger-2"), shared["name"])
+            check("a completed share counts as a backup", not dot)
+        elif mode == "notext":
+            check("a phone that cannot share files still gets the text",
+                  shared and not shared["hasFiles"] and shared["text"].startswith("{"),
+                  json.dumps(shared)[:70])
+            check("and that still counts", not dot)
+        else:
+            check("%s does not count as a backup" % label, dot)
+            wording = q.eval_on_selector("#shareBtn", "e => e.textContent")
+            check("%s says so rather than claiming Sent" % label, wording != "Sent", wording)
+        ctx.close()
+
+    # ---- 6c. a long press on a button must not pop the iOS copy bubble ----
+    # .t-row already guards the selection magnifier. A button held a beat too
+    # long with a wet thumb pops a menu over the control instead.
+    ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
+    q = ctx.new_page()
+    q.goto(BASE); q.wait_for_timeout(800)
+    try:
+        q.click("text=Got it", timeout=2000)
+    except Exception:
+        pass
+    # This one is read out of the source, not off the page, and the name says
+    # so: -webkit-touch-callout is a WebKit property. Chromium drops it on
+    # parse — no computed value and not even in cssText — so a rendered
+    # assertion here would pass by measuring nothing, which is the exact
+    # failure mode this suite exists to avoid. It still catches the rule being
+    # deleted; whether iOS honours it is for the phone to say.
+    src = io.open(os.path.join(os.getcwd(), "iron-ledger.html"), encoding="utf-8").read()
+    # comments stripped first: the comment above this rule says the word
+    # "button", and matching that instead of the selector would be a check
+    # that passes on prose
+    css = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+    blocks = re.findall(r"([^{}]*)\{[^{}]*-webkit-touch-callout:\s*none", css)
+    covers = " ".join(b.strip().split(chr(10))[-1].strip() for b in blocks)
+    check("source: buttons are guarded against the long-press menu",
+          "button" in covers, covers.strip()[:70])
+    check("source: and so is the tab bar", "role=\"tab\"" in covers or "[role=tab]" in covers,
+          covers.strip()[:70])
+    keeps = q.evaluate("""() => {const t = document.getElementById('backupText');
+        return t ? getComputedStyle(t).userSelect !== 'none' : false;}""")
+    check("but the backup text is still selectable by hand", keeps)
+    ctx.close()
+
     # ---- 7. a write that fails must never look like one that worked -------
     # save() used to swallow the error, so the app printed "✓ Added" for
     # entries that were never written and vanished on the next load. A silent

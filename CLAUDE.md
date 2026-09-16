@@ -107,6 +107,32 @@ something worth doing. `lastBackupAt` is deliberately **not** merged on
 restore, because a phone you have just restored onto has not taken a copy of
 its own and should still be asked for one.
 
+**Getting a copy off the phone is one tap where the phone allows it.** Copying
+is three steps on a phone — copy, leave the app, find somewhere to paste — and
+the backup is the only net under a week of logging. Where `navigator.share`
+exists the sheet offers *Send a copy*, which hands over a real
+`iron-ledger-<date>.json` file (Files, Notes, AirDrop to a laptop) rather than
+a wall of text. Copy stays, drops to `.ghost`, and is the only path where
+sharing is not available; `saveWord()` keeps the instructions naming the button
+that is actually on screen.
+
+It is counted as a backup on the **same rule as Copy: only when it completed**.
+Backing out of the share sheet rejects with `AbortError` and must not touch
+`lastBackupAt` — recording a copy that was never taken is the same class of lie
+as a failed write reporting success, and here it would silence the one nudge
+that protects the log. `navigator.canShare({files})` is probed because a phone
+without file sharing still takes the text.
+
+**A long press on a button pops the iOS copy menu.** `.t-row` already guarded
+the selection magnifier; `button, [role="tab"]` now guard the same bubble
+appearing over a control held a beat too long with a wet thumb. Inputs are
+deliberately left out — the backup box has to stay selectable by hand.
+`handoff` checks this **against the source and says so in the check name**:
+`-webkit-touch-callout` is a WebKit property that Chromium drops on parse, so
+there is no computed value and it is not even in `cssText`. A rendered
+assertion would pass by measuring nothing, which is the failure this project
+has already paid for twice.
+
 **Your pantry answers to part of its name.** A pantry entry used to be found
 only by its whole name, so someone who saved "Costco protein coffee" and later
 typed "protein coffee" missed the pantry entirely and got the table's black
