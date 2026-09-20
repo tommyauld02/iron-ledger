@@ -143,6 +143,30 @@ still means coffee, and it tries a singular form so "2 protein coffees" lands.
 `parseQty()` drops a leading article too: "half a protein coffee" used to leave
 "a protein coffee" behind, which matched nothing.
 
+**The pantry `+` asks how much.** It used to log exactly one saved serving, so
+four slices of bacon meant pressing `+` four times and combining the rows
+afterwards — found in real use, on the first morning. `+` now opens
+`#panSheet`: minus, the number, plus, a unit picker where one is meaningful,
+and a live total. `panAmount()` does the maths and nothing is written until
+*Add to ledger*, so backing out leaves the day untouched. The note records what
+was eaten — `Bacon · 4 slices` — because "Bacon" alone gives no way to tell one
+slice from four when you read it back a month later.
+
+The unit picker obeys the **same rule as the estimate review: switching
+converts, it never re-reads.** Re-reading 340 g as 340 oz is nine kilograms of
+yogurt logged in one tap. Weight and volume convert through grams; a count unit
+has no honest conversion to grams, so that direction resets to the saved
+serving rather than carrying a number across that would mean something else.
+
+**A count is one of the thing.** Typing 4 and picking "slice" means "one
+serving is four slices", and `normPantry` then reported `1 slice · 172 kcal` —
+a fourfold overcount stated with complete confidence, on every line in the app.
+`savePan` now stores one piece and **says that it did**, because changing what
+someone typed and not mentioning it is its own kind of silence. The total is
+preserved exactly: four of them logs what was entered. `normPantry` divides the
+same way on read, so records saved before this still come back true without
+anyone's pantry being rewritten underneath them.
+
 **Reading a nutrition label.** Inside the Claude viewer the `sample` capability
 reads the panel and can name the product. On the hosted copy there is no
 capability, so the panel is read on the device with Tesseract from

@@ -1770,6 +1770,38 @@
     gap: 12px;
   }
   .sheet-inner h2 { margin: 0; font-size: 17px; font-weight: 600; }
+  /* Minus, the number, plus. Both steppers are full-size targets because this
+     is used standing up with one hand. */
+  .qty-steps { display: grid; grid-template-columns: 56px 1fr 56px; gap: 8px; }
+  .qty-steps button {
+    height: 52px;
+    font-family: var(--font-num);
+    font-size: 22px;
+    color: var(--ink);
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .qty-steps button:hover { color: var(--accent); border-color: var(--accent); }
+  .qty-steps input {
+    min-width: 0;
+    height: 52px;
+    padding: 0 10px;
+    text-align: center;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 20px;
+  }
+  .qty-total {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 17px;
+    color: var(--ink) !important;
+  }
+  .qty-total.is-empty { color: var(--miss) !important; font-size: 13px; }
   .sheet-inner p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
   .sheet-inner textarea {
     width: 100%;
@@ -1936,12 +1968,36 @@
   </div>
 </div>
 
+<!-- How much of it. The pantry + used to log exactly one saved serving, so
+     four slices of bacon meant pressing + four times and combining the rows
+     afterwards. -->
+<div class="sheet" id="panSheet" hidden>
+  <div class="sheet-inner">
+    <h2 id="panSheetName">Add from pantry</h2>
+    <p id="panSheetSub"></p>
+    <div class="field"><label for="panQty">How many</label>
+      <div class="qty-steps">
+        <button id="panQtyDown" aria-label="Less">−</button>
+        <input id="panQty" inputmode="decimal" aria-label="How many">
+        <button id="panQtyUp" aria-label="More">+</button>
+      </div>
+    </div>
+    <div class="field" id="panUnitField" hidden><label for="panQtyUnit">Measured in</label>
+      <select id="panQtyUnit"></select></div>
+    <p id="panSheetTotal" class="qty-total"></p>
+    <div class="sheet-actions">
+      <button class="btn" id="panAddBtn">Add to ledger</button>
+      <button class="btn ghost" id="panCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-15.34";
+  var BUILD = "2026-09-20.35";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2849,6 +2905,15 @@
       sPro = (Number(it.p) || 0) * g / 100;
     }
 
+    // Records saved before the form normalised this still hold "4 slices" as
+    // one serving, and every line that reads them says "1 slice" — the whole
+    // app quietly quadrupling a breakfast. Fixed on the way out rather than by
+    // rewriting what is stored: the total is preserved either way, and nobody
+    // has to notice their pantry was edited underneath them.
+    if (unitKind(unit) === "count" && qty !== 1 && qty > 0) {
+      sCal = sCal / qty; sPro = sPro / qty; qty = 1;
+    }
+
     return {
       name: it.name,
       qty: qty,
@@ -2901,6 +2966,35 @@
       });
     });
     return best;
+  }
+
+  // ---------- how much of it ----------
+  // Which id is open in the quantity sheet, and what has been dialled in.
+  var panAdd = null;
+
+  // A count item is sold in pieces, so its own unit means "that many of them".
+  // A weight or volume item was saved with a real unit, so the number is in
+  // that unit and has to go through the per-100 g basis — treating 150 g as
+  // 150 servings of 100 g is a fifteen thousand calorie breakfast.
+  function panUnits(n) {
+    var opts = [n.unit];
+    if (n.k) ["g", "oz", "lb"].forEach(function (u) {
+      if (opts.indexOf(u) === -1) opts.push(u);
+    });
+    return opts;
+  }
+
+  function panAmount(n, qty, unit) {
+    if (!(qty > 0)) return null;
+    if (n.kind === "count" && unit === n.unit) {
+      return { cal: n.sCal * qty, pro: n.sPro * qty,
+               amount: qty + " " + n.unit + (qty === 1 ? "" : "s") };
+    }
+    var mult = WEIGHT_UNITS[unit] !== undefined ? WEIGHT_UNITS[unit]
+             : VOLUME_UNITS[unit] !== undefined ? VOLUME_UNITS[unit] : null;
+    if (mult === null || !n.k) return null;
+    var g = qty * mult;
+    return { cal: n.k * g / 100, pro: n.p * g / 100, amount: qty + " " + unit };
   }
 
   // Pantry resolution understands counts: "2 protein coffees" is 2 servings,
@@ -4904,6 +4998,21 @@
       }
       if (warn) warn.hidden = true;
 
+      // A count is one of the thing. Someone who types 4 and picks "slice"
+      // means "one serving is four slices" — and every line in the app then
+      // reads "1 slice · 172 kcal", a fourfold overcount stated with complete
+      // confidence. Store one piece so the number on screen is true. The total
+      // is preserved exactly: four of them logs what was typed, and "how many"
+      // is what the quantity sheet is for.
+      var normalised = "";
+      if (kind === "count" && serve !== 1) {
+        normalised = "Saved as 1 " + unit + " · " + Math.round(kcal / serve) +
+                     " kcal. Set how many when you log it.";
+        kcal = kcal / serve;
+        pro = pro / serve;
+        serve = 1;
+      }
+
       store.pantry.push({
         id: uid(),
         name: name,
@@ -4917,42 +5026,24 @@
       pantryForm = null;
       pantryShot = null;
       save(); render();
+      // Said after the redraw, because render() rebuilt the element. Changing
+      // what someone typed and not mentioning it is its own kind of silence.
+      if (normalised) {
+        var w2 = document.getElementById("panWarn");
+        if (w2) { w2.hidden = false; w2.textContent = normalised; }
+      }
     });
 
-    // Straight from the pantry into the day, no retyping. It logs against
-    // `cursor`, not today, so it matches the Add form and the date in the
-    // header rather than quietly disagreeing with both.
+    // Straight from the pantry into the day, no retyping — but ask how much
+    // first. It used to log exactly one saved serving, so four slices of bacon
+    // meant pressing + four times and combining the rows afterwards. The write
+    // itself happens in the sheet's Add, and logs against `cursor` rather than
+    // today so it matches the Add form and the date in the header.
     view.querySelectorAll("[data-addpan]").forEach(function (b) {
       b.addEventListener("click", function () {
-        var id = b.dataset.addpan;
         var raw = null;
-        store.pantry.forEach(function (x) { if (x.id === id) raw = x; });
-        if (!raw) return;
-
-        var n = normPantry(raw);
-        var c = Math.round(n.sCal), p = Math.round(n.sPro);
-        var key = ymd(cursor);
-        day(key).food.push({ id: uid(), cal: c, pro: p, note: raw.name });
-        stampGoal(key);
-        touch(key);
-        var wrote = save();
-        lastAdded = wrote ? { label: raw.name, cal: c, pro: p, at: Date.now() } : null;
-        render();
-
-        // render() has just replaced this button, so confirm on the new one.
-        // Without this the tap is silent and reads exactly like a dead control.
-        var fresh = view.querySelector('[data-addpan="' + id + '"]');
-        if (fresh) {
-          fresh.textContent = wrote ? "✓" : "!";
-          if (wrote) fresh.classList.add("is-done");
-          setTimeout(function () {
-            var later = view.querySelector('[data-addpan="' + id + '"]');
-            if (later && (later.textContent === "✓" || later.textContent === "!")) {
-              later.textContent = "+";
-              later.classList.remove("is-done");
-            }
-          }, 1400);
-        }
+        store.pantry.forEach(function (x) { if (x.id === b.dataset.addpan) raw = x; });
+        if (raw) openPanSheet(raw);
       });
     });
 
@@ -5694,6 +5785,145 @@
     return "Last copy taken " + (n === 0 ? "today" : n === 1 ? "yesterday" : n + " days ago") +
            ". Paste it back here on a new phone to restore everything.";
   }
+
+  // ---------- the quantity sheet ----------
+  // Wired once, outside #view, because render() replaces #view wholesale.
+  var panSheet = document.getElementById("panSheet");
+
+  function panRaw() {
+    var found = null;
+    if (panAdd) store.pantry.forEach(function (x) { if (x.id === panAdd.id) found = x; });
+    return found;
+  }
+
+  function panStep(unit) { return (unit === "g" || unit === "ml") ? 10 : 1; }
+
+  function drawPanSheet() {
+    var raw = panRaw();
+    if (!raw) { panSheet.hidden = true; return; }
+    var n = normPantry(raw);
+    document.getElementById("panSheetName").textContent = raw.name;
+    document.getElementById("panSheetSub").textContent =
+      "Saved as " + (n.kind === "count" ? "1 " + n.unit : n.qty + " " + n.unit) +
+      " · " + Math.round(n.sCal) + " kcal · " + Math.round(n.sPro) + " g protein." +
+      // The sheet covers the header, so a day that is not today has to say so
+      // here or the date on screen is the one you cannot currently see.
+      (ymd(cursor) === TODAY ? "" : " Logging to " +
+        cursor.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + ".");
+
+    var units = panUnits(n);
+    var field = document.getElementById("panUnitField");
+    var sel = document.getElementById("panQtyUnit");
+    // One option is not a choice, and a picker you cannot pick from is noise.
+    field.hidden = units.length < 2;
+    sel.innerHTML = units.map(function (u) {
+      return '<option value="' + u + '"' + (u === panAdd.unit ? " selected" : "") + ">" + u + "</option>";
+    }).join("");
+
+    var qtyEl = document.getElementById("panQty");
+    if (document.activeElement !== qtyEl) qtyEl.value = panAdd.qty;
+
+    var got = panAmount(n, Number(panAdd.qty), panAdd.unit);
+    var total = document.getElementById("panSheetTotal");
+    if (got) {
+      total.className = "qty-total";
+      total.textContent = got.amount + " · " + fmt(got.cal) + " kcal · " +
+                          Math.round(got.pro) + " g protein";
+    } else {
+      total.className = "qty-total is-empty";
+      total.textContent = "How many did you have?";
+    }
+    document.getElementById("panAddBtn").disabled = !got;
+  }
+
+  function openPanSheet(raw) {
+    var n = normPantry(raw);
+    // Weight and volume items open on the serving that was saved, so pressing
+    // Add straight away logs exactly what the + used to log on its own.
+    panAdd = { id: raw.id, unit: n.unit, qty: n.kind === "count" ? 1 : n.qty };
+    panSheet.hidden = false;
+    drawPanSheet();
+  }
+
+  function closePanSheet() { panAdd = null; panSheet.hidden = true; }
+
+  document.getElementById("panCancel").addEventListener("click", closePanSheet);
+  panSheet.addEventListener("click", function (e) { if (e.target === panSheet) closePanSheet(); });
+
+  document.getElementById("panQty").addEventListener("input", function () {
+    if (!panAdd) return;
+    panAdd.qty = this.value;
+    drawPanSheet();
+  });
+  function gramsPer(u) {
+    return WEIGHT_UNITS[u] !== undefined ? WEIGHT_UNITS[u]
+         : VOLUME_UNITS[u] !== undefined ? VOLUME_UNITS[u] : null;
+  }
+
+  document.getElementById("panQtyUnit").addEventListener("change", function () {
+    if (!panAdd) return;
+    var raw = panRaw(); if (!raw) return;
+    var n = normPantry(raw);
+    var was = panAdd.unit, now = this.value;
+    panAdd.unit = now;
+    var from = gramsPer(was), to = gramsPer(now);
+    if (from !== null && to !== null) {
+      // Both are real measures, so convert — the food stays the same size and
+      // only the reading changes. Re-reading 340 g as 340 oz is nine kilos of
+      // yogurt logged in one tap, the same trap the estimate review guards.
+      panAdd.qty = Math.round(((Number(panAdd.qty) || 0) * from / to) * 100) / 100;
+    } else if (now === n.unit) {
+      panAdd.qty = 1;                        // back to counting pieces
+    } else if (n.serveG) {
+      panAdd.qty = n.serveG;                 // pieces have no weight of their own
+    }
+    drawPanSheet();
+  });
+  [["panQtyDown", -1], ["panQtyUp", 1]].forEach(function (pair) {
+    document.getElementById(pair[0]).addEventListener("click", function () {
+      if (!panAdd) return;
+      var step = panStep(panAdd.unit);
+      var next = (Number(panAdd.qty) || 0) + pair[1] * step;
+      // Rounded because 0.30000000000000004 slices helps nobody.
+      panAdd.qty = Math.max(0, Math.round(next * 100) / 100);
+      drawPanSheet();
+    });
+  });
+
+  document.getElementById("panAddBtn").addEventListener("click", function () {
+    var raw = panRaw(); if (!raw) return;
+    var n = normPantry(raw);
+    var got = panAmount(n, Number(panAdd.qty), panAdd.unit);
+    if (!got) return;
+    var id = raw.id;
+    var c = Math.round(got.cal), pr = Math.round(got.pro);
+    var key = ymd(cursor);
+    // The ledger records what was eaten, not what was saved — "Bacon" alone
+    // gives no way to tell one slice from four when you read it back.
+    var note = raw.name + " · " + got.amount;
+    day(key).food.push({ id: uid(), cal: c, pro: pr, note: note });
+    stampGoal(key);
+    touch(key);
+    var wrote = save();
+    lastAdded = wrote ? { label: note, cal: c, pro: pr, at: Date.now() } : null;
+    closePanSheet();
+    render();
+
+    // render() has just replaced this button, so confirm on the new one.
+    // Without this the tap is silent and reads exactly like a dead control.
+    var fresh = view.querySelector('[data-addpan="' + id + '"]');
+    if (fresh) {
+      fresh.textContent = wrote ? "✓" : "!";
+      if (wrote) fresh.classList.add("is-done");
+      setTimeout(function () {
+        var later = view.querySelector('[data-addpan="' + id + '"]');
+        if (later && (later.textContent === "✓" || later.textContent === "!")) {
+          later.textContent = "+";
+          later.classList.remove("is-done");
+        }
+      }, 1400);
+    }
+  });
 
   document.getElementById("backupBtn").addEventListener("click", function () {
     backupText.value = JSON.stringify(store);

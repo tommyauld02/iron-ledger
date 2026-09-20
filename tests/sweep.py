@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os, json, datetime
+import re
 
 def words(p):
     """Open the plain-words box; it lives behind the fill-in table now."""
@@ -495,6 +496,7 @@ with sync_playwright() as pw:
     LASTADDED="""n=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{};
         for(const k of Object.keys(d)) for(const f of (d[k].food||[])) if(f.note===n) return f;
         return null;}"""
+    FINDNOTE="n=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{}; for(const k of Object.keys(d)) for(const f of (d[k].food||[])) if((f.note||'').indexOf(n)===0) return f; return null;}"
     before=p.evaluate(TOTAL)
     row=p.evaluate("""()=>{const b=document.querySelector('[data-addpan]');if(!b)return null;
         const it=b.closest('.pan-item');return {id:b.dataset.addpan,name:it.querySelector('.nm').textContent};}""")
@@ -502,13 +504,63 @@ with sync_playwright() as pw:
     box=p.locator("[data-addpan]").first.bounding_box()
     check("pantry: + is 44px", box and box["width"]>=44 and box["height"]>=44,
           box and "%dx%d"%(box["width"],box["height"]))
-    p.locator("[data-addpan]").first.click(); p.wait_for_timeout(400)
+    p.locator("[data-addpan]").first.click(); p.wait_for_timeout(500)
+    # + asks how much before it writes anything. It used to log exactly one
+    # saved serving, so four slices of bacon meant pressing it four times and
+    # combining the rows afterwards.
+    check("pantry: + asks how much rather than logging blind",
+          p.evaluate("()=>!document.getElementById('panSheet').hidden")
+          and p.evaluate(TOTAL)==before,
+          "rows %d -> %d"%(before, p.evaluate(TOTAL)))
+    check("pantry: the sheet names the food and its saved serving",
+          row["name"] in p.eval_on_selector("#panSheetName","e=>e.textContent")
+          and "Saved as" in p.eval_on_selector("#panSheetSub","e=>e.textContent"),
+          p.eval_on_selector("#panSheetSub","e=>e.textContent"))
+    for sel in ("#panQtyDown", "#panQty", "#panQtyUp", "#panAddBtn", "#panCancel"):
+        bb=p.locator(sel).bounding_box()
+        check("pantry: %s clears 44px"%sel, bb and bb["height"]>=44,
+              bb and "%dx%d"%(bb["width"],bb["height"]))
+    # whatever this food is saved in, the sheet opens on one serving of it
+    kcalOf=lambda t: float(re.search(r"([\d,]+) kcal", t).group(1).replace(",",""))
+    startQty=float(p.input_value("#panQty"))
+    one=p.eval_on_selector("#panSheetTotal","e=>e.textContent")
+    p.click("#panQtyUp"); p.wait_for_timeout(300)
+    up=p.eval_on_selector("#panSheetTotal","e=>e.textContent")
+    check("pantry: the stepper moves the number and the total",
+          float(p.input_value("#panQty"))>startQty and kcalOf(up)>kcalOf(one),
+          "%s -> %s"%(one,up))
+    p.click("#panQtyDown"); p.wait_for_timeout(300)
+    check("pantry: back down reads the same as it started",
+          p.eval_on_selector("#panSheetTotal","e=>e.textContent")==one,
+          "%s vs %s"%(one, p.eval_on_selector("#panSheetTotal","e=>e.textContent")))
+
+    # nothing eaten is not something to log, and a button that just sits there
+    # reads exactly like a dead one
+    p.fill("#panQty","0"); p.wait_for_timeout(300)
+    check("pantry: zero cannot be added",
+          p.eval_on_selector("#panAddBtn","e=>e.disabled"))
+    check("pantry: and it says why rather than sitting there",
+          "How many" in p.eval_on_selector("#panSheetTotal","e=>e.textContent"),
+          p.eval_on_selector("#panSheetTotal","e=>e.textContent"))
+    # double the serving; the calories have to double with it
+    p.fill("#panQty", str(startQty*2)); p.wait_for_timeout(300)
+    two=p.eval_on_selector("#panSheetTotal","e=>e.textContent")
+    check("pantry: twice the amount is twice the calories",
+          abs(kcalOf(two)-kcalOf(one)*2)<=2, "%s -> %s"%(one,two))
+
+    p.click("#panAddBtn"); p.wait_for_timeout(700)
     after=p.evaluate(TOTAL)
-    check("pantry: + logs one row to the day", after==before+1, "%d -> %d"%(before,after))
-    logged=p.evaluate(LASTADDED, row["name"])
-    check("pantry: + carries the food's own numbers",
-          bool(logged) and logged.get("note")==row["name"] and logged.get("cal") and logged.get("pro"),
-          json.dumps(logged))
+    check("pantry: adding logs one row for the whole amount", after==before+1,
+          "%d -> %d"%(before,after))
+    check("pantry: and the sheet closes behind it",
+          p.evaluate("()=>document.getElementById('panSheet').hidden"))
+    logged=p.evaluate(FINDNOTE, row["name"])
+    check("pantry: the row carries the doubled figure, not the saved one",
+          bool(logged) and abs(logged["cal"]-kcalOf(one)*2)<=2,
+          json.dumps(logged)+" vs one serving "+str(kcalOf(one)))
+    check("pantry: the ledger records how much, not just what",
+          bool(logged) and logged["note"]!=row["name"] and two.split(" \u00b7 ")[0] in logged["note"],
+          "%r vs %r" % (logged and logged["note"], two))
     # rule 3: the row lands on a tab you cannot see, so the button must speak
     check("pantry: + confirms visibly",
           p.eval_on_selector('[data-addpan="%s"]'%row["id"], "e=>e.classList.contains('is-done')"))
@@ -519,6 +571,59 @@ with sync_playwright() as pw:
     check("pantry: the row really is on macros",
           p.evaluate("n=>[...document.querySelectorAll('.t-row')].some(r=>r.textContent.includes(n))", row["name"]))
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(400)
+
+    # ---------- A COUNT IS ONE OF THE THING ----------
+    # Typing 4 and picking "slice" means "one serving is four slices", and
+    # every line in the app then read "1 slice · 172 kcal" — a fourfold
+    # overcount stated with complete confidence.
+    p.fill("#panName","test rashers"); p.fill("#panServe","4")
+    p.select_option("#panUnit","slice"); p.fill("#panCal","200"); p.fill("#panPro","12")
+    p.click("#savePan"); p.wait_for_timeout(600)
+    warn=p.evaluate("()=>{const w=document.getElementById('panWarn');return w&&!w.hidden?w.textContent:'';}")
+    check("count: saving four of something says it stored one",
+          "1 slice" in warn and "50" in warn, warn or "(said nothing)")
+    sub=p.evaluate("()=>{const r=[...document.querySelectorAll('.pan-item')]"
+                   ".find(x=>x.querySelector('.nm').textContent==='test rashers');"
+                   " return r?r.querySelector('.sub').textContent:'';}")
+    check("count: and the list says one slice at one slice's calories",
+          "1 slice" in sub and "50 kcal" in sub, sub)
+    rid=p.evaluate("()=>{const r=[...document.querySelectorAll('[data-addpan]')]"
+                   ".find(b=>b.closest('.pan-item').querySelector('.nm').textContent==='test rashers');"
+                   " return r?r.dataset.addpan:null;}")
+    p.click('[data-addpan="%s"]'%rid); p.wait_for_timeout(500)
+    p.fill("#panQty","4"); p.wait_for_timeout(300)
+    check("count: four of them adds back up to what was typed",
+          "200 kcal" in p.eval_on_selector("#panSheetTotal","e=>e.textContent"),
+          p.eval_on_selector("#panSheetTotal","e=>e.textContent"))
+    p.click("#panCancel"); p.wait_for_timeout(300)
+
+    # a record saved before that normalising existed is still read correctly
+    STALE="()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); s.pantry.push({id:'stale4',name:'old bacon',serveQty:4,serveUnit:'slice',serveG:null,sCal:172,sPro:12,aliases:[]}); localStorage.setItem('iron-ledger-v1', JSON.stringify(s)); return true;}"
+    p.evaluate(STALE); p.reload(); p.wait_for_timeout(900)
+    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    oldsub=p.evaluate("()=>{const r=[...document.querySelectorAll('.pan-item')]"
+                      ".find(x=>x.querySelector('.nm').textContent==='old bacon');"
+                      " return r?r.querySelector('.sub').textContent:'';}")
+    check("count: an already-saved four-slice record reads as one slice too",
+          "1 slice" in oldsub and "43 kcal" in oldsub, oldsub)
+
+    # ---------- SWITCHING A UNIT CONVERTS ----------
+    # Re-reading 340 g as 340 oz is nine kilos of yogurt logged in one tap.
+    oid=p.evaluate("()=>{const r=[...document.querySelectorAll('[data-addpan]')]"
+                   ".find(b=>b.closest('.pan-item').querySelector('.nm').textContent==='Bulk oats');"
+                   " return r?r.dataset.addpan:null;}")
+    p.click('[data-addpan="%s"]'%oid); p.wait_for_timeout(500)
+    check("units: a weight food offers other weights",
+          p.eval_on_selector_all("#panQtyUnit option","e=>e.map(x=>x.value)")==["g","oz","lb"],
+          str(p.eval_on_selector_all("#panQtyUnit option","e=>e.map(x=>x.value)")))
+    gq=float(p.input_value("#panQty")); gt=p.eval_on_selector("#panSheetTotal","e=>e.textContent")
+    p.select_option("#panQtyUnit","oz"); p.wait_for_timeout(400)
+    oq=float(p.input_value("#panQty")); ot=p.eval_on_selector("#panSheetTotal","e=>e.textContent")
+    check("units: switching converts the number",
+          abs(oq-gq/28.3495)<0.05, "%s g -> %s oz"%(gq,oq))
+    check("units: and does not move a single calorie",
+          kcalOf(ot)==kcalOf(gt), "%s -> %s"%(gt,ot))
+    p.click("#panCancel"); p.wait_for_timeout(300)
 
     # ---------- LOG ----------
     p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(600)
