@@ -269,6 +269,37 @@ The standing picker and a review are never on screen together — the review
 replaces the form — so there is deliberately no "update the open review" branch
 on it. Mid-review, the row picker is the way.
 
+**The daily checklist is not food.** Creatine and a multivitamin have no
+calories worth logging, but whether you took them is exactly what you want to
+see across a week. `store.supps` is the list — `{id, name, dose}` — and each
+day carries `d.supps = {id: true}` for what was ticked. It is built on the
+Pantry tab, because that is where you set up what the app knows about you, and
+ticked on Macros between the target bar and the add form: it belongs to the day
+you are looking at, and it is the last thing you check rather than the first
+thing you log. Nothing renders at all when the list is empty — an empty
+checklist is a nag with no content.
+
+**Ticking patches the DOM; it must not call `render()`.** The add-food fields
+keep no draft, so a redraw would wipe whatever is half typed into them — and
+you reach for the checklist mid-entry precisely because it is sitting right
+there. The handler updates the row, its `aria-pressed` and the `n of m` count
+in place, the way the workout clock and the estimate rows already do.
+
+**Rule 7 applies here with a different noun.** Renaming keeps the id, so every
+day already ticked follows the new name. Removing writes the name into
+`store.suppsRetired` and goes through `offerUndo()`, and `dayTitle()` names
+those ticks as *"also Creatine — no longer on your list"* rather than dropping
+them — a tick against nothing is history silently reassigned.
+
+On the calendar a complete day gets a **dot, not a colour**: the cell already
+means hit-or-miss on calories, and two colour systems in one twelve-month grid
+is a code nobody can read. The day's title says `checklist done`, or names what
+was missed — "3 of 4" a month later tells you nothing about which one you keep
+forgetting. The Log tab gains *Checklist days* and *Best run* **only when a
+list exists**, which also keeps `.yearstats` even rather than orphaning a tile
+on its own row. `suppStreak()` compares whole days rather than milliseconds,
+because the clocks change twice a year and a 23-hour gap is still one day.
+
 **Days are judged against the goal in force when they were logged.**
 `stampGoal()` snapshots it, so changing your target today never rewrites last
 month's calendar.

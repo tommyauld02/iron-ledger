@@ -1221,6 +1221,7 @@
     padding-bottom: 2px;
   }
   .cal-cell {
+    position: relative;
     aspect-ratio: 1;
     display: flex;
     flex-direction: column;
@@ -1248,6 +1249,112 @@
     font-weight: 700;
   }
   .cal-cell:not(.blank):hover { border-color: var(--accent); }
+  /* Every supplement ticked. A dot rather than another background colour: the
+     cell already means hit-or-miss on calories, and two colour systems in one
+     twelve-month grid is a code nobody can read. */
+  .cal-cell.supps-all::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ---------- daily checklist ---------- */
+  .supps { display: flex; flex-direction: column; gap: 6px; }
+  .supp-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .supp-count {
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    color: var(--ink-3);
+  }
+  .supp-count.is-done { color: var(--accent); }
+  .supp {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    padding: 6px 12px;
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .supp .box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    font-size: 15px;
+    color: var(--accent);
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .supp .nm { font-size: 15px; color: var(--ink); }
+  .supp .dose {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .supp.is-on { border-color: var(--accent); background: var(--accent-soft); }
+  .supp.is-on .box { border-color: var(--accent); background: var(--surface); }
+
+  .supp-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 2px 8px;
+    padding: 8px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .supp-item .nm { font-size: 15px; }
+  .supp-item .dose {
+    grid-column: 1;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .supp-item .dose:empty { display: none; }
+  .supp-item button {
+    grid-row: 1 / span 2;
+    min-height: 44px;
+    padding: 0 10px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 2px;
+  }
+  .supp-item button:hover { color: var(--accent); border-color: var(--rule); }
+  .supp-item.is-editing { display: flex; flex-wrap: wrap; gap: 8px; }
+  .supp-item.is-editing input {
+    flex: 1 1 130px;
+    min-width: 0;
+    height: 46px;
+    padding: 0 10px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-size: 15px;
+  }
+  .supp-item.is-editing button {
+    grid-row: auto;
+    min-height: 46px;
+    padding: 0 14px;
+  }
   .cal-cell .bar {
     width: 60%;
     height: 2px;
@@ -1997,7 +2104,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-20.35";
+  var BUILD = "2026-09-20.36";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2109,6 +2216,7 @@
   // app mid-session comes back with the right number instead of a stopped one.
   var workoutTick = null;
   // null, "share" or "load" — which routine-sharing panel is open on Coach
+  var suppEditing = null;   // which checklist item is being renamed
   var coachShare = null;
   var coachShareMsg = "";
   var pantryShot = null;
@@ -2287,6 +2395,46 @@
     var ran = Math.max(0, Date.now() - d.workoutStart);
     delete d.workoutStart;
     if (ran <= MAX_SESSION_MS) d.workoutMs = (Number(d.workoutMs) || 0) + ran;
+  }
+
+  // ---------- the daily checklist ----------
+  // Creatine and a multivitamin have no calories worth logging, but whether
+  // you took them is exactly the thing you want to see across a week. It is a
+  // separate list from the pantry: the pantry answers "what did I eat", this
+  // answers "did I do the thing every day".
+  function supps() { return store.supps || (store.supps = []); }
+
+  // Rule 7 applies here the same way it applies to training days. Stop taking
+  // something and the days you did take it must still say what it was, rather
+  // than dropping the tick or borrowing a name you now use for something else.
+  function suppName(id) {
+    var hit = null;
+    supps().forEach(function (x) { if (x.id === id) hit = x; });
+    if (hit) return hit.name;
+    return (store.suppsRetired && store.suppsRetired[id]) || "something you no longer take";
+  }
+
+  // Longest run of consecutive days with everything ticked. Compared by whole
+  // days rather than by milliseconds, because the clocks change twice a year
+  // and a 23-hour gap is still one day.
+  function suppStreak(keys) {
+    var sorted = keys.slice().sort();
+    var best = 0, run = 0, prev = null;
+    sorted.forEach(function (k) {
+      run = (prev && Math.round((parseYmd(k) - parseYmd(prev)) / 86400000) === 1) ? run + 1 : 1;
+      if (run > best) best = run;
+      prev = k;
+    });
+    return best;
+  }
+
+  function suppTaken(d) {
+    var marks = (d && d.supps) || {}, n = 0;
+    supps().forEach(function (x) { if (marks[x.id]) n++; });
+    return n;
+  }
+  function suppsAllIn(d) {
+    return supps().length > 0 && suppTaken(d) === supps().length;
   }
 
   function addSplit(name) {
@@ -3532,6 +3680,32 @@
               typical: "typical serving",
               claude: "estimated", unknown: "needs numbers" };
 
+  // Sits under the target bar and above the add form: it belongs to the day
+  // you are looking at, like the food does, and it is the last thing you check
+  // rather than the first thing you log. Nothing here when the list is empty —
+  // an empty checklist is a nag with no content.
+  function suppsHtml(d) {
+    var list = supps();
+    if (!list.length) return "";
+    var taken = suppTaken(d), all = list.length;
+    return '<section class="supps">' +
+      '<div class="supp-head">' +
+        '<span class="eyebrow">Daily checklist</span>' +
+        '<span class="supp-count' + (taken === all ? " is-done" : "") + '">' +
+          taken + ' of ' + all + '</span>' +
+      '</div>' +
+      list.map(function (x) {
+        var on = !!(d.supps && d.supps[x.id]);
+        return '<button class="supp' + (on ? " is-on" : "") + '" data-supp="' + esc(x.id) + '" ' +
+          'aria-pressed="' + (on ? "true" : "false") + '">' +
+          '<span class="box">' + (on ? "✓" : "") + '</span>' +
+          '<span class="nm">' + esc(x.name) + '</span>' +
+          '<span class="dose">' + esc(x.dose || "") + '</span>' +
+        '</button>';
+      }).join("") +
+    '</section>';
+  }
+
   function estimatorHtml(key, d) {
     if (est && est.status === "loading") {
       return '<section class="entry est">' +
@@ -3836,6 +4010,8 @@
         goalHtml +
       '</section>' +
 
+      suppsHtml(d) +
+
       '<section class="entry">' +
         '<div class="pair">' +
           '<div class="field"><label for="fCal">Calories</label>' +
@@ -3984,6 +4160,35 @@
         render();
       });
     }
+
+    // Ticked in place rather than redrawn. The add-food fields keep no draft,
+    // so a render() here would wipe whatever is half typed into them — you
+    // reach for the checklist mid-entry precisely because it is right there.
+    view.querySelectorAll("[data-supp]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var key = ymd(cursor);
+        var dd = day(key);
+        dd.supps = dd.supps || {};
+        var sid = b.dataset.supp;
+        if (dd.supps[sid]) delete dd.supps[sid]; else dd.supps[sid] = true;
+        touch(key);
+        // A failed write is already shouted about by #savebar, which stays up
+        // until one succeeds; the tick is the state, so it follows the store.
+        save();
+
+        var on = !!dd.supps[sid];
+        b.classList.toggle("is-on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+        var box = b.querySelector(".box");
+        if (box) box.textContent = on ? "✓" : "";
+        var count = view.querySelector(".supp-count");
+        if (count) {
+          var n = suppTaken(dd), all = supps().length;
+          count.textContent = n + " of " + all;
+          count.classList.toggle("is-done", n === all);
+        }
+      });
+    });
 
     var runEst = document.getElementById("runEst");
     if (runEst) {
@@ -4879,6 +5084,25 @@
       photoBlock = '<p class="est-note">Photo reading isn’t available in this window — type the three numbers off the package instead. Once saved they work everywhere, offline.</p>';
     }
 
+    var suppRows = supps().map(function (x) {
+      if (suppEditing === x.id) {
+        return '<div class="supp-item is-editing">' +
+          '<input class="text" id="suppRename" value="' + esc(x.name) +
+            '" aria-label="Rename ' + esc(x.name) + '">' +
+          '<input class="text" id="suppRedose" value="' + esc(x.dose || "") +
+            '" aria-label="How much ' + esc(x.name) + '">' +
+          '<button class="btn" id="suppSaveEdit">Save</button>' +
+          '<button class="btn ghost" id="suppCancelEdit">Cancel</button>' +
+        '</div>';
+      }
+      return '<div class="supp-item">' +
+        '<span class="nm">' + esc(x.name) + '</span>' +
+        '<button data-editsupp="' + esc(x.id) + '" aria-label="Rename ' + esc(x.name) + '">Rename</button>' +
+        '<button data-rmsupp="' + esc(x.id) + '" aria-label="Remove ' + esc(x.name) + '">Remove</button>' +
+        '<span class="dose">' + esc(x.dose || "") + '</span>' +
+      '</div>';
+    }).join("");
+
     var f = pantryForm || { name: "", servingG: "", cal: "", pro: "" };
 
     view.innerHTML =
@@ -4926,6 +5150,24 @@
       '<section style="display:flex;flex-direction:column;gap:8px">' +
         '<span class="eyebrow">' + (list.length ? list.length + (list.length === 1 ? ' food saved' : ' foods saved') : 'Nothing saved yet') + '</span>' +
         (rows || '<p class="empty">Foods you save here are matched first — ahead of the built-in reference — every time you describe a meal.</p>') +
+      '</section>' +
+
+      // The checklist lives here because this is where you set up what the
+      // app should know about you, and it is not something you edit mid-set.
+      '<section style="display:flex;flex-direction:column;gap:8px">' +
+        '<span class="eyebrow">Daily checklist</span>' +
+        (suppRows ||
+          '<p class="empty">Creatine, a multivitamin, whatever you take every day. ' +
+          'Add them here and tick them off on the Macros tab.</p>') +
+        '<div class="entry">' +
+          '<div class="pair">' +
+            '<div class="field"><label for="suppNameIn">Name</label>' +
+              '<input id="suppNameIn" class="text" placeholder="Creatine"></div>' +
+            '<div class="field"><label for="suppDoseIn">How much</label>' +
+              '<input id="suppDoseIn" class="text" placeholder="5 g"></div>' +
+          '</div>' +
+          '<button class="btn" id="addSupp">Add to the checklist</button>' +
+        '</div>' +
       '</section>';
 
     var shotBtn = document.getElementById("shotBtn");
@@ -5044,6 +5286,62 @@
         var raw = null;
         store.pantry.forEach(function (x) { if (x.id === b.dataset.addpan) raw = x; });
         if (raw) openPanSheet(raw);
+      });
+    });
+
+    var addSupp = document.getElementById("addSupp");
+    if (addSupp) {
+      addSupp.addEventListener("click", function () {
+        var nameEl = document.getElementById("suppNameIn");
+        var doseEl = document.getElementById("suppDoseIn");
+        var nm = (nameEl.value || "").trim();
+        // Nothing to add is not a thing to do quietly.
+        if (!nm) { nameEl.focus(); return; }
+        supps().push({ id: "s" + uid(), name: nm, dose: (doseEl.value || "").trim() });
+        save(); render();
+      });
+    }
+
+    view.querySelectorAll("[data-editsupp]").forEach(function (b) {
+      b.addEventListener("click", function () { suppEditing = b.dataset.editsupp; render(); });
+    });
+
+    var saveEdit = document.getElementById("suppSaveEdit");
+    if (saveEdit) {
+      saveEdit.addEventListener("click", function () {
+        var nm = (document.getElementById("suppRename").value || "").trim();
+        var ds = (document.getElementById("suppRedose").value || "").trim();
+        if (!nm) { document.getElementById("suppRename").focus(); return; }
+        // The id is kept, so every day already ticked follows the new name —
+        // the same way renaming a training day carries its history with it.
+        supps().forEach(function (x) { if (x.id === suppEditing) { x.name = nm; x.dose = ds; } });
+        suppEditing = null;
+        save(); render();
+      });
+    }
+    var cancelEdit = document.getElementById("suppCancelEdit");
+    if (cancelEdit) {
+      cancelEdit.addEventListener("click", function () { suppEditing = null; render(); });
+    }
+
+    view.querySelectorAll("[data-rmsupp]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.dataset.rmsupp, idx = -1;
+        supps().forEach(function (x, i) { if (x.id === id) idx = i; });
+        if (idx === -1) return;
+        var gone = supps()[idx];
+        // Days you did take it keep their tick and keep its name. Dropping the
+        // name here would leave a tick against nothing, which is rule 7 with a
+        // different noun.
+        store.suppsRetired = store.suppsRetired || {};
+        store.suppsRetired[gone.id] = gone.name;
+        supps().splice(idx, 1);
+        save(); render();
+        offerUndo("Removed " + gone.name, function () {
+          supps().splice(Math.min(idx, supps().length), 0, gone);
+          if (store.suppsRetired) delete store.suppsRetired[gone.id];
+          save(); render();
+        });
       });
     });
 
@@ -5222,9 +5520,11 @@
     var DOW = ["S", "M", "T", "W", "T", "F", "S"];
 
     var trained = 0, hits = 0, judged = 0, timeMs = 0, timedDays = 0;
+    var suppDone = [];
     Object.keys(store.days).forEach(function (k) {
       if (k.slice(0, 4) !== String(logYear)) return;
       var d = store.days[k];
+      if (suppsAllIn(d)) suppDone.push(k);
       if (d.lifts && d.lifts.length) trained++;
       // banked time only: a clock still running is not a finished session
       if (d.workoutMs) { timeMs += d.workoutMs; timedDays++; }
@@ -5235,7 +5535,9 @@
     function dayTitle(k) {
       var d = store.days[k];
       var label = parseYmd(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
-      if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length))) return label + " — nothing logged";
+      var ticks = suppTaken(d);
+      if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length) && !ticks))
+        return label + " — nothing logged";
       var bits = [label];
       if (d.food && d.food.length) {
         var t = totals(d);
@@ -5249,6 +5551,25 @@
                   (d.workoutMs ? " · " + fmtDurShort(d.workoutMs) : ""));
       } else {
         bits.push("no gym");
+      }
+      // Named, not just counted: "3 of 4" a month later tells you nothing
+      // about which one you keep forgetting.
+      if (supps().length) {
+        var missed = supps().filter(function (x) { return !(d.supps && d.supps[x.id]); });
+        bits.push(!missed.length
+          ? "checklist done"
+          : ticks + " of " + supps().length + " · missed " +
+            missed.map(function (x) { return x.name; }).join(", "));
+      }
+      // A tick for something you have since stopped taking still happened.
+      // Dropping it from the record would be rule 7 with a different noun, so
+      // it is named from store.suppsRetired rather than silently vanishing.
+      var dropped = Object.keys((d && d.supps) || {}).filter(function (id) {
+        return !supps().some(function (x) { return x.id === id; });
+      });
+      if (dropped.length) {
+        bits.push("also " + dropped.map(suppName).join(", ") +
+                  " — no longer on your list");
       }
       return bits.join(" — ");
     }
@@ -5267,6 +5588,7 @@
         if (v !== "none") cls += " " + v;
         else if (key > TODAY) cls += " future";
         if (key === TODAY) cls += " is-today";
+        if (rec && suppsAllIn(rec)) cls += " supps-all";
         var bar = (rec && rec.lifts && rec.lifts.length) ? cat(rec.lifts[0].cat).color : "transparent";
         cells += '<button class="' + cls + '" data-go="' + key + '" style="--barcolor:' + bar + '" ' +
                  'title="' + esc(dayTitle(key)) + '">' + dnum + '<span class="bar"></span></button>';
@@ -5284,6 +5606,9 @@
         '<span><i style="background:var(--hit-bg);box-shadow:inset 0 0 0 1px var(--hit)"></i>Target hit</span>' +
         '<span><i style="background:var(--miss-bg);box-shadow:inset 0 0 0 1px var(--miss)"></i>Target missed</span>' +
         '<span><i style="background:var(--surface-2);box-shadow:inset 0 0 0 1px var(--ink);"></i>Today</span>' +
+        (supps().length
+          ? '<span><i style="background:var(--accent);border-radius:50%"></i>Checklist done</span>'
+          : '') +
         cats().map(function (c) {
           return '<span><i class="line" style="background:' + c.color + '"></i>' + esc(c.short) + '</span>';
         }).join("") +
@@ -5302,6 +5627,12 @@
           '<div><b>' + (judged ? Math.round((hits / judged) * 100) + "%" : "—") + '</b><span>Hit rate</span></div>' +
           '<div><b>' + (timedDays ? fmtDurShort(timeMs / timedDays) : "—") +
             '</b><span>Avg session</span></div>' +
+          // Two more tiles only when there is a checklist to report on, which
+          // also keeps the grid even rather than orphaning one on a row.
+          (supps().length
+            ? '<div><b>' + suppDone.length + '</b><span>Checklist days</span></div>' +
+              '<div><b>' + suppStreak(suppDone) + '</b><span>Best run</span></div>'
+            : '') +
         '</div>' +
         legend +
         '<div class="months">' + months + '</div>' +
@@ -6055,6 +6386,13 @@
     if (incoming.region) store.region = incoming.region;
     // A restored phone should weigh food the way the old one did.
     if (WEIGH[incoming.wunit]) store.wunit = incoming.wunit;
+    if (incoming.supps && incoming.supps.length) store.supps = incoming.supps;
+    if (incoming.suppsRetired) {
+      store.suppsRetired = store.suppsRetired || {};
+      Object.keys(incoming.suppsRetired).forEach(function (k) {
+        if (!store.suppsRetired[k]) store.suppsRetired[k] = incoming.suppsRetired[k];
+      });
+    }
 
     Object.keys(store.days).forEach(function (k) {
       (store.days[k].food || []).forEach(function (f) {

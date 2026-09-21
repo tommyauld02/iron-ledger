@@ -58,6 +58,8 @@ STORE = {
                 "serveUnit": "bottle", "serveG": None, "sCal": 130, "sPro": 30, "aliases": []},
                {"id": "p2", "name": "legacy item", "serveQty": 100,
                 "serveUnit": "g", "serveG": 100, "sCal": 900, "sPro": 2}],  # absurd density
+    # a checklist, so the macros section and its rename editor both exist here
+    "supps": [{"id": "s1", "name": "Creatine", "dose": "5 g"}],
     "v": 1,
 }
 
@@ -632,6 +634,13 @@ with sync_playwright() as pw:
         ("add a movement", ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-newmove]"], "#rtNewMove"),
         ("add a day",      ['.tabs button[data-tab="coach"]', "#addDay"], "#rtNewDay"),
         ("add a split",    ['.tabs button[data-tab="gym"]', "#addSplitChip"], "#newSplitName"),
+        # Sheets rather than inline editors, but the same blind spot: neither
+        # exists until something is pressed, so nothing that walks the tabs as
+        # it finds them will ever paint them.
+        ("how much from the pantry",
+                           ['.tabs button[data-tab="pantry"]', "[data-addpan]"], "#panQty"),
+        ("rename a checklist item",
+                           ['.tabs button[data-tab="pantry"]', "[data-editsupp]"], "#suppRename"),
     ]
     unopened, small, zoomy = [], [], []
     for name, steps, field in EDITORS:

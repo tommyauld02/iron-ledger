@@ -640,6 +640,124 @@ with sync_playwright() as pw:
     p.eval_on_selector_all(".cal-cell.hit, .cal-cell.miss","e=>{if(e.length)e[0].click()}"); p.wait_for_timeout(500)
     check("log: tap day jumps to macros", p.evaluate("()=>document.querySelector('.tabs button[data-tab=macros]').getAttribute('aria-selected')")=="true")
 
+    MARKS="()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); const k=Object.keys(s.days).sort().pop(); return s.days[k].supps||{};}"
+    # ---------- THE DAILY CHECKLIST ----------
+    # Creatine and a multivitamin have no calories worth logging, but whether
+    # you took them is the thing you want to see across a week.
+    check("checklist: nothing on macros until there is a list",
+          p.locator(".supps").count()==0)
+    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    for nm, ds in [("Ashwagandha","2 pills"), ("Creatine","5 g")]:
+        p.fill("#suppNameIn", nm); p.fill("#suppDoseIn", ds)
+        p.click("#addSupp"); p.wait_for_timeout(350)
+    check("checklist: the pantry builds the list",
+          p.locator(".supp-item").count()==2,
+          str(p.eval_on_selector_all(".supp-item .nm","e=>e.map(x=>x.textContent)")))
+    p.fill("#suppNameIn",""); p.click("#addSupp"); p.wait_for_timeout(300)
+    check("checklist: a nameless one is not added",
+          p.locator(".supp-item").count()==2)
+
+    p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(500)
+    # Pin the day first. Earlier sections leave the cursor on whatever they
+    # were looking at, and a reload snaps back to today — so ticking here and
+    # asserting after a reload would be comparing two different days.
+    if not p.evaluate("()=>document.getElementById('todayBtn').hidden"):
+        p.click("#todayBtn"); p.wait_for_timeout(400)
+    check("checklist: it appears on macros", p.locator(".supp").count()==2)
+    check("checklist: under the target bar and above the add form",
+          p.evaluate("()=>{const s=document.querySelector('.supps'),"
+                     "g=document.querySelector('.goalbar'),e=document.querySelector('.entry');"
+                     " return s.getBoundingClientRect().top>g.getBoundingClientRect().top"
+                     " && s.getBoundingClientRect().top<e.getBoundingClientRect().top;}"))
+    for i in range(2):
+        bb=p.locator(".supp").nth(i).bounding_box()
+        check("checklist: row %d is a proper target"%i, bb and bb["height"]>=44,
+              bb and "%dx%d"%(bb["width"],bb["height"]))
+    check("checklist: it starts at none taken",
+          p.eval_on_selector(".supp-count","e=>e.textContent")=="0 of 2",
+          p.eval_on_selector(".supp-count","e=>e.textContent"))
+
+    # the whole reason this is patched in place instead of redrawn
+    p.fill("#fCal","450"); p.fill("#fNote","half typed")
+    p.locator(".supp").first.click(); p.wait_for_timeout(400)
+    check("checklist: ticking does not wipe a half-typed entry",
+          p.input_value("#fCal")=="450" and p.input_value("#fNote")=="half typed",
+          "%r %r"%(p.input_value("#fCal"), p.input_value("#fNote")))
+    check("checklist: the tick shows on the row",
+          p.eval_on_selector(".supp","e=>e.classList.contains('is-on')")
+          and p.eval_on_selector(".supp","e=>e.getAttribute('aria-pressed')")=="true")
+    check("checklist: and the count follows it",
+          p.eval_on_selector(".supp-count","e=>e.textContent")=="1 of 2",
+          p.eval_on_selector(".supp-count","e=>e.textContent"))
+    p.locator(".supp").first.click(); p.wait_for_timeout(350)
+    check("checklist: tapping again takes it back off",
+          p.eval_on_selector(".supp-count","e=>e.textContent")=="0 of 2"
+          and not p.eval_on_selector(".supp","e=>e.classList.contains('is-on')"))
+    p.locator(".supp").nth(0).click(); p.locator(".supp").nth(1).click(); p.wait_for_timeout(400)
+    check("checklist: all of them says so",
+          p.eval_on_selector(".supp-count","e=>e.classList.contains('is-done')"))
+    p.reload(); p.wait_for_timeout(900)
+    check("checklist: it survives a reload",
+          p.eval_on_selector(".supp-count","e=>e.textContent")=="2 of 2")
+
+    # ---------- AND IT REACHES THE CALENDAR ----------
+    p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(700)
+    check("checklist: a complete day is marked on the calendar",
+          p.eval_on_selector_all(".cal-cell.supps-all","e=>e.length")==1,
+          "%d marked"%p.eval_on_selector_all(".cal-cell.supps-all","e=>e.length"))
+    check("checklist: the day says so in full",
+          "checklist done" in p.eval_on_selector(".cal-cell.supps-all","e=>e.title"),
+          p.eval_on_selector(".cal-cell.supps-all","e=>e.title"))
+    tiles=p.eval_on_selector_all(".yearstats div","e=>e.map(x=>x.textContent)")
+    check("checklist: the year gains two tiles, keeping the grid even",
+          len(tiles)==6 and any("Checklist days" in t for t in tiles)
+          and any("Best run" in t for t in tiles), " | ".join(tiles))
+    check("checklist: the legend explains the mark",
+          any("Checklist done" in x for x in
+              p.eval_on_selector_all(".legend span","e=>e.map(y=>y.textContent)")))
+
+    p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(500)
+    p.locator(".supp").first.click(); p.wait_for_timeout(350)
+    p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(600)
+    check("checklist: missing one takes the mark away",
+          p.eval_on_selector_all(".cal-cell.supps-all","e=>e.length")==0)
+    check("checklist: and the day names what was missed",
+          "missed Ashwagandha" in p.eval_on_selector(".cal-cell.is-today","e=>e.title"),
+          p.eval_on_selector(".cal-cell.is-today","e=>e.title"))
+
+    # ---------- RENAMING KEEPS HISTORY, REMOVING KEEPS THE NAME ----------
+    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    was=p.evaluate(MARKS)
+    p.locator("[data-editsupp]").first.click(); p.wait_for_timeout(400)
+    rb=p.locator("#suppRename").bounding_box()
+    check("checklist: the rename field is a proper target", rb and rb["height"]>=44,
+          rb and "%dx%d"%(rb["width"],rb["height"]))
+    p.fill("#suppRename","Ashwagandha KSM-66"); p.click("#suppSaveEdit"); p.wait_for_timeout(500)
+    check("checklist: renaming takes",
+          p.eval_on_selector_all(".supp-item .nm","e=>e.map(x=>x.textContent)")[0]=="Ashwagandha KSM-66",
+          str(p.eval_on_selector_all(".supp-item .nm","e=>e.map(x=>x.textContent)")))
+    check("checklist: and the days you already ticked follow it",
+          p.evaluate(MARKS)==was, "%s -> %s"%(was, p.evaluate(MARKS)))
+
+    p.locator("[data-rmsupp]").last.click(); p.wait_for_timeout(500)
+    check("checklist: removing takes it off the list",
+          p.locator(".supp-item").count()==1)
+    check("checklist: it offers undo rather than a dialog",
+          p.evaluate("()=>!document.getElementById('undobar').hidden"))
+    check("checklist: and keeps the name for the days you took it",
+          (p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).suppsRetired")
+           or {}) != {},
+          str(p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).suppsRetired")))
+    p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(600)
+    check("checklist: a tick for something dropped is still named",
+          "no longer on your list" in p.eval_on_selector(".cal-cell.is-today","e=>e.title"),
+          p.eval_on_selector(".cal-cell.is-today","e=>e.title"))
+    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    p.click("#undoBtn"); p.wait_for_timeout(500)
+    check("checklist: undo puts it back",
+          p.locator(".supp-item").count()==2,
+          str(p.eval_on_selector_all(".supp-item .nm","e=>e.map(x=>x.textContent)")))
+
     # ---------- BACKUP / RESTORE ----------
     p.click("#backupBtn"); p.wait_for_timeout(400)
     txt=p.evaluate("()=>document.getElementById('backupText').value")
