@@ -758,6 +758,72 @@ with sync_playwright() as pw:
           p.locator(".supp-item").count()==2,
           str(p.eval_on_selector_all(".supp-item .nm","e=>e.map(x=>x.textContent)")))
 
+    # ---------- SETTINGS ----------
+    # The gear lives in the header, so it has to be there whichever tab you
+    # are on — a setting you can only reach from one screen is a hunt.
+    ATTR="()=>[document.documentElement.getAttribute('data-theme'), document.documentElement.getAttribute('data-accent')]"
+    ACC="()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()"
+    META="()=>{const m=document.querySelector('meta[name=theme-color]');return m&&m.content;}"
+    for t in ["macros","pantry","gym","coach","log"]:
+        p.click('.tabs button[data-tab="%s"]'%t); p.wait_for_timeout(250)
+        if not p.locator("#setBtn").is_visible():
+            check("settings: the gear is on %s"%t, False); break
+    else:
+        check("settings: the gear is on every tab", True)
+    gb=p.locator("#setBtn").bounding_box()
+    check("settings: the gear is a proper target", gb and gb["width"]>=44 and gb["height"]>=44,
+          gb and "%dx%d"%(gb["width"],gb["height"]))
+    teal=p.evaluate(ACC)
+    p.click("#setBtn"); p.wait_for_timeout(400)
+    check("settings: the gear opens the sheet",
+          p.evaluate("()=>!document.getElementById('setSheet').hidden"))
+    check("settings: it starts on the phone's own look and teal",
+          p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")==["Match phone","Teal"],
+          str(p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")))
+    small=[x for x in p.eval_on_selector_all("#setSheet button",
+           "e=>e.map(b=>[b.textContent.trim()||b.getAttribute('aria-label'),Math.round(b.getBoundingClientRect().height)])")
+           if x[1]<44]
+    check("settings: every control in it clears 44px", not small, str(small))
+
+    p.click('[data-pick-theme="dark"]'); p.wait_for_timeout(300)
+    check("settings: Dark takes effect at once", p.evaluate(ATTR)[0]=="dark")
+    check("settings: and the status bar follows it, not the phone",
+          p.evaluate(META)=="#191F1D", p.evaluate(META))
+    check("settings: native controls go dark with it",
+          p.evaluate("()=>document.documentElement.style.colorScheme")=="dark")
+    check("settings: the choice is marked",
+          p.eval_on_selector('[data-pick-theme="dark"]',"e=>e.getAttribute('aria-pressed')")=="true")
+
+    # Each accent changes the colour on screen, and its swatch shows the colour
+    # it actually applies. The palette lives twice in the CSS — once to apply,
+    # once for the swatch — and this is what stops the two drifting apart.
+    for th in ["light","dark"]:
+        p.click('[data-pick-theme="%s"]'%th); p.wait_for_timeout(250)
+        seen=set()
+        for acc in ["teal","blue","violet","orange","graphite"]:
+            p.click('[data-pick-accent="%s"]'%acc); p.wait_for_timeout(250)
+            applied=p.evaluate(ACC)
+            shown=p.evaluate("a=>getComputedStyle(document.querySelector('.sw-'+a)).getPropertyValue('--sw').trim()", acc)
+            check("settings: %s %s swatch matches what it applies"%(th,acc),
+                  applied.lower()==shown.lower(), "applies %s, shows %s"%(applied,shown))
+            seen.add(applied.lower())
+        check("settings: five %s accents are five different colours"%th, len(seen)==5, str(sorted(seen)))
+
+    p.click('[data-pick-accent="blue"]'); p.wait_for_timeout(250)
+    blue=p.evaluate(ACC)
+    p.click("#setDone"); p.wait_for_timeout(300)
+    check("settings: Done closes it",
+          p.evaluate("()=>document.getElementById('setSheet').hidden"))
+    p.reload(); p.wait_for_timeout(900)
+    check("settings: the look survives a reload", p.evaluate(ATTR)==["dark","blue"], str(p.evaluate(ATTR)))
+    check("settings: it lives in the log, so a backup carries it",
+          p.evaluate("()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));return [s.theme,s.accent];}")==["dark","blue"])
+    check("settings: and in the small key read before the first paint",
+          p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-look')||'{}')")=={"theme":"dark","accent":"blue"},
+          str(p.evaluate("()=>localStorage.getItem('iron-ledger-look')")))
+    # Left on dark and blue on purpose: the restore below wipes the phone and
+    # has to bring the look back along with everything else.
+
     # ---------- BACKUP / RESTORE ----------
     p.click("#backupBtn"); p.wait_for_timeout(400)
     txt=p.evaluate("()=>document.getElementById('backupText').value")
@@ -766,12 +832,17 @@ with sync_playwright() as pw:
     payload=json.loads(txt)
     # wipe and restore
     p.evaluate("()=>{document.getElementById('closeSheet').click();}"); p.wait_for_timeout(200)
-    p.evaluate("()=>localStorage.removeItem('iron-ledger-v1')")
+    p.evaluate("()=>{localStorage.removeItem('iron-ledger-v1'); localStorage.removeItem('iron-ledger-look');}")
     p.reload(); p.wait_for_timeout(900)
+    check("restore: a wiped phone starts on the default look",
+          p.evaluate(ATTR)==[None,None], str(p.evaluate(ATTR)))
     p.click("#backupBtn"); p.wait_for_timeout(300)
     p.evaluate("t=>{document.getElementById('backupText').value=t;}", txt)
     p.click("#restoreBtn"); p.wait_for_timeout(600)
     after=p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))")
+    check("restore: the look comes back and is applied",
+          [after.get("theme"), after.get("accent")]==["dark","blue"] and p.evaluate(ATTR)==["dark","blue"],
+          "stored %s, on screen %s" % ([after.get("theme"), after.get("accent")], p.evaluate(ATTR)))
     check("restore: days come back", len(after.get("days",{}))==len(payload.get("days",{})),
           "%d of %d days" % (len(after.get("days",{})), len(payload.get("days",{}))))
     check("restore: pantry comes back", len(after.get("pantry",[]))==len(payload.get("pantry",[])),

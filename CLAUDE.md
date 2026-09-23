@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~395 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~470 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -303,6 +303,46 @@ because the clocks change twice a year and a 23-hour gap is still one day.
 **Days are judged against the goal in force when they were logged.**
 `stampGoal()` snapshots it, so changing your target today never rewrites last
 month's calendar.
+
+**Settings: the look is chosen, not just inherited.** The gear sits in the
+header beside Backup, so it is on every tab. For now it holds Appearance
+(*Match phone* / *Light* / *Dark*) and an accent colour; it is built as
+`.set-group` blocks so later settings slot in rather than force a redesign.
+`store.theme` and `store.accent` are the truth and travel with a backup; a
+restored phone looks like the one it came from.
+
+The CSS already had `:root[data-theme="dark"]` wired in with nothing ever
+setting it. `applyLook()` is now the one place that sets it — along with
+`data-accent`, the `color-scheme` native controls follow, and the status-bar
+`theme-color`, which used to follow only the phone and would have left a white
+bar over a dark app for anyone who chose Dark on a light phone.
+
+**The look is applied before the first paint.** A tiny script at the top of the
+body reads `iron-ledger-look` — a small key of its own, not the whole log,
+which can run to hundreds of kilobytes — and sets the attributes before the
+header exists. Without it, someone who chose dark sees a white flash every
+time the app opens. `applyLook()` rewrites that key from the store, so the two
+reconcile on every load.
+
+**Only the accent moves; hit and miss never do.** Green and red on the
+calendar are a meaning, not a decoration, which is also why there is no red or
+green among the accents. Each accent is a CSS block keyed on `data-accent` with
+a light and a dark variant; teal is the base palette and needs no block. Every
+accent was checked before it went in — accent as text on all three surfaces,
+button text on the accent, and ink and accent on the soft tint, all 4.5:1 or
+better in both themes — and a ticked row has to stay visibly different from
+an unticked one. The `.sw-*` swatch colours repeat the palette on purpose, so
+the picker shows each accent as it would look in the current theme; `sweep`
+applies every accent in both themes and fails if a swatch and what it applies
+ever disagree.
+
+**`darkcheck` measures only what its fixture puts on screen.** It carried no
+meal, no checklist, no running clock and no open review, so every state that
+sits on the soft accent tint went unmeasured — and "5 g" on a ticked checklist
+row shipped in b36 at 4.08:1. The fixture now has all of them, the walk opens
+the estimate review and the Settings sheet, and a second pass chooses every
+accent in both themes with the phone set the *opposite* way, so the choice has
+to win. It was proven by putting the old colour back and watching it fail.
 
 **The app is installed, not just bookmarked.** `manifest.webmanifest` and
 `sw.js` make it a real PWA: standalone display, home-screen icon, and an
