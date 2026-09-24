@@ -277,10 +277,54 @@ with sync_playwright() as pw:
     check("gym: volume line", "1 set" in p.eval_on_selector(".lift-foot span","e=>e.textContent"))
     p.fill('[data-w="0"]',"185"); p.fill('[data-r="0"]',"5"); p.press('[data-r="0"]',"Enter"); p.wait_for_timeout(400)
     check("gym: Enter adds set", p.eval_on_selector_all(".set","e=>e.length")==2)
+    # A tap on a set used to remove it outright — the same remove-and-add-again
+    # the owner called out for movements. Now it opens an editor.
+    SETS = ("()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));"
+            "const k=Object.keys(s.days).sort().pop();"
+            "return s.days[k].lifts[0].sets.map(x=>x.w+'x'+x.r+(x.tech?':'+x.tech:''));}")
     p.eval_on_selector_all(".set","e=>e[0].click()"); p.wait_for_timeout(400)
+    check("gym: tapping a set opens it rather than removing it",
+          p.evaluate("()=>!document.getElementById('setEditSheet').hidden")
+          and p.eval_on_selector_all(".set","e=>e.length")==2)
+    check("gym: the editor names the set",
+          "set 1 of 2" in p.eval_on_selector("#seTitle","e=>e.textContent"),
+          p.eval_on_selector("#seTitle","e=>e.textContent"))
+    check("gym: and opens on its numbers",
+          p.input_value("#seW")=="185" and p.input_value("#seR")=="6" and p.input_value("#seT")=="",
+          "%s x %s %r" % (p.input_value("#seW"), p.input_value("#seR"), p.input_value("#seT")))
+    small=[x for x in p.eval_on_selector_all("#setEditSheet input, #setEditSheet select, #setEditSheet button",
+           "e=>e.map(b=>[b.id,Math.round(b.getBoundingClientRect().height)])") if x[1]<44]
+    check("gym: every control in it clears 44px", not small, str(small))
+    zoomy=p.eval_on_selector_all("#setEditSheet input, #setEditSheet select",
+          "e=>e.filter(x=>parseFloat(getComputedStyle(x).fontSize)<16).map(x=>x.id)")
+    check("gym: and none of its fields zoom the page", not zoomy, str(zoomy))
+    p.click("#seCancel"); p.wait_for_timeout(300)
+    check("gym: cancel leaves the set alone", p.evaluate(SETS)==["185x6","185x5"], str(p.evaluate(SETS)))
+
+    p.eval_on_selector_all(".set","e=>e[0].click()"); p.wait_for_timeout(300)
+    p.fill("#seR",""); p.click("#seSave"); p.wait_for_timeout(250)
+    check("gym: a set with no reps is not saved, and it says why",
+          p.evaluate("()=>!document.getElementById('setEditSheet').hidden")
+          and "reps" in p.eval_on_selector("#seWarn","e=>e.textContent")
+          and p.evaluate(SETS)[0]=="185x6")
+    p.fill("#seW","190"); p.fill("#seR","7"); p.select_option("#seT","failure")
+    p.click("#seSave"); p.wait_for_timeout(350)
+    check("gym: a set can be changed in place",
+          p.evaluate(SETS)==["190x7:failure","185x5"], str(p.evaluate(SETS)))
+    check("gym: the chip shows the change",
+          p.eval_on_selector_all(".set","e=>e.map(x=>x.textContent)")[0]=="190×7failure",
+          str(p.eval_on_selector_all(".set","e=>e.map(x=>x.textContent)")))
+    check("gym: and it offers undo", "Changed to 190×7 failure" in p.eval_on_selector("#undobar","e=>e.textContent"))
+    p.click("#undoBtn"); p.wait_for_timeout(350)
+    check("gym: undo puts the old numbers back", p.evaluate(SETS)==["185x6","185x5"], str(p.evaluate(SETS)))
+
+    # Remove lives in the editor now
+    p.eval_on_selector_all(".set","e=>e[0].click()"); p.wait_for_timeout(300)
+    p.click("#seRemove"); p.wait_for_timeout(400)
     check("gym: delete set + undo offered", p.eval_on_selector_all(".set","e=>e.length")==1 and not p.evaluate("()=>document.getElementById('undobar').hidden"))
     p.click("#undoBtn"); p.wait_for_timeout(400)
-    check("gym: undo set", p.eval_on_selector_all(".set","e=>e.length")==2)
+    check("gym: undo set", p.eval_on_selector_all(".set","e=>e.length")==2
+          and p.evaluate(SETS)==["185x6","185x5"], str(p.evaluate(SETS)))
     # custom movement
     p.select_option("#mSel","__new"); p.wait_for_timeout(200)
     p.fill("#mNew","Meadows Row"); p.click("#addLift"); p.wait_for_timeout(400)
@@ -907,7 +951,10 @@ with sync_playwright() as pw:
             q.fill('[data-w="%d"]'%i, "95"); q.fill('[data-r="%d"]'%i, "10")
             q.click('[data-addset="%d"]'%i); q.wait_for_timeout(120)
             q.evaluate("ms=>window.__advance(ms)", gap)
-    def near(ms, minutes): return ms not in (None,"unset") and abs(ms - minutes*MIN) < 3000
+    # The test clock moves by hand but also ticks with real time, and a drag
+    # costs a few real seconds. Ten seconds is still far finer than any
+    # distinction these checks draw, which are whole minutes apart.
+    def near(ms, minutes): return ms not in (None,"unset") and abs(ms - minutes*MIN) < 10000
 
     c, q = lap_page()
     q.click("#startWorkout"); q.wait_for_timeout(300)
@@ -1124,6 +1171,180 @@ with sync_playwright() as pw:
           q.locator(".lift.is-closed").count()==1
           and q.eval_on_selector(".lift.is-closed .done-sets","e=>e.textContent")=="30×12, 30×12, 30×12",
           q.eval_on_selector(".lift.is-closed .done-sets","e=>e.textContent"))
+    c.close()
+
+    # ---------- ARRANGING: MOVE A MOVEMENT, OR SUPERSET TWO ----------
+    # The Macros drag, for movements: picked up by the grip, the cards fold to
+    # a line each, and where it lands decides — a card's superset zone joins
+    # them, anywhere else moves it. Driven with a mouse here; tests/touch.py
+    # drives the same thing with real finger events.
+    ORD = ("()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));"
+           "const k=Object.keys(s.days).sort().pop();"
+           "return s.days[k].lifts.map(l=>l.movement+(l.ss?'*':''));}")
+    def mid(q, sel):
+        q.eval_on_selector(sel, "e=>e.scrollIntoView({block:'center'})"); q.wait_for_timeout(150)
+        bb = q.locator(sel).bounding_box()
+        return bb["x"]+bb["width"]/2, bb["y"]+bb["height"]/2
+    def hold(q, i):
+        x, y = mid(q, '[data-grip="%d"]' % i)
+        q.mouse.move(x, y); q.mouse.down(); q.wait_for_timeout(200)
+    def over(q, sel, dy=None):
+        bb = q.locator(sel).bounding_box()
+        q.mouse.move(bb["x"]+60, bb["y"]+(bb["height"]/2 if dy is None else dy), steps=8)
+        q.wait_for_timeout(150)
+    def drop(q):
+        q.mouse.up(); q.wait_for_timeout(400)
+
+    c, q = lap_page()
+    add(q, "Barbell Curl")
+    check("arrange: one movement has nothing to be arranged against",
+          q.locator("[data-grip]").count()==0)
+    add(q, "Dumbbell Curl"); add(q, "Lat Pulldown")
+    for i in range(3):
+        sets(q, i, 2, 1000)
+    check("arrange: two or more, and each has a grip", q.locator("[data-grip]").count()==3)
+    gb=q.locator('[data-grip="0"]').bounding_box()
+    check("arrange: the grip is a proper target", gb and gb["width"]>=44 and gb["height"]>=44,
+          gb and "%dx%d"%(gb["width"],gb["height"]))
+    check("arrange: the grip never scrolls the page",
+          q.eval_on_selector('[data-grip="0"]',"e=>getComputedStyle(e).touchAction")=="none")
+    check("arrange: there is a line saying how", q.locator(".drag-hint").count()==1)
+
+    hold(q, 1)
+    heights=q.eval_on_selector_all(".lift","e=>e.map(x=>Math.round(x.getBoundingClientRect().height))")
+    check("arrange: picking one up folds every card to a line",
+          q.evaluate("()=>document.body.classList.contains('arranging')") and max(heights)<=60, str(heights))
+    check("arrange: nothing on a folded card can be hit",
+          q.locator(".lift [data-w]:visible, .lift [data-done]:visible, .lift [data-rmlift]:visible").count()==0)
+    over(q, '.lift[data-li="0"]', dy=6)
+    check("arrange: where it will land is marked",
+          q.eval_on_selector('.lift[data-li="0"]',"e=>e.classList.contains('drop-before')"))
+    drop(q)
+    check("arrange: dropping it moves it (Dumbbell Curl did go first)",
+          q.evaluate(ORD)==["Dumbbell Curl","Barbell Curl","Lat Pulldown"], str(q.evaluate(ORD)))
+    check("arrange: and says so", "Moved Dumbbell Curl" in q.eval_on_selector("#undobar","e=>e.textContent"))
+    check("arrange: the cards unfold again",
+          not q.evaluate("()=>document.body.classList.contains('arranging')")
+          and q.locator('[data-w="0"]').count()==1)
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("arrange: undo puts the order back",
+          q.evaluate(ORD)==["Barbell Curl","Dumbbell Curl","Lat Pulldown"], str(q.evaluate(ORD)))
+
+    # picked up and put straight back: no change, no undo, nothing pressed
+    q.evaluate("()=>{document.getElementById('undobar').hidden=true;}")
+    hold(q, 2); drop(q)
+    check("arrange: put straight back changes nothing and offers nothing",
+          q.evaluate(ORD)==["Barbell Curl","Dumbbell Curl","Lat Pulldown"]
+          and q.evaluate("()=>document.getElementById('undobar').hidden")
+          and q.locator(".lift.is-closed").count()==0
+          and q.evaluate("()=>document.getElementById('setEditSheet').hidden"))
+
+    # the owner's superset: Barbell Curl dropped on Dumbbell Curl's zone
+    hold(q, 0)
+    zb=q.locator('[data-sszone="1"]').bounding_box()
+    check("arrange: every other card offers a superset zone while one is held",
+          zb is not None and q.locator(".lift:not(.lifted) .ss-zone:visible").count()==2)
+    q.mouse.move(zb["x"]+zb["width"]/2, zb["y"]+zb["height"]/2, steps=8); q.wait_for_timeout(150)
+    check("arrange: the zone under the finger lights up",
+          q.eval_on_selector('[data-sszone="1"]',"e=>getComputedStyle(e).borderStyle")=="solid")
+    drop(q)
+    check("arrange: dropped on the zone, the two are a superset",
+          q.evaluate(ORD)==["Dumbbell Curl*","Barbell Curl*","Lat Pulldown"], str(q.evaluate(ORD)))
+    check("arrange: drawn as one bracket", q.locator(".ss-group").count()==1
+          and q.locator(".ss-group .lift").count()==2)
+    check("arrange: and says so",
+          "Barbell Curl supersetted with Dumbbell Curl" in q.eval_on_selector("#undobar","e=>e.textContent"))
+    check("arrange: the how-to line goes once it has been done", q.locator(".drag-hint").count()==0)
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("arrange: undo takes the superset apart and the order back",
+          q.evaluate(ORD)==["Barbell Curl","Dumbbell Curl","Lat Pulldown"], str(q.evaluate(ORD)))
+    hold(q, 0)
+    zb=q.locator('[data-sszone="1"]').bounding_box()
+    q.mouse.move(zb["x"]+zb["width"]/2, zb["y"]+zb["height"]/2, steps=8); q.wait_for_timeout(150); drop(q)
+
+    # dropped between two members, it joins them; dropped outside, it leaves
+    hold(q, 2)
+    over(q, '.lift[data-li="1"]', dy=6)
+    drop(q)
+    check("arrange: dropped between two members, it joins the superset",
+          q.evaluate(ORD)==["Dumbbell Curl*","Lat Pulldown*","Barbell Curl*"], str(q.evaluate(ORD)))
+    # Order inside a superset is the point of it — which one came first — so
+    # a member dropped next to another member of its own superset stays in it.
+    # That is what lets the order inside a two-movement superset be swapped.
+    hold(q, 2)
+    over(q, '.lift[data-li="0"]', dy=6)
+    drop(q)
+    check("arrange: the order inside a superset can be changed without breaking it",
+          q.evaluate(ORD)==["Barbell Curl*","Dumbbell Curl*","Lat Pulldown*"], str(q.evaluate(ORD)))
+    # ...and one dropped away from its superset leaves it
+    add(q, "Hammer Curl")
+    hold(q, 0)
+    last=q.locator('.lift[data-li="3"]').bounding_box()
+    q.mouse.move(last["x"]+60, last["y"]+last["height"]-4, steps=8); q.wait_for_timeout(150); drop(q)
+    check("arrange: dropped away from its superset, a member leaves it",
+          q.evaluate(ORD)==["Dumbbell Curl*","Lat Pulldown*","Hammer Curl","Barbell Curl"], str(q.evaluate(ORD)))
+    c.close()
+
+    # ---------- A SUPERSET IS FINISHED, AND TIMED, AS ONE ----------
+    c, q = lap_page()
+    q.click("#startWorkout"); q.wait_for_timeout(300)
+    add(q, "Dumbbell Curl"); add(q, "Barbell Curl")
+    hold(q, 1)
+    zb=q.locator('[data-sszone="0"]').bounding_box()
+    q.mouse.move(zb["x"]+zb["width"]/2, zb["y"]+zb["height"]/2, steps=8); q.wait_for_timeout(150); drop(q)
+    check("superset: no Done on its members", q.locator(".ss-group [data-done]").count()==0)
+    check("superset: and nothing to finish until there is a set", q.locator("[data-ssdone]").count()==0)
+    for _ in range(3):
+        sets(q, 0, 1, 90000); sets(q, 1, 1, 90000)
+    db=q.locator("[data-ssdone]").bounding_box()
+    check("superset: one Done for the whole superset", db is not None and db["height"]>=44,
+          db and "%dx%d"%(db["width"],db["height"]))
+    q.click("[data-ssdone]"); q.wait_for_timeout(350)
+    r=q.evaluate(LAPS)
+    check("superset: both close together", all(x["closed"] for x in r[:2]))
+    check("superset: timed as one — six alternating sets, one time",
+          near(r[0]["lap"], 9) and r[1]["lap"] is None, str([x["lap"] for x in r]))
+    check("superset: the time sits on the bracket, not on a member",
+          q.eval_on_selector(".ss-group .ss-head .lap","e=>e.textContent").startswith("9:0")
+          and q.locator(".ss-group .lift .lap").count()==0,
+          q.eval_on_selector(".ss-group .ss-head .lap","e=>e.textContent"))
+    kept=[x["lap"] for x in r]
+    q.click("[data-ssreopen]"); q.wait_for_timeout(300)
+    check("superset: reopened for a fix, the time is kept",
+          [x["lap"] for x in q.evaluate(LAPS)]==kept and q.locator("[data-ssdone]").count()==1)
+    q.click("[data-sssplit]"); q.wait_for_timeout(300)
+    check("superset: Split takes the bracket away", q.locator(".ss-group").count()==0)
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("superset: and undo puts it back", q.locator(".ss-group").count()==1)
+    q.click('[data-rmlift="1"]'); q.wait_for_timeout(300)
+    check("superset: removing a member leaves no superset of one", q.locator(".ss-group").count()==0)
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("superset: undo brings the member back into the superset", q.locator(".ss-group").count()==1)
+    # nobody taps Done before locking in — a superset still open is one unit
+    add(q, "Lat Pulldown")
+    q.click('[data-ssdone]'); q.wait_for_timeout(300)
+    sets(q, 2, 2, 2*MIN)
+    q.click("#lockDay"); q.wait_for_timeout(700)
+    r=q.evaluate(LAPS)
+    check("superset: Lock in the day still times the one you were on", r[2]["closed"] and r[2]["lap"] not in (None,"unset"),
+          str(r[2]))
+    c.close()
+
+    c, q = lap_page()
+    q.click("#startWorkout"); q.wait_for_timeout(300)
+    add(q, "Dumbbell Curl"); add(q, "Barbell Curl")
+    hold(q, 1)
+    zb=q.locator('[data-sszone="0"]').bounding_box()
+    q.mouse.move(zb["x"]+zb["width"]/2, zb["y"]+zb["height"]/2, steps=8); q.wait_for_timeout(150); drop(q)
+    for _ in range(2):
+        sets(q, 0, 1, MIN); sets(q, 1, 1, MIN)
+    q.click("#lockDay"); q.wait_for_timeout(700)
+    r=q.evaluate(LAPS)
+    check("superset: locking with only a superset open times it as the one unit",
+          all(x["closed"] for x in r) and near(r[0]["lap"], 4) and r[1]["lap"] is None,
+          str([x["lap"] for x in r]))
+    check("superset: a locked day offers no grip, no Split, no Reopen",
+          q.locator("[data-grip], [data-sssplit], [data-ssreopen]").count()==0)
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

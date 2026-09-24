@@ -37,7 +37,7 @@ OVERFLOW="""()=>{const bad=[];
       bad.push((e.className||e.tagName)+' '+Math.round(r.left)+'..'+Math.round(r.right));});
   return bad.slice(0,6);}"""
 SMALL="""()=>{const bad=[];
-  document.querySelectorAll('button,select,input[type=file]').forEach(b=>{
+  document.querySelectorAll('button,select,input[type=file],[role=button]').forEach(b=>{
     const r=b.getBoundingClientRect();
     if(r.width&&r.height&&(r.height<44||r.width<44)&&!b.className.includes('cal-cell'))
       bad.push((b.id||b.className||'btn')+' '+Math.round(r.width)+'x'+Math.round(r.height));});

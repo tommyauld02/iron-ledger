@@ -137,6 +137,49 @@ with sync_playwright() as pw:
     check("a set logs with a finger", p.locator(".set").count()==1,
           "%d sets"%p.locator(".set").count())
 
+    # ---- moving and supersetting movements with a finger ----
+    # The grip has touch-action: none, which is the only thing stopping a real
+    # touch from being taken over by the page as a scroll. A mouse cannot test
+    # that; this can.
+    for mv in ["Barbell Curl", "Dumbbell Curl"]:
+        p.select_option("#mSel", mv)
+        # a tap has to land on screen, and clear of the sticky tab bar
+        p.eval_on_selector("#addLift", "e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(150)
+        ab=p.locator("#addLift").bounding_box()
+        p.touchscreen.tap(ab["x"]+ab["width"]/2, ab["y"]+ab["height"]/2); p.wait_for_timeout(400)
+    ORD=("()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));"
+         "return s.days[Object.keys(s.days).sort().pop()].lifts.map(l=>l.movement+(l.ss?'*':''));}")
+    def grip_drag(i, target):
+        p.eval_on_selector('[data-grip="%d"]'%i, "e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(200)
+        g=p.locator('[data-grip="%d"]'%i).bounding_box()
+        x0,y0=g["x"]+g["width"]/2, g["y"]+g["height"]/2
+        touch("touchStart", x0, y0); p.wait_for_timeout(200)
+        # the cards have folded and the page has moved: aim at where things are now
+        t=p.locator(target).bounding_box()
+        g2=p.locator('[data-grip="%d"]'%i).bounding_box()
+        xs,ys=g2["x"]+g2["width"]/2, g2["y"]+g2["height"]/2
+        # A move is a thumb sliding straight up or down the grip column; a
+        # superset is sliding across onto the zone beside it. That split is the
+        # design — the zone sits left of the grips so a vertical move never
+        # crosses one — and a diagonal aim at the middle of a row would not be.
+        if "sszone" in target:
+            x1,y1=t["x"]+t["width"]/2, t["y"]+t["height"]/2
+        else:
+            x1,y1=xs, t["y"]+6
+        for k in range(1,9):
+            touch("touchMove", xs+(x1-xs)*k/8, ys+(y1-ys)*k/8); p.wait_for_timeout(35)
+        p.wait_for_timeout(80)
+        touch("touchEnd"); p.wait_for_timeout(450)
+    before=p.evaluate(ORD)
+    grip_drag(2, '.lift[data-li="1"]')
+    check("a finger drag moves a movement",
+          p.evaluate(ORD)==["Barbell Row","Dumbbell Curl","Barbell Curl"], "%s -> %s"%(before, p.evaluate(ORD)))
+    check("and the page did not scroll it away mid-drag",
+          not p.evaluate("()=>document.body.classList.contains('arranging')"))
+    grip_drag(2, '[data-sszone="1"]')
+    check("a finger drag onto the superset zone makes a superset",
+          p.evaluate(ORD)==["Barbell Row","Dumbbell Curl*","Barbell Curl*"], str(p.evaluate(ORD)))
+
     # ---- home-screen metadata ----
     check("declares itself a home-screen app",
           p.evaluate("""()=>!!document.querySelector('meta[name="apple-mobile-web-app-capable"]')"""))

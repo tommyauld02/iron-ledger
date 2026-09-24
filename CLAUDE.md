@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~520 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~570 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -474,6 +474,55 @@ Choosing one **patches the label in place** — a `render()` would wipe the weig
 and reps typed but not yet set, the same trap the checklist ticks avoid. And the
 box goes back to normal after every set, so a drop tag cannot quietly ride
 along onto every set after it.
+
+**A tap on a set opens it; it no longer removes it.** Tapping a chip used to
+delete the set outright — the same remove-and-add-again the owner called out for
+movements. It now opens `#setEditSheet`: weight, reps, technique, Save, and
+*Remove this set* set apart below the everyday actions. Reps are required and it
+says so; weight may be nothing (bodyweight). Changing and removing both go
+through `offerUndo()`. The sheet re-finds the set by day, movement and position
+each time rather than holding the object, so a redraw or an undo in between
+cannot leave it writing to a set that is no longer on the page.
+
+**Supersets are a tag, not a nesting.** `l.ss` marks the members; every loop
+over `d.lifts` — totals, *Last*, laps, the calendar — keeps working untouched,
+and only drawing, timing and the drag know about groups. `tidySupersets()` is
+the one place the rules are restored after anything that moves or removes a
+movement: members sit next to each other, a group has at least two, and a group
+is open or finished as a whole. Removing a member snapshots every link first, so
+undo puts the superset back and not just the movement.
+
+A superset is **timed as one movement** — the owner's own description of one.
+`finishUnit()` takes a single lift or a whole group; the members still to be
+finished share one lap stored on the first of them, and a group's time is the
+sum of its members'. That also comes out right for a superset put together
+after the fact: sequential laps add up, and an overlapped partner was already
+recorded untimed with its time on the other. Members have no Done of their own;
+the bracket has *Done with superset*, then its time and *Reopen*, plus *Split*
+while open. *Lock in the day* counts a superset as the one unit it is.
+
+**Arranging is the Macros drag, adapted to cards.** A food row is one line; a
+movement card is a quarter of the screen and full of buttons. So a card is
+picked up by its **grip** (`touch-action: none`, which is the only thing keeping
+a real touch from being taken over by the page as a scroll), not by a hold
+anywhere, and the moment it is picked up **every card folds to one line** so the
+whole list fits on screen and the page can be scrolled so the held card stays
+under the finger. Where it lands decides: on another card's *superset* zone the
+two become a superset; anywhere else it moves. The zones sit **left of the
+grips**, so a thumb sliding straight up or down the grip column always moves and
+never supersets by accident — `touch` drives exactly that with real finger
+events, and a diagonal aim at the middle of a row does cross a zone.
+
+Order inside a superset is the point of one, so a card dropped next to a member
+of its own superset stays in it — that is what lets the order inside a
+two-movement superset be swapped. Dropped strictly between two members of
+another superset, it joins that one. Anywhere else it leaves.
+
+Letting go expands the cards again, and the release is followed by a click on
+whatever is under the finger by then — Done, Remove, a set. A capture-phase
+listener on `#view` swallows clicks for 400 ms after a drag, before any card's
+own handler can see one. Put straight back where it started, nothing changes
+and nothing is offered to undo.
 
 ## Publishing
 

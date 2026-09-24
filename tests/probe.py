@@ -22,7 +22,9 @@ SNAP="""()=>JSON.stringify({dom:document.querySelector('.app').innerHTML.length,
   txt:document.querySelector('main').textContent,
   ls:localStorage.getItem('iron-ledger-v1'),
   undo:document.getElementById('undobar').hidden,
-  sheet:document.getElementById('sheet').hidden,
+  // every sheet, not just Backup's: the quantity, settings and set editors
+  // are all sheets now, and a control that opens one is not a dead control
+  sheet:[...document.querySelectorAll('.sheet')].map(x=>x.hidden?0:1).join(''),
   tab:[...document.querySelectorAll('.tabs button')].map(b=>b.getAttribute('aria-selected')).join(''),
   date:document.getElementById('dateFull').textContent})"""
 
@@ -40,7 +42,7 @@ PROBES=[
  ("gym",".cat:nth-child(3)","switch split (legs)",None),
  ("gym","#addLift","add movement",None),
  ("gym",'[data-addset="0"]',"add a set",[('[data-w="0"]',"200"),('[data-r="0"]',"5")]),
- ("gym",".set","delete a set",None),
+ ("gym",".set","open a set to change it",None),
  ("gym","[data-rmlift]","remove movement",None),
  ("pantry","#shotBtn","open label photo picker",None),
  ("pantry","#savePan","save pantry food",[("#panName","Test bar"),("#panServe","1"),("#panCal","200"),("#panPro","20")]),

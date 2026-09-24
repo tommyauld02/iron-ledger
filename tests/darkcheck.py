@@ -28,7 +28,12 @@ def fixture(theme=None, accent=None):
                     {"id": "i2", "cal": 205, "pro": 4, "note": "White rice · 158 g", "est": True}]}],
             # an open movement, a finished one with its time, and one finished
             # untimed — the folded card only exists after Done is tapped
-            "lifts": [{"id": "l", "cat": "back", "movement": "Barbell Row",
+            # a superset: its bracket, label and Split sit on their own ground
+            "lifts": [{"id": "g1a", "cat": "back", "movement": "Dumbbell Curl", "ss": "g1",
+                       "sets": [{"w": 30, "r": 12}]},
+                      {"id": "g1b", "cat": "back", "movement": "Barbell Curl", "ss": "g1",
+                       "sets": [{"w": 60, "r": 10}]},
+                      {"id": "l", "cat": "back", "movement": "Barbell Row",
                        "sets": [{"w": 135, "r": 10}, {"w": 95, "r": 8, "tech": "drop"}]},
                       {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
                       {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
@@ -108,6 +113,16 @@ def walk(p, label):
             p.locator(".meal-open").first.click(); p.wait_for_timeout(300)
         low = p.evaluate(LOW)
         if low: found.append("%s: %s" % (tab, low))
+        if tab == "gym":
+            # The held state only exists mid-drag — the superset zones and the
+            # lit one under the finger. Put on screen and measured, because a
+            # state no test paints is a state no test measures.
+            p.evaluate("""()=>{document.body.classList.add('arranging');
+              const z=document.querySelectorAll('.ss-zone'); if(z[1]) z[1].classList.add('is-over');}""")
+            low = p.evaluate(LOW)
+            if low: found.append("gym (held): %s" % low)
+            p.evaluate("""()=>{document.body.classList.remove('arranging');
+              document.querySelectorAll('.ss-zone.is-over').forEach(z=>z.classList.remove('is-over'));}""")
         if tab == "macros":
             # the review header sits on the soft tint too
             if not p.locator("#estText").count():

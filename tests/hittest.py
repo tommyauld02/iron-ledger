@@ -27,7 +27,12 @@ store = {
                 {"id": "i2", "cal": 205, "pro": 4, "note": "White rice · 158 g", "est": True}]},
             {"id": "b", "cal": 200, "pro": 20, "note": "Protein bar"}],
         # a finished movement too, so its Reopen gets hit-tested like the rest
-        "lifts": [{"id": "l1", "cat": "back", "movement": "Barbell Row",
+        # a superset too, so its Split and its members' grips are reached for
+        "lifts": [{"id": "s1", "cat": "back", "movement": "Dumbbell Curl", "ss": "g1",
+                   "sets": [{"w": 30, "r": 12}]},
+                  {"id": "s2", "cat": "back", "movement": "Barbell Curl", "ss": "g1",
+                   "sets": [{"w": 60, "r": 10}]},
+                  {"id": "l1", "cat": "back", "movement": "Barbell Row",
                    "sets": [{"w": 135, "r": 10}, {"w": 155, "r": 8}]},
                   {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
                   {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
@@ -40,7 +45,9 @@ store = {
 
 HITTEST = """() => {
   const out = [];
-  const sel = 'button, input, select, textarea, [role=tab]';
+  // [role=button] is the drag grip: if anything sits over it, the card
+  // cannot be picked up at all.
+  const sel = 'button, input, select, textarea, [role=tab], [role=button]';
   const els = [...document.querySelectorAll(
     'main ' + sel + ', .topbar ' + sel + ', .tabs ' + sel + ', .undobar ' + sel)];
 

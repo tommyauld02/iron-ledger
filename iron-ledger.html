@@ -1745,8 +1745,8 @@
   .set .x { color: var(--ink-3); margin: 0 1px; }
   /* Scoped to buttons: a locked day renders its chips as spans, and a chip you
      cannot remove must not offer the remove cue. */
-  button.set:hover { border-color: var(--danger); color: var(--danger); }
-  button.set:hover .x { color: var(--danger); }
+  button.set:hover { border-color: var(--accent); color: var(--accent); }
+  button.set:hover .x { color: var(--accent); }
 
   /* The card is the finished state and persists; the confetti is the moment
      and does not. accent, not --hit: the hit tokens mean "macro target met" on
@@ -1956,6 +1956,102 @@
 
   .lift.is-closed .lift-head h3 { color: var(--ink-2); }
 
+  /* A superset: one bracket round its members, its own header and Done. */
+  .ss-group {
+    --catcolor: var(--accent);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 8px 10px;
+    border: 1px solid var(--accent);
+    border-left-width: 4px;
+    border-radius: 2px;
+    background: var(--surface-2);
+  }
+  .ss-head { display: flex; align-items: center; gap: 10px; min-height: 28px; }
+  .ss-label {
+    flex: 1;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .ss-head .lap {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .ss-head .lap.is-untimed { font-size: 11px; font-weight: 400; color: var(--ink-3); }
+  .ss-head button {
+    min-height: 44px;
+    margin: -8px -4px -8px 0;
+    padding: 0 10px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: none;
+    border: 0;
+  }
+  .ss-head button:hover { color: var(--accent); }
+  .ss-group .lift-done { margin-top: 0; }
+
+  /* The handle. Its own touch-action, so pressing it never scrolls the page. */
+  .grip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin: -12px -12px -12px 0;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--ink-3);
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    cursor: grab;
+  }
+  .ss-zone { display: none; }
+
+  /* ---------- while a movement is held ---------- */
+  body.arranging .lift { position: relative; }
+  body.arranging .lift .body > :not(.lift-head):not(.ss-zone) { display: none; }
+  body.arranging .lift .body { padding-bottom: 11px; }
+  body.arranging .ss-group > .lift-done,
+  body.arranging .drag-hint { display: none; }
+  body.arranging .lift.lifted { opacity: .35; }
+  body.arranging .lift:not(.lifted) .ss-zone {
+    display: flex;
+    position: absolute;
+    top: 5px;
+    bottom: 5px;
+    right: 52px;
+    width: 40%;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .04em;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px dashed var(--rule-hard);
+    border-radius: 2px;
+  }
+  /* As specific as the rule it overrides. At lower specificity the lit zone
+     stayed dashed — the drop still worked, but nothing said it would. */
+  body.arranging .lift:not(.lifted) .ss-zone.is-over {
+    color: var(--ink);
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+  }
+  .lift.drop-before { box-shadow: 0 -4px 0 0 var(--accent); }
+  .lift.drop-after { box-shadow: 0 4px 0 0 var(--accent); }
+
   /* The name is the thing you tap to change it. The chevron says so, and the
      padding makes the target 44px without growing the card: the extra height
      is taken back with a negative margin. */
@@ -2135,6 +2231,9 @@
     color: var(--ink) !important;
   }
   .qty-total.is-empty { color: var(--miss) !important; font-size: 13px; }
+  /* Removal lives in the editor now, below the everyday actions and set apart
+     from them, rather than being the thing a stray tap on a chip does. */
+  .se-remove { margin-top: 4px; color: var(--danger); border-color: var(--rule); }
   .sheet-inner p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
   .sheet-inner textarea {
     width: 100%;
@@ -2324,6 +2423,29 @@
   </div>
 </div>
 
+<!-- Tapping a set used to remove it outright — the same remove-and-add-again
+     the owner called out for movements. Now it opens this, and Remove is one
+     of the things you can do from it. -->
+<div class="sheet" id="setEditSheet" hidden>
+  <div class="sheet-inner">
+    <h2 id="seTitle">Change this set</h2>
+    <div class="pair">
+      <div class="field"><label for="seW">Weight · lb</label>
+        <input id="seW" inputmode="decimal"></div>
+      <div class="field"><label for="seR">Reps</label>
+        <input id="seR" inputmode="numeric"></div>
+    </div>
+    <div class="field"><label for="seT">Technique</label>
+      <select id="seT"></select></div>
+    <p id="seWarn" class="qty-total is-empty" hidden></p>
+    <div class="sheet-actions">
+      <button class="btn" id="seSave">Save</button>
+      <button class="btn ghost" id="seCancel">Cancel</button>
+    </div>
+    <button class="btn ghost se-remove" id="seRemove">Remove this set</button>
+  </div>
+</div>
+
 <div class="sheet" id="panSheet" hidden>
   <div class="sheet-inner">
     <h2 id="panSheetName">Add from pantry</h2>
@@ -2350,7 +2472,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-23.39";
+  var BUILD = "2026-09-24.40";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2726,23 +2848,81 @@
   //   - this movement's first set came before the last Done. It was being
   //     worked alongside another one — a superset, or a Done forgotten and
   //     tapped late — so the time since that Done is not all its own.
-  function finishLift(d, l) {
-    if (!l.doneAt) {
+  //
+  // A superset is timed as one movement — the owner's own description of
+  // one: "combined as sort of 1 entire movement". So the unit is either a
+  // single lift or every member of a superset, and the members still to be
+  // finished share one lap, stored on the first of them. A group's time is
+  // the sum of its members' laps, which also comes out right for a superset
+  // put together after the fact: sequential laps add up, and an overlapped
+  // partner was already recorded untimed with its time on the other.
+  function finishUnit(d, members) {
+    var fresh = members.filter(function (x) { return !x.doneAt; });
+    if (fresh.length) {
       var now = Date.now(), lap = null;
       if (d.workoutStart) {
         var lastDone = 0;
         d.lifts.forEach(function (x) {
-          if (x !== l && x.doneAt && x.doneAt > d.workoutStart && x.doneAt > lastDone) lastDone = x.doneAt;
+          if (fresh.indexOf(x) === -1 && x.doneAt && x.doneAt > d.workoutStart && x.doneAt > lastDone) lastDone = x.doneAt;
         });
-        var first = l.sets.length ? l.sets[0].t : 0;
+        var first = 0;
+        fresh.forEach(function (x) {
+          var t = x.sets.length ? x.sets[0].t : 0;
+          if (t && (!first || t < first)) first = t;
+        });
         // Only an earlier *Done* can disqualify it. A first set logged just
         // before Start was tapped is the normal way to begin, not an overlap.
         if (!(lastDone && first && first < lastDone)) lap = now - (lastDone || d.workoutStart);
       }
-      l.doneAt = now;
-      l.lapMs = (lap !== null && lap >= 0 && lap <= MAX_SESSION_MS) ? lap : null;
+      var lapMs = (lap !== null && lap >= 0 && lap <= MAX_SESSION_MS) ? lap : null;
+      fresh.forEach(function (x, k) {
+        x.doneAt = now;
+        x.lapMs = k === 0 ? lapMs : null;
+      });
     }
-    l.closed = true;
+    members.forEach(function (x) { x.closed = true; });
+  }
+  function finishLift(d, l) { finishUnit(d, [l]); }
+
+  // ---------- supersets ----------
+  // A tag on each member, not a nesting. Every loop over d.lifts — totals,
+  // the Last lookup, laps, the calendar — keeps working untouched; only the
+  // drawing and the drag know about groups. Two rules hold after anything
+  // that moves or removes a movement, and this is the one place that restores
+  // them: members sit next to each other, and a group has at least two. A
+  // group is also open or finished as a whole, never half of each.
+  function tidySupersets(d) {
+    var lifts = d.lifts, seen = {}, i = 0;
+    while (i < lifts.length) {
+      var id = lifts[i].ss;
+      if (!id) { i++; continue; }
+      var j = i;
+      while (j + 1 < lifts.length && lifts[j + 1].ss === id) j++;
+      if (j === i) {
+        delete lifts[i].ss;                      // a superset of one is no superset
+      } else {
+        if (seen[id]) {                          // split in two: the second run is its own group
+          id = "g" + uid();
+          for (var k = i; k <= j; k++) lifts[k].ss = id;
+        }
+        seen[id] = true;
+        var run = lifts.slice(i, j + 1);
+        if (!run.every(function (x) { return x.closed; })) {
+          run.forEach(function (x) { delete x.closed; });
+        }
+      }
+      i = j + 1;
+    }
+  }
+
+  // [first, last] index of the unit lift i belongs to
+  function unitOf(d, i) {
+    var l = d.lifts[i];
+    if (!l || !l.ss) return [i, i];
+    var a = i, b = i;
+    while (a > 0 && d.lifts[a - 1].ss === l.ss) a--;
+    while (b + 1 < d.lifts.length && d.lifts[b + 1].ss === l.ss) b++;
+    return [a, b];
   }
 
   function addSplit(name) {
@@ -4716,9 +4896,19 @@
     }).join("");
 
     var locked = !!d.gymLocked;
+    tidySupersets(d);
 
-    var cards = d.lifts.map(function (l, i) {
+    // Several movements can be moved about; one cannot, and a locked day is
+    // read-only. The grip and the superset zone only exist when it can.
+    var movable = !locked && d.lifts.length > 1;
+    var cardList = d.lifts.map(function (l, i) {
       var lc = cat(l.cat);
+      var inGroup = !!l.ss;
+      var grip = movable
+        ? '<span class="grip" data-grip="' + i + '" role="button" aria-label="Drag ' + esc(l.movement) +
+            ' to move it, or onto another to superset them">⠿</span>'
+        : '';
+      var zone = movable ? '<span class="ss-zone" data-sszone="' + i + '">⛓ superset</span>' : '';
       var v = volume(l);
       var prev = lastTime(l.movement, key);
       var lastLine = prev
@@ -4732,7 +4922,7 @@
         var tq = s.tech ? '<span class="tq">' + esc(techShort(s.tech)) + '</span>' : '';
         return locked
           ? '<span class="set">' + s.w + '<span class="x">×</span>' + s.r + tq + '</span>'
-          : '<button class="set" data-lift="' + i + '" data-set="' + si + '" title="Tap to remove">' +
+          : '<button class="set" data-lift="' + i + '" data-set="' + si + '" title="Tap to change">' +
             s.w + '<span class="x">×</span>' + s.r + tq + '</button>';
       }).join("");
 
@@ -4740,14 +4930,16 @@
       // by accident. Reopen is the one control left, and it changes nothing
       // but the card — the time stays what it was.
       if (l.closed) {
-        return '<article class="lift is-closed" style="--catcolor:' + lc.color + '">' +
+        return '<article class="lift is-closed" data-li="' + i + '" style="--catcolor:' + lc.color + '">' +
           '<div class="spine"></div>' +
           '<div class="body">' +
             '<div class="lift-head"><h3>' + esc(l.movement) + '</h3>' +
-              (l.lapMs != null
+              // in a superset the time belongs to the group, on its header
+              (inGroup ? '' : l.lapMs != null
                 ? '<span class="lap" title="Time on this movement">' + fmtDur(l.lapMs) + '</span>'
                 : '<span class="lap is-untimed">not timed</span>') +
-            '</div>' +
+              grip +
+            '</div>' + zone +
             (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
                        '</em> — a day you no longer train.</p>' : '') +
             (l.sets.length
@@ -4758,7 +4950,7 @@
               '<span>' + (v.sets
                 ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
                 : 'No sets logged') + '</span>' +
-              (locked ? '' : '<button data-reopen="' + i + '" aria-label="Reopen ' +
+              (locked || inGroup ? '' : '<button data-reopen="' + i + '" aria-label="Reopen ' +
                 esc(l.movement) + '">Reopen</button>') +
             '</div>' +
           '</div>' +
@@ -4783,7 +4975,7 @@
             esc(l.movement) + '">' + esc(l.movement) + '<span class="chev" aria-hidden="true">▾</span>' +
           '</button></h3>';
 
-      return '<article class="lift" style="--catcolor:' + lc.color + '">' +
+      return '<article class="lift" data-li="' + i + '" style="--catcolor:' + lc.color + '">' +
         '<div class="spine"></div>' +
         '<div class="body">' +
           (editing
@@ -4799,7 +4991,7 @@
             : '') +
           '<div class="lift-head">' + (editing ? '<h3>' + esc(l.movement) + '</h3>' : nameHtml) +
             '<span class="cattag"' + (lc.gone ? ' title="' + esc(lc.name) + '"' : '') + '>' +
-              lc.tag + '</span></div>' +
+              lc.tag + '</span>' + grip + '</div>' + zone +
           (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
                      '</em> — a day you no longer train.</p>' : '') +
           '<p class="last">' + lastLine + '</p>' +
@@ -4823,18 +5015,52 @@
             '</div>') +
           // Nothing to be done with until there is a set. Full width and away
           // from Remove, because the whole point is ending a movement cleanly.
-          (locked || !l.sets.length ? '' :
+          // a superset is finished as a whole, from the group, not per member
+          (locked || !l.sets.length || inGroup ? '' :
             '<button class="lift-done" data-done="' + i + '" aria-label="Done with ' +
               esc(l.movement) + '">Done</button>') +
           '<div class="lift-foot">' +
             '<span>' + (v.sets
               ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
-              : (locked ? 'No sets logged' : 'Log your first set — tap a set chip to remove it')) + '</span>' +
+              : (locked ? 'No sets logged' : 'Log your first set — tap a set to change or remove it')) + '</span>' +
             (locked ? '' : '<button data-rmlift="' + i + '">Remove</button>') +
           '</div>' +
         '</div>' +
       '</article>';
-    }).join("");
+    });
+
+    // Members of a superset are drawn inside one bracket, with the group's
+    // own controls: Split and Done while it is open, its time and Reopen once
+    // it is finished.
+    var cards = "";
+    for (var ci = 0; ci < d.lifts.length; ) {
+      var u = unitOf(d, ci);
+      if (u[0] === u[1]) { cards += cardList[ci]; ci++; continue; }
+      var members = d.lifts.slice(u[0], u[1] + 1);
+      var gClosed = members.every(function (x) { return x.closed; });
+      var gLap = null;
+      members.forEach(function (x) { if (x.lapMs != null) gLap = (gLap || 0) + x.lapMs; });
+      var gSets = members.some(function (x) { return x.sets.length; });
+      cards += '<section class="ss-group' + (gClosed ? ' is-closed' : '') + '" data-ssfirst="' + u[0] + '">' +
+        '<div class="ss-head">' +
+          '<span class="ss-label">Superset · ' + members.length + '</span>' +
+          (gClosed
+            ? (gLap != null
+                ? '<span class="lap" title="Time on this superset">' + fmtDur(gLap) + '</span>'
+                : '<span class="lap is-untimed">not timed</span>')
+            : '') +
+          (locked ? ''
+            : gClosed
+              ? '<button data-ssreopen="' + u[0] + '">Reopen</button>'
+              : '<button data-sssplit="' + u[0] + '">Split</button>') +
+        '</div>' +
+        cardList.slice(u[0], u[1] + 1).join("") +
+        (!locked && !gClosed && gSets
+          ? '<button class="lift-done ss-done" data-ssdone="' + u[0] + '">Done with superset</button>'
+          : '') +
+      '</section>';
+      ci = u[1] + 1;
+    }
 
     // The clock goes above everything, because it is the first thing you touch
     // when you walk in and the last thing before you leave — it should not be
@@ -4903,7 +5129,10 @@
         : '') +
 
       (cards
-        ? '<section class="liftgroup">' + cards + '</section>'
+        ? '<section class="liftgroup">' + cards + '</section>' +
+          (movable && !d.lifts.some(function (x) { return x.ss; })
+            ? '<p class="drag-hint">Drag ⠿ to move a movement, or drop it on another\u2019s ⛓ superset to combine them.</p>'
+            : '')
         : '<p class="empty">No movements logged for this day.<br>Pick a split above and add your first below.</p>') +
 
       // Add movement sits *under* the list, so the movements read in the order
@@ -5060,8 +5289,14 @@
         // still open it is the one you were on, and it is timed here, before
         // the clock stops and takes the anchor with it. Several open means no
         // telling which time is whose, so none of them is given one.
-        var stillOpen = d.lifts.filter(function (x) { return !x.closed && x.sets.length; });
-        if (stillOpen.length === 1) finishLift(d, stillOpen[0]);
+        // A superset counts as the one movement it is.
+        var units = [];
+        for (var ui = 0; ui < d.lifts.length; ) {
+          var uu = unitOf(d, ui), mem = d.lifts.slice(uu[0], uu[1] + 1);
+          if (mem.some(function (x) { return !x.closed; }) && mem.some(function (x) { return x.sets.length; })) units.push(mem);
+          ui = uu[1] + 1;
+        }
+        if (units.length === 1) finishUnit(d, units[0]);
         stopWorkout(d);          // the clock stops when the day is called done
         d.gymLocked = true;
         touch(key); save(); render();
@@ -5104,17 +5339,7 @@
 
     view.querySelectorAll("[data-set]").forEach(function (b) {
       b.addEventListener("click", function () {
-        var li = Number(b.dataset.lift), si = Number(b.dataset.set);
-        var lift = d.lifts[li];
-        if (!lift || !lift.sets[si]) return;
-        var gone = lift.sets[si];
-        lift.sets.splice(si, 1);
-        touch(key); save(); render();
-        offerUndo("Removed " + gone.w + " × " + gone.r + " from " + lift.movement, function () {
-          var l2 = day(key).lifts[li];
-          if (l2) l2.sets.splice(Math.min(si, l2.sets.length), 0, gone);
-          touch(key); save(); render();
-        });
+        openSetEditor(key, Number(b.dataset.lift), Number(b.dataset.set));
       });
     });
 
@@ -5179,6 +5404,59 @@
       });
     }
 
+    function unitMembers(first) {
+      var u = unitOf(d, first);
+      return d.lifts.slice(u[0], u[1] + 1);
+    }
+    function snapshot(members, keys) {
+      return members.map(function (x) {
+        var o = { l: x };
+        keys.forEach(function (k) { o[k] = x[k]; });
+        return o;
+      });
+    }
+    function restore(snap, keys) {
+      snap.forEach(function (o) {
+        keys.forEach(function (k) { if (o[k] === undefined) delete o.l[k]; else o.l[k] = o[k]; });
+      });
+    }
+
+    view.querySelectorAll("[data-ssdone]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var members = unitMembers(Number(b.dataset.ssdone));
+        var keys = ["doneAt", "lapMs", "closed"];
+        var was = snapshot(members, keys);
+        finishUnit(d, members);
+        touch(key); save(); render();
+        var lap = null;
+        members.forEach(function (x) { if (x.lapMs != null) lap = (lap || 0) + x.lapMs; });
+        offerUndo("Finished the superset" + (lap != null ? " · " + fmtDur(lap) : ""), function () {
+          restore(was, keys);
+          touch(key); save(); render();
+        });
+      });
+    });
+    view.querySelectorAll("[data-ssreopen]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        // Reopened to fix a number, like a single movement: the time is kept.
+        unitMembers(Number(b.dataset.ssreopen)).forEach(function (x) { delete x.closed; });
+        touch(key); save(); render();
+      });
+    });
+    view.querySelectorAll("[data-sssplit]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var members = unitMembers(Number(b.dataset.sssplit));
+        var was = snapshot(members, ["ss"]);
+        members.forEach(function (x) { delete x.ss; });
+        touch(key); save(); render();
+        offerUndo("Split the superset", function () {
+          restore(was, ["ss"]);
+          tidySupersets(d);
+          touch(key); save(); render();
+        });
+      });
+    });
+
     view.querySelectorAll("[data-done]").forEach(function (b) {
       b.addEventListener("click", function () {
         var l = d.lifts[Number(b.dataset.done)];
@@ -5213,12 +5491,19 @@
         var i = Number(b.dataset.rmlift);
         var gone = d.lifts[i];
         if (!gone) return;
+        // Taken before the removal, because tidySupersets is about to unlink a
+        // partner left on its own — and undo has to put the superset back too,
+        // not just the movement.
+        var linksWere = d.lifts.map(function (x) { return [x, x.ss]; });
         d.lifts.splice(i, 1);
+        tidySupersets(d);        // a superset left with one member is no superset
         touch(key); save(); render();
         offerUndo("Removed " + gone.movement +
           (gone.sets.length ? " and its " + gone.sets.length + " sets" : ""), function () {
           var dd = day(key);
           dd.lifts.splice(Math.min(i, dd.lifts.length), 0, gone);
+          linksWere.forEach(function (pr) { if (pr[1]) pr[0].ss = pr[1]; else delete pr[0].ss; });
+          tidySupersets(dd);
           touch(key); save(); render();
         });
       });
@@ -6473,6 +6758,157 @@
     if (id === "fCal" || id === "fPro" || id === "fNote") { e.preventDefault(); addFoodFromForm(); }
   });
 
+  // ---------- drag a movement: move it, or superset it ----------
+  // The Macros drag, for movements, with one difference forced by the shape
+  // of the thing: a food row is one line, a movement card is a quarter of the
+  // screen and full of buttons. So it is picked up by its grip, not by a hold
+  // anywhere, and the moment it is picked up every card folds to one line —
+  // the whole list fits on screen and a card can reach any position without
+  // the page scrolling under the finger.
+  //
+  // Where it lands decides what happens. On another card's superset zone:
+  // the two become a superset. Anywhere else: it moves there, joining a
+  // superset only if it is dropped between two of that superset's members.
+  var ldrag = null;
+  var liftDragEnded = 0;
+
+  function clearLiftDrag() {
+    if (!ldrag) return;
+    if (ldrag.ghost && ldrag.ghost.parentNode) ldrag.ghost.parentNode.removeChild(ldrag.ghost);
+    view.querySelectorAll(".lift.lifted, .lift.drop-before, .lift.drop-after").forEach(function (el) {
+      el.classList.remove("lifted", "drop-before", "drop-after");
+    });
+    view.querySelectorAll(".ss-zone.is-over").forEach(function (el) { el.classList.remove("is-over"); });
+    document.body.classList.remove("arranging", "dragging");
+    window.removeEventListener("pointermove", onLiftMove);
+    window.removeEventListener("pointerup", onLiftUp);
+    window.removeEventListener("pointercancel", clearLiftDrag);
+    ldrag = null;
+  }
+
+  view.addEventListener("pointerdown", function (e) {
+    if (tab !== "gym" || ldrag) return;
+    var grip = e.target.closest && e.target.closest("[data-grip]");
+    if (!grip) return;
+    var dd = day(ymd(cursor));
+    var from = Number(grip.dataset.grip);
+    var card = grip.closest(".lift");
+    if (!dd.lifts[from] || !card) return;
+    e.preventDefault();
+    ldrag = { from: from, el: card, target: null, ghost: null };
+    document.body.classList.add("arranging", "dragging");
+    card.classList.add("lifted");
+    // The cards have just folded to one line each and the page is much
+    // shorter. Scroll so the one being held is still under the finger rather
+    // than wherever the new height happened to leave it.
+    var r = card.getBoundingClientRect();
+    window.scrollBy(0, (r.top + r.height / 2) - e.clientY);
+    var g = document.createElement("div");
+    g.className = "drag-ghost";
+    g.textContent = dd.lifts[from].movement;
+    document.body.appendChild(g);
+    ldrag.ghost = g;
+    window.addEventListener("pointermove", onLiftMove);
+    window.addEventListener("pointerup", onLiftUp);
+    window.addEventListener("pointercancel", clearLiftDrag);
+    onLiftMove(e);
+  });
+
+  function onLiftMove(e) {
+    if (!ldrag) return;
+    var x = e.clientX, y = e.clientY;
+    ldrag.ghost.style.left = x + "px";
+    ldrag.ghost.style.top = y + "px";
+    view.querySelectorAll(".lift.drop-before, .lift.drop-after").forEach(function (el) {
+      el.classList.remove("drop-before", "drop-after");
+    });
+    view.querySelectorAll(".ss-zone.is-over").forEach(function (el) { el.classList.remove("is-over"); });
+
+    ldrag.ghost.style.visibility = "hidden";
+    var under = document.elementFromPoint(x, y);
+    ldrag.ghost.style.visibility = "";
+    var zone = under && under.closest && under.closest("[data-sszone]");
+    if (zone && Number(zone.dataset.sszone) !== ldrag.from) {
+      zone.classList.add("is-over");
+      ldrag.target = { join: Number(zone.dataset.sszone) };
+      return;
+    }
+    // Otherwise it is a move: the first card whose middle is below the
+    // finger is the one it goes in front of.
+    var rows = [].slice.call(view.querySelectorAll(".lift[data-li]"))
+      .filter(function (el) { return el !== ldrag.el; });
+    var at = rows.length;
+    for (var k = 0; k < rows.length; k++) {
+      var rr = rows[k].getBoundingClientRect();
+      if (y < rr.top + rr.height / 2) { at = k; break; }
+    }
+    if (at < rows.length) rows[at].classList.add("drop-before");
+    else if (rows.length) rows[rows.length - 1].classList.add("drop-after");
+    ldrag.target = { at: at };
+  }
+
+  function onLiftUp() {
+    if (!ldrag) return;
+    var from = ldrag.from, target = ldrag.target;
+    clearLiftDrag();
+    liftDragEnded = Date.now();
+    if (target) arrangeLift(from, target);
+  }
+
+  // Letting go expands the cards again, and the release is followed by a
+  // click on whatever is under the finger by then — Done, Remove, a set.
+  // Caught here, before any card's own handler can see it.
+  view.addEventListener("click", function (e) {
+    if (Date.now() - liftDragEnded < 400) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+  window.addEventListener("blur", clearLiftDrag);
+
+  function arrangeLift(from, target) {
+    var key = ymd(cursor), d = day(key);
+    var moving = d.lifts[from];
+    if (!moving) return;
+    var before = d.lifts.map(function (x) { return [x, x.ss, x.closed]; });
+    var msg;
+    if (target.join !== undefined) {
+      var onto = d.lifts[target.join];
+      if (!onto || onto === moving || (onto.ss && onto.ss === moving.ss)) { render(); return; }
+      var gid = onto.ss || ("g" + uid());
+      onto.ss = gid;
+      moving.ss = gid;
+      d.lifts.splice(from, 1);
+      // straight after the superset it is joining, so the group stays together
+      var end = unitOf(d, d.lifts.indexOf(onto))[1];
+      d.lifts.splice(end + 1, 0, moving);
+      msg = moving.movement + " supersetted with " + onto.movement;
+    } else {
+      d.lifts.splice(from, 1);
+      var at = Math.max(0, Math.min(target.at, d.lifts.length));
+      d.lifts.splice(at, 0, moving);
+      var prev = d.lifts[at - 1], next = d.lifts[at + 1];
+      if (prev && next && prev.ss && prev.ss === next.ss) moving.ss = prev.ss;
+      else if (moving.ss && !(prev && prev.ss === moving.ss) && !(next && next.ss === moving.ss)) delete moving.ss;
+      msg = "Moved " + moving.movement;
+    }
+    tidySupersets(d);
+    // Dropped back where it started: nothing changed, so nothing to say and
+    // nothing to undo.
+    var same = before.length === d.lifts.length && before.every(function (pr, k) {
+      return pr[0] === d.lifts[k] && (pr[0].ss || null) === (pr[1] || null);
+    });
+    if (same) { render(); return; }
+    touch(key); save(); render();
+    offerUndo(msg, function () {
+      var dd = day(key);
+      dd.lifts = before.map(function (pr) { return pr[0]; });
+      before.forEach(function (pr) {
+        if (pr[1]) pr[0].ss = pr[1]; else delete pr[0].ss;
+        if (pr[2]) pr[0].closed = true; else delete pr[0].closed;
+      });
+      tidySupersets(dd);
+      touch(key); save(); render();
+    });
+  }
+
   // iOS suspends a home-screen app rather than closing it, so "today" was
   // whatever day you first opened it — and food logged after midnight landed
   // on yesterday. Re-check the date every time the app comes back to the front.
@@ -6688,6 +7124,83 @@
     save();
     applyLook();
     drawSettings();
+  });
+
+  // ---------- changing a set ----------
+  // Wired once, outside #view, like the other sheets. The set is found again
+  // by day, movement and position each time rather than held as an object,
+  // so a redraw or an undo in between cannot leave the editor writing to a
+  // set that is no longer on the page.
+  var setEditSheet = document.getElementById("setEditSheet");
+  var setEditing = null;    // { key, li, si }
+
+  function editedSet() {
+    if (!setEditing) return null;
+    var dd = store.days[setEditing.key];
+    var l = dd && dd.lifts[setEditing.li];
+    var st = l && l.sets[setEditing.si];
+    return st ? { d: dd, l: l, st: st } : null;
+  }
+
+  function openSetEditor(key, li, si) {
+    setEditing = { key: key, li: li, si: si };
+    var at = editedSet();
+    if (!at) { setEditing = null; return; }
+    document.getElementById("seTitle").textContent =
+      at.l.movement + " · set " + (si + 1) + " of " + at.l.sets.length;
+    document.getElementById("seW").value = at.st.w;
+    document.getElementById("seR").value = at.st.r;
+    document.getElementById("seT").innerHTML = TECHNIQUES.map(function (t) {
+      return '<option value="' + t.id + '"' + ((at.st.tech || "") === t.id ? " selected" : "") + '>' +
+             t.name + '</option>';
+    }).join("");
+    document.getElementById("seWarn").hidden = true;
+    setEditSheet.hidden = false;
+  }
+
+  function closeSetEditor() { setEditing = null; setEditSheet.hidden = true; }
+
+  document.getElementById("seCancel").addEventListener("click", closeSetEditor);
+  setEditSheet.addEventListener("click", function (e) { if (e.target === setEditSheet) closeSetEditor(); });
+
+  document.getElementById("seSave").addEventListener("click", function () {
+    var at = editedSet();
+    if (!at) { closeSetEditor(); return; }
+    var w = num(document.getElementById("seW").value);
+    var r = num(document.getElementById("seR").value);
+    var tech = document.getElementById("seT").value;
+    // Same rule as adding one: weight may be nothing (bodyweight), reps may not.
+    if (!r) {
+      var warn = document.getElementById("seWarn");
+      warn.hidden = false; warn.textContent = "How many reps?";
+      document.getElementById("seR").focus();
+      return;
+    }
+    var key = setEditing.key, st = at.st;
+    var was = { w: st.w, r: st.r, tech: st.tech };
+    st.w = w; st.r = r;
+    if (tech) st.tech = tech; else delete st.tech;
+    closeSetEditor();
+    touch(key); save(); render();
+    offerUndo("Changed to " + setText(st), function () {
+      st.w = was.w; st.r = was.r;
+      if (was.tech) st.tech = was.tech; else delete st.tech;
+      touch(key); save(); render();
+    });
+  });
+
+  document.getElementById("seRemove").addEventListener("click", function () {
+    var at = editedSet();
+    if (!at) { closeSetEditor(); return; }
+    var key = setEditing.key, li = setEditing.li, si = setEditing.si;
+    var gone = at.l.sets.splice(si, 1)[0];
+    var lift = at.l;
+    closeSetEditor();
+    touch(key); save(); render();
+    offerUndo("Removed " + setText(gone) + " from " + lift.movement, function () {
+      lift.sets.splice(Math.min(si, lift.sets.length), 0, gone);
+      touch(key); save(); render();
+    });
   });
 
   // ---------- the quantity sheet ----------
