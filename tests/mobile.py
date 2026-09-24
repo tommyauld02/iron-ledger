@@ -6,7 +6,9 @@ store={"days":{T:{"food":[
   {"id":"r1","cal":205,"pro":4,"note":"White rice, cooked · 158 g","est":True},
   {"id":"r2","cal":489,"pro":57,"note":"Costco top sirloin · 6 oz","est":True},
   {"id":"r3","cal":190,"pro":21,"note":"Protein bar"}],
-  "lifts":[{"id":"l1","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10}]}],
+  # a finished movement too, so the folded card is measured on every phone
+  "lifts":[{"id":"l1","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10}]},
+           {"id":"l2","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":452000,"closed":True}],
   "updated":1,"goal":G}},
  "moves":None,"goal":G,"region":"United States",
  "pantry":[{"id":"p1","name":"protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,

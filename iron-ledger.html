@@ -1935,6 +1935,35 @@
     margin-right: -10px;
   }
   .lift-foot button:hover, .lift-foot button:active { color: var(--danger); }
+  /* Reopen is not destructive, so it does not borrow Remove's warning red. */
+  .lift-foot button[data-reopen]:hover,
+  .lift-foot button[data-reopen]:active { color: var(--accent); }
+
+  .lift-done {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 9px;
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--catcolor);
+    background: var(--surface);
+    border: 1px solid var(--catcolor);
+    border-radius: 2px;
+  }
+  .lift-done:hover { background: var(--catcolor); color: var(--surface); }
+
+  .lift.is-closed .lift-head h3 { color: var(--ink-2); }
+  .lift .lap {
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  .lift .lap.is-untimed { font-size: 11px; font-weight: 400; color: var(--ink-3); }
 
   .daysum {
     display: flex;
@@ -2252,7 +2281,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-22.37";
+  var BUILD = "2026-09-23.38";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2583,6 +2612,38 @@
   }
   function suppsAllIn(d) {
     return supps().length > 0 && suppTaken(d) === supps().length;
+  }
+
+  // ---------- each movement's time ----------
+  // A lap: from the last movement you finished — or from Start workout, for
+  // the first — to this one's Done. Stored once, when Done is first tapped,
+  // so nothing later (another movement removed, the clock restarted, this one
+  // reopened to fix a number) can quietly rewrite it.
+  //
+  // Three ways it would lie, and each records no time instead, the way a
+  // forgotten workout clock does:
+  //   - no clock running: there is nothing to measure from;
+  //   - past MAX_SESSION_MS: that is a clock left running, not a movement;
+  //   - this movement's first set came before the last Done. It was being
+  //     worked alongside another one — a superset, or a Done forgotten and
+  //     tapped late — so the time since that Done is not all its own.
+  function finishLift(d, l) {
+    if (!l.doneAt) {
+      var now = Date.now(), lap = null;
+      if (d.workoutStart) {
+        var lastDone = 0;
+        d.lifts.forEach(function (x) {
+          if (x !== l && x.doneAt && x.doneAt > d.workoutStart && x.doneAt > lastDone) lastDone = x.doneAt;
+        });
+        var first = l.sets.length ? l.sets[0].t : 0;
+        // Only an earlier *Done* can disqualify it. A first set logged just
+        // before Start was tapped is the normal way to begin, not an overlap.
+        if (!(lastDone && first && first < lastDone)) lap = now - (lastDone || d.workoutStart);
+      }
+      l.doneAt = now;
+      l.lapMs = (lap !== null && lap >= 0 && lap <= MAX_SESSION_MS) ? lap : null;
+    }
+    l.closed = true;
   }
 
   function addSplit(name) {
@@ -4575,6 +4636,35 @@
             s.w + '<span class="x">×</span>' + s.r + '</button>';
       }).join("");
 
+      // Finished: what you did and how long it took, and nothing on it to hit
+      // by accident. Reopen is the one control left, and it changes nothing
+      // but the card — the time stays what it was.
+      if (l.closed) {
+        return '<article class="lift is-closed" style="--catcolor:' + lc.color + '">' +
+          '<div class="spine"></div>' +
+          '<div class="body">' +
+            '<div class="lift-head"><h3>' + esc(l.movement) + '</h3>' +
+              (l.lapMs != null
+                ? '<span class="lap" title="Time on this movement">' + fmtDur(l.lapMs) + '</span>'
+                : '<span class="lap is-untimed">not timed</span>') +
+            '</div>' +
+            (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
+                       '</em> — a day you no longer train.</p>' : '') +
+            (l.sets.length
+              ? '<p class="last done-sets">' +
+                  l.sets.map(function (s) { return s.w + "×" + s.r; }).join(", ") + '</p>'
+              : '') +
+            '<div class="lift-foot">' +
+              '<span>' + (v.sets
+                ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
+                : 'No sets logged') + '</span>' +
+              (locked ? '' : '<button data-reopen="' + i + '" aria-label="Reopen ' +
+                esc(l.movement) + '">Reopen</button>') +
+            '</div>' +
+          '</div>' +
+        '</article>';
+      }
+
       return '<article class="lift" style="--catcolor:' + lc.color + '">' +
         '<div class="spine"></div>' +
         '<div class="body">' +
@@ -4591,6 +4681,11 @@
               '<input inputmode="numeric" placeholder="reps" data-r="' + i + '">' +
               '<button data-addset="' + i + '">Set</button>' +
             '</div>') +
+          // Nothing to be done with until there is a set. Full width and away
+          // from Remove, because the whole point is ending a movement cleanly.
+          (locked || !l.sets.length ? '' :
+            '<button class="lift-done" data-done="' + i + '" aria-label="Done with ' +
+              esc(l.movement) + '">Done</button>') +
           '<div class="lift-foot">' +
             '<span>' + (v.sets
               ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
@@ -4820,6 +4915,13 @@
     var lockBtn = document.getElementById("lockDay");
     if (lockBtn) {
       lockBtn.addEventListener("click", function () {
+        // Nobody taps Done on the last movement before locking in — Lock in
+        // the day is how you say you are finished. If exactly one movement is
+        // still open it is the one you were on, and it is timed here, before
+        // the clock stops and takes the anchor with it. Several open means no
+        // telling which time is whose, so none of them is given one.
+        var stillOpen = d.lifts.filter(function (x) { return !x.closed && x.sets.length; });
+        if (stillOpen.length === 1) finishLift(d, stillOpen[0]);
         stopWorkout(d);          // the clock stops when the day is called done
         d.gymLocked = true;
         touch(key); save(); render();
@@ -4847,7 +4949,9 @@
       var w = num(view.querySelector('[data-w="' + i + '"]').value);
       var r = num(view.querySelector('[data-r="' + i + '"]').value);
       if (!r) { view.querySelector('[data-r="' + i + '"]').focus(); return; }
-      d.lifts[i].sets.push({ w: w, r: r });
+      // t is what lets finishLift tell a movement worked in sequence from one
+      // worked alongside another. Twenty bytes a set.
+      d.lifts[i].sets.push({ w: w, r: r, t: Date.now() });
       touch(key); save(); render();
       var next = view.querySelector('[data-w="' + i + '"]');
       if (next) next.focus();
@@ -4866,6 +4970,35 @@
           if (l2) l2.sets.splice(Math.min(si, l2.sets.length), 0, gone);
           touch(key); save(); render();
         });
+      });
+    });
+
+    view.querySelectorAll("[data-done]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var l = d.lifts[Number(b.dataset.done)];
+        if (!l) return;
+        var was = { doneAt: l.doneAt, lapMs: l.lapMs, closed: l.closed };
+        finishLift(d, l);
+        touch(key); save(); render();
+        // The undo is for the Done tapped a set too early. It puts back
+        // exactly what was there, so the time is taken again on the real Done.
+        offerUndo("Finished " + l.movement + (l.lapMs != null ? " · " + fmtDur(l.lapMs) : ""), function () {
+          ["doneAt", "lapMs", "closed"].forEach(function (k) {
+            if (was[k] === undefined) delete l[k]; else l[k] = was[k];
+          });
+          touch(key); save(); render();
+        });
+      });
+    });
+
+    view.querySelectorAll("[data-reopen]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var l = d.lifts[Number(b.dataset.reopen)];
+        if (!l) return;
+        // Reopening is for fixing a number after you have moved on, so the
+        // time is kept; finishLift will not take it again.
+        delete l.closed;
+        touch(key); save(); render();
       });
     });
 

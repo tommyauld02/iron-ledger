@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~470 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~490 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -412,6 +412,40 @@ bar names the state before you get there: past the bound it goes `.is-stale`,
 loses the accent, reads *Left running*, and says the time will not be saved.
 The once-a-second tick only writes digits, so it hands over to one `render()`
 at the moment the bound is crossed and stops.
+
+**Each movement gets a Done, and a time.** Asked for after the first real
+session: once you have moved on, the card you left is a target for misplaced
+taps, and there was no way to see how long any one movement took. Done appears
+once a movement has a set; tapping it folds the card down to what you did and
+how long it took, with nothing left on it to hit but *Reopen*.
+
+The time is a **lap**: from the last movement you finished — or from *Start
+workout*, for the first — to this one's Done. `finishLift()` computes it once
+and stores it as `lapMs` beside `doneAt`, so nothing afterwards (another
+movement removed, the clock restarted, this one reopened) can quietly rewrite
+it. Undo straight after Done puts back exactly what was there, for the Done
+tapped a set early; *Reopen* later keeps the time, because it is for fixing a
+number after you have moved on, not for re-timing.
+
+It records **no time rather than a wrong one**, the same rule as a forgotten
+workout clock, in three cases: no clock running; a lap past `MAX_SESSION_MS`;
+and a movement whose first set came before the last Done — it was being worked
+alongside another, a superset or a Done forgotten and tapped late, so the time
+since that Done is not all its own. That last check is why sets now carry a `t`
+timestamp. Only an earlier *Done* disqualifies: a first set logged just before
+*Start workout* is the normal way to begin.
+
+*Lock in the day* times the movement you were still on, because nobody taps
+Done on the last one before locking in — but only when exactly one is open.
+Several open means no telling whose time is whose, so none of them is given
+one. Lock stays the thing that stops the clock, and it times the last movement
+*before* `stopWorkout()` takes the anchor away.
+
+The folded card only exists after a press, so it is in the fixtures of
+`darkcheck`, `hittest` and `mobile` from the start rather than waiting to be
+found. The lap tests run on a clock the suite moves by hand, pinned to noon, so
+a seven minute set of rows takes seven minutes to the app and none to CI, and
+the laps come out exact.
 
 ## Publishing
 

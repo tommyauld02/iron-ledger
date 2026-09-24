@@ -318,9 +318,13 @@ with sync_playwright() as pw:
     check("gym: locked hides the add form", p.evaluate("()=>!document.getElementById('addLift')"))
     check("gym: locked hides set entry", p.eval_on_selector_all("[data-addset]","e=>e.length")==0)
     check("gym: locked hides remove", p.eval_on_selector_all("[data-rmlift]","e=>e.length")==0)
-    # spans, not disabled buttons — probe reads a control that does nothing as dead
-    check("gym: locked set chips are not controls",
-          p.eval_on_selector_all(".set","e=>e.length>0&&e.every(x=>x.tagName==='SPAN')"))
+    # Lock in the day folds the one movement still open, so its sets become
+    # text rather than chips. Asserted with the cards on screen, because "no
+    # button anywhere" also passes on an empty page. The chips-as-spans path
+    # for a locked day with movements left open is checked in the laps block.
+    check("gym: a locked day leaves no set you can tap",
+          p.locator(".lift").count()>0 and p.locator("button.set").count()==0,
+          "%d cards, %d tappable sets" % (p.locator(".lift").count(), p.locator("button.set").count()))
     ubox=p.locator("#unlockDay").bounding_box()
     check("gym: unlock is 44px", ubox and ubox["height"]>=44,
           ubox and "%dx%d"%(ubox["width"],ubox["height"]))
@@ -864,6 +868,157 @@ with sync_playwright() as pw:
           str(after.get("retired")))
     check("restore: region comes back", after.get("region")==payload.get("region"),
           "got %s want %s" % (after.get("region"), payload.get("region")))
+
+    # ---------- EACH MOVEMENT'S TIME ----------
+    # Its own page, on a clock the test moves by hand: a seven minute set of
+    # rows takes seven minutes to the app and none to the suite, and the laps
+    # come out exact rather than depending on how fast the clicks land. Pinned
+    # to noon so advancing it can never cross midnight.
+    LAPCLOCK = """
+      const REAL = Date;
+      const noon = new REAL(); noon.setHours(12, 0, 0, 0);
+      let off = noon.getTime() - REAL.now();
+      window.__advance = ms => { off += ms; };
+      class FD extends REAL {
+        constructor(...a) { if (!a.length) super(REAL.now() + off); else super(...a); }
+        static now() { return REAL.now() + off; }
+      }
+      window.Date = FD;"""
+    MIN = 60000
+    LAPS = ("()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));"
+            "const k=Object.keys(s.days).sort().pop();"
+            "return s.days[k].lifts.map(l=>({m:l.movement,closed:!!l.closed,"
+            "lap:l.lapMs===undefined?'unset':l.lapMs}));}")
+
+    def lap_page():
+        c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+        c.add_init_script("delete window.claude;"); c.add_init_script(LAPCLOCK)
+        q = c.new_page()
+        q.on("pageerror", lambda e: errs.append("laps: "+str(e)))
+        q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(900)
+        try: q.click("text=Got it", timeout=1500)
+        except Exception: pass
+        q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+        return c, q
+    def add(q, mv):
+        q.select_option("#mSel", label=mv); q.click("#addLift"); q.wait_for_timeout(300)
+    def sets(q, i, n, gap):
+        for _ in range(n):
+            q.fill('[data-w="%d"]'%i, "95"); q.fill('[data-r="%d"]'%i, "10")
+            q.click('[data-addset="%d"]'%i); q.wait_for_timeout(120)
+            q.evaluate("ms=>window.__advance(ms)", gap)
+    def near(ms, minutes): return ms not in (None,"unset") and abs(ms - minutes*MIN) < 3000
+
+    c, q = lap_page()
+    q.click("#startWorkout"); q.wait_for_timeout(300)
+    q.evaluate("ms=>window.__advance(ms)", MIN)
+    add(q, "Barbell Row")
+    check("laps: no Done before there is a set to be done with",
+          q.locator("[data-done]").count()==0)
+    sets(q, 0, 3, 2*MIN)
+    db=q.locator("[data-done]").bounding_box()
+    check("laps: Done appears once there is a set", db is not None)
+    check("laps: Done is a proper target", db and db["height"]>=44, db and "%dx%d"%(db["width"],db["height"]))
+    q.click('[data-done="0"]'); q.wait_for_timeout(350)
+    r=q.evaluate(LAPS)
+    check("laps: the first runs from Start workout", near(r[0]["lap"], 7), "%s ms, want ~7 min" % r[0]["lap"])
+    check("laps: Done folds the card", r[0]["closed"] and q.locator(".lift.is-closed").count()==1)
+    check("laps: nothing left on it to hit by accident",
+          q.locator(".lift.is-closed [data-w], .lift.is-closed button.set, .lift.is-closed [data-rmlift], "
+                    ".lift.is-closed [data-done]").count()==0)
+    check("laps: it shows the time",
+          q.eval_on_selector(".lift.is-closed .lap","e=>e.textContent")=="7:00"
+          or q.eval_on_selector(".lift.is-closed .lap","e=>e.textContent").startswith("7:0"),
+          q.eval_on_selector(".lift.is-closed .lap","e=>e.textContent"))
+    check("laps: and says so as it happens",
+          "Finished Barbell Row" in q.eval_on_selector("#undobar","e=>e.textContent"),
+          q.eval_on_selector("#undobar","e=>e.textContent"))
+    rb=q.locator("[data-reopen]").bounding_box()
+    check("laps: Reopen is a proper target", rb and rb["height"]>=44, rb and "%dx%d"%(rb["width"],rb["height"]))
+
+    q.evaluate("ms=>window.__advance(ms)", MIN)
+    add(q, "Lat Pulldown"); sets(q, 1, 3, 3*MIN)
+    q.click('[data-done="1"]'); q.wait_for_timeout(350)
+    r=q.evaluate(LAPS)
+    check("laps: the next runs from the last Done, not from the start",
+          near(r[1]["lap"], 10), "%s ms, want ~10 min" % r[1]["lap"])
+
+    # a Done tapped a set early is taken back, and the real one times it
+    q.evaluate("ms=>window.__advance(ms)", MIN)
+    add(q, "Seated Cable Row"); sets(q, 2, 1, 2*MIN)
+    q.click('[data-done="2"]'); q.wait_for_timeout(350)
+    q.click("#undoBtn"); q.wait_for_timeout(350)
+    r=q.evaluate(LAPS)
+    check("laps: undo reopens it and forgets the time",
+          not r[2]["closed"] and r[2]["lap"]=="unset" and q.locator('[data-w="2"]').count()==1, str(r[2]))
+    sets(q, 2, 2, 2*MIN)
+    q.click('[data-done="2"]'); q.wait_for_timeout(350)
+    check("laps: the real Done takes the time again",
+          near(q.evaluate(LAPS)[2]["lap"], 7), "%s ms, want ~7 min" % q.evaluate(LAPS)[2]["lap"])
+
+    # reopening to fix a number keeps the time
+    kept=q.evaluate(LAPS)[0]["lap"]
+    q.click('[data-reopen="0"]'); q.wait_for_timeout(300)
+    check("laps: Reopen opens it for editing",
+          not q.evaluate(LAPS)[0]["closed"] and q.locator('[data-w="0"]').count()==1)
+    q.evaluate("ms=>window.__advance(ms)", 5*MIN)
+    q.click('[data-done="0"]'); q.wait_for_timeout(300)
+    check("laps: closing it again keeps the time it had", q.evaluate(LAPS)[0]["lap"]==kept,
+          "%s -> %s" % (kept, q.evaluate(LAPS)[0]["lap"]))
+
+    # nobody taps Done on the last one before locking in
+    q.evaluate("ms=>window.__advance(ms)", MIN)
+    add(q, "Barbell Curl"); sets(q, 3, 3, 2*MIN)
+    q.click("#lockDay"); q.wait_for_timeout(700)
+    r=q.evaluate(LAPS)
+    check("laps: Lock in the day times the one you were still on",
+          r[3]["closed"] and near(r[3]["lap"], 12), "%s ms, want ~12 min" % r[3]["lap"])
+    check("laps: a locked day offers no Reopen", q.locator("[data-reopen]").count()==0)
+    q.reload(); q.wait_for_timeout(900)
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    check("laps: the times survive a reload",
+          [x["lap"] for x in q.evaluate(LAPS)]==[x["lap"] for x in r])
+    c.close()
+
+    # ---------- AND THE WAYS IT MUST NOT LIE ----------
+    c, q = lap_page()
+    add(q, "Barbell Row"); sets(q, 0, 2, 2*MIN)
+    q.click('[data-done="0"]'); q.wait_for_timeout(350)
+    check("laps: no clock running means no time, not a guess",
+          q.evaluate(LAPS)[0]["lap"] is None
+          and q.eval_on_selector(".lift.is-closed .lap","e=>e.textContent")=="not timed")
+
+    q.click("#startWorkout"); q.wait_for_timeout(300)
+    add(q, "Lat Pulldown"); add(q, "Seated Cable Row")
+    for _ in range(3):
+        sets(q, 1, 1, 90000); sets(q, 2, 1, 90000)
+    q.click('[data-done="1"]'); q.wait_for_timeout(300)
+    q.evaluate("ms=>window.__advance(ms)", 30000)
+    q.click('[data-done="2"]'); q.wait_for_timeout(300)
+    check("laps: a superset partner is not handed the other's time",
+          q.evaluate(LAPS)[2]["lap"] is None, str(q.evaluate(LAPS)[2]))
+
+    add(q, "T-Bar Row"); sets(q, 3, 1, 1000)
+    q.evaluate("ms=>window.__advance(ms)", 7*60*MIN)
+    q.click('.tabs button[data-tab="macros"]'); q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(300)
+    q.click('[data-done="3"]'); q.wait_for_timeout(300)
+    check("laps: a clock left running is not a seven hour set",
+          q.evaluate(LAPS)[3]["lap"] is None, str(q.evaluate(LAPS)[3]))
+    c.close()
+
+    # two movements still open at lock: no telling whose time is whose
+    c, q = lap_page()
+    q.click("#startWorkout"); q.wait_for_timeout(300)
+    add(q, "Barbell Row"); sets(q, 0, 2, 2*MIN)
+    add(q, "Lat Pulldown"); sets(q, 1, 2, 2*MIN)
+    q.click("#lockDay"); q.wait_for_timeout(700)
+    check("laps: locking with several open times none of them",
+          all(x["lap"]=="unset" for x in q.evaluate(LAPS)), str(q.evaluate(LAPS)))
+    # spans, not disabled buttons — probe reads a control that does nothing as dead
+    check("laps: sets on a locked day's open movements are not controls",
+          q.eval_on_selector_all(".set","e=>e.length>0&&e.every(x=>x.tagName==='SPAN')"),
+          "%d chips" % q.locator(".set").count())
+    c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:

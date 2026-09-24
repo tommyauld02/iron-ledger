@@ -26,8 +26,11 @@ store = {
                 {"id": "i1", "cal": 284, "pro": 53, "note": "Chicken breast · 172 g", "est": True},
                 {"id": "i2", "cal": 205, "pro": 4, "note": "White rice · 158 g", "est": True}]},
             {"id": "b", "cal": 200, "pro": 20, "note": "Protein bar"}],
+        # a finished movement too, so its Reopen gets hit-tested like the rest
         "lifts": [{"id": "l1", "cat": "back", "movement": "Barbell Row",
-                   "sets": [{"w": 135, "r": 10}, {"w": 155, "r": 8}]}],
+                   "sets": [{"w": 135, "r": 10}, {"w": 155, "r": 8}]},
+                  {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
+                  {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
         "updated": 1, "goal": G}},
     "moves": None, "goal": G, "region": "United States",
     "pantry": [{"id": "p1", "name": "costco protein coffee", "serveQty": 1,
