@@ -641,6 +641,9 @@ with sync_playwright() as pw:
                            ['.tabs button[data-tab="pantry"]', "[data-addpan]"], "#panQty"),
         ("rename a checklist item",
                            ['.tabs button[data-tab="pantry"]', "[data-editsupp]"], "#suppRename"),
+        # Today has no movement in this fixture, so the steps add one first.
+        ("change a movement",
+                           ['.tabs button[data-tab="gym"]', "#addLift", "[data-editlift]"], "#liftMove"),
     ]
     unopened, small, zoomy = [], [], []
     for name, steps, field in EDITORS:

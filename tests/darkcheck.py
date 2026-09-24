@@ -28,7 +28,8 @@ def fixture(theme=None, accent=None):
                     {"id": "i2", "cal": 205, "pro": 4, "note": "White rice · 158 g", "est": True}]}],
             # an open movement, a finished one with its time, and one finished
             # untimed — the folded card only exists after Done is tapped
-            "lifts": [{"id": "l", "cat": "back", "movement": "Barbell Row", "sets": [{"w": 135, "r": 10}]},
+            "lifts": [{"id": "l", "cat": "back", "movement": "Barbell Row",
+                       "sets": [{"w": 135, "r": 10}, {"w": 95, "r": 8, "tech": "drop"}]},
                       {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
                       {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
             "supps": {"s1": True},                       # one ticked, one not: both states

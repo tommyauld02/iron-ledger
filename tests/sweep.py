@@ -1020,6 +1020,112 @@ with sync_playwright() as pw:
           "%d chips" % q.locator(".set").count())
     c.close()
 
+    # ---------- CHANGE THE MOVEMENT, KEEP THE SETS ----------
+    # Found in the gym: Barbell Curl picked when Dumbbell Curl was meant, and
+    # the only fix was Remove and add again, losing the sets on the way.
+    EL = ("()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));"
+          "const k=Object.keys(s.days).sort().pop();"
+          "return {lifts:s.days[k].lifts.map(l=>({m:l.movement,sets:l.sets.map(x=>x.w+'x'+x.r+(x.tech?':'+x.tech:''))})),"
+          "moves:(s.moves.back||[])};}")
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("edit: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    q.select_option("#mSel", "Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    for _ in range(2):
+        q.fill('[data-w="0"]',"30"); q.fill('[data-r="0"]',"12"); q.click('[data-addset="0"]'); q.wait_for_timeout(150)
+    nb=q.locator("[data-editlift]").bounding_box()
+    check("edit: the name is a proper target", nb and nb["height"]>=44, nb and "%dx%d"%(nb["width"],nb["height"]))
+    q.click("[data-editlift]"); q.wait_for_timeout(300)
+    check("edit: tapping the name opens a picker on the current movement",
+          q.eval_on_selector("#liftMove","e=>e.value")=="Barbell Curl")
+    check("edit: the picker will not zoom the page",
+          q.eval_on_selector("#liftMove","e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
+    small=[x for x in q.eval_on_selector_all(".lift-edit select, .lift-edit button",
+           "e=>e.map(b=>[b.id,Math.round(b.getBoundingClientRect().height)])") if x[1]<44]
+    check("edit: its controls clear 44px", not small, str(small))
+    q.click("#liftMoveCancel"); q.wait_for_timeout(250)
+    check("edit: cancel changes nothing", q.evaluate(EL)["lifts"][0]["m"]=="Barbell Curl")
+    q.click("[data-editlift]"); q.wait_for_timeout(250)
+    q.select_option("#liftMove","Dumbbell Curl"); q.click("#liftMoveSave"); q.wait_for_timeout(350)
+    r=q.evaluate(EL)["lifts"][0]
+    check("edit: the movement changes", r["m"]=="Dumbbell Curl", r["m"])
+    check("edit: and the sets stay with it", r["sets"]==["30x12","30x12"], str(r["sets"]))
+    check("edit: it offers undo", "Changed Barbell Curl to Dumbbell Curl" in
+          q.eval_on_selector("#undobar","e=>e.textContent"))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("edit: undo puts the old name back, sets and all",
+          q.evaluate(EL)["lifts"][0]=={"m":"Barbell Curl","sets":["30x12","30x12"]})
+    # a name typed in the editor joins the split's list; undo takes a typo back out of it
+    q.click("[data-editlift]"); q.wait_for_timeout(250)
+    q.select_option("#liftMove","__new"); q.fill("#liftMoveNew","Spider Curl")
+    q.click("#liftMoveSave"); q.wait_for_timeout(350)
+    r=q.evaluate(EL)
+    check("edit: a new name can be typed", r["lifts"][0]["m"]=="Spider Curl")
+    check("edit: and it joins the split's movement list", "Spider Curl" in r["moves"])
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("edit: undo takes a typed name back out of the list",
+          "Spider Curl" not in q.evaluate(EL)["moves"])
+
+    # ---------- HOW A SET WAS DONE ----------
+    tb=q.locator(".tech").bounding_box()
+    check("technique: the box sits beside weight and reps", tb is not None)
+    check("technique: it is a proper target", tb and tb["height"]>=44, tb and "%dx%d"%(tb["width"],tb["height"]))
+    check("technique: its picker will not zoom the page",
+          q.eval_on_selector('[data-tech="0"]',"e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
+    check("technique: it starts on normal",
+          q.eval_on_selector('[data-techshow="0"]',"e=>e.textContent")=="normal")
+    q.fill('[data-w="0"]',"20"); q.fill('[data-r="0"]',"10")
+    q.select_option('[data-tech="0"]',"drop"); q.wait_for_timeout(200)
+    check("technique: picking one shows it",
+          q.eval_on_selector('[data-techshow="0"]',"e=>e.textContent")=="drop")
+    check("technique: and does not wipe weight and reps typed first",
+          q.input_value('[data-w="0"]')=="20" and q.input_value('[data-r="0"]')=="10",
+          "%r %r"%(q.input_value('[data-w="0"]'),q.input_value('[data-r="0"]')))
+    q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    check("technique: the set is stored with it",
+          q.evaluate(EL)["lifts"][0]["sets"][-1]=="20x10:drop", str(q.evaluate(EL)["lifts"][0]["sets"]))
+    check("technique: a normal set carries nothing extra",
+          all(":" not in x for x in q.evaluate(EL)["lifts"][0]["sets"][:-1]))
+    check("technique: the box goes back to normal so a tag cannot ride along",
+          q.eval_on_selector('[data-techshow="0"]',"e=>e.textContent")=="normal"
+          and q.eval_on_selector('[data-tech="0"]',"e=>e.value")=="")
+    check("technique: the chip says which set it was",
+          q.eval_on_selector_all(".set","e=>e.map(x=>x.textContent)")[-1].endswith("drop"))
+    check("technique: the row still fits the phone",
+          q.evaluate("()=>document.body.scrollWidth<=document.body.clientWidth"))
+    q.click('[data-done="0"]'); q.wait_for_timeout(300)
+    check("technique: the finished card keeps it",
+          "20×10 drop" in q.eval_on_selector(".lift.is-closed .done-sets","e=>e.textContent"))
+    # next session, the Last line says which set was the drop
+    q.evaluate("""()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));
+      const k=Object.keys(s.days).sort().pop(); const t=new Date(k+'T12:00:00');
+      t.setDate(t.getDate()-1); const y=t.toISOString().slice(0,10);
+      s.days[y]=JSON.parse(JSON.stringify(s.days[k])); s.days[k].lifts=[];
+      localStorage.setItem('iron-ledger-v1', JSON.stringify(s));}""")
+    q.reload(); q.wait_for_timeout(900)
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(300)
+    q.select_option("#mSel","Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    check("technique: next time, Last says which set was the drop",
+          "20×10 drop" in q.eval_on_selector(".lift .last","e=>e.textContent"),
+          q.eval_on_selector(".lift .last","e=>e.textContent"))
+    # Most sets are just sets. Never touching the box must be the ordinary
+    # path, all the way to closing the movement out.
+    for _ in range(3):
+        q.fill('[data-w="0"]',"30"); q.fill('[data-r="0"]',"12"); q.click('[data-addset="0"]'); q.wait_for_timeout(150)
+    plain=q.evaluate(EL)["lifts"][0]["sets"]
+    check("technique: sets with none chosen add like any other",
+          plain==["30x12","30x12","30x12"], str(plain))
+    q.click('[data-done="0"]'); q.wait_for_timeout(300)
+    check("technique: and a movement with none closes out like any other",
+          q.locator(".lift.is-closed").count()==1
+          and q.eval_on_selector(".lift.is-closed .done-sets","e=>e.textContent")=="30×12, 30×12, 30×12",
+          q.eval_on_selector(".lift.is-closed .done-sets","e=>e.textContent"))
+    c.close()
+
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:
         print("%-6s %-42s %s" % (st,name,detail))

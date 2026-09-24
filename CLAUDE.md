@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~490 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~520 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -446,6 +446,34 @@ The folded card only exists after a press, so it is in the fixtures of
 found. The lap tests run on a clock the suite moves by hand, pinned to noon, so
 a seven minute set of rows takes seven minutes to the app and none to CI, and
 the laps come out exact.
+
+**A movement can be changed without losing its sets.** Picking Barbell Curl
+when Dumbbell Curl was meant used to mean Remove and add again, and the sets
+went with it. The name on an open card is a button with a ▾; it opens a picker
+on that split's movements (plus whatever it is called now, in case that is no
+longer on the list) and *+ New movement…*. Saving swaps `l.movement` and
+nothing else. Undo puts the old name back — and takes a name typed in the
+editor back out of the split's list, so a typo does not stay behind in the
+library. The target is 44px tall without growing the card: the padding is
+taken back with a negative margin. Closed and locked cards do not offer it;
+the point of folding a card is that nothing on it can be hit by accident.
+
+**How a set was done: a technique box beside weight and reps.** Drop set,
+rest-pause, to failure, warm-up and the rest live in `TECHNIQUES`, and a set
+carries `tech` **only when it is something other than normal** — most sets are
+just sets, and never touching the box is the ordinary path all the way to Done.
+The tag shows on the chip, on the folded card and on next time's *Last* line,
+which is where it pays off: you see which set was the drop. `techShort()`
+answers an id it does not know with the id itself, so a technique from a newer
+backup or a retired one still reads as itself rather than vanishing.
+
+Two things that are easy to get wrong. The box is a native picker made
+invisible and laid over a short label, so it stays narrow enough to sit in the
+row on a 320px phone while the picker still shows every technique in full.
+Choosing one **patches the label in place** — a `render()` would wipe the weight
+and reps typed but not yet set, the same trap the checklist ticks avoid. And the
+box goes back to normal after every set, so a drop tag cannot quietly ride
+along onto every set after it.
 
 ## Publishing
 

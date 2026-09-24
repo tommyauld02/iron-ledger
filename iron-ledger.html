@@ -1955,6 +1955,75 @@
   .lift-done:hover { background: var(--catcolor); color: var(--surface); }
 
   .lift.is-closed .lift-head h3 { color: var(--ink-2); }
+
+  /* The name is the thing you tap to change it. The chevron says so, and the
+     padding makes the target 44px without growing the card: the extra height
+     is taken back with a negative margin. */
+  .lift-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+    margin: -12px 0;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    background: none;
+    border: 0;
+  }
+  .lift-name .chev { font-size: 11px; color: var(--ink-3); }
+  .lift-name:hover .chev { color: var(--accent); }
+  .lift-edit { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+  .lift-edit select, .lift-edit input {
+    width: 100%;
+    height: 46px;
+    padding: 0 10px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-size: 15px;
+  }
+  .lift-edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* weight · reps · technique · Set */
+  .setadd { grid-template-columns: 1fr 1fr 76px auto; }
+  .tech {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    min-width: 0;
+    padding: 0 4px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .tech-show {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .04em;
+    color: var(--ink-3);
+  }
+  .tech.is-set { border-color: var(--catcolor); }
+  .tech.is-set .tech-show { color: var(--ink); }
+  .tech select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+  }
+  .set .tq {
+    margin-left: 6px;
+    font-size: 11px;
+    letter-spacing: .02em;
+    color: var(--ink-2);
+  }
   .lift .lap {
     font-family: var(--font-num);
     font-variant-numeric: tabular-nums;
@@ -2281,7 +2350,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-23.38";
+  var BUILD = "2026-09-23.39";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2394,6 +2463,7 @@
   var workoutTick = null;
   // null, "share" or "load" — which routine-sharing panel is open on Coach
   var suppEditing = null;   // which checklist item is being renamed
+  var liftEditing = null;   // which movement on the day is having its name changed
   var coachShare = null;
   var coachShareMsg = "";
   var pantryShot = null;
@@ -2612,6 +2682,35 @@
   }
   function suppsAllIn(d) {
     return supps().length > 0 && suppTaken(d) === supps().length;
+  }
+
+  // ---------- how a set was done ----------
+  // Tagged on the set itself, so the Last line next time says which set was
+  // the drop. "" is a straight set and is never stored — a set carries a tech
+  // only when it is something other than normal.
+  var TECHNIQUES = [
+    { id: "", short: "normal", name: "Normal set" },
+    { id: "warmup", short: "warm-up", name: "Warm-up" },
+    { id: "drop", short: "drop", name: "Drop set" },
+    { id: "restpause", short: "rest-pause", name: "Rest-pause" },
+    { id: "failure", short: "failure", name: "To failure" },
+    { id: "forced", short: "forced", name: "Forced reps" },
+    { id: "negative", short: "negatives", name: "Negatives" },
+    { id: "partial", short: "partials", name: "Partials" },
+    { id: "superset", short: "superset", name: "Superset" },
+    { id: "amrap", short: "amrap", name: "AMRAP" },
+    { id: "myo", short: "myo-reps", name: "Myo-reps" },
+    { id: "cluster", short: "cluster", name: "Cluster" }
+  ];
+  // An id this build does not know — a newer backup, a technique retired
+  // later — still reads as itself rather than vanishing from the record.
+  function techShort(id) {
+    var hit = null;
+    TECHNIQUES.forEach(function (t) { if (t.id === id) hit = t; });
+    return hit ? hit.short : String(id);
+  }
+  function setText(st) {
+    return st.w + "×" + st.r + (st.tech ? " " + techShort(st.tech) : "");
   }
 
   // ---------- each movement's time ----------
@@ -4624,16 +4723,17 @@
       var prev = lastTime(l.movement, key);
       var lastLine = prev
         ? 'Last · ' + shortDate(prev.key) + ' — <em>' +
-          prev.lift.sets.map(function (s) { return s.w + "×" + s.r; }).join(", ") + '</em>'
+          prev.lift.sets.map(setText).join(", ") + '</em>'
         : 'First time logging this one.';
 
       var sets = l.sets.map(function (s, si) {
         // Locked chips are spans, not disabled buttons: probe treats a control
         // that does nothing as dead, and a span is honestly not a control.
+        var tq = s.tech ? '<span class="tq">' + esc(techShort(s.tech)) + '</span>' : '';
         return locked
-          ? '<span class="set">' + s.w + '<span class="x">×</span>' + s.r + '</span>'
+          ? '<span class="set">' + s.w + '<span class="x">×</span>' + s.r + tq + '</span>'
           : '<button class="set" data-lift="' + i + '" data-set="' + si + '" title="Tap to remove">' +
-            s.w + '<span class="x">×</span>' + s.r + '</button>';
+            s.w + '<span class="x">×</span>' + s.r + tq + '</button>';
       }).join("");
 
       // Finished: what you did and how long it took, and nothing on it to hit
@@ -4652,7 +4752,7 @@
                        '</em> — a day you no longer train.</p>' : '') +
             (l.sets.length
               ? '<p class="last done-sets">' +
-                  l.sets.map(function (s) { return s.w + "×" + s.r; }).join(", ") + '</p>'
+                  l.sets.map(setText).join(", ") + '</p>'
               : '') +
             '<div class="lift-foot">' +
               '<span>' + (v.sets
@@ -4665,10 +4765,39 @@
         '</article>';
       }
 
+      // Picked Barbell Curl when you meant Dumbbell Curl: change it here and
+      // the sets stay, rather than removing the movement and adding it again.
+      var editing = liftEditing === i && !locked;
+      var editOpts = "";
+      if (editing) {
+        var pool = (store.moves[l.cat] || []).slice();
+        if (pool.indexOf(l.movement) === -1) pool.push(l.movement);
+        editOpts = pool.sort().map(function (m) {
+          return '<option value="' + esc(m) + '"' + (m === l.movement ? " selected" : "") + '>' +
+                 esc(m) + '</option>';
+        }).join("") + '<option value="__new">+ New movement…</option>';
+      }
+      var nameHtml = locked
+        ? '<h3>' + esc(l.movement) + '</h3>'
+        : '<h3><button class="lift-name" data-editlift="' + i + '" aria-label="Change ' +
+            esc(l.movement) + '">' + esc(l.movement) + '<span class="chev" aria-hidden="true">▾</span>' +
+          '</button></h3>';
+
       return '<article class="lift" style="--catcolor:' + lc.color + '">' +
         '<div class="spine"></div>' +
         '<div class="body">' +
-          '<div class="lift-head"><h3>' + esc(l.movement) + '</h3>' +
+          (editing
+            ? '<div class="lift-edit">' +
+                '<select id="liftMove" aria-label="Change the movement">' + editOpts + '</select>' +
+                '<input id="liftMoveNew" class="text" placeholder="Name the movement" hidden ' +
+                  'aria-label="Name the movement">' +
+                '<div class="lift-edit-actions">' +
+                  '<button class="btn" id="liftMoveSave">Save</button>' +
+                  '<button class="btn ghost" id="liftMoveCancel">Cancel</button>' +
+                '</div>' +
+              '</div>'
+            : '') +
+          '<div class="lift-head">' + (editing ? '<h3>' + esc(l.movement) + '</h3>' : nameHtml) +
             '<span class="cattag"' + (lc.gone ? ' title="' + esc(lc.name) + '"' : '') + '>' +
               lc.tag + '</span></div>' +
           (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
@@ -4679,6 +4808,17 @@
             '<div class="setadd">' +
               '<input inputmode="decimal" placeholder="lb" data-w="' + i + '">' +
               '<input inputmode="numeric" placeholder="reps" data-r="' + i + '">' +
+              // The native picker, invisible, laid over a short label: the box
+              // stays narrow enough to sit beside weight and reps on a 320px
+              // phone, and the picker still shows every technique in full.
+              '<label class="tech">' +
+                '<span class="tech-show" data-techshow="' + i + '">normal</span>' +
+                '<select data-tech="' + i + '" aria-label="Technique for this set">' +
+                  TECHNIQUES.map(function (t) {
+                    return '<option value="' + t.id + '">' + t.name + '</option>';
+                  }).join("") +
+                '</select>' +
+              '</label>' +
               '<button data-addset="' + i + '">Set</button>' +
             '</div>') +
           // Nothing to be done with until there is a set. Full width and away
@@ -4951,7 +5091,12 @@
       if (!r) { view.querySelector('[data-r="' + i + '"]').focus(); return; }
       // t is what lets finishLift tell a movement worked in sequence from one
       // worked alongside another. Twenty bytes a set.
-      d.lifts[i].sets.push({ w: w, r: r, t: Date.now() });
+      var st = { w: w, r: r, t: Date.now() };
+      var techEl = view.querySelector('[data-tech="' + i + '"]');
+      // Read here and not kept: the redraw below puts the box back to normal,
+      // so a drop tag cannot quietly ride along onto every set after it.
+      if (techEl && techEl.value) st.tech = techEl.value;
+      d.lifts[i].sets.push(st);
       touch(key); save(); render();
       var next = view.querySelector('[data-w="' + i + '"]');
       if (next) next.focus();
@@ -4972,6 +5117,67 @@
         });
       });
     });
+
+    // Choosing a technique patches the label in place. A render() here would
+    // wipe the weight and reps typed but not yet set — the same trap the
+    // checklist ticks avoid.
+    view.querySelectorAll("[data-tech]").forEach(function (sel) {
+      sel.addEventListener("change", function () {
+        var show = view.querySelector('[data-techshow="' + sel.dataset.tech + '"]');
+        if (!show) return;
+        show.textContent = techShort(sel.value);
+        show.parentNode.classList.toggle("is-set", !!sel.value);
+      });
+    });
+
+    view.querySelectorAll("[data-editlift]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        liftEditing = Number(b.dataset.editlift);
+        render();
+        var f = document.getElementById("liftMove");
+        if (f) f.focus();
+      });
+    });
+    var liftMove = document.getElementById("liftMove");
+    var liftMoveNew = document.getElementById("liftMoveNew");
+    if (liftMove && liftMoveNew) {
+      liftMove.addEventListener("change", function () {
+        liftMoveNew.hidden = liftMove.value !== "__new";
+        if (!liftMoveNew.hidden) liftMoveNew.focus();
+      });
+    }
+    var liftMoveCancel = document.getElementById("liftMoveCancel");
+    if (liftMoveCancel) {
+      liftMoveCancel.addEventListener("click", function () { liftEditing = null; render(); });
+    }
+    var liftMoveSave = document.getElementById("liftMoveSave");
+    if (liftMoveSave) {
+      liftMoveSave.addEventListener("click", function () {
+        var l = d.lifts[liftEditing];
+        if (!l) { liftEditing = null; render(); return; }
+        var name = liftMove.value === "__new" ? liftMoveNew.value.trim() : liftMove.value;
+        if (!name) { liftMoveNew.focus(); return; }
+        liftEditing = null;
+        var was = l.movement;
+        if (name === was) { render(); return; }
+        var mlist = store.moves[l.cat] || (store.moves[l.cat] = []);
+        var added = mlist.indexOf(name) === -1;
+        if (added) mlist.push(name);
+        l.movement = name;
+        touch(key); save(); render();
+        // Undo takes back a name typed in error along with the change, so a
+        // typo does not stay behind in the split's movement list.
+        offerUndo("Changed " + was + " to " + name, function () {
+          l.movement = was;
+          if (added) {
+            var ml = store.moves[l.cat] || [];
+            var at = ml.indexOf(name);
+            if (at > -1) ml.splice(at, 1);
+          }
+          touch(key); save(); render();
+        });
+      });
+    }
 
     view.querySelectorAll("[data-done]").forEach(function (b) {
       b.addEventListener("click", function () {
