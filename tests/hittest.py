@@ -63,12 +63,14 @@ HITTEST = """() => {
     // Content scrolled up under the header is behind it by design — reporting
     // that is crying wolf. Only judge what is actually in the band, and judge
     // the header and tab bar themselves wherever they are.
-    const chrome = el.closest('.topbar, .tabs, .undobar');
+    // The dock holds the tab bar, the undo and save bars and the rest timer;
+    // all of it is chrome, and the band for content ends where it begins.
+    const chrome = el.closest('.topbar, .dock');
     if (!chrome) {
       const bar = document.querySelector('.topbar');
-      const tabs = document.querySelector('.tabs');
+      const dock = document.querySelector('.dock');
       const top = bar ? bar.getBoundingClientRect().bottom : 0;
-      const bottom = tabs ? tabs.getBoundingClientRect().top : innerHeight;
+      const bottom = dock ? dock.getBoundingClientRect().top : innerHeight;
       if (r.top < top || r.bottom > bottom) continue;
     } else if (r.top < 0 || r.bottom > innerHeight) {
       continue;

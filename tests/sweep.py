@@ -2,6 +2,14 @@ from playwright.sync_api import sync_playwright
 import os, json, datetime
 import re
 
+# Rule 5 is 44px, measured. This suite measures controls straight after the
+# action that drew them, while the cards' 0.18s slide-in is still running, so
+# a box can come back 43.99998 tall from subtracting two fractional edges — it
+# failed the grip once that way. A control that is genuinely too small is a
+# whole pixel short (the 43px scanner button CI caught), so half a pixel of
+# allowance still catches every real one.
+MIN_TAP = 43.5
+
 def words(p):
     """Open the plain-words box; it lives behind the fill-in table now."""
     if not p.locator("#estText").count():
@@ -98,7 +106,7 @@ with sync_playwright() as pw:
     check("serving: a count from the pantry is not",
           any(r["g"] is None for r in was), json.dumps([r for r in was if r["g"] is None]))
     gbox=p.locator("[data-ig]").first.bounding_box()
-    check("serving: weight field is 44px", gbox and gbox["height"]>=44,
+    check("serving: weight field is 44px", gbox and gbox["height"]>=MIN_TAP,
           gbox and "%dx%d"%(gbox["width"],gbox["height"]))
 
     g0=float(rice["g"]); c0=rice["cal"]; p0=rice["pro"]
@@ -134,7 +142,7 @@ with sync_playwright() as pw:
           "%d suggestions" % p.locator("#estFoods option").count())
     for sel in ('[data-eq="0"]', '[data-eu="0"]', '[data-ef="0"]', "#estAddRow", "#estSwap"):
         bb=p.locator(sel).bounding_box()
-        check("entry: %s clears 44px" % sel, bb and bb["height"]>=44,
+        check("entry: %s clears 44px" % sel, bb and bb["height"]>=MIN_TAP,
               bb and "%dx%d"%(bb["width"],bb["height"]))
 
     # pressing it with nothing filled in must not read as a dead button
@@ -168,7 +176,7 @@ with sync_playwright() as pw:
     p.fill('[data-ef="0"]',"eggs"); p.click("#estAddRow"); p.wait_for_timeout(500)
     p.fill('[data-ef="1"]',"toast"); p.wait_for_timeout(200)
     rb=p.locator("[data-erm]").first.bounding_box()
-    check("entry: remove is a proper target", rb and rb["height"]>=44,
+    check("entry: remove is a proper target", rb and rb["height"]>=MIN_TAP,
           rb and "%dx%d"%(rb["width"],rb["height"]))
     p.click('[data-erm="0"]'); p.wait_for_timeout(500)
     check("entry: removing a row removes the right one",
@@ -194,14 +202,14 @@ with sync_playwright() as pw:
     check("units: grams is what you get until you say otherwise",
           p.eval_on_selector("#wUnitIn","e=>e.value")=="g")
     ub=p.locator("#wUnitIn").bounding_box()
-    check("units: the picker is a proper target", ub and ub["height"]>=44,
+    check("units: the picker is a proper target", ub and ub["height"]>=MIN_TAP,
           ub and "%dx%d"%(ub["width"],ub["height"]))
 
     words(p);p.fill("#estText","200 g chicken breast"); p.click("#runEst"); p.wait_for_timeout(1200)
     r0=p.evaluate(ROW)
     check("units: a weight you typed comes back in the unit you typed", r0["u"]=="g", json.dumps(r0))
     rb=p.locator("[data-iu]").first.bounding_box()
-    check("units: the row picker is a proper target", rb and rb["height"]>=44,
+    check("units: the row picker is a proper target", rb and rb["height"]>=MIN_TAP,
           rb and "%dx%d"%(rb["width"],rb["height"]))
     p.select_option("[data-iu]","oz"); p.wait_for_timeout(600)
     r1=p.evaluate(ROW)
@@ -370,7 +378,7 @@ with sync_playwright() as pw:
           p.locator(".lift").count()>0 and p.locator("button.set").count()==0,
           "%d cards, %d tappable sets" % (p.locator(".lift").count(), p.locator("button.set").count()))
     ubox=p.locator("#unlockDay").bounding_box()
-    check("gym: unlock is 44px", ubox and ubox["height"]>=44,
+    check("gym: unlock is 44px", ubox and ubox["height"]>=MIN_TAP,
           ubox and "%dx%d"%(ubox["width"],ubox["height"]))
     p.reload(); p.wait_for_timeout(900)
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(500)
@@ -393,7 +401,7 @@ with sync_playwright() as pw:
             const b=document.getElementById('startWorkout'), h=document.querySelector('.split-head');
             return !!b && !!h && b.getBoundingClientRect().top < h.getBoundingClientRect().top;}"""))
     sb=p.locator("#startWorkout").bounding_box()
-    check("timer: start is a proper target", sb and sb["height"]>=44,
+    check("timer: start is a proper target", sb and sb["height"]>=MIN_TAP,
           sb and "%dx%d"%(sb["width"],sb["height"]))
     p.click("#startWorkout"); p.wait_for_timeout(500)
     check("timer: starting shows a clock",
@@ -401,7 +409,7 @@ with sync_playwright() as pw:
     check("timer: the start time is stored, not a counter",
           bool(p.evaluate(REC, Ts).get("workoutStart")))
     db=p.locator("#discardWorkout").bounding_box()
-    check("timer: discard is a proper target", db and db["height"]>=44,
+    check("timer: discard is a proper target", db and db["height"]>=MIN_TAP,
           db and "%dx%d"%(db["width"],db["height"]))
     # a phone suspends the app mid-session; elapsed must come from the clock,
     # not from an interval that stopped counting
@@ -468,7 +476,7 @@ with sync_playwright() as pw:
     NAMES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).routine.days.map(d=>d.name)"
     check("splits: + sits in the chip row", p.evaluate("()=>!!document.getElementById('addSplitChip')"))
     ab=p.locator("#addSplitChip").bounding_box()
-    check("splits: + is a proper target", ab and ab["height"]>=44,
+    check("splits: + is a proper target", ab and ab["height"]>=MIN_TAP,
           ab and "%dx%d"%(ab["width"],ab["height"]))
     n0=len(p.evaluate(NAMES))
     p.click("#addSplitChip"); p.wait_for_timeout(400)
@@ -490,8 +498,8 @@ with sync_playwright() as pw:
           p.eval_on_selector_all(".split-row","e=>e.length")==n0+1)
     nb=p.locator(".split-name").first.bounding_box()
     rb=p.locator(".split-rm").first.bounding_box()
-    check("splits: rename field clears 44px", nb and nb["height"]>=44, nb and "%dx%d"%(nb["width"],nb["height"]))
-    check("splits: remove clears 44px", rb and rb["height"]>=44, rb and "%dx%d"%(rb["width"],rb["height"]))
+    check("splits: rename field clears 44px", nb and nb["height"]>=MIN_TAP, nb and "%dx%d"%(nb["width"],nb["height"]))
+    check("splits: remove clears 44px", rb and rb["height"]>=MIN_TAP, rb and "%dx%d"%(rb["width"],rb["height"]))
     first=p.locator("[data-splitname]").first
     first.fill("Bi / Tri / RD"); first.dispatch_event("change"); p.wait_for_timeout(500)
     check("splits: rename sticks", p.evaluate(NAMES)[0]=="Bi / Tri / RD", str(p.evaluate(NAMES)))
@@ -550,7 +558,7 @@ with sync_playwright() as pw:
         const it=b.closest('.pan-item');return {id:b.dataset.addpan,name:it.querySelector('.nm').textContent};}""")
     check("pantry: every good food offers +", row is not None, str(row))
     box=p.locator("[data-addpan]").first.bounding_box()
-    check("pantry: + is 44px", box and box["width"]>=44 and box["height"]>=44,
+    check("pantry: + is 44px", box and box["width"]>=MIN_TAP and box["height"]>=MIN_TAP,
           box and "%dx%d"%(box["width"],box["height"]))
     p.locator("[data-addpan]").first.click(); p.wait_for_timeout(500)
     # + asks how much before it writes anything. It used to log exactly one
@@ -566,7 +574,7 @@ with sync_playwright() as pw:
           p.eval_on_selector("#panSheetSub","e=>e.textContent"))
     for sel in ("#panQtyDown", "#panQty", "#panQtyUp", "#panAddBtn", "#panCancel"):
         bb=p.locator(sel).bounding_box()
-        check("pantry: %s clears 44px"%sel, bb and bb["height"]>=44,
+        check("pantry: %s clears 44px"%sel, bb and bb["height"]>=MIN_TAP,
               bb and "%dx%d"%(bb["width"],bb["height"]))
     # whatever this food is saved in, the sheet opens on one serving of it
     kcalOf=lambda t: float(re.search(r"([\d,]+) kcal", t).group(1).replace(",",""))
@@ -719,7 +727,7 @@ with sync_playwright() as pw:
                      " && s.getBoundingClientRect().top<e.getBoundingClientRect().top;}"))
     for i in range(2):
         bb=p.locator(".supp").nth(i).bounding_box()
-        check("checklist: row %d is a proper target"%i, bb and bb["height"]>=44,
+        check("checklist: row %d is a proper target"%i, bb and bb["height"]>=MIN_TAP,
               bb and "%dx%d"%(bb["width"],bb["height"]))
     check("checklist: it starts at none taken",
           p.eval_on_selector(".supp-count","e=>e.textContent")=="0 of 2",
@@ -778,7 +786,7 @@ with sync_playwright() as pw:
     was=p.evaluate(MARKS)
     p.locator("[data-editsupp]").first.click(); p.wait_for_timeout(400)
     rb=p.locator("#suppRename").bounding_box()
-    check("checklist: the rename field is a proper target", rb and rb["height"]>=44,
+    check("checklist: the rename field is a proper target", rb and rb["height"]>=MIN_TAP,
           rb and "%dx%d"%(rb["width"],rb["height"]))
     p.fill("#suppRename","Ashwagandha KSM-66"); p.click("#suppSaveEdit"); p.wait_for_timeout(500)
     check("checklist: renaming takes",
@@ -819,7 +827,7 @@ with sync_playwright() as pw:
     else:
         check("settings: the gear is on every tab", True)
     gb=p.locator("#setBtn").bounding_box()
-    check("settings: the gear is a proper target", gb and gb["width"]>=44 and gb["height"]>=44,
+    check("settings: the gear is a proper target", gb and gb["width"]>=MIN_TAP and gb["height"]>=MIN_TAP,
           gb and "%dx%d"%(gb["width"],gb["height"]))
     teal=p.evaluate(ACC)
     p.click("#setBtn"); p.wait_for_timeout(400)
@@ -965,7 +973,7 @@ with sync_playwright() as pw:
     sets(q, 0, 3, 2*MIN)
     db=q.locator("[data-done]").bounding_box()
     check("laps: Done appears once there is a set", db is not None)
-    check("laps: Done is a proper target", db and db["height"]>=44, db and "%dx%d"%(db["width"],db["height"]))
+    check("laps: Done is a proper target", db and db["height"]>=MIN_TAP, db and "%dx%d"%(db["width"],db["height"]))
     q.click('[data-done="0"]'); q.wait_for_timeout(350)
     r=q.evaluate(LAPS)
     check("laps: the first runs from Start workout", near(r[0]["lap"], 7), "%s ms, want ~7 min" % r[0]["lap"])
@@ -981,7 +989,7 @@ with sync_playwright() as pw:
           "Finished Barbell Row" in q.eval_on_selector("#undobar","e=>e.textContent"),
           q.eval_on_selector("#undobar","e=>e.textContent"))
     rb=q.locator("[data-reopen]").bounding_box()
-    check("laps: Reopen is a proper target", rb and rb["height"]>=44, rb and "%dx%d"%(rb["width"],rb["height"]))
+    check("laps: Reopen is a proper target", rb and rb["height"]>=MIN_TAP, rb and "%dx%d"%(rb["width"],rb["height"]))
 
     q.evaluate("ms=>window.__advance(ms)", MIN)
     add(q, "Lat Pulldown"); sets(q, 1, 3, 3*MIN)
@@ -1085,7 +1093,7 @@ with sync_playwright() as pw:
     for _ in range(2):
         q.fill('[data-w="0"]',"30"); q.fill('[data-r="0"]',"12"); q.click('[data-addset="0"]'); q.wait_for_timeout(150)
     nb=q.locator("[data-editlift]").bounding_box()
-    check("edit: the name is a proper target", nb and nb["height"]>=44, nb and "%dx%d"%(nb["width"],nb["height"]))
+    check("edit: the name is a proper target", nb and nb["height"]>=MIN_TAP, nb and "%dx%d"%(nb["width"],nb["height"]))
     q.click("[data-editlift]"); q.wait_for_timeout(300)
     check("edit: tapping the name opens a picker on the current movement",
           q.eval_on_selector("#liftMove","e=>e.value")=="Barbell Curl")
@@ -1120,7 +1128,7 @@ with sync_playwright() as pw:
     # ---------- HOW A SET WAS DONE ----------
     tb=q.locator(".tech").bounding_box()
     check("technique: the box sits beside weight and reps", tb is not None)
-    check("technique: it is a proper target", tb and tb["height"]>=44, tb and "%dx%d"%(tb["width"],tb["height"]))
+    check("technique: it is a proper target", tb and tb["height"]>=MIN_TAP, tb and "%dx%d"%(tb["width"],tb["height"]))
     check("technique: its picker will not zoom the page",
           q.eval_on_selector('[data-tech="0"]',"e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
     check("technique: it starts on normal",
@@ -1204,7 +1212,7 @@ with sync_playwright() as pw:
         sets(q, i, 2, 1000)
     check("arrange: two or more, and each has a grip", q.locator("[data-grip]").count()==3)
     gb=q.locator('[data-grip="0"]').bounding_box()
-    check("arrange: the grip is a proper target", gb and gb["width"]>=44 and gb["height"]>=44,
+    check("arrange: the grip is a proper target", gb and gb["width"]>=MIN_TAP and gb["height"]>=MIN_TAP,
           gb and "%dx%d"%(gb["width"],gb["height"]))
     check("arrange: the grip never scrolls the page",
           q.eval_on_selector('[data-grip="0"]',"e=>getComputedStyle(e).touchAction")=="none")
@@ -1297,7 +1305,7 @@ with sync_playwright() as pw:
     for _ in range(3):
         sets(q, 0, 1, 90000); sets(q, 1, 1, 90000)
     db=q.locator("[data-ssdone]").bounding_box()
-    check("superset: one Done for the whole superset", db is not None and db["height"]>=44,
+    check("superset: one Done for the whole superset", db is not None and db["height"]>=MIN_TAP,
           db and "%dx%d"%(db["width"],db["height"]))
     q.click("[data-ssdone]"); q.wait_for_timeout(350)
     r=q.evaluate(LAPS)
@@ -1345,6 +1353,154 @@ with sync_playwright() as pw:
           str([x["lap"] for x in r]))
     check("superset: a locked day offers no grip, no Split, no Reopen",
           q.locator("[data-grip], [data-sssplit], [data-ssreopen]").count()==0)
+    c.close()
+
+    # ---------- REST BETWEEN SETS ----------
+    # Start, stop, nothing kept. On a clock the test moves by hand.
+    c, q = lap_page()
+    RB = "()=>!document.getElementById('restbar').hidden"
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(250)
+    check("rest: not on the other tabs", not q.evaluate(RB))
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(250)
+    check("rest: on the gym tab", q.evaluate(RB))
+    bb=q.locator("#restBtn").bounding_box(); tb=q.locator(".tabs").bounding_box()
+    check("rest: a proper target", bb["height"]>=MIN_TAP and bb["width"]>=MIN_TAP, "%dx%d"%(bb["width"],bb["height"]))
+    check("rest: docked above the tab bar, under the thumb", bb["y"]+bb["height"] <= tb["y"]+1)
+    logged=q.evaluate("()=>localStorage.getItem('iron-ledger-v1')")
+    q.click("#restBtn"); q.wait_for_timeout(200)
+    q.evaluate("ms=>window.__advance(ms)", 95000); q.wait_for_timeout(1300)
+    clk=q.eval_on_selector("#restClock","e=>e.textContent")
+    check("rest: counts from the tap", clk in ("1:35","1:36","1:37"), clk)
+    check("rest: and offers the way out", q.eval_on_selector("#restBtn","e=>e.textContent")=="Stop")
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(200)
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(1200)
+    check("rest: a look at another tab does not lose it",
+          q.eval_on_selector("#restClock","e=>e.textContent") not in ("0:00",""))
+    q.click("#restBtn"); q.wait_for_timeout(250)
+    check("rest: Stop resets it", q.eval_on_selector("#restClock","e=>e.textContent")=="0:00"
+          and q.eval_on_selector("#restBtn","e=>e.textContent")=="Start")
+    check("rest: and nothing about it is kept",
+          q.evaluate("()=>localStorage.getItem('iron-ledger-v1')")==logged)
+
+    # ---------- TAKE A MOVEMENT OFF THE LIST ----------
+    OPTS="()=>[...document.querySelectorAll('#mSel option')].map(o=>o.value)"
+    q.select_option("#mSel","Hammer Curl")
+    mb=q.locator("#mDrop").bounding_box()
+    check("list: the minus is a proper target", mb["height"]>=MIN_TAP and mb["width"]>=MIN_TAP, "%dx%d"%(mb["width"],mb["height"]))
+    q.click("#mDrop"); q.wait_for_timeout(300)
+    check("list: it takes the chosen movement off", "Hammer Curl" not in q.evaluate(OPTS))
+    check("list: and says so", "Took Hammer Curl off" in q.eval_on_selector("#undobar","e=>e.textContent"))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("list: undo puts it back", "Hammer Curl" in q.evaluate(OPTS))
+    q.select_option("#mSel","__new"); q.wait_for_timeout(150)
+    check("list: with New movement chosen there is nothing to take off",
+          q.eval_on_selector("#mDrop","e=>e.disabled"))
+    c.close()
+
+    # ---------- A MEAL EATEN OFTEN, SAVED ----------
+    c, q = lap_page()
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    if not q.locator("#estText").count(): q.click("#estSwap"); q.wait_for_timeout(200)
+    q.fill("#estText","chicken breast and white rice"); q.click("#runEst"); q.wait_for_timeout(1200)
+    sb=q.locator("#estSave").bounding_box()
+    check("meal: the estimate offers to save it", sb is not None and sb["height"]>=MIN_TAP,
+          sb and "%dx%d"%(sb["width"],sb["height"]))
+    q.click("#estSave"); q.wait_for_timeout(300)
+    nb=q.locator("#estSaveName").bounding_box()
+    check("meal: its name field is a proper target", nb and nb["height"]>=MIN_TAP)
+    check("meal: and will not zoom the page",
+          q.eval_on_selector("#estSaveName","e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
+    q.fill("#estSaveName","Usual lunch"); q.click("#estSaveGo"); q.wait_for_timeout(400)
+    pan=q.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry")
+    saved=[x for x in pan if x["name"]=="Usual lunch"]
+    check("meal: it goes in the pantry as a meal, parts and all",
+          len(saved)==1 and saved[0]["serveUnit"]=="meal" and len(saved[0]["items"])==2
+          and saved[0]["sCal"]==sum(x["cal"] for x in saved[0]["items"]),
+          str(saved[0] if saved else pan))
+    check("meal: it says so", "Saved “Usual lunch” in your pantry" in q.eval_on_selector("#undobar","e=>e.textContent"))
+    check("meal: and the estimate is still open to log today", q.locator(".review").count()==1)
+    q.click("#estSave"); q.wait_for_timeout(250)
+    q.fill("#estSaveName","usual LUNCH"); q.click("#estSaveGo"); q.wait_for_timeout(400)
+    pan=q.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry")
+    check("meal: saving the same name again updates it rather than doubling it",
+          len([x for x in pan if x["name"].lower()=="usual lunch"])==1
+          and "Updated" in q.eval_on_selector("#undobar","e=>e.textContent"))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    pan=q.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry")
+    check("meal: undoing the update puts the first one back",
+          [x["name"] for x in pan]==["Usual lunch"], str([x["name"] for x in pan]))
+    q.click("#discardEst"); q.wait_for_timeout(300)
+
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    check("meal: the pantry says what it is",
+          q.eval_on_selector(".pan-item .sub","e=>e.textContent").startswith("Meal of 2"),
+          q.eval_on_selector(".pan-item .sub","e=>e.textContent"))
+    q.click("[data-addpan]"); q.wait_for_timeout(300)
+    q.click("#panQtyUp"); q.wait_for_timeout(200)
+    q.click("#panAddBtn"); q.wait_for_timeout(400)
+    food=q.evaluate("()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));"
+                    "return s.days[Object.keys(s.days).sort().pop()].food;}")
+    check("meal: logged twice over, it lands as a meal with every part doubled",
+          len(food)==1 and len(food[0].get("items",[]))==2
+          and sum(x["cal"] for x in food[0]["items"])==2*saved[0]["sCal"],
+          str(food)[:160])
+    # a meal already in the day can be saved as well
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    q.locator(".meal-open").first.click(); q.wait_for_timeout(300)
+    check("meal: one already in the day offers to be saved",
+          q.locator("[data-savemeal]").count()==1)
+    c.close()
+
+    # ---------- AGAINST LAST TIME ----------
+    T0=datetime.date.today(); PREV=(T0-datetime.timedelta(days=4)).isoformat(); NOW=T0.isoformat()
+    GG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    CMP={"days":{
+        PREV:{"food":[],"updated":1,"goal":GG,"workoutMs":58*60000,
+              "lifts":[{"id":"a","cat":"back","movement":"Barbell Row","lapMs":420000,
+                        "sets":[{"w":135,"r":10},{"w":135,"r":10}]},
+                       {"id":"b","cat":"back","movement":"Lat Pulldown",
+                        "sets":[{"w":140,"r":10},{"w":140,"r":10},{"w":140,"r":10}]}]},
+        NOW:{"food":[],"updated":1,"goal":GG,"workoutMs":62*60000,
+             "lifts":[{"id":"c","cat":"back","movement":"Barbell Row","lapMs":390000,
+                       "sets":[{"w":145,"r":10},{"w":145,"r":10}]},
+                      {"id":"d","cat":"back","movement":"Lat Pulldown",
+                       "sets":[{"w":130,"r":10},{"w":130,"r":10}]},
+                      {"id":"e","cat":"back","movement":"Face Pull","sets":[{"w":40,"r":15}]}]}},
+        "moves":None,"goal":GG,"region":"United States","pantry":[],"v":1}
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("compare: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CMP)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    cb=q.locator("#openCompare").bounding_box()
+    check("compare: offered once there are sets", cb is not None and cb["height"]>=MIN_TAP)
+    q.click("#openCompare"); q.wait_for_timeout(400)
+    body=q.eval_on_selector("#cmpBody","e=>e.innerText")
+    rows=q.evaluate("""()=>[...document.querySelectorAll('#cmpBody .cmp-card')].map(c=>({
+        h:(c.querySelector('h3')||{}).textContent||'session',
+        r:[...c.querySelectorAll('.cmp-row')].map(x=>[x.querySelector('.cmp-l').textContent,
+            x.querySelector('.cmp-d').className.replace('cmp-d ','')])}))""")
+    sess=dict(rows[0]["r"]); row=dict(rows[1]["r"]); pull=dict(rows[2]["r"])
+    check("compare: against the last session of the same split", "against" in body and "Back" in body, body[:90])
+    check("compare: more movements reads as up", sess.get("Movements")=="up", str(sess))
+    check("compare: a longer session is green, as asked", sess.get("Time")=="up", str(sess))
+    check("compare: a heavier top set is green", row.get("Top weight · lb")=="up", str(row))
+    check("compare: the same number of sets is neither", row.get("Sets")=="same", str(row))
+    check("compare: a lighter one is red", pull.get("Top weight · lb")=="down", str(pull))
+    check("compare: a time missing on either side is not compared",
+          pull.get("Time")=="same" and "not compared" in body)
+    check("compare: a first time says so", "First time" in body)
+    check("compare: up and down read in the macro colours",
+          q.evaluate("""()=>{const t=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+            const rgb=h=>{h=h.replace('#','');return 'rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';};
+            const up=document.querySelector('.cmp-d.up'), dn=document.querySelector('.cmp-d.down');
+            return getComputedStyle(up).color===rgb(t('--hit')) && getComputedStyle(dn).color===rgb(t('--miss'));}"""))
+    q.click("#cmpDone"); q.wait_for_timeout(250)
+    check("compare: Done closes it", q.evaluate("()=>document.getElementById('cmpSheet').hidden"))
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

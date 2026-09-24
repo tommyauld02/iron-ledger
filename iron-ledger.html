@@ -55,6 +55,7 @@
     --hit-bg: #E2EFD6;
     --miss: #A03327;
     --miss-bg: #F4E1DE;
+    --on-miss: #FFFFFF;
     --on-accent: #FFFFFF;
     --shadow: 0 1px 2px rgba(20, 26, 25, .07), 0 8px 24px -12px rgba(20, 26, 25, .18);
 
@@ -82,6 +83,7 @@
       --hit-bg: #1E2C18;
       --miss: #E0796B;
       --miss-bg: #2F1D1A;
+      --on-miss: #1B0E0C;
       --on-accent: #0B1614;
       --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
     }
@@ -106,6 +108,7 @@
     --hit-bg: #1E2C18;
     --miss: #E0796B;
     --miss-bg: #2F1D1A;
+    --on-miss: #1B0E0C;
     --on-accent: #0B1614;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
   }
@@ -2082,6 +2085,20 @@
   }
   .lift-edit-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
+  .msel-row { display: grid; grid-template-columns: 1fr 46px; gap: 6px; }
+  .msel-row select { min-width: 0; }
+  #mDrop {
+    height: 46px;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  #mDrop:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
+  #mDrop:disabled { opacity: .45; }
+
   /* weight · reps · technique · Set */
   .setadd { grid-template-columns: 1fr 1fr 76px auto; }
   .tech {
@@ -2243,6 +2260,61 @@
   /* Removal lives in the editor now, below the everyday actions and set apart
      from them, rather than being the thing a stray tap on a chip does. */
   .se-remove { margin-top: 4px; color: var(--danger); border-color: var(--rule); }
+
+  /* ---------- against last time ---------- */
+  #cmpBody { display: flex; flex-direction: column; gap: 10px; }
+  #cmpBody h2 { margin: 0; }
+  .cmp-sub, .cmp-when {
+    margin: 0;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .02em;
+    color: var(--ink-3) !important;
+  }
+  .cmp-card {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .cmp-card h3 { margin: 0 0 2px; font-size: 15px; font-weight: 600; }
+  .cmp-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px;
+    align-items: baseline;
+    padding: 5px 0;
+    border-top: 1px solid var(--rule);
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 12px;
+  }
+  .cmp-card h3 + .cmp-when + .cmp-row, .cmp-card .cmp-row:first-child { border-top: 0; }
+  .cmp-l { color: var(--ink-3); }
+  .cmp-v { color: var(--ink-2); text-align: right; }
+  .cmp-d { min-width: 64px; text-align: right; font-weight: 600; }
+  .cmp-d.up { color: var(--hit); }
+  .cmp-d.down { color: var(--miss); }
+  .cmp-d.same { color: var(--ink-3); font-weight: 400; }
+
+  .meal-save {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 0 2px;
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .04em;
+    color: var(--accent);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .est-save { margin-top: 2px; }
+  .meal-note { align-self: center; font-family: var(--font-num); font-size: 11px; color: var(--ink-3); }
   .sheet-inner p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
   .sheet-inner textarea {
     width: 100%;
@@ -2258,6 +2330,47 @@
     color: var(--ink);
   }
   .sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* ---------- rest timer ---------- */
+  .restbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 16px 6px calc(16px + env(safe-area-inset-left));
+    background: var(--surface);
+    border-top: 1px solid var(--rule);
+  }
+  .restbar[hidden] { display: none; }
+  .rest-label {
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .rest-clock {
+    flex: 1;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 20px;
+    color: var(--ink-2);
+  }
+  .restbar button {
+    min-width: 96px;
+    min-height: 44px;
+    padding: 0 16px;
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+  }
+  .restbar.is-running { background: var(--accent-soft); }
+  .restbar.is-running .rest-clock { color: var(--ink); }
+  .restbar.is-running button { color: var(--on-accent); background: var(--accent); }
 
   /* ---------- undo ---------- */
   /* One sticky dock at the bottom. The savebar, the undo bar and the tab bar
@@ -2277,7 +2390,11 @@
     gap: 12px;
     padding: 10px 14px;
     background: var(--miss);
-    color: #FFFFFF;
+    /* Not white: --miss is a deep red in light and a light coral in dark,
+       and white on the coral was 2.95:1 — the one warning that says your log
+       is not being saved, hardest to read in the dark. Nothing measured it
+       until darkcheck widened to the whole dock. */
+    color: var(--on-miss);
     font-family: var(--font-num);
     font-size: 12px;
     line-height: 1.35;
@@ -2287,9 +2404,9 @@
     flex: none;
     min-height: 44px;
     padding: 0 14px;
-    border: 1px solid #FFFFFF;
+    border: 1px solid var(--on-miss);
     border-radius: 2px;
-    color: #FFFFFF;
+    color: var(--on-miss);
     font-family: var(--font-num);
     font-size: 11px;
     letter-spacing: .08em;
@@ -2387,6 +2504,14 @@
     <button id="undoBtn">Undo</button>
   </div>
 
+  <!-- The rest timer. In the dock so it is under the thumb wherever the page
+       is scrolled, and on the Gym tab only. It records nothing. -->
+  <div class="restbar" id="restbar" hidden>
+    <span class="rest-label">Rest</span>
+    <span class="rest-clock" id="restClock">0:00</span>
+    <button id="restBtn">Start</button>
+  </div>
+
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="macros" aria-selected="true">Macros</button>
     <button role="tab" data-tab="pantry" aria-selected="false">Pantry</button>
@@ -2455,6 +2580,14 @@
   </div>
 </div>
 
+<!-- Against last time. Filled when it opens; nothing in it is stored. -->
+<div class="sheet" id="cmpSheet" hidden>
+  <div class="sheet-inner">
+    <div id="cmpBody"></div>
+    <button class="btn ghost" id="cmpDone">Done</button>
+  </div>
+</div>
+
 <div class="sheet" id="panSheet" hidden>
   <div class="sheet-inner">
     <h2 id="panSheetName">Add from pantry</h2>
@@ -2481,7 +2614,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-24.41";
+  var BUILD = "2026-09-24.42";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2573,6 +2706,7 @@
   var estRows = [{ qty: "", unit: "", food: "" }];
   var estWords = false;    // true while the plain-words box has taken over
   var estHint = "";        // "you have not filled anything in yet"
+  var estSaving = false;   // the name field for saving this estimate as a meal is open
   var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
   var pantryForm = null;
   var coachOpen = null;
@@ -4005,6 +4139,45 @@
     return (t && t.length <= 40) ? t : "";
   }
 
+  // A meal eaten often goes in the pantry as one entry: its totals as the
+  // serving, so + and the quantity sheet work on it like anything else, and
+  // its parts kept, so logging it puts a meal in the day rather than one
+  // anonymous number. The unit is "meal", a count: two of them is twice.
+  function saveMealToPantry(name, parts) {
+    var items = parts.map(function (x) {
+      return { cal: Math.round(Number(x.cal) || 0), pro: Math.round(Number(x.pro) || 0), note: x.note || "" };
+    });
+    var entry = {
+      id: uid(), name: name, serveQty: 1, serveUnit: "meal", serveG: null,
+      sCal: items.reduce(function (a, x) { return a + x.cal; }, 0),
+      sPro: items.reduce(function (a, x) { return a + x.pro; }, 0),
+      aliases: [], items: items
+    };
+    // One name, one entry. Saving over it says so — "Updated" — rather than
+    // leaving two "Usual lunch" rows to guess between.
+    var at = -1;
+    store.pantry.forEach(function (x, i) { if (x.name.toLowerCase() === name.toLowerCase()) at = i; });
+    var was = at > -1 ? store.pantry[at] : null;
+    if (was) { entry.id = was.id; store.pantry[at] = entry; } else store.pantry.push(entry);
+    save();
+    render();
+    offerUndo((was ? "Updated " : "Saved ") + "\u201c" + name + "\u201d in your pantry", function () {
+      var i2 = -1;
+      store.pantry.forEach(function (x, i) { if (x === entry) i2 = i; });
+      if (i2 > -1) { if (was) store.pantry[i2] = was; else store.pantry.splice(i2, 1); }
+      save(); render();
+    });
+  }
+
+  // A meal saved with a part still waiting for numbers would bake a zero into
+  // every future log of it.
+  function unpricedPart(parts) {
+    for (var i = 0; i < parts.length; i++) {
+      if (parts[i].pending || (!parts[i].cal && !parts[i].pro)) return parts[i].note || "one of the items";
+    }
+    return null;
+  }
+
   function commitEstimate(key) {
     var d = day(key);
 
@@ -4040,6 +4213,7 @@
     tidyMeals(d);
     stampGoal(key);
     est = null;
+    estSaving = false;
     estDraft = "";
     // The table has to empty with the draft. Leaving the rows filled in is how
     // someone logs the same meal twice without noticing.
@@ -4129,6 +4303,8 @@
       cursor.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     document.getElementById("todayBtn").hidden = (key === TODAY);
 
+    drawRest();              // in the dock, outside #view, so not redrawn below
+
     try {
       if (tab === "macros") renderMacros(key, d);
       else if (tab === "gym") renderGym(key, d);
@@ -4203,6 +4379,23 @@
     '</section>';
   }
 
+  // What the estimate would be called as a saved meal: the words typed, if
+  // they read as a name, otherwise the foods in it.
+  function estMealName() {
+    if (!est || !est.items) return "";
+    var byText = est.text && est.text.indexOf("&") === -1 ? mealNameFrom(est.text) : "";
+    if (byText) return byText;
+    var nm = est.items.map(function (it) { return it.food; }).join(" & ");
+    return nm.length <= 40 ? nm : nm.slice(0, 39) + "…";
+  }
+  function estParts() {
+    return est.items.map(function (it) {
+      return { cal: it.calories, pro: it.protein,
+               note: it.amount ? it.food + " · " + it.amount : it.food,
+               pending: it.src === "unknown" && !it.calories && !it.protein };
+    });
+  }
+
   function estimatorHtml(key, d) {
     if (est && est.status === "loading") {
       return '<section class="entry est">' +
@@ -4262,6 +4455,17 @@
                 'Put these in as one meal' +
               '</button>'
             : '') +
+          // Eaten often? Keep it. The review stays open afterwards — saving it
+          // for next time is not the same as logging it today.
+          (estSaving
+            ? '<div class="rt-inline est-save">' +
+                '<input class="text" id="estSaveName" value="' + esc(estMealName()) + '" ' +
+                  'placeholder="Name it — Usual lunch" aria-label="Name this meal">' +
+                '<button class="btn" id="estSaveGo">Save</button>' +
+                '<button class="btn ghost" id="estSaveCancel">Cancel</button>' +
+              '</div>'
+            : '<button class="meal-save" id="estSave">Save this meal to your pantry</button>') +
+          (estHint && est ? '<p class="rev-assume" style="color:var(--miss)">' + esc(estHint) + '</p>' : '') +
           '<div class="rev-actions">' +
             '<button class="btn" id="commitEst">' +
               ((estAsMeal && est.items.length > 1)
@@ -4389,6 +4593,13 @@
           }).join("") +
           '<div class="meal-actions">' +
             '<button data-renamemeal="' + esc(f.id) + '">Name this meal</button>' +
+            // Only a meal with numbers on every part can be saved — otherwise
+            // it would bake a zero into every future log of it — and a note
+            // takes the button's place rather than a button that cannot work.
+            (unpricedPart(f.items.map(function (x) {
+                return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; }))
+              ? '<span class="meal-note">Numbers on every part to save it</span>'
+              : '<button data-savemeal="' + esc(f.id) + '">Save to pantry</button>') +
             '<button data-split="' + esc(f.id) + '">Split apart</button>' +
           '</div>' +
           (mealRenaming === f.id
@@ -4792,6 +5003,32 @@
       });
     });
 
+    var estSave = document.getElementById("estSave");
+    if (estSave) {
+      estSave.addEventListener("click", function () {
+        var gap = unpricedPart(estParts());
+        if (gap) {
+          estHint = "Put numbers on \u201c" + gap + "\u201d first \u2014 a saved meal is only as good as what\u2019s in it.";
+          render(); return;
+        }
+        estHint = ""; estSaving = true; render();
+        var f = document.getElementById("estSaveName");
+        if (f) { f.focus(); f.select(); }
+      });
+    }
+    var estSaveCancel = document.getElementById("estSaveCancel");
+    if (estSaveCancel) estSaveCancel.addEventListener("click", function () { estSaving = false; render(); });
+    var estSaveGo = document.getElementById("estSaveGo");
+    if (estSaveGo) {
+      estSaveGo.addEventListener("click", function () {
+        var f = document.getElementById("estSaveName");
+        var nm = (f.value || "").trim();
+        if (!nm) { f.focus(); return; }
+        estSaving = false;
+        saveMealToPantry(nm, estParts());
+      });
+    }
+
     view.querySelectorAll("[data-ic], [data-ip]").forEach(function (input) {
       input.addEventListener("input", function () {
         if (!est || est.status !== "review") return;
@@ -5139,6 +5376,9 @@
 
       (cards
         ? '<section class="liftgroup">' + cards + '</section>' +
+          (d.lifts.some(function (x) { return x.sets.length; })
+            ? '<button class="btn ghost" id="openCompare" style="width:100%">Compare with last time</button>'
+            : '') +
           (movable && !d.lifts.some(function (x) { return x.ss; })
             ? '<p class="drag-hint">Drag ⠿ to move a movement, or drop it on another\u2019s ⛓ superset to combine them.</p>'
             : '')
@@ -5150,7 +5390,12 @@
       (locked ? '' :
         '<section class="entry" style="--catcolor:' + c.color + '">' +
           '<div class="field"><label for="mSel">Add movement · ' + esc(c.name) + '</label>' +
-            '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select></div>' +
+            // A native picker cannot hold a button per option, so the minus
+            // sits beside it and takes out whichever movement is chosen.
+            '<div class="msel-row">' +
+              '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select>' +
+              '<button id="mDrop" aria-label="Take the chosen movement off this list">−</button>' +
+            '</div></div>' +
           '<input id="mNew" class="text" placeholder="Name the movement" hidden ' +
             'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);border-radius:2px;font-size:15px;width:100%">' +
           '<button class="btn" id="addLift">Add to today</button>' +
@@ -5225,10 +5470,34 @@
     // rest of the tab's handlers down with it.
     var sel = document.getElementById("mSel");
     var neu = document.getElementById("mNew");
+    var mDrop = document.getElementById("mDrop");
     if (sel && neu) {
+      // With "+ New movement" chosen there is nothing to take off the list, so
+      // the minus says so by being disabled rather than doing nothing.
+      if (mDrop) mDrop.disabled = sel.value === "__new";
       sel.addEventListener("change", function () {
         neu.hidden = sel.value !== "__new";
+        if (mDrop) mDrop.disabled = sel.value === "__new";
         if (!neu.hidden) neu.focus();
+      });
+    }
+    if (mDrop && sel) {
+      mDrop.addEventListener("click", function () {
+        var name = sel.value;
+        if (!name || name === "__new") return;
+        var catId = activeCat;                       // the split it was on, even if you switch before undo
+        var list = store.moves[catId] || [];
+        var at = list.indexOf(name);
+        if (at === -1) return;
+        list.splice(at, 1);
+        // Only the list of choices changes. Every workout already logged with
+        // this movement keeps it — rule 7 — because a lift carries its own name.
+        save(); render();
+        offerUndo("Took " + name + " off " + cat(catId).name, function () {
+          var l2 = store.moves[catId] || (store.moves[catId] = []);
+          if (l2.indexOf(name) === -1) l2.splice(Math.min(at, l2.length), 0, name);
+          save(); render();
+        });
       });
     }
 
@@ -5312,6 +5581,9 @@
         celebrate();
       });
     }
+    var cmpBtn = document.getElementById("openCompare");
+    if (cmpBtn) cmpBtn.addEventListener("click", openCompare);
+
     var unlockBtn = document.getElementById("unlockDay");
     if (unlockBtn) {
       unlockBtn.addEventListener("click", function () {
@@ -5824,6 +6096,8 @@
 
       var sub = bad
         ? "Saved as a weight when it isn’t one. Tap Fix and pick the container."
+        : raw.items && raw.items.length > 1
+          ? "Meal of " + raw.items.length + " · " + Math.round(n.sCal) + " kcal · " + Math.round(n.sPro) + " g protein"
         : (n.kind === "count"
             ? "1 " + n.unit + " · " + Math.round(n.sCal) + " kcal · " + Math.round(n.sPro) + " g protein"
             : n.qty + " " + n.unit + " · " + Math.round(n.sCal) + " kcal · " + Math.round(n.sPro) + " g protein");
@@ -6630,6 +6904,9 @@
       if (el.getAttribute && el.getAttribute("data-renamemeal")) {
         return { kind: "renamemeal", id: el.getAttribute("data-renamemeal") };
       }
+      if (el.getAttribute && el.getAttribute("data-savemeal")) {
+        return { kind: "savemeal", id: el.getAttribute("data-savemeal") };
+      }
       el = el.parentNode;
     }
     return null;
@@ -6669,6 +6946,13 @@
       takeOutOfMeal(a.id);
     } else if (a.kind === "renamemeal") {
       renameMeal(a.id);
+    } else if (a.kind === "savemeal") {
+      var at = locate(day(ymd(cursor)), a.id);
+      if (!at || !isMeal(at.row)) return;
+      var parts = at.row.items.map(function (x) { return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; });
+      if (unpricedPart(parts)) return;   // not offered; a note sits in its place
+      // Its name as it reads in the day; "Name this meal" first to change it.
+      saveMealToPantry(rowNote(at.row) || "Saved meal", parts);
     }
   });
   // ---------- drag a row onto another to combine them ----------
@@ -7049,6 +7333,39 @@
            ". Paste it back here on a new phone to restore everything.";
   }
 
+  // ---------- rest between sets ----------
+  // Start, stop, nothing else: asked for as the simplest possible thing, and
+  // nothing about it is saved. It is a timestamp and not a counter for the
+  // same reason the workout clock is — the phone goes in a pocket between
+  // sets, iOS suspends the app, and a counter would come back reading two
+  // seconds for a two minute rest. Running on and not shown on other tabs,
+  // so going to check a macro mid-rest does not lose it.
+  var restStart = 0;
+  var restTick = null;
+
+  function drawRest() {
+    var bar = document.getElementById("restbar");
+    if (!bar) return;
+    bar.hidden = tab !== "gym";
+    var on = !!restStart;
+    bar.classList.toggle("is-running", on);
+    document.getElementById("restClock").textContent = fmtDur(on ? Math.max(0, Date.now() - restStart) : 0);
+    var btn = document.getElementById("restBtn");
+    btn.textContent = on ? "Stop" : "Start";
+    btn.setAttribute("aria-label", on ? "Stop the rest timer" : "Start the rest timer");
+  }
+
+  document.getElementById("restBtn").addEventListener("click", function () {
+    if (restStart) {
+      restStart = 0;
+      if (restTick) { clearInterval(restTick); restTick = null; }
+    } else {
+      restStart = Date.now();
+      restTick = setInterval(drawRest, 1000);
+    }
+    drawRest();
+  });
+
   // ---------- how it looks ----------
   // Teal is the base palette; every other accent is a block of CSS keyed on
   // data-accent. The ids here have to match those blocks — sweep applies each
@@ -7134,6 +7451,100 @@
     applyLook();
     drawSettings();
   });
+
+  // ---------- against last time ----------
+  // Up is green and down is red, the way the macro targets read — the owner
+  // asked for exactly that, and listed a longer session with the heavier
+  // weights and extra sets, so time is coloured the same way.
+  var cmpSheet = document.getElementById("cmpSheet");
+
+  function liftStats(l) {
+    var top = 0, reps = 0, vol = 0;
+    l.sets.forEach(function (st) { if (st.w > top) top = st.w; reps += st.r; vol += st.w * st.r; });
+    return { top: top, sets: l.sets.length, reps: reps, vol: vol, time: l.lapMs != null ? l.lapMs : null };
+  }
+
+  function cmpRow(label, was, now, show) {
+    if (was == null || now == null) {
+      return '<div class="cmp-row"><span class="cmp-l">' + label + '</span>' +
+        '<span class="cmp-v">' + (now == null ? "—" : show(now)) + '</span>' +
+        '<span class="cmp-d same">not compared</span></div>';
+    }
+    var diff = now - was;
+    var cls = diff > 0 ? "up" : diff < 0 ? "down" : "same";
+    return '<div class="cmp-row"><span class="cmp-l">' + label + '</span>' +
+      '<span class="cmp-v">' + show(was) + ' → ' + show(now) + '</span>' +
+      '<span class="cmp-d ' + cls + '">' +
+        (diff > 0 ? "▲ " + show(diff) : diff < 0 ? "▼ " + show(-diff) : "same") + '</span></div>';
+  }
+
+  function compareHtml(key, d) {
+    var mine = d.lifts.filter(function (l) { return l.sets.length; });
+    var cats = [];
+    mine.forEach(function (l) { if (cats.indexOf(l.cat) === -1) cats.push(l.cat); });
+    var ofCats = function (l) { return cats.indexOf(l.cat) > -1 && l.sets.length; };
+
+    // The last session of the same split, not simply the last session — legs
+    // against yesterday's chest would say nothing at all.
+    var prevKey = null;
+    Object.keys(store.days).filter(function (k) { return k < key; }).sort().reverse().some(function (k) {
+      var ls = store.days[k].lifts || [];
+      if (ls.some(ofCats)) { prevKey = k; return true; }
+      return false;
+    });
+
+    var sum = function (ls) {
+      var t = { moves: 0, sets: 0, reps: 0, vol: 0 };
+      ls.forEach(function (l) { var st = liftStats(l); t.moves++; t.sets += st.sets; t.reps += st.reps; t.vol += st.vol; });
+      return t;
+    };
+    var num = function (n) { return fmt(n); };
+    var html = '<h2>Compared with last time</h2>';
+    if (prevKey) {
+      var pd = store.days[prevKey];
+      var now = sum(mine), was = sum((pd.lifts || []).filter(ofCats));
+      html += '<p class="cmp-sub">This session against ' + shortDate(prevKey) + ' · ' +
+        esc(cats.map(function (c) { return cat(c).name; }).join(" + ")) + '</p>' +
+        '<div class="cmp-card">' +
+          cmpRow("Movements", was.moves, now.moves, num) +
+          cmpRow("Sets", was.sets, now.sets, num) +
+          cmpRow("Reps", was.reps, now.reps, num) +
+          cmpRow("Volume · lb", was.vol, now.vol, num) +
+          cmpRow("Time", pd.workoutMs || null, d.workoutMs || null, fmtDur) +
+        '</div>';
+    } else {
+      html += '<p class="cmp-sub">No earlier session of this split yet — this one becomes the one to beat.</p>';
+    }
+
+    html += '<span class="eyebrow">Each movement</span>';
+    mine.forEach(function (l) {
+      var prev = lastTime(l.movement, key);
+      html += '<div class="cmp-card"><h3>' + esc(l.movement) + '</h3>';
+      if (!prev) {
+        html += '<p class="cmp-when">First time — nothing to compare yet.</p></div>';
+        return;
+      }
+      var a = liftStats(prev.lift), b = liftStats(l);
+      html += '<p class="cmp-when">against ' + shortDate(prev.key) + '</p>' +
+        cmpRow("Top weight · lb", a.top, b.top, num) +
+        cmpRow("Sets", a.sets, b.sets, num) +
+        cmpRow("Reps", a.reps, b.reps, num) +
+        cmpRow("Volume · lb", a.vol, b.vol, num) +
+        cmpRow("Time", a.time, b.time, fmtDur) +
+      '</div>';
+    });
+    return html;
+  }
+
+  function openCompare() {
+    var key = ymd(cursor);
+    document.getElementById("cmpBody").innerHTML = compareHtml(key, day(key));
+    cmpSheet.hidden = false;
+    var inner = cmpSheet.querySelector(".sheet-inner");
+    if (inner) inner.scrollTop = 0;
+  }
+  document.getElementById("cmpDone").addEventListener("click", function () { cmpSheet.hidden = true; });
+  cmpSheet.addEventListener("click", function (e) { if (e.target === cmpSheet) cmpSheet.hidden = true; });
 
   // ---------- changing a set ----------
   // Wired once, outside #view, like the other sheets. The set is found again
@@ -7327,7 +7738,20 @@
     // The ledger records what was eaten, not what was saved — "Bacon" alone
     // gives no way to tell one slice from four when you read it back.
     var note = raw.name + " · " + got.amount;
-    day(key).food.push({ id: uid(), cal: c, pro: pr, note: note });
+    var q = Number(panAdd.qty);
+    if (raw.items && raw.items.length > 1) {
+      // A saved meal lands as the meal it is, parts and all, so the day shows
+      // what was in it and it can still be split apart. Its total is read
+      // through from the parts like any other meal's.
+      day(key).food.push({ id: uid(), note: q === 1 ? raw.name : note,
+        items: raw.items.map(function (it) {
+          return { id: uid(), cal: Math.round(it.cal * q), pro: Math.round(it.pro * q),
+                   note: q === 1 ? it.note : it.note + " × " + q };
+        }) });
+      tidyMeals(day(key));
+    } else {
+      day(key).food.push({ id: uid(), cal: c, pro: pr, note: note });
+    }
     stampGoal(key);
     touch(key);
     var wrote = save();

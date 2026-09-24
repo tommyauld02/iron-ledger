@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~570 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~610 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -523,6 +523,50 @@ whatever is under the finger by then — Done, Remove, a set. A capture-phase
 listener on `#view` swallows clicks for 400 ms after a drag, before any card's
 own handler can see one. Put straight back where it started, nothing changes
 and nothing is offered to undo.
+
+**The rest timer is start and stop, and nothing else.** Asked for as the
+simplest possible thing, and kept that way: it lives in the `.dock` above the
+tab bar on the Gym tab only, so it is under the thumb wherever the page is
+scrolled, and it saves nothing. It is a timestamp (`restStart`) and not a
+counter, for the workout clock's reason — the phone goes in a pocket between
+sets and iOS suspends the app. It keeps running while another tab is looked at.
+Because it sits in the dock, **`hittest`'s usable band now ends at the dock's
+top, not the tab bar's**, and the whole dock counts as chrome; otherwise
+anything scrolled under the rest bar reads as covered.
+
+**The Add movement list has a minus.** A native picker cannot hold a button per
+option, so `#mDrop` sits beside it and takes out whichever movement is chosen,
+with undo. It is disabled on *+ New movement*, where there is nothing to take.
+Only the list of choices changes — every workout already logged keeps the
+movement, because a lift carries its own name (rule 7).
+
+**A meal eaten often is saved to the pantry.** From the estimate review (*Save
+this meal to your pantry*, with a name field) or from a meal already in the day
+(*Save to pantry* in its actions). `saveMealToPantry()` writes one pantry entry
+with the meal's totals as the serving, unit `meal`, and its parts in `items`, so
+`+` and the quantity sheet work on it like anything else — and logging it puts a
+**meal** in the day, parts scaled by how many, rather than one anonymous number.
+One name is one entry: saving over it says *Updated*, and undo puts the old one
+back. A meal with a part still waiting for numbers cannot be saved, because it
+would bake a zero into every future log of it — and a note stands in the
+button's place rather than a button that cannot work.
+
+**Compared with last time.** A sheet, from *Compare with last time* under the
+movements. The session is set against the last session of the **same split**
+(legs against yesterday's chest would say nothing), and each movement against
+the last time it was done: top weight, sets, reps, volume and time. Up is
+`--hit` and down is `--miss`, the macro colours, as the owner asked — and he
+listed a longer session with the heavier weights, so time is coloured the same
+way. A figure missing on either side is shown as *not compared* rather than
+counted as a change.
+
+**The save warning was 2.95:1 in dark mode.** `.savebar` was white on
+`--miss`, which is a deep red in light and a light coral in dark. It shows only
+when writes are failing, so nothing measured it until `darkcheck` widened from
+the tab and undo bars to the whole `.dock`. It now uses `--on-miss`, dark in
+the dark theme — 6.38:1. Worth knowing: `darkcheck` reads computed colours, so
+it measures a *hidden* element as it would look revealed. That is how it caught
+this, and the picker options before it.
 
 ## Publishing
 

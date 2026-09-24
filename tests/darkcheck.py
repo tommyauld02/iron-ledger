@@ -45,6 +45,10 @@ def fixture(theme=None, accent=None):
                    {"id": "s2", "name": "Zinc", "dose": "50 mg"}],
          "pantry": [{"id": "p", "name": "protein coffee", "serveQty": 1, "serveUnit": "bottle",
                      "serveG": None, "sCal": 130, "sPro": 30, "aliases": []}], "v": 1}
+    P = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
+    s["days"][P] = {"food": [], "updated": 1, "goal": G, "workoutMs": 40 * 60000,
+        "lifts": [{"id": "p1", "cat": "back", "movement": "Barbell Row", "sets": [{"w": 115, "r": 10}]},
+                  {"id": "p2", "cat": "back", "movement": "Dumbbell Curl", "sets": [{"w": 40, "r": 12}, {"w": 40, "r": 12}]}]}
     if theme: s["theme"] = theme
     if accent: s["accent"] = accent
     return s
@@ -55,7 +59,7 @@ LOW = """() => {
   const lum = c => { const m=c.match(/\\d+/g); if(!m) return null;
     const [r,g,b]=m.slice(0,3).map(n=>{n/=255; return n<=.03928? n/12.92 : Math.pow((n+.055)/1.055,2.4);});
     return .2126*r+.7152*g+.0722*b; };
-  document.querySelectorAll('main *, .topbar *, .tabs *, .undobar *, .sheet:not([hidden]) *').forEach(el=>{
+  document.querySelectorAll('main *, .topbar *, .dock *, .sheet:not([hidden]) *').forEach(el=>{
     if(!el.textContent.trim() || el.children.length) return;
     const s=getComputedStyle(el); const f=lum(s.color);
     let p=el, bgc=null;
@@ -114,6 +118,17 @@ def walk(p, label):
         low = p.evaluate(LOW)
         if low: found.append("%s: %s" % (tab, low))
         if tab == "gym":
+            # the rest bar lives in the dock, and running looks different
+            p.click("#restBtn"); p.wait_for_timeout(200)
+            low = p.evaluate(LOW)
+            if low: found.append("gym (resting): %s" % low)
+            p.click("#restBtn"); p.wait_for_timeout(150)
+            # the comparison is a sheet, open only after a press
+            if p.locator("#openCompare").count():
+                p.click("#openCompare"); p.wait_for_timeout(300)
+                low = p.evaluate(LOW)
+                if low: found.append("compare: %s" % low)
+                p.click("#cmpDone"); p.wait_for_timeout(200)
             # The held state only exists mid-drag — the superset zones and the
             # lit one under the finger. Put on screen and measured, because a
             # state no test paints is a state no test measures.
