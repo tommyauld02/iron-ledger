@@ -2113,7 +2113,16 @@
     width: 100%;
     height: 100%;
     opacity: 0;
+    /* Invisible, but it still has colours — and the list it opens on Android
+       and desktop uses them. Left unset, Linux Chromium gave its options a
+       dark-scheme default that measured 4.34:1; Windows gave something else,
+       so it passed locally and failed CI for two builds running. */
+    color: var(--ink);
+    background: var(--surface);
   }
+  /* Every native list, told its colours outright, so no platform default can
+     decide how legible a picker is in the dark. */
+  select option { color: var(--ink); background-color: var(--surface); }
   .set .tq {
     margin-left: 6px;
     font-size: 11px;
@@ -2472,7 +2481,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-24.40";
+  var BUILD = "2026-09-24.41";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days

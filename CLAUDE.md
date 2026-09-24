@@ -622,6 +622,17 @@ including the press-and-hold drag · `mobile` fit and font audit across five
 iPhone sizes · plus `commit`, `noclaude`, `yourwords`, `firstrun`, `photo2`,
 `taborder`.
 
+**CI runs Linux, and a platform default is a platform difference.** The
+technique box is a native `<select>` made invisible, and it set no colours of
+its own. Linux Chromium gave its options a dark-scheme default that measured
+4.34:1; Windows gave them something else, so `darkcheck` passed on the owner's
+machine and failed in CI — for **b39 and b40 both, which therefore never
+deployed**, while the phone sat on b38. Two fixes, both kept: every
+`select option` is told its colours outright, so no platform decides how
+legible a picker is; and **a push is not done until CI is green and the live
+page serves the new `BUILD`** — b39 was pushed without anyone watching, which
+is how one failure became two.
+
 Two lessons paid for the hard way:
 
 - **A test that measures hidden elements passes while measuring nothing.** A
