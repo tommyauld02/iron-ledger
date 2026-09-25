@@ -1555,13 +1555,17 @@ with sync_playwright() as pw:
 
     # ---------- THE SET TO BEAT ----------
     # Asked for from the gym: starting a movement, what was the best last time,
-    # so there is a number to pass. Last time's top set — the heaviest, the
-    # most reps at that weight breaking a tie, never a warm-up.
+    # so there is a number to pass. Judged by the owner's own exchange rate:
+    # five pounds is worth one rep, so 150x7 and 145x8 are the same set, and
+    # 145x10 beats 150x7. Never a warm-up.
     BEAT={"days":{PREV:{"food":[],"updated":1,"goal":GG,"workoutMs":50*60000,
               "lifts":[{"id":"a","cat":"back","movement":"Barbell Row","sets":[
                           {"w":185,"r":5,"tech":"warmup"},{"w":135,"r":10},{"w":145,"r":6},{"w":145,"r":8}]},
                        {"id":"b","cat":"back","movement":"Lat Pulldown","sets":[
-                          {"w":120,"r":12,"tech":"restpause"}]}]}},
+                          {"w":120,"r":12,"tech":"restpause"}]},
+                       {"id":"c","cat":"back","movement":"Dumbbell Curl","sets":[
+                          {"w":30,"r":12},{"w":35,"r":6}]},
+                       {"id":"e","cat":"back","movement":"T-Bar Row","sets":[{"w":150,"r":7}]}]}},
           "moves":None,"goal":GG,"region":"United States","pantry":[],"v":1}
     BL="()=>[...document.querySelectorAll('.lift')].map(x=>{const b=x.querySelector('.beat');return b?b.textContent:'';})"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
@@ -1576,14 +1580,19 @@ with sync_playwright() as pw:
     def lift_set(i, w, r):
         q.fill('[data-w="%d"]'%i, w); q.fill('[data-r="%d"]'%i, r)
         q.click('[data-addset="%d"]'%i); q.wait_for_timeout(250)
-    q.select_option("#mSel","Barbell Row"); q.click("#addLift"); q.wait_for_timeout(300)
-    check("beat: a movement opens on last time's top set",
+    def add_move(mv):
+        q.select_option("#mSel", mv)
+        q.eval_on_selector("#addLift","e=>e.scrollIntoView({block:'center'})")
+        q.click("#addLift"); q.wait_for_timeout(300)
+    add_move("Barbell Row")
+    # 135x10 and 145x8 are worth the same; the heavier is the one on the bar
+    check("beat: a movement opens on last time's best set",
           q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
-    check("beat: the heaviest set, and never the warm-up", "185" not in q.evaluate(BL)[0])
+    check("beat: and never the warm-up, however heavy", "185" not in q.evaluate(BL)[0])
     lift_set(0, "145", "8")
     check("beat: matching it is not beating it", q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
     lift_set(0, "150", "7")
-    check("beat: more weight for fewer reps is a trade, not a win",
+    check("beat: five pounds is worth a rep, so 150×7 only matches 145×8",
           q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
     lift_set(0, "145", "9")
     check("beat: one more rep at the same weight beats it",
@@ -1594,16 +1603,26 @@ with sync_playwright() as pw:
             return getComputedStyle(document.querySelector('.beat.is-beaten b')).color===rgb;}"""))
     q.click('[data-done="0"]'); q.wait_for_timeout(350)
     check("beat: the folded card keeps it", "Beaten" in q.evaluate(BL)[0], q.evaluate(BL)[0])
-    q.select_option("#mSel","Lat Pulldown"); q.click("#addLift"); q.wait_for_timeout(300)
+    add_move("Lat Pulldown")
     check("beat: a tag rides along with the number",
           q.evaluate(BL)[1]=="To beat · 120×12 rest-pause", q.evaluate(BL)[1])
-    q.select_option("#mSel","Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    add_move("Barbell Curl")
     check("beat: a first time has nothing to pass", q.evaluate(BL)[2]=="", q.evaluate(BL)[2])
-    lift_set(1, "100", "10"); lift_set(2, "60", "10")
+    add_move("Dumbbell Curl")
+    check("beat: reps count too, so 30×12 is last time's best, not the heavier 35×6",
+          q.evaluate(BL)[3]=="To beat · 30×12", q.evaluate(BL)[3])
+    add_move("T-Bar Row")
+    lift_set(4, "145", "8")
+    check("beat: 145×8 against 150×7 is the same set", q.evaluate(BL)[4]=="To beat · 150×7", q.evaluate(BL)[4])
+    lift_set(4, "145", "10")
+    check("beat: and 145×10 beats 150×7, the owner's own example",
+          q.evaluate(BL)[4]=="↑ Beaten · 145×10 over 150×7", q.evaluate(BL)[4])
+    lift_set(1, "100", "10"); lift_set(2, "60", "10"); lift_set(3, "25", "10")
     q.eval_on_selector("#lockDay","e=>e.scrollIntoView({block:'center'})")
     q.click("#lockDay"); q.wait_for_timeout(700)
     check("beat: a finished day does not nag about one it did not beat",
-          "To beat" not in "".join(q.evaluate(BL)) and "Beaten" in q.evaluate(BL)[0], str(q.evaluate(BL)))
+          "To beat" not in "".join(q.evaluate(BL)) and "Beaten" in q.evaluate(BL)[0]
+          and "Beaten" in q.evaluate(BL)[4], str(q.evaluate(BL)))
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

@@ -584,19 +584,30 @@ way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
 
 **The set to beat.** Asked for from the gym: starting a movement, what is the
-number to pass? Every open card carries it under *Last*: `topSet()` of last
-time's sets — the heaviest, the most reps at that weight breaking a tie, never
-a warm-up — as *To beat · 145×8*. When one of today's sets goes past it the
-line turns `--hit` and reads *↑ Beaten · 145×9 over 145×8*, and the folded
-card keeps it, so tapping Done does not take the moment away.
+number to pass? Every open card carries it under *Last* — last time's best
+set, never a warm-up — as *To beat · 145×8*. When one of today's sets goes past
+it the line turns `--hit` and reads *↑ Beaten · 145×9 over 145×8*, and the
+folded card keeps it, so tapping Done does not take the moment away.
 
-`beats()` is strict on purpose: more weight for at least the same reps, or
-more reps for at least the same weight. 150×7 against 145×8 is a trade — some
-would call it progress, some would not — and the app does not call a trade a
-win. Matching is not beating either. Any tag rides along with the number, so
-`120×12 rest-pause` never passes for a straight set of twelve. A finished day
-shows *Beaten* where it was and nothing where it was not: *To beat* with
-nothing left to do about it is a nag.
+**Five pounds is worth one rep — the owner's rule, not a formula from a
+book.** In his words, 150×7 is the same as 145×8, and 145×10 beats 150×7. So
+`setWorth()` counts a set as its reps plus one for every `LB_PER_REP` pounds,
+`topSet()` takes the set worth most (the heavier of two worth the same,
+because that is the one that was on the bar), and `beats()` means worth more.
+Worth the same is a match, not a win, so 150×7 against 145×8 stays *To beat*.
+The same rate settles what he did not spell out: 145×9 beats 150×7, because it
+is worth 150×8. And it picks the target as well as judging it — 30×12 is last
+time's best over a heavier 35×6 — because a target chosen by weight alone
+could be "beaten" by a set worth less than one already done last time.
+
+The first version was stricter: more weight for at least the same reps, or
+more reps for at least the same weight, and anything else was a trade it
+would not call either way. He answered that with the exchange rate, which is
+the better rule because it decides every case.
+
+Any tag rides along with the number, so `120×12 rest-pause` never passes for
+a straight set of twelve. A finished day shows *Beaten* where it was and
+nothing where it was not: *To beat* with nothing left to do about it is a nag.
 
 **The save warning was 2.95:1 in dark mode.** `.savebar` was white on
 `--miss`, which is a deep red in light and a light coral in dark. It shows only

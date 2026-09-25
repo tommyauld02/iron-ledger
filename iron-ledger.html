@@ -2629,7 +2629,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-24.43";
+  var BUILD = "2026-09-24.44";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4260,26 +4260,29 @@
 
   // ---------- the set to beat ----------
   // Progressive overload needs a number to pass, so an open card carries last
-  // time's top set: the heaviest, with the most reps at that weight breaking a
-  // tie. A warm-up is never it — nobody is trying to pass their warm-up — and
-  // any other tag rides along with the number, so a rest-pause total reads as
-  // one rather than passing for a straight set.
+  // time's best set. Best by the owner's own exchange rate: five pounds is
+  // worth one rep, so 150×7 and 145×8 are the same set, and 145×10 beats
+  // 150×7. A set weighs its reps plus one for every LB_PER_REP pounds.
+  var LB_PER_REP = 5;
+  function setWorth(s) { return (Number(s.w) || 0) / LB_PER_REP + (Number(s.r) || 0); }
+  // Last time's best: the set worth most, and the heavier of two worth the
+  // same, because that is the one that was on the bar. A warm-up is never it
+  // — nobody is trying to pass their warm-up — and any other tag rides along
+  // with the number, so a rest-pause total never passes for a straight set.
   function topSet(sets) {
     var best = null;
     sets.forEach(function (s) {
       if (s.tech === "warmup" || !(Number(s.r) > 0)) return;
-      var w = Number(s.w) || 0, bw = best ? Number(best.w) || 0 : 0;
-      if (!best || w > bw || (w === bw && Number(s.r) > Number(best.r))) best = s;
+      if (!best) { best = s; return; }
+      var gap = setWorth(s) - setWorth(best);
+      if (gap > 1e-9 || (Math.abs(gap) <= 1e-9 && (Number(s.w) || 0) > (Number(best.w) || 0))) best = s;
     });
     return best;
   }
-  // Passed means plainly better, never arguably: more weight for at least the
-  // same reps, or more reps for at least the same weight. 150×8 against 145×10
-  // is a trade, and the app does not call a trade a win.
+  // Beaten means worth more. Worth the same is a match, not a win: 150×7
+  // against 145×8 stays "to beat".
   function beats(s, goal) {
-    var w = Number(s.w) || 0, r = Number(s.r) || 0;
-    var gw = Number(goal.w) || 0, gr = Number(goal.r) || 0;
-    return s.tech !== "warmup" && w >= gw && r >= gr && (w > gw || r > gr);
+    return s.tech !== "warmup" && setWorth(s) > setWorth(goal) + 1e-9;
   }
 
   function shortDate(key) {
