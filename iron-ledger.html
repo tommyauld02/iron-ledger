@@ -1724,6 +1724,19 @@
   }
   .lift .last em { font-style: normal; color: var(--ink-2); }
 
+  /* The set to pass: last time's top set, until one of today's goes past it.
+     --hit, the macro colour for "target met", because that is what it is. */
+  .lift .beat {
+    margin: 4px 0 0;
+    font-family: var(--font-num);
+    font-size: 12px;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+  .lift .beat b { font-weight: 600; color: var(--ink); }
+  .lift .beat.is-beaten .beat-k,
+  .lift .beat.is-beaten b { color: var(--hit); }
+
   .sets {
     display: flex;
     flex-wrap: wrap;
@@ -2440,6 +2453,8 @@
     text-transform: uppercase;
   }
   .undobar button:active { background: var(--surface); color: var(--ink); }
+  /* a notice has nothing to undo, so it has no button */
+  .undobar button[hidden] { display: none; }
 
   /* ---------- tabs ---------- */
   .tabs {
@@ -2614,7 +2629,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-24.42";
+  var BUILD = "2026-09-24.43";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4243,6 +4258,30 @@
     return null;
   }
 
+  // ---------- the set to beat ----------
+  // Progressive overload needs a number to pass, so an open card carries last
+  // time's top set: the heaviest, with the most reps at that weight breaking a
+  // tie. A warm-up is never it — nobody is trying to pass their warm-up — and
+  // any other tag rides along with the number, so a rest-pause total reads as
+  // one rather than passing for a straight set.
+  function topSet(sets) {
+    var best = null;
+    sets.forEach(function (s) {
+      if (s.tech === "warmup" || !(Number(s.r) > 0)) return;
+      var w = Number(s.w) || 0, bw = best ? Number(best.w) || 0 : 0;
+      if (!best || w > bw || (w === bw && Number(s.r) > Number(best.r))) best = s;
+    });
+    return best;
+  }
+  // Passed means plainly better, never arguably: more weight for at least the
+  // same reps, or more reps for at least the same weight. 150×8 against 145×10
+  // is a trade, and the app does not call a trade a win.
+  function beats(s, goal) {
+    var w = Number(s.w) || 0, r = Number(s.r) || 0;
+    var gw = Number(goal.w) || 0, gr = Number(goal.r) || 0;
+    return s.tech !== "warmup" && w >= gw && r >= gr && (w > gw || r > gr);
+  }
+
   function shortDate(key) {
     var d = parseYmd(key);
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
@@ -5161,6 +5200,17 @@
         ? 'Last · ' + shortDate(prev.key) + ' — <em>' +
           prev.lift.sets.map(setText).join(", ") + '</em>'
         : 'First time logging this one.';
+      // The set to pass, and the moment one of today's goes past it. A day
+      // that is over only says so if it did: "To beat" with nothing left to
+      // do about it is a nag.
+      var goal = prev ? topSet(prev.lift.sets) : null;
+      var passed = goal ? topSet(l.sets.filter(function (s) { return beats(s, goal); })) : null;
+      var beatLine = passed
+        ? '<p class="beat is-beaten"><span class="beat-k">↑ Beaten ·</span> <b>' + esc(setText(passed)) +
+          '</b> <span class="beat-was">over ' + esc(setText(goal)) + '</span></p>'
+        : goal && !locked && !l.closed
+          ? '<p class="beat"><span class="beat-k">To beat ·</span> <b>' + esc(setText(goal)) + '</b></p>'
+          : '';
 
       var sets = l.sets.map(function (s, si) {
         // Locked chips are spans, not disabled buttons: probe treats a control
@@ -5192,6 +5242,7 @@
               ? '<p class="last done-sets">' +
                   l.sets.map(setText).join(", ") + '</p>'
               : '') +
+            beatLine +
             '<div class="lift-foot">' +
               '<span>' + (v.sets
                 ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
@@ -5241,6 +5292,7 @@
           (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
                      '</em> — a day you no longer train.</p>' : '') +
           '<p class="last">' + lastLine + '</p>' +
+          beatLine +
           (sets ? '<div class="sets">' + sets + '</div>' : '') +
           (locked ? '' :
             '<div class="setadd">' +
@@ -5607,13 +5659,23 @@
       if (!r) { view.querySelector('[data-r="' + i + '"]').focus(); return; }
       // t is what lets finishLift tell a movement worked in sequence from one
       // worked alongside another. Twenty bytes a set.
-      var st = { w: w, r: r, t: Date.now() };
+      var now = Date.now();
+      var st = { w: w, r: r, t: now };
       var techEl = view.querySelector('[data-tech="' + i + '"]');
       // Read here and not kept: the redraw below puts the box back to normal,
       // so a drop tag cannot quietly ride along onto every set after it.
       if (techEl && techEl.value) st.tech = techEl.value;
+      // Start forgotten: the first set of the day starts the clock, at that
+      // set, rather than whenever Start is finally remembered. Today only — a
+      // set typed into last Tuesday is a record being filled in, not a
+      // session beginning — and only on a day not yet timed and with no set
+      // on it, so a clock someone threw away mid-session stays thrown away.
+      var starts = key === TODAY && !d.workoutStart && !d.workoutMs &&
+        !d.lifts.some(function (x) { return x.sets.length; });
+      if (starts) d.workoutStart = now;
       d.lifts[i].sets.push(st);
       touch(key); save(); render();
+      if (starts) notify("Workout started with your first set");
       var next = view.querySelector('[data-w="' + i + '"]');
       if (next) next.focus();
     }
@@ -6738,6 +6800,9 @@
     if (!bar || !lab) return;
     lab.textContent = label;
     bar.hidden = false;
+    // Nothing to restore means nothing to press: a dead Undo is a lie.
+    var btn = document.getElementById("undoBtn");
+    if (btn) btn.hidden = !restore;
     pendingUndo = restore;
     clearTimeout(undoTimer);
     undoTimer = setTimeout(function () {
@@ -6745,6 +6810,13 @@
       pendingUndo = null;
     }, 9000);
   }
+
+  // Something the app did by itself, said out loud (rule 3), with nothing on
+  // the bar to press. The workout clock starting on the first set is the
+  // case: an Undo there would sit right above the rest timer's Start, one wet
+  // thumb away from quietly taking back the very thing that was just fixed.
+  // Discard, on the clock itself, is the way to throw it away.
+  function notify(label) { offerUndo(label, null); }
 
   function hideUndo() {
     var bar = document.getElementById("undobar");

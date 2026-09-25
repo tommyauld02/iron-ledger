@@ -282,6 +282,8 @@ with sync_playwright() as pw:
     p.fill('[data-w="0"]',"185"); p.fill('[data-r="0"]',"6")
     p.click('[data-addset="0"]'); p.wait_for_timeout(400)
     check("gym: add set", p.eval_on_selector_all(".set","e=>e.length")==1)
+    check("gym: Start forgotten, the first set starts the clock",
+          p.evaluate("()=>!!document.getElementById('workoutClock')"))
     check("gym: volume line", "1 set" in p.eval_on_selector(".lift-foot span","e=>e.textContent"))
     p.fill('[data-w="0"]',"185"); p.fill('[data-r="0"]',"5"); p.press('[data-r="0"]',"Enter"); p.wait_for_timeout(400)
     check("gym: Enter adds set", p.eval_on_selector_all(".set","e=>e.length")==2)
@@ -1035,9 +1037,57 @@ with sync_playwright() as pw:
           [x["lap"] for x in q.evaluate(LAPS)]==[x["lap"] for x in r])
     c.close()
 
+    # ---------- START FORGOTTEN ----------
+    # Found in the gym: Start was never pressed, so the whole session went
+    # untimed. The first set of the day starts the clock now, at that set.
+    DAY = ("k=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1'));"
+           "return (s.days||{})[k]||{};}")
+    c, q = lap_page()
+    add(q, "Barbell Row")
+    check("clock: Start is still offered before the first set", q.locator("#startWorkout").count()==1)
+    sets(q, 0, 3, 2*MIN)
+    rec=q.evaluate(DAY, Ts)
+    check("clock: the first set starts it when Start was forgotten", bool(rec.get("workoutStart")))
+    check("clock: from that set, not from whenever it is noticed",
+          rec.get("workoutStart")==rec["lifts"][0]["sets"][0]["t"],
+          "%s vs %s" % (rec.get("workoutStart"), rec["lifts"][0]["sets"][0].get("t")))
+    check("clock: and it says so", q.evaluate("()=>!document.getElementById('undobar').hidden")
+          and "first set" in q.eval_on_selector("#undoLabel","e=>e.textContent"),
+          q.eval_on_selector("#undoLabel","e=>e.textContent"))
+    # an Undo there would sit right above the rest timer's Start
+    check("clock: with nothing on the bar to press", q.locator("#undoBtn").bounding_box() is None)
+    q.click('[data-done="0"]'); q.wait_for_timeout(350)
+    check("clock: the first movement's time runs from that set",
+          near(q.evaluate(LAPS)[0]["lap"], 6), "%s ms, want ~6 min" % q.evaluate(LAPS)[0]["lap"])
+    ub=q.locator("#undoBtn").bounding_box()
+    check("clock: the next thing that can be undone gets its Undo back",
+          ub is not None and ub["height"]>=MIN_TAP
+          and "Finished" in q.eval_on_selector("#undoLabel","e=>e.textContent"))
+    # a day already timed was decided on; a set does not reopen the question
+    q.click("#lockDay"); q.wait_for_timeout(700)
+    q.click("#unlockDay"); q.wait_for_timeout(500)
+    add(q, "Lat Pulldown"); sets(q, 1, 1, MIN)
+    check("clock: a day already timed is not restarted by a set",
+          not q.evaluate(DAY, Ts).get("workoutStart"))
+    # a set typed into another day is a record being filled in, not a session
+    YK=(T-datetime.timedelta(days=1)).isoformat()
+    q.click("#prevDay"); q.wait_for_timeout(400)
+    add(q, "Barbell Row"); sets(q, 0, 1, MIN)
+    yrec=q.evaluate(DAY, YK)
+    check("clock: a set typed into yesterday starts no clock",
+          len(yrec.get("lifts") or [])==1 and not yrec.get("workoutStart"), str(yrec.get("workoutStart")))
+    c.close()
+
     # ---------- AND THE WAYS IT MUST NOT LIE ----------
     c, q = lap_page()
-    add(q, "Barbell Row"); sets(q, 0, 2, 2*MIN)
+    add(q, "Barbell Row"); sets(q, 0, 1, 2*MIN)
+    # the first set started the clock; Discard is how a session goes untimed
+    # now, and a set after that must not quietly start it again
+    q.eval_on_selector("#discardWorkout","e=>e.scrollIntoView({block:'center'})")
+    q.click("#discardWorkout"); q.wait_for_timeout(350)
+    sets(q, 0, 1, 2*MIN)
+    check("clock: a clock thrown away stays thrown away",
+          not q.evaluate(DAY, Ts).get("workoutStart") and q.locator("#startWorkout").count()==1)
     q.click('[data-done="0"]'); q.wait_for_timeout(350)
     check("laps: no clock running means no time, not a guess",
           q.evaluate(LAPS)[0]["lap"] is None
@@ -1501,6 +1551,59 @@ with sync_playwright() as pw:
             return getComputedStyle(up).color===rgb(t('--hit')) && getComputedStyle(dn).color===rgb(t('--miss'));}"""))
     q.click("#cmpDone"); q.wait_for_timeout(250)
     check("compare: Done closes it", q.evaluate("()=>document.getElementById('cmpSheet').hidden"))
+    c.close()
+
+    # ---------- THE SET TO BEAT ----------
+    # Asked for from the gym: starting a movement, what was the best last time,
+    # so there is a number to pass. Last time's top set — the heaviest, the
+    # most reps at that weight breaking a tie, never a warm-up.
+    BEAT={"days":{PREV:{"food":[],"updated":1,"goal":GG,"workoutMs":50*60000,
+              "lifts":[{"id":"a","cat":"back","movement":"Barbell Row","sets":[
+                          {"w":185,"r":5,"tech":"warmup"},{"w":135,"r":10},{"w":145,"r":6},{"w":145,"r":8}]},
+                       {"id":"b","cat":"back","movement":"Lat Pulldown","sets":[
+                          {"w":120,"r":12,"tech":"restpause"}]}]}},
+          "moves":None,"goal":GG,"region":"United States","pantry":[],"v":1}
+    BL="()=>[...document.querySelectorAll('.lift')].map(x=>{const b=x.querySelector('.beat');return b?b.textContent:'';})"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("beat: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", BEAT)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    def lift_set(i, w, r):
+        q.fill('[data-w="%d"]'%i, w); q.fill('[data-r="%d"]'%i, r)
+        q.click('[data-addset="%d"]'%i); q.wait_for_timeout(250)
+    q.select_option("#mSel","Barbell Row"); q.click("#addLift"); q.wait_for_timeout(300)
+    check("beat: a movement opens on last time's top set",
+          q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
+    check("beat: the heaviest set, and never the warm-up", "185" not in q.evaluate(BL)[0])
+    lift_set(0, "145", "8")
+    check("beat: matching it is not beating it", q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
+    lift_set(0, "150", "7")
+    check("beat: more weight for fewer reps is a trade, not a win",
+          q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
+    lift_set(0, "145", "9")
+    check("beat: one more rep at the same weight beats it",
+          q.evaluate(BL)[0]=="↑ Beaten · 145×9 over 145×8", q.evaluate(BL)[0])
+    check("beat: and it reads in the macro green",
+          q.evaluate("""()=>{const h=getComputedStyle(document.documentElement).getPropertyValue('--hit').trim().replace('#','');
+            const rgb='rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
+            return getComputedStyle(document.querySelector('.beat.is-beaten b')).color===rgb;}"""))
+    q.click('[data-done="0"]'); q.wait_for_timeout(350)
+    check("beat: the folded card keeps it", "Beaten" in q.evaluate(BL)[0], q.evaluate(BL)[0])
+    q.select_option("#mSel","Lat Pulldown"); q.click("#addLift"); q.wait_for_timeout(300)
+    check("beat: a tag rides along with the number",
+          q.evaluate(BL)[1]=="To beat · 120×12 rest-pause", q.evaluate(BL)[1])
+    q.select_option("#mSel","Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    check("beat: a first time has nothing to pass", q.evaluate(BL)[2]=="", q.evaluate(BL)[2])
+    lift_set(1, "100", "10"); lift_set(2, "60", "10")
+    q.eval_on_selector("#lockDay","e=>e.scrollIntoView({block:'center'})")
+    q.click("#lockDay"); q.wait_for_timeout(700)
+    check("beat: a finished day does not nag about one it did not beat",
+          "To beat" not in "".join(q.evaluate(BL)) and "Beaten" in q.evaluate(BL)[0], str(q.evaluate(BL)))
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

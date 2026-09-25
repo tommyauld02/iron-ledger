@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~610 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~635 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -343,6 +343,10 @@ row shipped in b36 at 4.08:1. The fixture now has all of them, the walk opens
 the estimate review and the Settings sheet, and a second pass chooses every
 accent in both themes with the phone set the *opposite* way, so the choice has
 to win. It was proven by putting the old colour back and watching it fail.
+It also fails if the fixture stops painting any of the three looks of the set
+to beat — to beat, beaten, and beaten on a folded card — and `mobile` does the
+same for their fit, so a fixture edit cannot quietly turn either into a check
+of nothing.
 
 **The app is installed, not just bookmarked.** `manifest.webmanifest` and
 `sw.js` make it a real PWA: standalone display, home-screen icon, and an
@@ -395,6 +399,25 @@ hour session, and it goes through `offerUndo()` like everything else
 destructive. The calendar and the Log tab's *Avg session* read **banked** time
 only: a clock still running is not a finished session and must not drag the
 average down all afternoon.
+
+**A forgotten Start is started by the first set.** Found in the gym: Start was
+never pressed and a whole session went untimed. `addSet()` now starts the
+clock at the first set of the day — at that set's own `t`, so the two agree to
+the millisecond — when the day is today, has no clock running, no banked time
+and no set on it. Each condition is doing work. A set typed into last Tuesday
+is a record being filled in, not a session beginning. Banked time means the
+day was already timed. And a set already on the day means the clock was either
+not wanted or thrown away with Discard, so it stays thrown away. The first
+movement's lap then runs from that set rather than from a Start that never
+came. Start is still there, and still the more accurate of the two: the set is
+logged after it is lifted.
+
+It says so with `notify()`, which is the undo bar with no button. An Undo
+there would sit directly above the rest timer's Start, and the thumb goes to
+Start rest straight after logging a set — one wet miss from quietly taking
+back the very thing that was just fixed. Discard, on the clock itself, is the
+way out, with its own undo. `offerUndo()` now hides its button whenever there
+is nothing to restore, because a dead Undo is a lie.
 
 **A forgotten clock records nothing rather than a lie.** Nobody locks in the
 day from the car park, so a clock is going to be left running overnight — and
@@ -559,6 +582,21 @@ the last time it was done: top weight, sets, reps, volume and time. Up is
 listed a longer session with the heavier weights, so time is coloured the same
 way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
+
+**The set to beat.** Asked for from the gym: starting a movement, what is the
+number to pass? Every open card carries it under *Last*: `topSet()` of last
+time's sets — the heaviest, the most reps at that weight breaking a tie, never
+a warm-up — as *To beat · 145×8*. When one of today's sets goes past it the
+line turns `--hit` and reads *↑ Beaten · 145×9 over 145×8*, and the folded
+card keeps it, so tapping Done does not take the moment away.
+
+`beats()` is strict on purpose: more weight for at least the same reps, or
+more reps for at least the same weight. 150×7 against 145×8 is a trade — some
+would call it progress, some would not — and the app does not call a trade a
+win. Matching is not beating either. Any tag rides along with the number, so
+`120×12 rest-pause` never passes for a straight set of twelve. A finished day
+shows *Beaten* where it was and nothing where it was not: *To beat* with
+nothing left to do about it is a nag.
 
 **The save warning was 2.95:1 in dark mode.** `.savebar` was white on
 `--miss`, which is a deep red in light and a light coral in dark. It shows only

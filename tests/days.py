@@ -154,8 +154,10 @@ with sync_playwright() as pw:
         p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(900)
         p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(450)
         p.select_option("#mSel","Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
-        p.fill('[data-w="0"]',"135"); p.fill('[data-r="0"]',"10"); p.click('[data-addset="0"]'); p.wait_for_timeout(350)
+        # Start first: a set logged first now starts the clock by itself, and
+        # this is about what midnight does to a clock, however it started
         p.click("#startWorkout"); p.wait_for_timeout(500)
+        p.fill('[data-w="0"]',"135"); p.fill('[data-r="0"]',"10"); p.click('[data-addset="0"]'); p.wait_for_timeout(350)
         started=keys(p)[0]
         p.evaluate("ms=>window.__bump(ms)", jump); resume(p)
         rec=p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]", started)

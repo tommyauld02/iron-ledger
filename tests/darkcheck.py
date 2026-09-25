@@ -47,8 +47,12 @@ def fixture(theme=None, accent=None):
                      "serveG": None, "sCal": 130, "sPro": 30, "aliases": []}], "v": 1}
     P = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
     s["days"][P] = {"food": [], "updated": 1, "goal": G, "workoutMs": 40 * 60000,
+        # last time's sets decide the line under each open card: Barbell Row
+        # is beaten today, Dumbbell Curl still to beat, and the folded Lat
+        # Pulldown keeps its "Beaten" — every state of it on screen
         "lifts": [{"id": "p1", "cat": "back", "movement": "Barbell Row", "sets": [{"w": 115, "r": 10}]},
-                  {"id": "p2", "cat": "back", "movement": "Dumbbell Curl", "sets": [{"w": 40, "r": 12}, {"w": 40, "r": 12}]}]}
+                  {"id": "p2", "cat": "back", "movement": "Dumbbell Curl", "sets": [{"w": 40, "r": 12}, {"w": 40, "r": 12}]},
+                  {"id": "p3", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 110, "r": 10}]}]}
     if theme: s["theme"] = theme
     if accent: s["accent"] = accent
     return s
@@ -118,6 +122,14 @@ def walk(p, label):
         low = p.evaluate(LOW)
         if low: found.append("%s: %s" % (tab, low))
         if tab == "gym":
+            # the set to beat has three looks, and a state the fixture stops
+            # painting is a state this suite stops measuring — so say so
+            painted = p.evaluate("""()=>({
+              toBeat: document.querySelectorAll('.lift:not(.is-closed) .beat:not(.is-beaten)').length,
+              beaten: document.querySelectorAll('.lift:not(.is-closed) .beat.is-beaten').length,
+              folded: document.querySelectorAll('.lift.is-closed .beat.is-beaten').length})""")
+            for k, n in painted.items():
+                if not n: found.append("set to beat: the %s state is not on screen" % k)
             # the rest bar lives in the dock, and running looks different
             p.click("#restBtn"); p.wait_for_timeout(200)
             low = p.evaluate(LOW)

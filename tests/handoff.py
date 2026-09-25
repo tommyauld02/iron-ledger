@@ -611,6 +611,23 @@ with sync_playwright() as pw:
     check("undo bar is showing for this check",
           not p.evaluate("() => document.getElementById('undobar').hidden"))
     check("the undo bar does not cover the tab bar either", p.evaluate(TABS_REACHABLE))
+
+    # The first set of the day starts the workout clock and says so on the
+    # same bar, with no button: on the Gym tab it sits right above the rest
+    # timer, and a thumb on its way to Start rest must reach Start rest.
+    p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(400)
+    p.select_option("#mSel", "Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
+    p.fill('[data-w="0"]', "135"); p.fill('[data-r="0"]', "10")
+    p.click('[data-addset="0"]'); p.wait_for_timeout(400)
+    check("the first-set notice is showing for this check",
+          not p.evaluate("() => document.getElementById('undobar').hidden")
+          and "first set" in p.eval_on_selector("#undoLabel", "e => e.textContent"))
+    check("the notice has nothing on it to press",
+          p.evaluate("() => document.getElementById('undoBtn').getBoundingClientRect().height === 0"))
+    check("the rest timer's Start is still what a tap on it reaches", p.evaluate("""() => {
+        const b = document.getElementById('restBtn'), r = b.getBoundingClientRect();
+        return r.height > 0 && b.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); }"""))
+    check("and the tab bar is still reachable", p.evaluate(TABS_REACHABLE))
     ctx.close()
 
     # ---- 8. every editor that hides behind a press ------------------------

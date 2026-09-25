@@ -7,9 +7,16 @@ store={"days":{T:{"food":[
   {"id":"r2","cal":489,"pro":57,"note":"Costco top sirloin · 6 oz","est":True},
   {"id":"r3","cal":190,"pro":21,"note":"Protein bar"}],
   # a finished movement too, so the folded card is measured on every phone
-  "lifts":[{"id":"l1","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10}]},
-           {"id":"l2","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":452000,"closed":True}],
-  "updated":1,"goal":G}},
+  "lifts":[{"id":"l1","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10,"tech":"restpause"}]},
+           {"id":"l2","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":452000,"closed":True},
+           {"id":"l3","cat":"back","movement":"Seated Cable Row","sets":[]}],
+  "updated":1,"goal":G},
+  # last time, so every card carries its set to beat, at its longest: a tag
+  # on both sides of a beaten line, and one still to beat
+  (datetime.date.today()-datetime.timedelta(days=3)).isoformat():{"food":[],"updated":1,"goal":G,
+  "lifts":[{"id":"p1","cat":"back","movement":"Barbell Row","sets":[{"w":125,"r":10,"tech":"restpause"}]},
+           {"id":"p2","cat":"back","movement":"Lat Pulldown","sets":[{"w":110,"r":10}]},
+           {"id":"p3","cat":"back","movement":"Seated Cable Row","sets":[{"w":225,"r":12,"tech":"restpause"}]}]}},
  "moves":None,"goal":G,"region":"United States",
  "pantry":[{"id":"p1","name":"protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,
             "sCal":130,"sPro":30,"aliases":[]}],"v":1}
@@ -61,6 +68,10 @@ with sync_playwright() as pw:
             p.click('.tabs button[data-tab="%s"]'%t); p.wait_for_timeout(350)
             if t=="coach" and p.locator("[data-openday]").count():
                 p.locator("[data-openday]").first.click(); p.wait_for_timeout(300)
+            # the set-to-beat lines are what could burst a narrow card, so a
+            # fixture that stops painting them must say so, not pass on nothing
+            if t=="gym" and p.eval_on_selector_all(".lift .beat","e=>e.length")<3:
+                FAILS.append("%s: set-to-beat lines not on screen to measure" % name)
             for x in p.evaluate(ZOOM): zoom.add(x)
             for x in p.evaluate(SMALL): small.add(x)
             o=p.evaluate(OVERFLOW)
