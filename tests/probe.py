@@ -48,6 +48,8 @@ PROBES=[
  ("pantry","#savePan","save pantry food",[("#panName","Test bar"),("#panServe","1"),("#panCal","200"),("#panPro","20")]),
  ("pantry","[data-rmpan]","remove pantry food",None),
  ("pantry","[data-fixpan]","fix legacy pantry entry",None),
+ ("pantry",'[data-pantab="breakfast"]',"show one pantry section",None),
+ ("pantry",'[data-pansec="lunch"]',"choose a section to save under",None),
  ("log","#prevYear","previous year",None),
  ("log","#nextYear","next year",None),
  ("log",".cal-cell.hit, .cal-cell.miss","tap a logged day",None),

@@ -18,8 +18,13 @@ store={"days":{T:{"food":[
            {"id":"p2","cat":"back","movement":"Lat Pulldown","sets":[{"w":110,"r":10}]},
            {"id":"p3","cat":"back","movement":"Seated Cable Row","sets":[{"w":225,"r":12,"tech":"restpause"}]}]}},
  "moves":None,"goal":G,"region":"United States",
+ # sorted and not, so the section tabs, headings and Move / Sort are measured
  "pantry":[{"id":"p1","name":"protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,
-            "sCal":130,"sPro":30,"aliases":[]}],"v":1}
+            "sCal":130,"sPro":30,"aliases":[]},
+           {"id":"p2","name":"Costco rotisserie chicken salad","serveQty":1,"serveUnit":"container","serveG":None,
+            "sCal":420,"sPro":38,"aliases":[],"sec":"lunch"},
+           {"id":"p3","name":"Ice cream sandwich","serveQty":1,"serveUnit":"piece","serveG":None,
+            "sCal":180,"sPro":3,"aliases":[],"sec":"desserts"}],"v":1}
 
 # every device the app realistically has to fit
 # 402x874 / 440x956 are the logical sizes the 16 Pro and Pro Max report; the
@@ -72,6 +77,8 @@ with sync_playwright() as pw:
             # fixture that stops painting them must say so, not pass on nothing
             if t=="gym" and p.eval_on_selector_all(".lift .beat","e=>e.length")<3:
                 FAILS.append("%s: set-to-beat lines not on screen to measure" % name)
+            if t=="pantry" and p.eval_on_selector_all("[data-pantab]","e=>e.length")<7:
+                FAILS.append("%s: pantry section tabs not on screen to measure" % name)
             for x in p.evaluate(ZOOM): zoom.add(x)
             for x in p.evaluate(SMALL): small.add(x)
             o=p.evaluate(OVERFLOW)

@@ -643,6 +643,23 @@
     background: var(--surface-2);
   }
   .meal-actions button:hover { color: var(--accent); border-color: var(--accent); }
+  /* Save to pantry is a picker: it looks like its neighbours, and the native
+     list it opens is laid invisibly over it */
+  .meal-actions .meal-pick {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    background: var(--surface-2);
+  }
 
   /* ---------- first run ---------- */
   .welcome {
@@ -1095,12 +1112,18 @@
 
   /* ---------- pantry ---------- */
   /* Three rows — name, macros, sub-line — stacked in the middle column, with
-     the + spanning all three on the left and Remove spanning the first two on
-     the right. Every cell is placed explicitly; leaving them to auto-placement
-     around the two spanning buttons is what made this hard to read before. */
+     the + spanning all three on the left, and on the right Remove beside the
+     name and Move / Sort beside the two lines under it: two 44px targets
+     stacked take 91px, and anything else stacked them into 110 or more.
+     Every cell is placed explicitly; leaving them to auto-placement around
+     the spanning buttons is what made this hard to read before. */
   .pan-item {
     display: grid;
-    grid-template-columns: auto 1fr auto;
+    /* minmax(0, ...) and not 1fr: a 1fr column will not shrink below its
+       longest unbreakable line, and "420 kcal · 38 g /container" held that
+       way pushed the page wider than a 320px phone, which then zooms the
+       whole app out. Found when the mobile fixture gained a container. */
+    grid-template-columns: auto minmax(0, 1fr) auto;
     gap: 3px 12px;
     align-items: baseline;
     padding: 11px 2px;
@@ -1134,7 +1157,7 @@
   }
   /* A record with impossible numbers gets no +; this keeps the rest aligned. */
   .pan-item .add-gap { grid-column: 1; grid-row: 1 / -1; min-width: 44px; }
-  .pan-item .nm { grid-column: 2; grid-row: 1; font-size: 15px; font-weight: 500; }
+  .pan-item .nm { grid-column: 2; grid-row: 1; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
   .pan-item .macros {
     grid-column: 2;
     grid-row: 2;
@@ -1142,10 +1165,10 @@
     font-variant-numeric: tabular-nums;
     font-size: 13px;
     color: var(--ink-2);
-    white-space: nowrap;
+    overflow-wrap: anywhere;
   }
   .pan-item .sub {
-    grid-column: 2 / -1;
+    grid-column: 2;
     grid-row: 3;
     font-family: var(--font-num);
     font-size: 10px;
@@ -1153,7 +1176,7 @@
     color: var(--ink-3);
   }
   .pan-item .rm {
-    grid-row: 1 / 3;
+    grid-row: 1;
     grid-column: 3;
     align-self: center;
     font-family: var(--font-num);
@@ -1166,6 +1189,87 @@
     margin-right: -10px;
   }
   .pan-item .rm:hover, .pan-item .rm:active { color: var(--danger); }
+
+  /* ---------- pantry sections ---------- */
+  /* Move / Sort sits under Remove, in the same quiet style. A native picker
+     made invisible over the label, like the technique box: the row stays
+     narrow and the picker still names every section in full. Sort is in the
+     accent, because a food with no section is something to do. */
+  .pan-item .mv {
+    grid-column: 3;
+    grid-row: 2 / 4;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    align-self: center;
+    min-height: 44px;
+    padding: 0 10px;
+    margin-right: -10px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--ink-3);
+  }
+  .pan-item .mv.is-unsorted { color: var(--accent); }
+  .pan-item .mv select, .meal-pick select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    color: var(--ink);
+    background: var(--surface);
+  }
+
+  /* The sections as buttons — the tabs over the list, and the choice on the
+     save forms. Settings' Appearance look, already measured in every accent,
+     but wrapping rather than a fixed grid: five names do not fit one row on
+     a 320px phone. */
+  .sec-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .sec-row button {
+    min-height: 44px;
+    padding: 0 12px;
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .04em;
+    color: var(--ink-2);
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .sec-row button[aria-pressed="true"] {
+    color: var(--ink);
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .sec-row .n { margin-left: 4px; }
+  .sec-k {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .sec-pick { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+  .pan-tabs { margin-bottom: 2px; }
+  .pan-group h4 {
+    margin: 12px 0 0;
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .pan-hint {
+    margin: 4px 0 0;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+  }
 
   .photo-btn {
     display: block;
@@ -2629,7 +2733,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-24.44";
+  var BUILD = "2026-09-28.45";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2723,7 +2827,12 @@
   var estHint = "";        // "you have not filled anything in yet"
   var estSaving = false;   // the name field for saving this estimate as a meal is open
   var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
+  var estSaveSec = "";     // the section chosen for that saved meal, if any
   var pantryForm = null;
+  // Which part of the pantry is on show: "all", a section id, or "none" for
+  // the foods not yet given a section. Transient — the app opens on All, so
+  // nothing saved is ever hidden behind a tab someone forgot they left open.
+  var panTab = "all";
   var coachOpen = null;
   // Gym split editing. Transient view state, never saved: reopening the app
   // should show you your splits, not the half-finished act of renaming one.
@@ -4154,11 +4263,53 @@
     return (t && t.length <= 40) ? t : "";
   }
 
+  // ---------- the pantry's sections ----------
+  // Asked for once the pantry grew: somewhere to look for breakfast things at
+  // breakfast. A food carries `sec` only once it has been given one; foods
+  // saved before sections existed have none and are shown as not sorted
+  // until someone sorts them — never guessed into a meal they may not be.
+  var PAN_SECS = [
+    { id: "breakfast", name: "Breakfast" },
+    { id: "lunch", name: "Lunch" },
+    { id: "dinner", name: "Dinner" },
+    { id: "snacks", name: "Snacks" },
+    { id: "desserts", name: "Desserts" }
+  ];
+  function secName(id) {
+    var hit = null;
+    PAN_SECS.forEach(function (s) { if (s.id === id) hit = s.name; });
+    return hit;
+  }
+  // "" for not sorted — and for an id this build does not know, which keeps
+  // the food in view under Not sorted rather than filed somewhere invisible.
+  function panSec(raw) { return secName(raw.sec) ? raw.sec : ""; }
+  // The five sections as buttons. `attr` names what a press does, so the
+  // pantry form and the meal save row share the look without sharing
+  // handlers.
+  function secButtons(attr, chosen) {
+    return '<div class="sec-row" role="group" aria-label="Save under">' +
+      PAN_SECS.map(function (s) {
+        return '<button type="button" ' + attr + '="' + s.id + '" aria-pressed="' +
+          (chosen === s.id ? 'true' : 'false') + '">' + s.name + '</button>';
+      }).join("") +
+    '</div>';
+  }
+  // Patched in place, never through render(): the fields around these keep
+  // no draft of their own, and the meal's name box would snap back to its
+  // default. A second press on the chosen one clears it.
+  function pressSec(btn, attr) {
+    var on = btn.getAttribute("aria-pressed") !== "true";
+    btn.parentNode.querySelectorAll("[" + attr + "]").forEach(function (b) {
+      b.setAttribute("aria-pressed", b === btn && on ? "true" : "false");
+    });
+    return on ? btn.getAttribute(attr) : "";
+  }
+
   // A meal eaten often goes in the pantry as one entry: its totals as the
   // serving, so + and the quantity sheet work on it like anything else, and
   // its parts kept, so logging it puts a meal in the day rather than one
   // anonymous number. The unit is "meal", a count: two of them is twice.
-  function saveMealToPantry(name, parts) {
+  function saveMealToPantry(name, parts, sec) {
     var items = parts.map(function (x) {
       return { cal: Math.round(Number(x.cal) || 0), pro: Math.round(Number(x.pro) || 0), note: x.note || "" };
     });
@@ -4173,10 +4324,14 @@
     var at = -1;
     store.pantry.forEach(function (x, i) { if (x.name.toLowerCase() === name.toLowerCase()) at = i; });
     var was = at > -1 ? store.pantry[at] : null;
+    // Saving over one without choosing a section keeps the one it had.
+    var into = secName(sec) ? sec : (was && secName(was.sec) ? was.sec : "");
+    if (into) entry.sec = into;
     if (was) { entry.id = was.id; store.pantry[at] = entry; } else store.pantry.push(entry);
     save();
     render();
-    offerUndo((was ? "Updated " : "Saved ") + "\u201c" + name + "\u201d in your pantry", function () {
+    offerUndo((was ? "Updated " : "Saved ") + "\u201c" + name + "\u201d " +
+              (into ? "under " + secName(into) : "in your pantry"), function () {
       var i2 = -1;
       store.pantry.forEach(function (x, i) { if (x === entry) i2 = i; });
       if (i2 > -1) { if (was) store.pantry[i2] = was; else store.pantry.splice(i2, 1); }
@@ -4505,7 +4660,9 @@
                   'placeholder="Name it — Usual lunch" aria-label="Name this meal">' +
                 '<button class="btn" id="estSaveGo">Save</button>' +
                 '<button class="btn ghost" id="estSaveCancel">Cancel</button>' +
-              '</div>'
+              '</div>' +
+              '<div class="sec-pick"><span class="sec-k">Save under</span>' +
+                secButtons("data-estsec", estSaveSec) + '</div>'
             : '<button class="meal-save" id="estSave">Save this meal to your pantry</button>') +
           (estHint && est ? '<p class="rev-assume" style="color:var(--miss)">' + esc(estHint) + '</p>' : '') +
           '<div class="rev-actions">' +
@@ -4641,7 +4798,14 @@
             (unpricedPart(f.items.map(function (x) {
                 return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; }))
               ? '<span class="meal-note">Numbers on every part to save it</span>'
-              : '<button data-savemeal="' + esc(f.id) + '">Save to pantry</button>') +
+              // a picker, not a button: choosing where it goes is the save
+              : '<label class="meal-pick">Save to pantry ▾' +
+                  '<select data-savemealsec="' + esc(f.id) + '" aria-label="Save this meal to your pantry, under">' +
+                    '<option value="" selected disabled>Save under…</option>' +
+                    PAN_SECS.map(function (s) {
+                      return '<option value="' + s.id + '">' + s.name + '</option>';
+                    }).join("") +
+                  '</select></label>') +
             '<button data-split="' + esc(f.id) + '">Split apart</button>' +
           '</div>' +
           (mealRenaming === f.id
@@ -5053,13 +5217,16 @@
           estHint = "Put numbers on \u201c" + gap + "\u201d first \u2014 a saved meal is only as good as what\u2019s in it.";
           render(); return;
         }
-        estHint = ""; estSaving = true; render();
+        estHint = ""; estSaving = true; estSaveSec = ""; render();
         var f = document.getElementById("estSaveName");
         if (f) { f.focus(); f.select(); }
       });
     }
     var estSaveCancel = document.getElementById("estSaveCancel");
     if (estSaveCancel) estSaveCancel.addEventListener("click", function () { estSaving = false; render(); });
+    view.querySelectorAll("[data-estsec]").forEach(function (b) {
+      b.addEventListener("click", function () { estSaveSec = pressSec(b, "data-estsec"); });
+    });
     var estSaveGo = document.getElementById("estSaveGo");
     if (estSaveGo) {
       estSaveGo.addEventListener("click", function () {
@@ -5067,7 +5234,7 @@
         var nm = (f.value || "").trim();
         if (!nm) { f.focus(); return; }
         estSaving = false;
-        saveMealToPantry(nm, estParts());
+        saveMealToPantry(nm, estParts(), estSaveSec);
       });
     }
 
@@ -6151,7 +6318,15 @@
       return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
     });
 
-    var rows = list.map(function (raw) {
+    // How many in each section, and how many not yet sorted. A tab left on
+    // something that no longer exists falls back to All rather than showing
+    // an empty list with nothing to say why.
+    var counts = { all: list.length, none: 0 };
+    PAN_SECS.forEach(function (s) { counts[s.id] = 0; });
+    list.forEach(function (raw) { counts[panSec(raw) || "none"]++; });
+    if (panTab === "none" ? !counts.none : panTab !== "all" && !secName(panTab)) panTab = "all";
+
+    function rowHtml(raw) {
       var n = normPantry(raw);
       var bad = n.k && (n.k > 900 || n.p > 90);
 
@@ -6175,6 +6350,19 @@
         : '<button class="add" data-addpan="' + raw.id + '" aria-label="Add ' +
             esc(raw.name) + ' to this day">+</button>';
 
+      // Where it lives, and the way to change that: the technique box's trick
+      // of a native picker made invisible over a short label, so the row
+      // stays narrow and the picker still names every section in full.
+      var sec = panSec(raw);
+      var move = '<label class="mv' + (sec ? '' : ' is-unsorted') + '">' + (sec ? 'Move' : 'Sort') + ' ▾' +
+        '<select data-movepan="' + raw.id + '" aria-label="' +
+          (sec ? 'Move ' + esc(raw.name) + ' to another section' : 'Choose a section for ' + esc(raw.name)) + '">' +
+          (sec ? '' : '<option value="" selected disabled>Pick a section</option>') +
+          PAN_SECS.map(function (s) {
+            return '<option value="' + s.id + '"' + (s.id === sec ? ' selected' : '') + '>' + s.name + '</option>';
+          }).join("") +
+        '</select></label>';
+
       return '<div class="pan-item"' + (bad ? ' style="background:var(--miss-bg)"' : '') + '>' +
         addBtn +
         '<span class="nm">' + esc(raw.name) + '</span>' +
@@ -6182,8 +6370,45 @@
         '<span class="sub"' + (bad ? ' style="color:var(--miss)"' : '') + '>' + esc(sub) + '</span>' +
         '<button class="rm" data-' + (bad ? 'fixpan' : 'rmpan') + '="' + raw.id + '">' +
           (bad ? "Fix" : "Remove") + '</button>' +
+        move +
       '</div>';
-    }).join("");
+    }
+
+    // All shows every section under its own heading, in the order a day runs;
+    // a section's tab shows just that section. Foods with no section yet come
+    // last, under a heading that says what to do about them.
+    function group(name, items, hint) {
+      return items.length
+        ? '<div class="pan-group"><h4>' + name + '</h4>' +
+            (hint ? '<p class="pan-hint">' + hint + '</p>' : '') +
+            items.map(rowHtml).join("") + '</div>'
+        : '';
+    }
+    var unsorted = list.filter(function (raw) { return !panSec(raw); });
+    var SORT_HINT = "No section yet. Tap Sort on each to give it one.";
+    var rows = panTab === "all"
+      ? PAN_SECS.map(function (s) {
+          return group(s.name, list.filter(function (raw) { return panSec(raw) === s.id; }));
+        }).join("") + group("Not sorted", unsorted, SORT_HINT)
+      : panTab === "none"
+        ? '<p class="pan-hint">' + SORT_HINT + '</p>' + unsorted.map(rowHtml).join("")
+        : list.filter(function (raw) { return panSec(raw) === panTab; }).map(rowHtml).join("") ||
+          '<p class="empty">Nothing under ' + secName(panTab) + ' yet. Choose ' + secName(panTab) +
+            ' when you save a food, or tap Move on one under All.</p>';
+
+    // The tabs: All, the five sections, and Not sorted only while something
+    // is. The count says where things are before anything is tapped.
+    function tab(id, name, n) {
+      return '<button type="button" data-pantab="' + id + '" aria-pressed="' + (panTab === id ? 'true' : 'false') + '">' +
+        name + (n ? ' <span class="n">' + n + '</span>' : '') + '</button>';
+    }
+    var tabs = list.length
+      ? '<div class="sec-row pan-tabs" role="group" aria-label="Show">' +
+          tab("all", "All", counts.all) +
+          PAN_SECS.map(function (s) { return tab(s.id, s.name, counts[s.id]); }).join("") +
+          (counts.none ? tab("none", "Not sorted", counts.none) : '') +
+        '</div>'
+      : '';
 
     var photoBlock = "";
     if (pantryShot && pantryShot.status === "loading") {
@@ -6224,6 +6449,9 @@
     }).join("");
 
     var f = pantryForm || { name: "", servingG: "", cal: "", pro: "" };
+    // Standing in a section's tab, a new food starts out filed under it —
+    // the obvious place for it — and a press on another changes that.
+    var formSec = f.sec !== undefined ? f.sec : (secName(panTab) ? panTab : "");
 
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:12px">' +
@@ -6262,6 +6490,8 @@
           '</div>' +
           '<p class="est-note">For anything pre-made, leave it at <strong>1</strong> and pick the container — bottle, bar, can. ' +
             'Only reach for grams or ounces when it’s something you actually portion out yourself, like rice or meat.</p>' +
+          '<div class="field"><span class="sec-k">Save under</span>' +
+            secButtons("data-pansec", formSec) + '</div>' +
           '<p class="est-note" id="panWarn" hidden style="color:var(--miss)"></p>' +
           '<button class="btn" id="savePan">Save to pantry</button>' +
         '</div>' +
@@ -6269,6 +6499,7 @@
 
       '<section style="display:flex;flex-direction:column;gap:8px">' +
         '<span class="eyebrow">' + (list.length ? list.length + (list.length === 1 ? ' food saved' : ' foods saved') : 'Nothing saved yet') + '</span>' +
+        tabs +
         (rows || '<p class="empty">Foods you save here are matched first — ahead of the built-in reference — every time you describe a meal.</p>') +
       '</section>' +
 
@@ -6317,8 +6548,10 @@
         if (!raw) return;
         var n = normPantry(raw);
         // Keep the numbers, drop the bad weight, let him name the container.
+        // And keep its section: fixing a number is not refiling it.
         pantryForm = { name: raw.name, servingG: "1", unit: "bottle",
-                       cal: String(Math.round(n.sCal)), pro: String(Math.round(n.sPro)) };
+                       cal: String(Math.round(n.sCal)), pro: String(Math.round(n.sPro)),
+                       sec: panSec(raw) };
         store.pantry = store.pantry.filter(function (x) { return x.id !== b.dataset.fixpan; });
         save(); render();
         var nameEl = document.getElementById("panName");
@@ -6375,7 +6608,11 @@
         serve = 1;
       }
 
-      store.pantry.push({
+      // The section is read off the buttons as they stand, because that is
+      // what was on screen when Save was pressed.
+      var chosen = view.querySelector('[data-pansec][aria-pressed="true"]');
+      var sec = chosen ? chosen.getAttribute("data-pansec") : "";
+      var entry = {
         id: uid(),
         name: name,
         serveQty: serve,
@@ -6384,16 +6621,54 @@
         sCal: kcal,
         sPro: pro,
         aliases: []
-      });
+      };
+      if (secName(sec)) entry.sec = sec;
+      store.pantry.push(entry);
       pantryForm = null;
       pantryShot = null;
-      save(); render();
+      // Saved while looking at another section's tab, the new food would land
+      // somewhere off screen — the Add button that saved perfectly and said
+      // nothing. So the list follows it, and the bar says where it went.
+      if (panTab !== "all") panTab = entry.sec || "none";
+      var ok = save(); render();
+      if (ok) notify("Saved " + name + (entry.sec ? " under " + secName(entry.sec) : " to your pantry"));
       // Said after the redraw, because render() rebuilt the element. Changing
       // what someone typed and not mentioning it is its own kind of silence.
       if (normalised) {
         var w2 = document.getElementById("panWarn");
         if (w2) { w2.hidden = false; w2.textContent = normalised; }
       }
+    });
+
+    view.querySelectorAll("[data-pantab]").forEach(function (b) {
+      b.addEventListener("click", function () { panTab = b.getAttribute("data-pantab"); render(); });
+    });
+    view.querySelectorAll("[data-pansec]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        pantryForm = pantryForm || { name: "", servingG: "", cal: "", pro: "", unit: "" };
+        pantryForm.sec = pressSec(b, "data-pansec");
+      });
+    });
+
+    // Moving a food changes where it is filed and nothing else. It can leave
+    // the list on screen when a section's tab is open, so the bar says where
+    // it went, and undo puts it back where it was — including nowhere.
+    view.querySelectorAll("[data-movepan]").forEach(function (sel) {
+      sel.addEventListener("change", function () {
+        var id = sel.getAttribute("data-movepan"), raw = null;
+        store.pantry.forEach(function (x) { if (x.id === id) raw = x; });
+        if (!raw || !secName(sel.value) || sel.value === panSec(raw)) return;
+        var had = raw.sec, from = panSec(raw);
+        raw.sec = sel.value;
+        save(); render();
+        offerUndo((from ? "Moved " + raw.name + " to " : "Put " + raw.name + " under ") + secName(raw.sec), function () {
+          store.pantry.forEach(function (x) {
+            if (x.id !== id) return;
+            if (had === undefined) delete x.sec; else x.sec = had;
+          });
+          save(); render();
+        });
+      });
     });
 
     // Straight from the pantry into the day, no retyping — but ask how much
@@ -6572,7 +6847,9 @@
           servingG: got.servingGrams > 0 ? String(got.servingGrams) : "1",
           unit: got.servingGrams > 0 ? "g" : "bottle",
           cal: got.calories ? String(got.calories) : "",
-          pro: got.protein ? String(got.protein) : ""
+          pro: got.protein ? String(got.protein) : "",
+          // a section already chosen survives the label being read
+          sec: pantryForm ? pantryForm.sec : undefined
         };
         pantryShot = (got.calories && got.protein) ? null
           : { status: "error", message: "Read what it could — fill in the blanks and give it a name before saving." };
@@ -6618,7 +6895,8 @@
           servingG: grams > 0 ? String(grams) : "1",
           unit: grams > 0 ? "g" : "bottle",
           cal: out.calories ? String(Math.round(Number(out.calories))) : "",
-          pro: out.protein ? String(Math.round(Number(out.protein))) : ""
+          pro: out.protein ? String(Math.round(Number(out.protein))) : "",
+          sec: pantryForm ? pantryForm.sec : undefined
         };
         pantryShot = null;
       }
@@ -6979,9 +7257,6 @@
       if (el.getAttribute && el.getAttribute("data-renamemeal")) {
         return { kind: "renamemeal", id: el.getAttribute("data-renamemeal") };
       }
-      if (el.getAttribute && el.getAttribute("data-savemeal")) {
-        return { kind: "savemeal", id: el.getAttribute("data-savemeal") };
-      }
       el = el.parentNode;
     }
     return null;
@@ -7021,14 +7296,21 @@
       takeOutOfMeal(a.id);
     } else if (a.kind === "renamemeal") {
       renameMeal(a.id);
-    } else if (a.kind === "savemeal") {
-      var at = locate(day(ymd(cursor)), a.id);
-      if (!at || !isMeal(at.row)) return;
-      var parts = at.row.items.map(function (x) { return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; });
-      if (unpricedPart(parts)) return;   // not offered; a note sits in its place
-      // Its name as it reads in the day; "Name this meal" first to change it.
-      saveMealToPantry(rowNote(at.row) || "Saved meal", parts);
     }
+  });
+
+  // Save to pantry on a meal already in the day is a picker, so the section
+  // chosen is the save — one choice, not a button and then a second question.
+  // Opening it and backing out chooses nothing, and nothing happens.
+  view.addEventListener("change", function (e) {
+    var sel = e.target;
+    if (!sel || !sel.getAttribute || !sel.getAttribute("data-savemealsec")) return;
+    var at = locate(day(ymd(cursor)), sel.getAttribute("data-savemealsec"));
+    if (!secName(sel.value) || !at || !isMeal(at.row)) return;
+    var parts = at.row.items.map(function (x) { return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; });
+    if (unpricedPart(parts)) return;   // not offered; a note sits in its place
+    // Its name as it reads in the day; "Name this meal" first to change it.
+    saveMealToPantry(rowNote(at.row) || "Saved meal", parts, sel.value);
   });
   // ---------- drag a row onto another to combine them ----------
   // A press-and-hold starts the drag rather than a plain drag, so an ordinary

@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~635 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~660 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -346,7 +346,9 @@ to win. It was proven by putting the old colour back and watching it fail.
 It also fails if the fixture stops painting any of the three looks of the set
 to beat — to beat, beaten, and beaten on a folded card — and `mobile` does the
 same for their fit, so a fixture edit cannot quietly turn either into a check
-of nothing.
+of nothing. The pantry's sections carry the same guard: tabs, a chosen tab, a
+heading, the not-sorted hint, Sort and Move must all be on screen, and the
+walk opens the meal save row with a section chosen.
 
 **The app is installed, not just bookmarked.** `manifest.webmanifest` and
 `sw.js` make it a real PWA: standalone display, home-screen icon, and an
@@ -573,6 +575,46 @@ One name is one entry: saving over it says *Updated*, and undo puts the old one
 back. A meal with a part still waiting for numbers cannot be saved, because it
 would bake a zero into every future log of it — and a note stands in the
 button's place rather than a button that cannot work.
+
+**The pantry is filed in sections.** Asked for once it grew: Breakfast,
+Lunch, Dinner, Snacks and Desserts (`PAN_SECS`), in the order a day runs — he
+listed them in another order; this one is for finding things. A food carries
+`sec` only once it has one. The list opens on *All*, each section under its
+own heading, with a tab per section and a count on each, so where things are
+is visible before anything is tapped. `panTab` is transient: the app always
+opens on All, so nothing saved is hidden behind a tab someone forgot they
+left open.
+
+**Nothing is guessed into a section.** Foods saved before sections existed
+carry none and wait under *Not sorted*, with a line saying what to do, and the
+*Not sorted* tab exists only while something is. An id this build does not
+know — a newer backup — displays as not sorted and is kept as it is: shown,
+not lost, and not rewritten until someone chooses.
+
+**Saving says where it went.** The form has *Save under* buttons, starting on
+the section whose tab you are standing in. Saved under Lunch while Breakfast is
+showing, the new food would land off screen — the Add that saved perfectly and
+said nothing — so the list follows it to its tab and `notify()` names the
+section. Saving a meal from the estimate asks with the same buttons; on a meal
+already in the day, *Save to pantry* is a picker, so choosing the section is the
+save. Saving over a meal of the same name without choosing keeps its section.
+
+**Moving is a picker, not a mode.** *Move ▾* — *Sort ▾*, in the accent, for a
+food with no section — sits under Remove: the technique box's invisible native
+picker over a short label. It changes `sec` and nothing else, says where the
+food went, and undo puts it back, including back to no section at all. The
+row was rearranged for it: Remove beside the name, Move beside the two lines
+under it. Two 44px targets stacked need 91px; stacking them under the name as
+well came out at 134px a row. The section buttons flip `aria-pressed` in place
+through `pressSec()` rather than calling `render()`, because the meal's name box
+keeps no draft and would snap back to its default — the checklist ticks' rule.
+
+**A `1fr` column will not shrink below its longest unbreakable line.** The
+pantry row's middle column was `1fr` and its macros line `nowrap`, so
+`420 kcal · 38 g /container` pushed the page wider than a 320px phone — which
+then zooms the whole app out, and every tap `mobile` made landed somewhere
+else. Any long unit could always do it; it took the sections fixture's
+container to show it. The column is `minmax(0, 1fr)` and the line may wrap.
 
 **Compared with last time.** A sheet, from *Compare with last time* under the
 movements. The session is set against the last session of the **same split**

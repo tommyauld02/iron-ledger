@@ -43,8 +43,14 @@ def fixture(theme=None, accent=None):
          "moves": None, "goal": G, "region": "United States",
          "supps": [{"id": "s1", "name": "Creatine", "dose": "5 g"},
                    {"id": "s2", "name": "Zinc", "dose": "50 mg"}],
+         # sorted and not: the tabs, a heading, the hint and Sort in the
+         # accent all exist only once the pantry has sections in it
          "pantry": [{"id": "p", "name": "protein coffee", "serveQty": 1, "serveUnit": "bottle",
-                     "serveG": None, "sCal": 130, "sPro": 30, "aliases": []}], "v": 1}
+                     "serveG": None, "sCal": 130, "sPro": 30, "aliases": []},
+                    {"id": "p2", "name": "Eggs", "serveQty": 1, "serveUnit": "egg",
+                     "serveG": None, "sCal": 72, "sPro": 6, "aliases": [], "sec": "breakfast"},
+                    {"id": "p3", "name": "Ice cream sandwich", "serveQty": 1, "serveUnit": "piece",
+                     "serveG": None, "sCal": 180, "sPro": 3, "aliases": [], "sec": "desserts"}], "v": 1}
     P = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
     s["days"][P] = {"food": [], "updated": 1, "goal": G, "workoutMs": 40 * 60000,
         # last time's sets decide the line under each open card: Barbell Row
@@ -121,6 +127,21 @@ def walk(p, label):
             p.locator(".meal-open").first.click(); p.wait_for_timeout(300)
         low = p.evaluate(LOW)
         if low: found.append("%s: %s" % (tab, low))
+        if tab == "pantry":
+            # the sections have looks of their own, and a chosen one in the
+            # form sits on the form's ground rather than the page's
+            painted = p.evaluate("""()=>({
+              tabs: document.querySelectorAll('[data-pantab]').length,
+              chosen: document.querySelectorAll('[data-pantab][aria-pressed=true]').length,
+              heading: document.querySelectorAll('.pan-group h4').length,
+              hint: document.querySelectorAll('.pan-hint').length,
+              sort: document.querySelectorAll('.pan-item .mv.is-unsorted').length,
+              move: document.querySelectorAll('.pan-item .mv:not(.is-unsorted)').length})""")
+            for k, n in painted.items():
+                if not n: found.append("pantry: the %s state is not on screen" % k)
+            p.click('[data-pansec="snacks"]'); p.wait_for_timeout(100)
+            low = p.evaluate(LOW)
+            if low: found.append("pantry (section chosen): %s" % low)
         if tab == "gym":
             # the set to beat has three looks, and a state the fixture stops
             # painting is a state this suite stops measuring — so say so
@@ -157,6 +178,12 @@ def walk(p, label):
             p.fill("#estText", "chicken and rice"); p.click("#runEst"); p.wait_for_timeout(900)
             low = p.evaluate(LOW)
             if low: found.append("estimate review: %s" % low)
+            # saving it as a meal opens a row of sections, one of them chosen
+            p.click("#estSave"); p.wait_for_timeout(250)
+            p.click('[data-estsec="lunch"]'); p.wait_for_timeout(100)
+            low = p.evaluate(LOW)
+            if low: found.append("meal save row: %s" % low)
+            p.click("#estSaveCancel"); p.wait_for_timeout(200)
             p.click("#discardEst"); p.wait_for_timeout(300)
     p.click("#setBtn"); p.wait_for_timeout(350)
     low = p.evaluate(LOW)

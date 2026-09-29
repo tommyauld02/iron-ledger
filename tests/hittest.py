@@ -38,9 +38,12 @@ store = {
                   {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
         "updated": 1, "goal": G}},
     "moves": None, "goal": G, "region": "United States",
+    # one sorted and one not, so the section tabs, Move and Sort are all hit
     "pantry": [{"id": "p1", "name": "costco protein coffee", "serveQty": 1,
                 "serveUnit": "bottle", "serveG": None, "sCal": 130, "sPro": 30,
-                "aliases": []}],
+                "aliases": []},
+               {"id": "p2", "name": "Eggs", "serveQty": 1, "serveUnit": "egg",
+                "serveG": None, "sCal": 72, "sPro": 6, "aliases": [], "sec": "breakfast"}],
     "v": 1}
 
 HITTEST = """() => {
