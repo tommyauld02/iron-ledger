@@ -2001,6 +2001,81 @@ with sync_playwright() as pw:
           "session ·" in q.eval_on_selector(".cal-cell.is-today","e=>e.title"), q.eval_on_selector(".cal-cell.is-today","e=>e.title"))
     c.close()
 
+    # ---------- THE SECTIONS ARE YOURS ----------
+    # Asked for next: someone who never eats breakfast should be able to take
+    # it away, and anyone should be able to rename one or add their own.
+    YG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    def yitem(i, name, cal, pro, unit="bottle", **kw):
+        x={"id":i,"name":name,"serveQty":1,"serveUnit":unit,"serveG":None,"sCal":cal,"sPro":pro,"aliases":[]}
+        x.update(kw)
+        return x
+    YOURS={"days":{Ts:{"food":[{"id":"m1","note":"Chicken and rice","items":[
+                {"id":"i1","cal":284,"pro":53,"note":"Chicken breast"},{"id":"i2","cal":205,"pro":4,"note":"White rice"}]}],
+             "updated":1,"goal":YG}},
+           "moves":None,"goal":YG,"region":"United States","v":1,"pantry":[
+             yitem("p1","Eggs",72,6,"egg",secs=["breakfast"]),
+             yitem("p2","Ice cream sandwich",180,3,"piece",secs=["desserts"])]}
+    YTABS="()=>[...document.querySelectorAll('[data-pantab]')].map(b=>b.textContent)"
+    YST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
+    YSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("yours: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", YOURS)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    eb=q.locator("#editPanSecs").bounding_box()
+    check("yours: Edit sections is offered, a proper target", eb is not None and eb["height"]>=MIN_TAP)
+    check("yours: nothing is written until something changes", q.evaluate(YST).get("panSecs") is None)
+    q.click("#editPanSecs"); q.wait_for_timeout(250)
+    check("yours: each section is a name to change",
+          q.eval_on_selector_all("[data-secname]","e=>e.map(x=>x.value)")==["Breakfast","Lunch","Dinner","Snacks","Desserts"])
+    small=q.evaluate("""()=>[...document.querySelectorAll('[data-secname],[data-rmsec],#newSecName,#addSec')]
+        .filter(e=>{const r=e.getBoundingClientRect();return r.height<43.5||r.width<43.5;}).map(e=>e.id||e.textContent)""")
+    zoomy=q.evaluate("()=>[...document.querySelectorAll('[data-secname],#newSecName')].filter(e=>parseFloat(getComputedStyle(e).fontSize)<16).length")
+    check("yours: every field and button is a proper target, and none zooms the page", not small and not zoomy, str(small))
+    q.fill('[data-secname="breakfast"]',"Brunch"); q.press('[data-secname="breakfast"]',"Tab"); q.wait_for_timeout(250)
+    check("yours: renaming keeps the section, so its foods follow",
+          q.evaluate(YST)["panSecs"][0]=={"id":"breakfast","name":"Brunch"}
+          and q.evaluate(YST)["pantry"][0].get("secs")==["breakfast"])
+    q.fill('[data-secname="lunch"]',"   "); q.press('[data-secname="lunch"]',"Tab"); q.wait_for_timeout(250)
+    check("yours: an empty name is not a name", q.evaluate(YST)["panSecs"][1]["name"]=="Lunch")
+    q.click('[data-rmsec="desserts"]'); q.wait_for_timeout(250)
+    check("yours: taking one away says its foods stay",
+          q.evaluate(YSAYS)=="Took away Desserts \u2014 its foods are still in All", q.evaluate(YSAYS))
+    q.fill("#newSecName","Pre-workout"); q.press("#newSecName","Enter"); q.wait_for_timeout(250)
+    check("yours: a new one is added, and says so",
+          q.evaluate(YST)["panSecs"][-1]["name"]=="Pre-workout" and q.evaluate(YSAYS)=="Added Pre-workout")
+    check("yours: ready for the next", q.evaluate("()=>document.activeElement&&document.activeElement.id")=="newSecName")
+    q.click("#editPanSecs"); q.wait_for_timeout(250)
+    check("yours: the tabs are the sections as they now stand",
+          q.evaluate(YTABS)==["All 2","Brunch 1","Lunch","Dinner","Snacks","Pre-workout"], str(q.evaluate(YTABS)))
+    check("yours: the food from a section taken away is still in All",
+          "Ice cream sandwich" in q.eval_on_selector_all(".pan-item .nm","e=>e.map(x=>x.childNodes[0].textContent)"))
+    check("yours: and the form offers the new one",
+          q.eval_on_selector_all("[data-pansec]","e=>e.map(x=>x.textContent)")==["Brunch","Lunch","Dinner","Snacks","Pre-workout"])
+    q.click("#undoBtn"); q.wait_for_timeout(250); q.click("#undoBtn"); q.wait_for_timeout(250)
+    check("yours: undo takes the new one back, then brings the old one back with its food",
+          q.evaluate(YTABS)==["All 2","Brunch 1","Lunch","Dinner","Snacks","Desserts 1"], str(q.evaluate(YTABS)))
+    q.click("#editPanSecs"); q.wait_for_timeout(250)
+    while q.locator("[data-rmsec]").count():
+        q.locator("[data-rmsec]").first.click(); q.wait_for_timeout(200)
+    q.click("#editPanSecs"); q.wait_for_timeout(250)
+    check("yours: with none at all there are no tabs, no choices and no Meals",
+          q.evaluate(YTABS)==[] and q.locator("[data-pansec]").count()==0 and q.locator("[data-panmeals]").count()==0)
+    check("yours: and every food is kept", len(q.evaluate(YST)["pantry"])==2)
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    q.locator(".meal-open").first.click(); q.wait_for_timeout(300)
+    q.click("[data-savemealnow]"); q.wait_for_timeout(300)
+    check("yours: a meal in the day can still be saved, with nothing to choose",
+          any(x["name"]=="Chicken and rice" for x in q.evaluate(YST)["pantry"]) and "in your pantry" in q.evaluate(YSAYS))
+    q.reload(); q.wait_for_timeout(900)
+    check("yours: they are kept, not just drawn", q.evaluate(YST)["panSecs"]==[])
+    c.close()
+
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:
         print("%-6s %-42s %s" % (st,name,detail))

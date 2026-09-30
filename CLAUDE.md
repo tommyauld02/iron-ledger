@@ -603,6 +603,23 @@ in the day, *Save to pantry* is a picker, so the one section chosen is the
 save, and more can be added from the pantry. Saving over a meal of the same
 name without choosing keeps the sections it had.
 
+**The sections themselves are the owner's.** Someone who never eats
+breakfast takes it away; someone who trains early adds a pre-workout. *Edit
+sections*, over the list, is the Gym tab's *Edit splits* in miniature: each
+name is a field that renames on change — the id stays, so every food in it
+follows — Remove takes one away, and a field at the foot adds one.
+`store.panSecs` holds them once anything is changed; until then the starting
+five stand in (`panSections()`), so nothing is written for no reason.
+
+Taking a section away does not touch a single food. Its id stays on every food
+that was in it — unknown to the list, so shown nowhere and lost nowhere — and
+undo puts the section back with its foods already in it. With no sections at
+all there are no tabs, no choices on the forms and no Meals button, and a meal
+already in the day is saved with a plain button, since there is nothing to
+choose. Names are typed now, not written into the code, so everywhere one is
+drawn it goes through `esc()`. A restore brings the sections with it, the way
+it brings the routine.
+
 **A food's meals are changed on its own row.** *Meals ▾* sits under Remove and
 opens the five as buttons on the row, with Done. Each press is its own change,
 said out loud and undoable. The food being edited stays in view even once it

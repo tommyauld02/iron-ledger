@@ -149,6 +149,11 @@ def walk(p, label):
             low = p.evaluate(LOW)
             if low: found.append("pantry (choosing meals): %s" % low)
             p.click("#panEditDone"); p.wait_for_timeout(150)
+            # editing the sections themselves only exists after a press
+            p.click("#editPanSecs"); p.wait_for_timeout(250)
+            low = p.evaluate(LOW)
+            if low: found.append("pantry (editing sections): %s" % low)
+            p.click("#editPanSecs"); p.wait_for_timeout(150)
         if tab == "gym":
             # the set to beat has three looks, and a state the fixture stops
             # painting is a state this suite stops measuring — so say so

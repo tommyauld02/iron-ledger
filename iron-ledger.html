@@ -1314,6 +1314,8 @@
   }
   .sec-pick { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
   .pan-tabs { margin-bottom: 2px; }
+  .sec-edit-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+  .sec-new { grid-template-columns: 1fr auto; }
 
   .photo-btn {
     display: block;
@@ -2777,7 +2779,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-29.48";
+  var BUILD = "2026-09-29.49";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2884,6 +2886,7 @@
   // forgot they left open.
   var panTab = "all";
   var panEditing = null;   // the food whose meals are being chosen, if any
+  var panSecEdit = false;  // the sections themselves are being edited
   var coachOpen = null;
   // Gym split editing. Transient view state, never saved: reopening the app
   // should show you your splits, not the half-finished act of renaming one.
@@ -4343,16 +4346,29 @@
   // coffee is breakfast *and* a snack. So a food is in as many sections as it
   // is eaten at — or none, and then it simply lives under All, as every food
   // did before sections existed. Nothing is guessed into one.
-  var PAN_SECS = [
+  var PAN_SECS_START = [
     { id: "breakfast", name: "Breakfast" },
     { id: "lunch", name: "Lunch" },
     { id: "dinner", name: "Dinner" },
     { id: "snacks", name: "Snacks" },
     { id: "desserts", name: "Desserts" }
   ];
+  // And the sections themselves are the owner's, not the app's: someone who
+  // never eats breakfast takes it away, someone who trains early adds a
+  // pre-workout. `store.panSecs` holds them once anything is changed; until
+  // then the five above stand in, so nothing is written for no reason.
+  function panSections() {
+    return Array.isArray(store.panSecs) ? store.panSecs : PAN_SECS_START;
+  }
+  function ownSections() {
+    if (!Array.isArray(store.panSecs)) {
+      store.panSecs = PAN_SECS_START.map(function (x) { return { id: x.id, name: x.name }; });
+    }
+    return store.panSecs;
+  }
   function secName(id) {
     var hit = null;
-    PAN_SECS.forEach(function (s) { if (s.id === id) hit = s.name; });
+    panSections().forEach(function (s) { if (s.id === id) hit = s.name; });
     return hit;
   }
   // `secs` is the list. `sec` is how b45 stored its one section; it is read
@@ -4363,14 +4379,15 @@
   // The sections this build knows, in the order a day runs.
   function panSecs(raw) {
     var have = rawSecs(raw);
-    return PAN_SECS.filter(function (s) { return have.indexOf(s.id) > -1; })
+    return panSections().filter(function (s) { return have.indexOf(s.id) > -1; })
                    .map(function (s) { return s.id; });
   }
-  // An id this build does not know — a newer backup — is kept as it is while
-  // the known ones are changed around it: shown nowhere, lost nowhere.
+  // An id this build does not know — a newer backup, or a section since
+  // taken away — is kept as it is while the known ones are changed around it:
+  // shown nowhere, lost nowhere, and back the moment the section is.
   function setPanSecs(raw, ids) {
     var next = rawSecs(raw).filter(function (id) { return !secName(id); })
-      .concat(PAN_SECS.filter(function (s) { return ids.indexOf(s.id) > -1; })
+      .concat(panSections().filter(function (s) { return ids.indexOf(s.id) > -1; })
                       .map(function (s) { return s.id; }));
     delete raw.sec;
     if (next.length) raw.secs = next; else delete raw.secs;
@@ -4386,9 +4403,9 @@
   // row share the look without sharing handlers.
   function secButtons(attr, chosen, label) {
     return '<div class="sec-row" role="group" aria-label="' + (label || "Which meals it is for") + '">' +
-      PAN_SECS.map(function (s) {
-        return '<button type="button" ' + attr + '="' + s.id + '" aria-pressed="' +
-          (chosen.indexOf(s.id) > -1 ? 'true' : 'false') + '">' + s.name + '</button>';
+      panSections().map(function (s) {
+        return '<button type="button" ' + attr + '="' + esc(s.id) + '" aria-pressed="' +
+          (chosen.indexOf(s.id) > -1 ? 'true' : 'false') + '">' + esc(s.name) + '</button>';
       }).join("") +
     '</div>';
   }
@@ -4766,8 +4783,10 @@
                 '<button class="btn" id="estSaveGo">Save</button>' +
                 '<button class="btn ghost" id="estSaveCancel">Cancel</button>' +
               '</div>' +
-              '<div class="sec-pick"><span class="sec-k">Which meals is it for?</span>' +
-                secButtons("data-estsec", estSaveSecs) + '</div>'
+              (panSections().length
+                ? '<div class="sec-pick"><span class="sec-k">Which meals is it for?</span>' +
+                    secButtons("data-estsec", estSaveSecs) + '</div>'
+                : '')
             : '<button class="meal-save" id="estSave">Save this meal to your pantry</button>') +
           (estHint && est ? '<p class="rev-assume" style="color:var(--miss)">' + esc(estHint) + '</p>' : '') +
           '<div class="rev-actions">' +
@@ -4904,13 +4923,16 @@
                 return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; }))
               ? '<span class="meal-note">Numbers on every part to save it</span>'
               // a picker, not a button: choosing where it goes is the save
-              : '<label class="meal-pick">Save to pantry ▾' +
-                  '<select data-savemealsec="' + esc(f.id) + '" aria-label="Save this meal to your pantry, under">' +
-                    '<option value="" selected disabled>Save under…</option>' +
-                    PAN_SECS.map(function (s) {
-                      return '<option value="' + s.id + '">' + s.name + '</option>';
-                    }).join("") +
-                  '</select></label>') +
+              : panSections().length
+                ? '<label class="meal-pick">Save to pantry ▾' +
+                    '<select data-savemealsec="' + esc(f.id) + '" aria-label="Save this meal to your pantry, under">' +
+                      '<option value="" selected disabled>Save under…</option>' +
+                      panSections().map(function (s) {
+                        return '<option value="' + esc(s.id) + '">' + esc(s.name) + '</option>';
+                      }).join("") +
+                    '</select></label>'
+                // with no sections there is nothing to choose, so it just saves
+                : '<button data-savemealnow="' + esc(f.id) + '">Save to pantry</button>') +
             '<button data-split="' + esc(f.id) + '">Split apart</button>' +
           '</div>' +
           (mealRenaming === f.id
@@ -6544,7 +6566,7 @@
     // How many in each section — a food in two counts in both. A tab left on
     // something that no longer exists falls back to All.
     var counts = { all: list.length };
-    PAN_SECS.forEach(function (s) { counts[s.id] = 0; });
+    panSections().forEach(function (s) { counts[s.id] = 0; });
     list.forEach(function (raw) { panSecs(raw).forEach(function (id) { counts[id]++; }); });
     if (panTab !== "all" && !secName(panTab)) panTab = "all";
     if (panEditing && !list.some(function (raw) { return raw.id === panEditing; })) panEditing = null;
@@ -6577,8 +6599,8 @@
       // row — Meals opens the five as buttons, any number of them on.
       var secs = panSecs(raw);
       var editing = panEditing === raw.id;
-      var tags = secs.length ? '<span class="tags">' + secList(secs) + '</span>' : '';
-      var meals = '<button class="mv" data-panmeals="' + raw.id + '" aria-expanded="' + (editing ? 'true' : 'false') +
+      var tags = secs.length ? '<span class="tags">' + esc(secList(secs)) + '</span>' : '';
+      var meals = !panSections().length ? '' : '<button class="mv" data-panmeals="' + raw.id + '" aria-expanded="' + (editing ? 'true' : 'false') +
         '" aria-label="Which meals ' + esc(raw.name) + ' is for">Meals ▾</button>';
       var editor = editing
         ? '<div class="pan-edit"><span class="sec-k">Which meals is it for?</span>' +
@@ -6605,19 +6627,39 @@
       ? list.map(rowHtml).join("")
       : list.filter(function (raw) { return panSecs(raw).indexOf(panTab) > -1 || raw.id === panEditing; })
             .map(rowHtml).join("") ||
-          '<p class="empty">Nothing under ' + secName(panTab) + ' yet. Tap Meals on a food to add it here, ' +
-            'or choose ' + secName(panTab) + ' when you save one.</p>';
+          '<p class="empty">Nothing under ' + esc(secName(panTab)) + ' yet. Tap Meals on a food to add it here, ' +
+            'or choose ' + esc(secName(panTab)) + ' when you save one.</p>';
 
-    // The tabs: All and the five sections. The count says where things are
-    // before anything is tapped.
+    // The tabs: All and the sections. The count says where things are before
+    // anything is tapped. No sections at all means no tabs: All on its own is
+    // not a choice.
     function tab(id, name, n) {
       return '<button type="button" data-pantab="' + id + '" aria-pressed="' + (panTab === id ? 'true' : 'false') + '">' +
         name + (n ? ' <span class="n">' + n + '</span>' : '') + '</button>';
     }
-    var tabs = list.length
+    var tabs = list.length && panSections().length
       ? '<div class="sec-row pan-tabs" role="group" aria-label="Show">' +
           tab("all", "All", counts.all) +
-          PAN_SECS.map(function (s) { return tab(s.id, s.name, counts[s.id]); }).join("") +
+          panSections().map(function (s) { return tab(esc(s.id), esc(s.name), counts[s.id]); }).join("") +
+        '</div>'
+      : '';
+    // Editing the sections: the Gym tab's Edit splits, in miniature. Each name
+    // is a field that renames on change; Remove takes a section away and
+    // leaves its foods in All; a field at the foot adds one.
+    var secEditor = panSecEdit
+      ? '<div class="split-list">' +
+          panSections().map(function (x) {
+            return '<div class="sec-edit-row">' +
+              '<input class="split-name" data-secname="' + esc(x.id) + '" value="' + esc(x.name) +
+                '" aria-label="Name of the section ' + esc(x.name) + '">' +
+              '<button class="split-rm" data-rmsec="' + esc(x.id) + '" aria-label="Remove ' + esc(x.name) + '">Remove</button>' +
+            '</div>';
+          }).join("") +
+          '<div class="split-new sec-new">' +
+            '<input id="newSecName" class="split-name" placeholder="Pre-workout, late night…" aria-label="Name a new section">' +
+            '<button class="btn" id="addSec">Add</button>' +
+          '</div>' +
+          '<p class="est-note">Taking a section away keeps its foods \u2014 they stay under All.</p>' +
         '</div>'
       : '';
 
@@ -6701,16 +6743,21 @@
           '</div>' +
           '<p class="est-note">For anything pre-made, leave it at <strong>1</strong> and pick the container — bottle, bar, can. ' +
             'Only reach for grams or ounces when it’s something you actually portion out yourself, like rice or meat.</p>' +
-          '<div class="field"><span class="sec-k">Which meals is it for?</span>' +
-            secButtons("data-pansec", formSecs) + '</div>' +
+          (panSections().length
+            ? '<div class="field"><span class="sec-k">Which meals is it for?</span>' +
+                secButtons("data-pansec", formSecs) + '</div>'
+            : '') + +
           '<p class="est-note" id="panWarn" hidden style="color:var(--miss)"></p>' +
           '<button class="btn" id="savePan">Save to pantry</button>' +
         '</div>' +
       '</section>' +
 
       '<section style="display:flex;flex-direction:column;gap:8px">' +
-        '<span class="eyebrow">' + (list.length ? list.length + (list.length === 1 ? ' food saved' : ' foods saved') : 'Nothing saved yet') + '</span>' +
-        tabs +
+        '<div class="split-head">' +
+          '<span class="eyebrow">' + (list.length ? list.length + (list.length === 1 ? ' food saved' : ' foods saved') : 'Nothing saved yet') + '</span>' +
+          '<button id="editPanSecs">' + (panSecEdit ? "Done" : "Edit sections") + '</button>' +
+        '</div>' +
+        (panSecEdit ? secEditor : tabs) +
         (rows || '<p class="empty">Foods you save here are matched first — ahead of the built-in reference — every time you describe a meal.</p>') +
       '</section>' +
 
@@ -6853,6 +6900,52 @@
         if (w2) { w2.hidden = false; w2.textContent = normalised; }
       }
     });
+
+    var editPanSecs = document.getElementById("editPanSecs");
+    if (editPanSecs) editPanSecs.addEventListener("click", function () { panSecEdit = !panSecEdit; panEditing = null; render(); });
+    // Renaming keeps the id, so every food in it follows the new name.
+    view.querySelectorAll("[data-secname]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        var id = el.getAttribute("data-secname"), nm = (el.value || "").trim();
+        var sx = ownSections().filter(function (x) { return x.id === id; })[0];
+        if (!sx || !nm) { el.value = sx ? sx.name : ""; return; }   // an empty name is no name
+        if (sx.name === nm) return;
+        sx.name = nm;
+        save(); render();
+      });
+    });
+    view.querySelectorAll("[data-rmsec]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var list = ownSections(), id = b.getAttribute("data-rmsec"), idx = -1;
+        list.forEach(function (x, i) { if (x.id === id) idx = i; });
+        if (idx === -1) return;
+        var gone = list.splice(idx, 1)[0];
+        save(); render();
+        offerUndo("Took away " + gone.name + " \u2014 its foods are still in All", function () {
+          var l2 = ownSections();
+          l2.splice(Math.min(idx, l2.length), 0, gone);
+          save(); render();
+        });
+      });
+    });
+    var newSecEl = document.getElementById("newSecName");
+    function commitNewSec() {
+      var nm = (newSecEl.value || "").trim();
+      if (!nm) { newSecEl.focus(); return; }            // nothing typed is not a section
+      var sx = { id: "s" + uid(), name: nm };
+      ownSections().push(sx);
+      save(); render();
+      offerUndo("Added " + nm, function () {
+        store.panSecs = ownSections().filter(function (x) { return x.id !== sx.id; });
+        save(); render();
+      });
+      var again = document.getElementById("newSecName");
+      if (again) again.focus();                         // ready for the next one
+    }
+    if (newSecEl) {
+      document.getElementById("addSec").addEventListener("click", commitNewSec);
+      newSecEl.addEventListener("keydown", function (e) { if (e.key === "Enter") commitNewSec(); });
+    }
 
     view.querySelectorAll("[data-pantab]").forEach(function (b) {
       b.addEventListener("click", function () { panTab = b.getAttribute("data-pantab"); render(); });
@@ -7552,6 +7645,9 @@
       if (el.getAttribute && el.getAttribute("data-renamemeal")) {
         return { kind: "renamemeal", id: el.getAttribute("data-renamemeal") };
       }
+      if (el.getAttribute && el.getAttribute("data-savemealnow")) {
+        return { kind: "savemealnow", id: el.getAttribute("data-savemealnow") };
+      }
       el = el.parentNode;
     }
     return null;
@@ -7591,6 +7687,12 @@
       takeOutOfMeal(a.id);
     } else if (a.kind === "renamemeal") {
       renameMeal(a.id);
+    } else if (a.kind === "savemealnow") {
+      var at = locate(day(ymd(cursor)), a.id);
+      if (!at || !isMeal(at.row)) return;
+      var parts = at.row.items.map(function (x) { return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; });
+      if (unpricedPart(parts)) return;
+      saveMealToPantry(rowNote(at.row) || "Saved meal", parts, []);
     }
   });
 
@@ -8560,6 +8662,9 @@
     if (incoming.routine && incoming.routine.days && incoming.routine.days.length) {
       store.routine = incoming.routine;
     }
+    // The pantry's sections come with it, the way the routine does: a restored
+    // phone files food the way the old one did.
+    if (Array.isArray(incoming.panSecs)) store.panSecs = incoming.panSecs;
     if (incoming.retired) {
       Object.keys(incoming.retired).forEach(function (k) {
         if (!store.retired[k]) store.retired[k] = incoming.retired[k];

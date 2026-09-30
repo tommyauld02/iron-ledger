@@ -665,6 +665,8 @@ with sync_playwright() as pw:
                            ['.tabs button[data-tab="gym"]', "#dayNoteAdd"], "#dayNoteIn"),
         ("a note on a movement",
                            ['.tabs button[data-tab="gym"]', "#addLift", "[data-liftnote]"], "#liftNoteIn"),
+        ("the pantry's sections",
+                           ['.tabs button[data-tab="pantry"]', "#editPanSecs"], "#newSecName"),
     ]
     unopened, small, zoomy = [], [], []
     for name, steps, field in EDITORS:
