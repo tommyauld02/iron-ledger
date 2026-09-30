@@ -1739,7 +1739,8 @@ with sync_playwright() as pw:
                           {"w":120,"r":12,"tech":"restpause"}]},
                        {"id":"c","cat":"back","movement":"Dumbbell Curl","sets":[
                           {"w":30,"r":12},{"w":35,"r":6}]},
-                       {"id":"e","cat":"back","movement":"T-Bar Row","sets":[{"w":150,"r":7}]}]}},
+                       {"id":"e","cat":"back","movement":"T-Bar Row","sets":[{"w":150,"r":7}]},
+                       {"id":"f","cat":"back","movement":"Seated Cable Row","sets":[{"w":100,"r":10},{"w":100,"r":10}]}]}},
           "moves":None,"goal":GG,"region":"United States","pantry":[],"v":1}
     BL="()=>[...document.querySelectorAll('.lift')].map(x=>{const b=x.querySelector('.beat');return b?b.textContent:'';})"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
@@ -1763,6 +1764,11 @@ with sync_playwright() as pw:
     check("beat: a movement opens on last time's best set",
           q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
     check("beat: and never the warm-up, however heavy", "185" not in q.evaluate(BL)[0])
+    # every way past it, as the owner put it: the next tier of weight, a rep, or
+    # a set — 135x10 is worth a 145x8 by the rule, so last time had two
+    WAYS="()=>[...document.querySelectorAll('.lift')].map(x=>{const w=x.querySelector('.beat-ways');return w?w.textContent:'';})"
+    check("beat: it names every way past it: heavier, a rep, or a set",
+          q.evaluate(WAYS)[0]=="+5 lb 150×8 · +1 rep 145×9 · +1 set a 3rd set of 145×8", q.evaluate(WAYS)[0])
     lift_set(0, "145", "8")
     check("beat: matching it is not beating it", q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
     lift_set(0, "150", "7")
@@ -1771,6 +1777,7 @@ with sync_playwright() as pw:
     lift_set(0, "145", "9")
     check("beat: one more rep at the same weight beats it",
           q.evaluate(BL)[0]=="↑ Beaten · 145×9 over 145×8", q.evaluate(BL)[0])
+    check("beat: and the ways go once it is beaten", q.evaluate(WAYS)[0]=="", q.evaluate(WAYS)[0])
     check("beat: and it reads in the macro green",
           q.evaluate("""()=>{const h=getComputedStyle(document.documentElement).getPropertyValue('--hit').trim().replace('#','');
             const rgb='rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
@@ -1791,6 +1798,14 @@ with sync_playwright() as pw:
     lift_set(4, "145", "10")
     check("beat: and 145×10 beats 150×7, the owner's own example",
           q.evaluate(BL)[4]=="↑ Beaten · 145×10 over 150×7", q.evaluate(BL)[4])
+    add_move("Seated Cable Row")
+    check("beat: an extra set is offered at last time's level",
+          q.evaluate(WAYS)[5].endswith("+1 set a 3rd set of 100×10"), q.evaluate(WAYS)[5])
+    lift_set(5, "100", "10"); lift_set(5, "100", "10")
+    check("beat: matching last time's two sets is still to beat", q.evaluate(BL)[5]=="To beat · 100×10", q.evaluate(BL)[5])
+    lift_set(5, "95", "11")       # worth the same as 100x10 by the rule, so a set at that level
+    check("beat: a third set at that level beats it",
+          q.evaluate(BL)[5]=="↑ Beaten · a 3rd set of 100×10", q.evaluate(BL)[5])
     lift_set(1, "100", "10"); lift_set(2, "60", "10"); lift_set(3, "25", "10")
     q.eval_on_selector("#lockDay","e=>e.scrollIntoView({block:'center'})")
     q.click("#lockDay"); q.wait_for_timeout(700)
@@ -1979,6 +1994,10 @@ with sync_playwright() as pw:
     last=q.eval_on_selector(".lift .last","e=>e.textContent")
     check("special: back at the gym, the home session is last time", "(At home, dumbbells only)" in last and "25×20" in last, last)
     check("special: and the number to beat", q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 25×20")
+    check("special: with a way past it that does not need the heavier dumbbells",
+          "+1 rep 25×21" in q.eval_on_selector(".lift .beat-ways","e=>e.textContent")
+          and "a 2nd set of 25×20" in q.eval_on_selector(".lift .beat-ways","e=>e.textContent"),
+          q.eval_on_selector(".lift .beat-ways","e=>e.textContent"))
     q.fill('[data-w="0"]',"35"); q.fill('[data-r="0"]',"11"); q.click('[data-addset="0"]'); q.wait_for_timeout(300)
     q.click("#openCompare"); q.wait_for_timeout(300)
     body=q.eval_on_selector("#cmpBody","e=>e.innerText")

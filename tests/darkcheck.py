@@ -160,7 +160,8 @@ def walk(p, label):
             painted = p.evaluate("""()=>({
               toBeat: document.querySelectorAll('.lift:not(.is-closed) .beat:not(.is-beaten)').length,
               beaten: document.querySelectorAll('.lift:not(.is-closed) .beat.is-beaten').length,
-              folded: document.querySelectorAll('.lift.is-closed .beat.is-beaten').length})""")
+              folded: document.querySelectorAll('.lift.is-closed .beat.is-beaten').length,
+              ways: document.querySelectorAll('.lift .beat-ways').length})""")
             for k, n in painted.items():
                 if not n: found.append("set to beat: the %s state is not on screen" % k)
             # and the notes: the day's, one on an open card, one on a folded

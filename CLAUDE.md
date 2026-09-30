@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~715 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~740 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -727,6 +727,18 @@ more reps for at least the same weight, and anything else was a trade it
 would not call either way. He answered that with the exchange rate, which is
 the better rule because it decides every case.
 
+**Every way past it is spelled out.** One number was not enough: a light,
+high-rep day at home made the gym's target 25×20, and "beat that" read as
+"outdo it with heavier dumbbells". The owner's answer was the three ways a
+lifter actually progresses, each of which counts: the next tier of weight at
+the same reps (`+5 lb`, `LB_PER_REP`), one more rep, or one more set at that
+level. So under *To beat* a line reads *+5 lb 150×8 · +1 rep 145×9 · +1 set a
+3rd set of 145×8* — and after the home day, *+1 rep 25×21*, which the gym's own
+dumbbells can do. The set is counted by the same rule (`setsAtLeast()`): any set
+worth at least the target is a set at that level, so 140×9 counts toward "a 3rd
+set of 145×8". An extra set beats it only when no single set already has, and
+reads *↑ Beaten · a 3rd set of 145×8*.
+
 Any tag rides along with the number, so `120×12 rest-pause` never passes for
 a straight set of twelve. A finished day shows *Beaten* where it was and
 nothing where it was not: *To beat* with nothing left to do about it is a nag.
@@ -853,6 +865,14 @@ Two lessons paid for the hard way:
 - **A test that measures hidden elements passes while measuring nothing.** A
   touch-target check reported green because no panel was open. Assert the
   elements are on screen before asserting anything about them.
+- **A broken expression shows up as text, not as an error.** A patch left
+  `: '') + +` in the pantry form: unary plus on the next string, so the
+  warning paragraph became the word *NaN* — no exception, no page error, and
+  every size and colour check still green. Two pantry checks failed only
+  because they happened to look for that paragraph. `mobile` now walks each
+  tab's text nodes for `NaN` and `undefined`, node by node, because innerText
+  runs *NaN* into the button after it and a word-boundary search then finds
+  nothing; it was proven on the broken build before being trusted.
 - **Tests ran for a while against a stale generated copy** and passed
   everything against an old build. The suites now read `iron-ledger.html`
   directly, so there is nothing to go stale.

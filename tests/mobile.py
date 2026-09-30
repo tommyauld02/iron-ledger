@@ -83,6 +83,15 @@ with sync_playwright() as pw:
                 FAILS.append("%s: notes not on screen to measure" % name)
             if t=="pantry" and p.eval_on_selector_all("[data-pantab]","e=>e.length")<6:
                 FAILS.append("%s: pantry section tabs not on screen to measure" % name)
+            # A stray "+" once turned a whole paragraph of the pantry form into
+            # the word NaN, and nothing measuring sizes or colours could see it.
+            # A broken expression shows up as text, so look for the text — node
+            # by node: innerText runs "NaN" into the button after it as
+            # "NaNSAVE TO PANTRY", and a word-boundary search then finds nothing.
+            junk=p.evaluate("""()=>{const w=document.createTreeWalker(document.getElementById('view'),NodeFilter.SHOW_TEXT),bad=[];let n;
+              while((n=w.nextNode())) if(/(^|[^A-Za-z])(NaN|undefined)([^A-Za-z]|$)/.test(n.nodeValue)) bad.push(n.nodeValue.trim().slice(0,30));
+              return bad.join(' | ');}""")
+            if junk: FAILS.append("%s: the %s tab shows %s" % (name, t, junk))
             for x in p.evaluate(ZOOM): zoom.add(x)
             for x in p.evaluate(SMALL): small.add(x)
             o=p.evaluate(OVERFLOW)

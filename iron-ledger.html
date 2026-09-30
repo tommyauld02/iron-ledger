@@ -1884,6 +1884,15 @@
     overflow-wrap: anywhere;
   }
   .lift .beat b { font-weight: 600; color: var(--ink); }
+  /* the ways past it, one line under the target, wrapping on a narrow phone */
+  .lift .beat-ways {
+    margin: 2px 0 0;
+    font-family: var(--font-num);
+    font-size: 11px;
+    color: var(--ink-3);
+    overflow-wrap: anywhere;
+  }
+  .lift .beat-ways b { font-weight: 500; color: var(--ink-2); }
   .lift .beat.is-beaten .beat-k,
   .lift .beat.is-beaten b { color: var(--hit); }
 
@@ -2779,7 +2788,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-29.49";
+  var BUILD = "2026-09-30.50";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4557,6 +4566,19 @@
   function beats(s, goal) {
     return s.tech !== "warmup" && setWorth(s) > setWorth(goal) + 1e-9;
   }
+  // The third way past last time: one more set at its level. A set counts if
+  // it is worth at least the target by the same rule — 140×9 is a 145×8 set —
+  // so "a 3rd set of 145×8" is met by any three sets that good.
+  function setsAtLeast(sets, goal) {
+    var g = setWorth(goal);
+    return sets.filter(function (s) {
+      return s.tech !== "warmup" && Number(s.r) > 0 && setWorth(s) >= g - 1e-9;
+    }).length;
+  }
+  function ordinal(n) {
+    var v = n % 100, suf = ["th", "st", "nd", "rd"];
+    return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
+  }
 
   function shortDate(key) {
     var d = parseYmd(key);
@@ -5562,12 +5584,30 @@
       // do about it is a nag.
       var goal = prev ? topSet(prev.lift.sets) : null;
       var passed = goal ? topSet(l.sets.filter(function (s) { return beats(s, goal); })) : null;
+      // Every way past it, spelled out, because one number was not enough: a
+      // light high-rep day at home made the gym's target 25×20, and the
+      // honest answer is not "outdo that" but "25×21, or a second set of it".
+      // The next tier of weight at the same reps, one more rep, or one more
+      // set at that level — each is progressive overload, and any one counts.
+      var goalSets = goal ? setsAtLeast(prev.lift.sets, goal) : 0;
+      var extraSet = !!goal && !passed && setsAtLeast(l.sets, goal) > goalSets;
+      var gw = goal ? Number(goal.w) || 0 : 0, gr = goal ? Number(goal.r) || 0 : 0;
+      var ways = goal
+        ? '<p class="beat-ways">' +
+            (gw ? '<span class="bw-k">+' + LB_PER_REP + ' lb</span> <b>' + (gw + LB_PER_REP) + '×' + gr + '</b> · ' : '') +
+            '<span class="bw-k">+1 rep</span> <b>' + gw + '×' + (gr + 1) + '</b> · ' +
+            '<span class="bw-k">+1 set</span> <b>a ' + ordinal(goalSets + 1) + ' set of ' + gw + '×' + gr + '</b>' +
+          '</p>'
+        : '';
       var beatLine = passed
         ? '<p class="beat is-beaten"><span class="beat-k">↑ Beaten ·</span> <b>' + esc(setText(passed)) +
           '</b> <span class="beat-was">over ' + esc(setText(goal)) + '</span></p>'
-        : goal && !locked && !l.closed
-          ? '<p class="beat"><span class="beat-k">To beat ·</span> <b>' + esc(setText(goal)) + '</b></p>'
-          : '';
+        : extraSet
+          ? '<p class="beat is-beaten"><span class="beat-k">↑ Beaten ·</span> <b>a ' + ordinal(goalSets + 1) +
+            ' set</b> <span class="beat-was">of ' + esc(setText(goal)) + '</span></p>'
+          : goal && !locked && !l.closed
+            ? '<p class="beat"><span class="beat-k">To beat ·</span> <b>' + esc(setText(goal)) + '</b></p>' + ways
+            : '';
 
       var sets = l.sets.map(function (s, si) {
         // Locked chips are spans, not disabled buttons: probe treats a control
@@ -6746,7 +6786,7 @@
           (panSections().length
             ? '<div class="field"><span class="sec-k">Which meals is it for?</span>' +
                 secButtons("data-pansec", formSecs) + '</div>'
-            : '') + +
+            : '') +
           '<p class="est-note" id="panWarn" hidden style="color:var(--miss)"></p>' +
           '<button class="btn" id="savePan">Save to pantry</button>' +
         '</div>' +
