@@ -1190,6 +1190,46 @@
   }
   .pan-item .rm:hover, .pan-item .rm:active { color: var(--danger); }
 
+  /* ---------- notes ---------- */
+  /* A note for the day and one on each movement. Ink-2 rather than ink-3 for
+     the quiet parts: the day's sit on the page's ground, where ink-3 is 4.3:1. */
+  .note-add {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 0 2px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .note-add:hover { color: var(--accent); }
+  .day-note, .lift-note { display: flex; align-items: center; gap: 10px; }
+  .day-note { padding-left: 12px; border-left: 3px solid var(--accent); }
+  .dn-k {
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .dn-text, .ln-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .dn-text { font-size: 15px; color: var(--ink); }
+  .ln-text { font-size: 13px; font-style: italic; color: var(--ink-2); }
+  .day-note button, .lift-note button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 10px;
+    margin-right: -10px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .lift .note-add, .lift .lift-note, .lift .note-edit { margin-top: 6px; }
+  .lift .last.lift-note-done { font-style: italic; color: var(--ink-2); }
+
   /* ---------- pantry sections ---------- */
   /* Meals sits under Remove, in the same quiet style, and opens the five
      sections on the row itself. */
@@ -2737,7 +2777,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-29.46";
+  var BUILD = "2026-09-29.47";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2858,6 +2898,8 @@
   // null, "share" or "load" — which routine-sharing panel is open on Coach
   var suppEditing = null;   // which checklist item is being renamed
   var liftEditing = null;   // which movement on the day is having its name changed
+  var dayNoting = false;    // the note for the day is being written
+  var liftNoting = null;    // the id of the movement whose note is being written
   var coachShare = null;
   var coachShareMsg = "";
   var pantryShot = null;
@@ -5352,6 +5394,48 @@
     } catch (e) { /* never let a flourish break logging */ }
   }
 
+  // ---------- notes ----------
+  // A note for the day — at home, a hotel gym, travelling — and one on each
+  // movement — the last set was really hard. The context that explains a
+  // number when you look back at it, which is why both reappear next time on
+  // that movement's Last line, where the number is being read again.
+  function clip(txt, n) {
+    txt = String(txt || "").trim();
+    return txt.length > n ? txt.slice(0, n - 1) + "\u2026" : txt;
+  }
+  function noteEditor(id, value, placeholder, label) {
+    return '<div class="rt-inline note-edit">' +
+      '<input class="text" id="' + id + 'In" maxlength="200" value="' + esc(value || "") + '" ' +
+        'placeholder="' + placeholder + '" aria-label="' + label + '">' +
+      '<button class="btn" id="' + id + 'Save">Save</button>' +
+      '<button class="btn ghost" id="' + id + 'Cancel">Cancel</button>' +
+    '</div>';
+  }
+  // The day's note stays open to writing even once the day is locked in:
+  // "trained at the hotel" is often only worth saying afterwards, and it
+  // changes no lift.
+  function dayNoteHtml(d) {
+    if (dayNoting) return noteEditor("dayNote", d.gymNote, "Home, hotel gym, travelling\u2026", "Note for the day");
+    return d.gymNote
+      ? '<div class="day-note"><span class="dn-k">Note</span><span class="dn-text">' + esc(d.gymNote) + '</span>' +
+          '<button id="dayNoteEdit" aria-label="Change the note for the day">Edit</button></div>'
+      : '<button class="note-add" id="dayNoteAdd">+ Note for the day</button>';
+  }
+  // A movement's note is written on its open card and read on every other:
+  // folded, locked, and next time's Last line.
+  function liftNoteHtml(l, locked) {
+    if (liftNoting === l.id && !locked) {
+      return noteEditor("liftNote", l.note, "Last set was really hard\u2026", "Note on " + esc(l.movement));
+    }
+    if (l.note) {
+      return '<div class="lift-note"><span class="ln-text">' + esc(l.note) + '</span>' +
+        (locked ? '' : '<button data-liftnote="' + esc(l.id) + '" aria-label="Change the note on ' +
+          esc(l.movement) + '">Edit</button>') + '</div>';
+    }
+    return locked ? '' : '<button class="note-add" data-liftnote="' + esc(l.id) + '" aria-label="Add a note on ' +
+      esc(l.movement) + '">+ Note</button>';
+  }
+
   function renderGym(key, d) {
     // Someone whose routine no longer contains the day we were showing (a reset,
     // a restore from another phone) must land on a real day, not an empty one.
@@ -5409,9 +5493,14 @@
       var zone = movable ? '<span class="ss-zone" data-sszone="' + i + '">⛓ superset</span>' : '';
       var v = volume(l);
       var prev = lastTime(l.movement, key);
+      // Last time's notes ride along: the day's — "hotel gym" explains a
+      // light session — and the movement's own, "last set was really hard".
+      var prevDay = prev ? store.days[prev.key] : null;
       var lastLine = prev
-        ? 'Last · ' + shortDate(prev.key) + ' — <em>' +
-          prev.lift.sets.map(setText).join(", ") + '</em>'
+        ? 'Last · ' + shortDate(prev.key) +
+          (prevDay && prevDay.gymNote ? ' (' + esc(clip(prevDay.gymNote, 32)) + ')' : '') + ' — <em>' +
+          prev.lift.sets.map(setText).join(", ") + '</em>' +
+          (prev.lift.note ? ' · \u201c' + esc(clip(prev.lift.note, 48)) + '\u201d' : '')
         : 'First time logging this one.';
       // The set to pass, and the moment one of today's goes past it. A day
       // that is over only says so if it did: "To beat" with nothing left to
@@ -5455,6 +5544,7 @@
               ? '<p class="last done-sets">' +
                   l.sets.map(setText).join(", ") + '</p>'
               : '') +
+            (l.note ? '<p class="last lift-note-done">\u201c' + esc(l.note) + '\u201d</p>' : '') +
             beatLine +
             '<div class="lift-foot">' +
               '<span>' + (v.sets
@@ -5527,6 +5617,7 @@
           // Nothing to be done with until there is a set. Full width and away
           // from Remove, because the whole point is ending a movement cleanly.
           // a superset is finished as a whole, from the group, not per member
+          liftNoteHtml(l, locked) +
           (locked || !l.sets.length || inGroup ? '' :
             '<button class="lift-done" data-done="' + i + '" aria-label="Done with ' +
               esc(l.movement) + '">Done</button>') +
@@ -5600,6 +5691,7 @@
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:10px">' +
         clock +
+        dayNoteHtml(d) +
         '<div class="split-head">' +
           '<span class="eyebrow">Today’s split</span>' +
           '<button id="editSplits">' + (splitEdit ? "Done" : "Edit splits") + '</button>' +
@@ -5789,6 +5881,52 @@
         touch(key); save(); render();
       });
     }
+
+    // Notes. Each save says what it did and can be undone, like any change;
+    // saving an emptied note is how one is taken away.
+    function noteSaved(label, restore) { touch(key); save(); render(); offerUndo(label, restore); }
+    function wireNote(id, open, onSave) {
+      var input = document.getElementById(id + "In");
+      if (!input) return;
+      input.focus();
+      input.addEventListener("keydown", function (e) { if (e.key === "Enter") onSave(input.value); });
+      document.getElementById(id + "Save").addEventListener("click", function () { onSave(input.value); });
+      document.getElementById(id + "Cancel").addEventListener("click", function () { open(false); render(); });
+    }
+    ["dayNoteAdd", "dayNoteEdit"].forEach(function (bid) {
+      var b = document.getElementById(bid);
+      if (b) b.addEventListener("click", function () { dayNoting = true; liftNoting = null; render(); });
+    });
+    wireNote("dayNote", function (on) { dayNoting = on; }, function (value) {
+      var text = String(value || "").trim(), was = d.gymNote;
+      dayNoting = false;
+      if (text === (was || "")) { render(); return; }
+      if (text) d.gymNote = text; else delete d.gymNote;
+      noteSaved(!text ? "Removed the note for the day" : was ? "Changed the note for the day" : "Added a note for the day",
+        function () {
+          var dd = day(key);
+          if (was) dd.gymNote = was; else delete dd.gymNote;
+          touch(key); save(); render();
+        });
+    });
+    view.querySelectorAll("[data-liftnote]").forEach(function (b) {
+      b.addEventListener("click", function () { liftNoting = b.getAttribute("data-liftnote"); dayNoting = false; render(); });
+    });
+    wireNote("liftNote", function (on) { if (!on) liftNoting = null; }, function (value) {
+      var l = null;
+      d.lifts.forEach(function (x) { if (x.id === liftNoting) l = x; });
+      liftNoting = null;
+      if (!l) { render(); return; }
+      var text = String(value || "").trim(), was = l.note;
+      if (text === (was || "")) { render(); return; }
+      if (text) l.note = text; else delete l.note;
+      noteSaved(!text ? "Removed the note on " + l.movement
+                      : was ? "Changed the note on " + l.movement : "Added a note on " + l.movement,
+        function () {
+          if (was) l.note = was; else delete l.note;
+          touch(key); save(); render();
+        });
+    });
 
     // A mis-tap at nine in the morning should not become a six hour session,
     // so a running clock can be thrown away — with undo, like every other
@@ -6995,6 +7133,7 @@
       } else {
         bits.push("no gym");
       }
+      if (d.gymNote) bits.push("\u201c" + d.gymNote + "\u201d");
       // Named, not just counted: "3 of 4" a month later tells you nothing
       // about which one you keep forgetting.
       if (supps().length) {
@@ -7975,7 +8114,8 @@
       var pd = store.days[prevKey];
       var now = sum(mine), was = sum((pd.lifts || []).filter(ofCats));
       html += '<p class="cmp-sub">This session against ' + shortDate(prevKey) + ' · ' +
-        esc(cats.map(function (c) { return cat(c).name; }).join(" + ")) + '</p>' +
+        esc(cats.map(function (c) { return cat(c).name; }).join(" + ")) +
+        (pd.gymNote ? ' · \u201c' + esc(clip(pd.gymNote, 40)) + '\u201d' : '') + '</p>' +
         '<div class="cmp-card">' +
           cmpRow("Movements", was.moves, now.moves, num) +
           cmpRow("Sets", was.sets, now.sets, num) +

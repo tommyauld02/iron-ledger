@@ -33,12 +33,13 @@ def fixture(theme=None, accent=None):
                        "sets": [{"w": 30, "r": 12}]},
                       {"id": "g1b", "cat": "back", "movement": "Barbell Curl", "ss": "g1",
                        "sets": [{"w": 60, "r": 10}]},
-                      {"id": "l", "cat": "back", "movement": "Barbell Row",
+                      {"id": "l", "cat": "back", "movement": "Barbell Row", "note": "Grip gave out on the last set",
                        "sets": [{"w": 135, "r": 10}, {"w": 95, "r": 8, "tech": "drop"}]},
-                      {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
+                      {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "note": "Slow negatives", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
                       {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
             "supps": {"s1": True},                       # one ticked, one not: both states
             "workoutStart": int(time.time() * 1000) - 45 * 60000,
+            "gymNote": "Hotel gym, dumbbells only",
             "updated": 1, "goal": G}},
          "moves": None, "goal": G, "region": "United States",
          "supps": [{"id": "s1", "name": "Creatine", "dose": "5 g"},
@@ -52,11 +53,11 @@ def fixture(theme=None, accent=None):
                     {"id": "p3", "name": "Ice cream sandwich", "serveQty": 1, "serveUnit": "piece",
                      "serveG": None, "sCal": 180, "sPro": 3, "aliases": [], "sec": "desserts"}], "v": 1}
     P = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
-    s["days"][P] = {"food": [], "updated": 1, "goal": G, "workoutMs": 40 * 60000,
+    s["days"][P] = {"food": [], "updated": 1, "goal": G, "workoutMs": 40 * 60000, "gymNote": "At home",
         # last time's sets decide the line under each open card: Barbell Row
         # is beaten today, Dumbbell Curl still to beat, and the folded Lat
         # Pulldown keeps its "Beaten" — every state of it on screen
-        "lifts": [{"id": "p1", "cat": "back", "movement": "Barbell Row", "sets": [{"w": 115, "r": 10}]},
+        "lifts": [{"id": "p1", "cat": "back", "movement": "Barbell Row", "note": "Last set was really hard", "sets": [{"w": 115, "r": 10}]},
                   {"id": "p2", "cat": "back", "movement": "Dumbbell Curl", "sets": [{"w": 40, "r": 12}, {"w": 40, "r": 12}]},
                   {"id": "p3", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 110, "r": 10}]}]}
     if theme: s["theme"] = theme
@@ -155,6 +156,15 @@ def walk(p, label):
               folded: document.querySelectorAll('.lift.is-closed .beat.is-beaten').length})""")
             for k, n in painted.items():
                 if not n: found.append("set to beat: the %s state is not on screen" % k)
+            # and the notes: the day's, one on an open card, one on a folded
+            # card, and last time's riding on the Last line
+            notes = p.evaluate("""()=>({
+              day: document.querySelectorAll('.day-note').length,
+              open: document.querySelectorAll('.lift .lift-note').length,
+              folded: document.querySelectorAll('.lift .lift-note-done').length,
+              last: [...document.querySelectorAll('.lift .last')].filter(e=>e.textContent.includes('\u201c')).length})""")
+            for k, n in notes.items():
+                if not n: found.append("notes: the %s note is not on screen" % k)
             # the rest bar lives in the dock, and running looks different
             p.click("#restBtn"); p.wait_for_timeout(200)
             low = p.evaluate(LOW)

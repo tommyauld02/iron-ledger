@@ -1799,6 +1799,102 @@ with sync_playwright() as pw:
           and "Beaten" in q.evaluate(BL)[4], str(q.evaluate(BL)))
     c.close()
 
+    # ---------- NOTES ----------
+    # Asked for from the gym: a note for the day — at home, a hotel gym — and
+    # one on a movement — the last set was really hard. Both come back next
+    # time on that movement's Last line, where the number is read again.
+    NT=datetime.date.today(); NP=(NT-datetime.timedelta(days=3)).isoformat()
+    NG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    NOTESTORE={"days":{NP:{"food":[],"updated":1,"goal":NG,"gymNote":"Hotel gym, dumbbells only","workoutMs":40*60000,
+                           "lifts":[{"id":"a","cat":"back","movement":"Barbell Curl","note":"Last set was really hard",
+                                     "sets":[{"w":60,"r":10},{"w":60,"r":8}]}]}},
+               "moves":None,"goal":NG,"region":"United States","pantry":[],"v":1}
+    NDAY="k=>(JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{})"
+    NSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("notes: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", NOTESTORE)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    nb=q.locator("#dayNoteAdd").bounding_box()
+    check("notes: a note for the day is offered, as a proper target",
+          nb is not None and nb["height"]>=MIN_TAP, nb and "%dx%d"%(nb["width"],nb["height"]))
+    check("notes: it sits under the clock, above the split",
+          q.evaluate("""()=>{const n=document.getElementById('dayNoteAdd'), h=document.querySelector('.split-head');
+            return n.getBoundingClientRect().top < h.getBoundingClientRect().top;}"""))
+    q.click("#dayNoteAdd"); q.wait_for_timeout(250)
+    check("notes: its field is ready to type in, and will not zoom the page",
+          q.evaluate("()=>document.activeElement&&document.activeElement.id")=="dayNoteIn"
+          and q.eval_on_selector("#dayNoteIn","e=>parseFloat(getComputedStyle(e).fontSize)")>=16
+          and q.locator("#dayNoteIn").bounding_box()["height"]>=MIN_TAP)
+    q.fill("#dayNoteIn","Training at home"); q.press("#dayNoteIn","Enter"); q.wait_for_timeout(300)
+    check("notes: the day's note is kept on the day", q.evaluate(NDAY, Ts).get("gymNote")=="Training at home")
+    check("notes: and shown, and said", "Training at home" in q.eval_on_selector(".day-note","e=>e.textContent")
+          and q.evaluate(NSAYS)=="Added a note for the day", q.evaluate(NSAYS))
+
+    q.select_option("#mSel","Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    last=q.eval_on_selector(".lift .last","e=>e.textContent")
+    check("notes: last time's day note comes back beside its date", "(Hotel gym, dumbbells only)" in last, last)
+    check("notes: and last time's note on the movement beside its sets", "\u201cLast set was really hard\u201d" in last, last)
+    lb=q.locator("[data-liftnote]").bounding_box()
+    check("notes: a movement offers a note, as a proper target", lb is not None and lb["height"]>=MIN_TAP)
+    q.fill('[data-w="0"]',"60"); q.fill('[data-r="0"]',"11"); q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    q.click("[data-liftnote]"); q.wait_for_timeout(250)
+    check("notes: its field will not zoom the page either",
+          q.eval_on_selector("#liftNoteIn","e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
+    q.fill("#liftNoteIn","Grip gave out on the last set"); q.click("#liftNoteSave"); q.wait_for_timeout(300)
+    check("notes: the movement's note is kept on the movement",
+          q.evaluate(NDAY, Ts)["lifts"][0].get("note")=="Grip gave out on the last set")
+    check("notes: and shown on its card, and said",
+          "Grip gave out" in q.eval_on_selector(".lift-note","e=>e.textContent")
+          and q.evaluate(NSAYS)=="Added a note on Barbell Curl", q.evaluate(NSAYS))
+    q.click('[data-done="0"]'); q.wait_for_timeout(300)
+    check("notes: a folded card keeps its note",
+          q.eval_on_selector_all(".lift-note-done","e=>e.map(x=>x.textContent)")==["\u201cGrip gave out on the last set\u201d"])
+
+    q.eval_on_selector("#dayNoteEdit","e=>e.scrollIntoView({block:'center'})"); q.click("#dayNoteEdit"); q.wait_for_timeout(250)
+    check("notes: editing starts from what is there", q.input_value("#dayNoteIn")=="Training at home")
+    q.fill("#dayNoteIn","Home gym"); q.click("#dayNoteSave"); q.wait_for_timeout(300)
+    check("notes: a change says so", q.evaluate(NDAY, Ts).get("gymNote")=="Home gym"
+          and q.evaluate(NSAYS)=="Changed the note for the day", q.evaluate(NSAYS))
+    q.click("#dayNoteEdit"); q.wait_for_timeout(250)
+    q.fill("#dayNoteIn",""); q.click("#dayNoteSave"); q.wait_for_timeout(300)
+    check("notes: saved empty, the note is taken away, and says so",
+          "gymNote" not in q.evaluate(NDAY, Ts) and q.evaluate(NSAYS)=="Removed the note for the day"
+          and q.locator("#dayNoteAdd").count()==1, q.evaluate(NSAYS))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("notes: undo brings it back", q.evaluate(NDAY, Ts).get("gymNote")=="Home gym")
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("notes: and once more takes back the change before", q.evaluate(NDAY, Ts).get("gymNote")=="Training at home")
+
+    q.click("#dayNoteEdit"); q.wait_for_timeout(250)
+    q.fill("#dayNoteIn","Nothing to keep"); q.click("#dayNoteCancel"); q.wait_for_timeout(250)
+    check("notes: Cancel keeps what was there", q.evaluate(NDAY, Ts).get("gymNote")=="Training at home")
+
+    q.eval_on_selector("#lockDay","e=>e.scrollIntoView({block:'center'})"); q.click("#lockDay"); q.wait_for_timeout(700)
+    check("notes: a finished day's note can still be written", q.locator("#dayNoteEdit").count()==1)
+    check("notes: its movements' notes are read, not edited",
+          q.locator("[data-liftnote]").count()==0 and "Grip gave out" in q.eval_on_selector(".lift","e=>e.textContent"))
+    q.click("#openCompare") if q.locator("#openCompare").count() else None
+    q.wait_for_timeout(300)
+    check("notes: the comparison names what the other day was",
+          "\u201cHotel gym, dumbbells only\u201d" in q.eval_on_selector(".cmp-sub","e=>e.textContent"),
+          q.eval_on_selector(".cmp-sub","e=>e.textContent"))
+    q.click("#cmpDone"); q.wait_for_timeout(200)
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    check("notes: and so does the calendar",
+          q.evaluate("()=>[...document.querySelectorAll('.cal-cell')].some(x=>(x.title||'').includes('\u201cHotel gym, dumbbells only\u201d'))"))
+    q.reload(); q.wait_for_timeout(900)
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    check("notes: they are kept, not just drawn",
+          "Training at home" in q.eval_on_selector(".day-note","e=>e.textContent")
+          and "Grip gave out" in q.eval_on_selector(".lift","e=>e.textContent"))
+    c.close()
+
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:
         print("%-6s %-42s %s" % (st,name,detail))

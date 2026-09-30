@@ -28,7 +28,8 @@ store = {
             {"id": "b", "cal": 200, "pro": 20, "note": "Protein bar"}],
         # a finished movement too, so its Reopen gets hit-tested like the rest
         # a superset too, so its Split and its members' grips are reached for
-        "lifts": [{"id": "s1", "cat": "back", "movement": "Dumbbell Curl", "ss": "g1",
+        "gymNote": "Hotel gym",
+        "lifts": [{"id": "s1", "cat": "back", "movement": "Dumbbell Curl", "ss": "g1", "note": "Slow on the way down",
                    "sets": [{"w": 30, "r": 12}]},
                   {"id": "s2", "cat": "back", "movement": "Barbell Curl", "ss": "g1",
                    "sets": [{"w": 60, "r": 10}]},

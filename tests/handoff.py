@@ -661,6 +661,10 @@ with sync_playwright() as pw:
         # Today has no movement in this fixture, so the steps add one first.
         ("change a movement",
                            ['.tabs button[data-tab="gym"]', "#addLift", "[data-editlift]"], "#liftMove"),
+        ("a note for the day",
+                           ['.tabs button[data-tab="gym"]', "#dayNoteAdd"], "#dayNoteIn"),
+        ("a note on a movement",
+                           ['.tabs button[data-tab="gym"]', "#addLift", "[data-liftnote]"], "#liftNoteIn"),
     ]
     unopened, small, zoomy = [], [], []
     for name, steps, field in EDITORS:

@@ -7,7 +7,9 @@ store={"days":{T:{"food":[
   {"id":"r2","cal":489,"pro":57,"note":"Costco top sirloin · 6 oz","est":True},
   {"id":"r3","cal":190,"pro":21,"note":"Protein bar"}],
   # a finished movement too, so the folded card is measured on every phone
-  "lifts":[{"id":"l1","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10,"tech":"restpause"}]},
+  "gymNote":"Hotel gym downtown — dumbbells only up to 50, no cable stack at all",
+  "lifts":[{"id":"l1","cat":"back","movement":"Barbell Row","note":"Last set was really hard, grip gave out before the back did",
+            "sets":[{"w":135,"r":10,"tech":"restpause"}]},
            {"id":"l2","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":452000,"closed":True},
            {"id":"l3","cat":"back","movement":"Seated Cable Row","sets":[]}],
   "updated":1,"goal":G},
@@ -77,6 +79,8 @@ with sync_playwright() as pw:
             # fixture that stops painting them must say so, not pass on nothing
             if t=="gym" and p.eval_on_selector_all(".lift .beat","e=>e.length")<3:
                 FAILS.append("%s: set-to-beat lines not on screen to measure" % name)
+            if t=="gym" and not p.eval_on_selector_all(".day-note, .lift .lift-note","e=>e.length")>=2:
+                FAILS.append("%s: notes not on screen to measure" % name)
             if t=="pantry" and p.eval_on_selector_all("[data-pantab]","e=>e.length")<6:
                 FAILS.append("%s: pantry section tabs not on screen to measure" % name)
             for x in p.evaluate(ZOOM): zoom.add(x)

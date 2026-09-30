@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~670 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~695 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -651,6 +651,20 @@ the last time it was done: top weight, sets, reps, volume and time. Up is
 listed a longer session with the heavier weights, so time is coloured the same
 way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
+
+**Notes: one for the day, one on each movement.** Asked for from the gym:
+*at home* or *hotel gym* for the day (`d.gymNote`), and *last set was really
+hard* on a movement (`l.note`). They are the context that explains a number when
+you look back at it, so both come back on next time's *Last* line — the day's
+in brackets after its date, the movement's in quotes after its sets, clipped
+short there — and the comparison and the calendar day's title name the day's.
+The day's note is offered under the clock and stays writable after *Lock in
+the day*: "trained at the hotel" is often only worth saying afterwards, and it
+changes no lift. A movement's is written on its open card, just above Done,
+and read everywhere else. Saving an emptied note is how one is taken away, and
+every save says what it did through `offerUndo()`. Their quiet labels are
+`--ink-2`, not `--ink-3`: the day's sit on the page's ground, where ink-3
+measures 4.3:1.
 
 **The set to beat.** Asked for from the gym: starting a movement, what is the
 number to pass? Every open card carries it under *Last* — last time's best

@@ -43,6 +43,7 @@ PROBES=[
  ("gym","#addLift","add movement",None),
  ("gym",'[data-addset="0"]',"add a set",[('[data-w="0"]',"200"),('[data-r="0"]',"5")]),
  ("gym",".set","open a set to change it",None),
+ ("gym","#dayNoteAdd","write a note for the day",None),
  ("gym","[data-rmlift]","remove movement",None),
  ("pantry","#shotBtn","open label photo picker",None),
  ("pantry","#savePan","save pantry food",[("#panName","Test bar"),("#panServe","1"),("#panCal","200"),("#panPro","20")]),
