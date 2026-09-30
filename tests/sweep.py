@@ -1503,32 +1503,34 @@ with sync_playwright() as pw:
     q.select_option("[data-savemealsec]", "dinner"); q.wait_for_timeout(400)
     pan=q.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry")
     check("meal: saving it from the day files it where it was put",
-          any(x.get("sec")=="dinner" and x.get("items") for x in pan)
+          any(x.get("secs")==["dinner"] and x.get("items") for x in pan)
           and "under Dinner" in q.eval_on_selector("#undoLabel","e=>e.textContent"),
           q.eval_on_selector("#undoLabel","e=>e.textContent"))
     c.close()
 
     # ---------- THE PANTRY IN SECTIONS ----------
     # Asked for once the pantry grew: Breakfast, Lunch, Dinner, Snacks and
-    # Desserts as tabs, and a choice of where to file a food when saving it.
-    # Foods saved before sections existed are shown as not sorted, never
-    # guessed into a meal.
-    def pitem(i, name, cal, pro, unit="bottle", sec=None):
+    # Desserts as tabs. Then, once sorting began: protein coffee is breakfast
+    # *and* a snack. So a food is in as many sections as it is eaten at, or
+    # none, and All is every food in one list, the way the pantry always was.
+    def pitem(i, name, cal, pro, unit="bottle", **kw):
         x={"id":i,"name":name,"serveQty":1,"serveUnit":unit,"serveG":None,"sCal":cal,"sPro":pro,"aliases":[]}
-        if sec: x["sec"]=sec
+        x.update(kw)
         return x
     SG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
     SECS={"days":{},"moves":None,"goal":SG,"region":"United States","v":1,"pantry":[
         pitem("p1","Costco protein coffee",130,30),
-        pitem("p2","Eggs",72,6,"egg","breakfast"),
-        pitem("p3","Bacon",43,3,"slice","breakfast"),
-        pitem("p4","Protein bar",190,20,"bar"),
-        pitem("p5","Ice cream sandwich",180,3,"piece","desserts"),
-        pitem("p6","Mystery thing",100,5,"bar","brunch")]}
-    PANS="()=>Object.fromEntries(JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.map(x=>[x.name,x.sec||'']))"
+        pitem("p2","Eggs",72,6,"egg",sec="breakfast"),                 # how b45 stored its one
+        pitem("p3","Bacon",43,3,"slice",secs=["breakfast"]),
+        pitem("p4","Protein bar",190,20,"bar",secs=["snacks","brunch"]),   # an id this build does not know
+        pitem("p5","Ice cream sandwich",180,3,"piece",secs=["desserts"])]}
+    PANS=("()=>Object.fromEntries(JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry"
+          ".map(x=>[x.name,(x.secs||(x.sec?[x.sec]:[])).join('+')]))")
     TABS="()=>[...document.querySelectorAll('[data-pantab]')].map(b=>b.textContent+(b.getAttribute('aria-pressed')==='true'?'*':''))"
-    SHOWN="()=>[...document.querySelectorAll('.pan-group h4, .pan-item .nm')].map(e=>e.tagName==='H4'?'#'+e.textContent:e.textContent)"
-    SAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
+    SHOWN=("()=>[...document.querySelectorAll('.pan-item .nm')].map(e=>e.childNodes[0].textContent+"
+           "(e.querySelector('.tags')?' ['+e.querySelector('.tags').textContent+']':''))")
+    CHOSEN=("a=>[...document.querySelectorAll('['+a+'][aria-pressed=true]')].map(b=>b.getAttribute(a))")
+    SAYS=("()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent")
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;")
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("sections: "+str(e)))
@@ -1539,74 +1541,68 @@ with sync_playwright() as pw:
     except Exception: pass
     q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
     check("sections: tabs for All and the five, with how many are in each",
-          q.evaluate(TABS)==["All 6*","Breakfast 2","Lunch","Dinner","Snacks","Desserts 1","Not sorted 3"],
+          q.evaluate(TABS)==["All 5*","Breakfast 2","Lunch","Dinner","Snacks 1","Desserts 1"],
           str(q.evaluate(TABS)))
-    check("sections: All shows each under its own heading, in the order a day runs",
-          q.evaluate(SHOWN)==["#Breakfast","Bacon","Eggs","#Desserts","Ice cream sandwich",
-                              "#Not sorted","Costco protein coffee","Mystery thing","Protein bar"],
+    check("sections: All is every food in one list, each naming its meals",
+          q.evaluate(SHOWN)==["Bacon [Breakfast]","Costco protein coffee","Eggs [Breakfast]",
+                              "Ice cream sandwich [Desserts]","Protein bar [Snacks]"],
           str(q.evaluate(SHOWN)))
-    check("sections: foods from before sections are not guessed into one",
-          q.evaluate(PANS)["Costco protein coffee"]=="" and "Tap Sort" in q.eval_on_selector(".pan-hint","e=>e.textContent"))
-    check("sections: a section this build does not know is shown, not lost",
-          "Mystery thing" in q.evaluate(SHOWN) and q.evaluate(PANS)["Mystery thing"]=="brunch")
-    small=q.evaluate("""()=>[...document.querySelectorAll('[data-pantab],[data-pansec],.pan-item .mv')]
+    check("sections: a food with none is simply in All, not flagged",
+          q.evaluate(PANS)["Costco protein coffee"]=="" and q.locator(".pan-hint").count()==0)
+    check("sections: what b45 saved still counts", q.evaluate(PANS)["Eggs"]=="breakfast")
+
+    # a food's meals, changed from its own row
+    q.click('[data-panmeals="p1"]'); q.wait_for_timeout(250)
+    check("sections: Meals opens the five on the food's own row",
+          q.locator("[data-pansecfor]").count()==5 and q.evaluate(CHOSEN, "data-pansecfor")==[])
+    q.click('[data-pansecfor="breakfast"]'); q.wait_for_timeout(250)
+    q.click('[data-pansecfor="snacks"]'); q.wait_for_timeout(250)
+    check("sections: one food can be in more than one", q.evaluate(PANS)["Costco protein coffee"]=="breakfast+snacks"
+          and q.evaluate(CHOSEN, "data-pansecfor")==["breakfast","snacks"], q.evaluate(PANS)["Costco protein coffee"])
+    check("sections: and each change says so", q.evaluate(SAYS)=="Added Costco protein coffee to Snacks", q.evaluate(SAYS))
+    check("sections: counted in each", "Breakfast 3" in q.evaluate(TABS) and "Snacks 2" in q.evaluate(TABS), str(q.evaluate(TABS)))
+    small=q.evaluate("""()=>[...document.querySelectorAll('[data-pantab],[data-pansec],[data-pansecfor],[data-panmeals],#panEditDone')]
         .filter(e=>{const r=e.getBoundingClientRect();return r.width&&(r.height<43.5||r.width<43.5);})
         .map(e=>e.textContent.trim()+' '+Math.round(e.getBoundingClientRect().height))""")
-    check("sections: every tab, choice and Move is a proper target", not small, str(small))
-    check("sections: and Move's picker will not zoom the page",
-          q.evaluate("()=>[...document.querySelectorAll('.pan-item .mv select')].every(s=>parseFloat(getComputedStyle(s).fontSize)>=16)"))
-
-    q.click('[data-pantab="breakfast"]'); q.wait_for_timeout(300)
-    check("sections: a section's tab shows just that section",
-          q.evaluate(SHOWN)==["Bacon","Eggs"], str(q.evaluate(SHOWN)))
-    check("sections: standing in it, a new food starts out filed there",
-          q.eval_on_selector_all("[data-pansec][aria-pressed=true]","e=>e.map(b=>b.dataset.pansec)")==["breakfast"])
-    q.fill("#panName","Turkey sandwich"); q.fill("#panServe","1"); q.fill("#panCal","420"); q.fill("#panPro","32")
-    q.click('[data-pansec="lunch"]'); q.wait_for_timeout(100)
-    check("sections: choosing another changes it and keeps what was typed",
-          q.eval_on_selector_all("[data-pansec][aria-pressed=true]","e=>e.map(b=>b.dataset.pansec)")==["lunch"]
-          and q.input_value("#panName")=="Turkey sandwich")
-    q.click("#savePan"); q.wait_for_timeout(400)
-    check("sections: it is saved where it was put", q.evaluate(PANS).get("Turkey sandwich")=="lunch")
-    check("sections: the list follows it rather than leaving it off screen",
-          "Lunch 1*" in q.evaluate(TABS) and q.evaluate(SHOWN)==["Turkey sandwich"], str(q.evaluate(TABS)))
-    check("sections: and says where it went", q.evaluate(SAYS)=="Saved Turkey sandwich under Lunch", q.evaluate(SAYS))
+    check("sections: every tab, choice, Meals and Done is a proper target", not small, str(small))
+    q.click("#panEditDone"); q.wait_for_timeout(250)
+    check("sections: Done closes it", q.locator("[data-pansecfor]").count()==0)
 
     q.click('[data-pantab="snacks"]'); q.wait_for_timeout(300)
+    check("sections: a section's tab shows every food eaten then",
+          q.evaluate(SHOWN)==["Costco protein coffee [Breakfast and Snacks]","Protein bar [Snacks]"], str(q.evaluate(SHOWN)))
+    q.click('[data-panmeals="p4"]'); q.wait_for_timeout(250)
+    q.click('[data-pansecfor="snacks"]'); q.wait_for_timeout(250)
+    check("sections: taken out of the section on show, it stays in view until Done",
+          "Protein bar" in q.evaluate(SHOWN), str(q.evaluate(SHOWN)))
+    check("sections: an id this build does not know is kept, not lost", q.evaluate(PANS)["Protein bar"]=="brunch")
+    q.click("#panEditDone"); q.wait_for_timeout(250)
+    check("sections: and goes once the choosing is done", "Protein bar" not in q.evaluate(SHOWN), str(q.evaluate(SHOWN)))
+
+    q.click('[data-pantab="dinner"]'); q.wait_for_timeout(300)
     check("sections: an empty one says how to fill it",
-          "Choose Snacks when you save a food" in q.eval_on_selector_all("section .empty","e=>e.map(x=>x.textContent).join(' ')"))
-    q.click('[data-pantab="all"]'); q.wait_for_timeout(300)
-    q.fill("#panName","Rice cakes"); q.fill("#panServe","1"); q.fill("#panCal","35"); q.fill("#panPro","1")
-    q.click('[data-pansec="snacks"]'); q.click('[data-pansec="snacks"]'); q.wait_for_timeout(100)
-    check("sections: a second press clears the choice",
-          q.eval_on_selector_all("[data-pansec][aria-pressed=true]","e=>e.length")==0)
+          "Tap Meals on a food" in q.eval_on_selector_all("section .empty","e=>e.map(x=>x.textContent).join(' ')"))
+    check("sections: standing in it, a new food starts out filed there", q.evaluate(CHOSEN, "data-pansec")==["dinner"])
+    q.fill("#panName","Turkey chili"); q.fill("#panServe","1"); q.fill("#panCal","380"); q.fill("#panPro","30")
+    q.click('[data-pansec="lunch"]'); q.wait_for_timeout(100)
+    check("sections: more than one can be chosen when saving, and what was typed stays",
+          q.evaluate(CHOSEN, "data-pansec")==["lunch","dinner"] and q.input_value("#panName")=="Turkey chili")
     q.click("#savePan"); q.wait_for_timeout(400)
-    check("sections: saved with none chosen, it waits under Not sorted",
-          q.evaluate(PANS).get("Rice cakes")=="" and q.evaluate(SAYS)=="Saved Rice cakes to your pantry", q.evaluate(SAYS))
-
-    q.select_option('[data-movepan="p3"]', "lunch"); q.wait_for_timeout(300)
-    check("sections: Move files it somewhere else, and says so",
-          q.evaluate(PANS)["Bacon"]=="lunch" and q.evaluate(SAYS)=="Moved Bacon to Lunch", q.evaluate(SAYS))
-    q.click("#undoBtn"); q.wait_for_timeout(300)
-    check("sections: undo puts it back", q.evaluate(PANS)["Bacon"]=="breakfast")
-    q.select_option('[data-movepan="p1"]', "breakfast"); q.wait_for_timeout(300)
-    check("sections: Sort gives one its first section", q.evaluate(PANS)["Costco protein coffee"]=="breakfast"
-          and q.evaluate(SAYS)=="Put Costco protein coffee under Breakfast", q.evaluate(SAYS))
-    q.click("#undoBtn"); q.wait_for_timeout(300)
-    check("sections: and undo returns it to none at all", q.evaluate(PANS)["Costco protein coffee"]=="")
-
-    # sort everything left from the Not sorted tab itself
-    q.click('[data-pantab="none"]'); q.wait_for_timeout(300)
-    left=q.eval_on_selector_all("[data-movepan]","e=>e.map(s=>s.dataset.movepan)")
-    for pid in left:
-        q.select_option('[data-movepan="%s"]' % pid, "snacks"); q.wait_for_timeout(250)
-    check("sections: with everything sorted, Not sorted goes and the list falls back to All",
-          len(left)==4 and not any(t.startswith("Not sorted") for t in q.evaluate(TABS))
-          and q.evaluate(TABS)[0].endswith("*"), "%d sorted, tabs %s" % (len(left), q.evaluate(TABS)))
+    check("sections: it is saved in every one chosen", q.evaluate(PANS).get("Turkey chili")=="lunch+dinner")
+    check("sections: and says where it went", q.evaluate(SAYS)=="Saved Turkey chili under Lunch and Dinner", q.evaluate(SAYS))
+    check("sections: the list keeps showing a section it went into", "Dinner 1*" in q.evaluate(TABS), str(q.evaluate(TABS)))
+    q.click('[data-pantab="snacks"]'); q.wait_for_timeout(300)
+    q.fill("#panName","Rice cakes"); q.fill("#panServe","1"); q.fill("#panCal","35"); q.fill("#panPro","1")
+    q.click('[data-pansec="snacks"]'); q.wait_for_timeout(100)
+    check("sections: a press on a chosen one takes it off", q.evaluate(CHOSEN, "data-pansec")==[])
+    q.click("#savePan"); q.wait_for_timeout(400)
+    check("sections: saved with none, it lives in All and the list goes there",
+          q.evaluate(PANS).get("Rice cakes")=="" and q.evaluate(TABS)[0].endswith("*")
+          and q.evaluate(SAYS)=="Saved Rice cakes to your pantry", "%s | %s" % (q.evaluate(TABS), q.evaluate(SAYS)))
     q.reload(); q.wait_for_timeout(900)
     q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
-    check("sections: they are kept, not just drawn", q.evaluate(PANS)["Costco protein coffee"]=="snacks"
-          and q.evaluate(TABS)[0]=="All 8*", str(q.evaluate(TABS)))
+    check("sections: they are kept, not just drawn",
+          q.evaluate(PANS)["Costco protein coffee"]=="breakfast+snacks" and q.evaluate(TABS)[0]=="All 7*", str(q.evaluate(TABS)))
 
     # the estimate's save row asks the same question
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
@@ -1614,19 +1610,69 @@ with sync_playwright() as pw:
     q.fill("#estText","chicken breast and white rice"); q.click("#runEst"); q.wait_for_timeout(1200)
     q.click("#estSave"); q.wait_for_timeout(300)
     q.fill("#estSaveName","Usual lunch")
-    q.click('[data-estsec="lunch"]'); q.wait_for_timeout(100)
+    q.click('[data-estsec="lunch"]'); q.click('[data-estsec="dinner"]'); q.wait_for_timeout(100)
     small=q.evaluate("""()=>[...document.querySelectorAll('[data-estsec]')]
         .filter(e=>{const r=e.getBoundingClientRect();return r.height<43.5||r.width<43.5;}).map(e=>e.textContent)""")
     check("sections: saving a meal offers them too, as proper targets",
           q.locator("[data-estsec]").count()==5 and not small, str(small))
-    check("sections: and choosing one does not wipe the name", q.input_value("#estSaveName")=="Usual lunch")
+    check("sections: and choosing does not wipe the name", q.input_value("#estSaveName")=="Usual lunch")
     q.click("#estSaveGo"); q.wait_for_timeout(400)
-    check("sections: the meal is filed where it was put",
-          q.evaluate(PANS).get("Usual lunch")=="lunch" and "under Lunch" in q.evaluate(SAYS), q.evaluate(SAYS))
+    check("sections: the meal is filed in each one chosen",
+          q.evaluate(PANS).get("Usual lunch")=="lunch+dinner" and "under Lunch and Dinner" in q.evaluate(SAYS), q.evaluate(SAYS))
     q.click("#estSave"); q.wait_for_timeout(300)
     q.fill("#estSaveName","Usual lunch"); q.click("#estSaveGo"); q.wait_for_timeout(400)
-    check("sections: saved over with none chosen, it keeps the section it had",
-          q.evaluate(PANS).get("Usual lunch")=="lunch" and "Updated" in q.evaluate(SAYS), q.evaluate(SAYS))
+    check("sections: saved over with none chosen, it keeps the ones it had",
+          q.evaluate(PANS).get("Usual lunch")=="lunch+dinner" and "Updated" in q.evaluate(SAYS), q.evaluate(SAYS))
+    c.close()
+
+    # ---------- UNDO, AND UNDO AGAIN ----------
+    # Found using b45: sorting several foods, only the last could be taken
+    # back, and only for nine seconds. Now each Undo goes one further back,
+    # for as long as the changes keep coming one after another, and only a
+    # change that cannot be undone ends the run. Looking at another tab hides
+    # the bar; coming back brings it back.
+    UND={"days":{Ts:{"food":[{"id":"f1","cal":300,"pro":20,"note":"Toast"},
+                            {"id":"f2","cal":500,"pro":40,"note":"Steak"},
+                            {"id":"f3","cal":200,"pro":5,"note":"Chips"}],"updated":1,"goal":SG}},
+         "moves":None,"goal":SG,"region":"United States","v":1,"pantry":[
+            pitem("p1","Costco protein coffee",130,30)]}
+    NOTES="k=>((JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{}).food||[]).map(f=>f.note)"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("undo: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", UND)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    for _ in range(3):
+        q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
+    check("undo: three deletes in a row", q.evaluate(NOTES, Ts)==[] and q.evaluate(SAYS)=="Removed Chips",
+          "%s | %s" % (q.evaluate(NOTES, Ts), q.evaluate(SAYS)))
+    q.click("#undoBtn"); q.wait_for_timeout(250)
+    check("undo: the first press takes back the last", q.evaluate(NOTES, Ts)==["Chips"], str(q.evaluate(NOTES, Ts)))
+    check("undo: and the bar moves on to the one before", q.evaluate(SAYS)=="Removed Steak", q.evaluate(SAYS))
+    q.click("#undoBtn"); q.wait_for_timeout(250)
+    check("undo: a second press goes one further back", q.evaluate(NOTES, Ts)==["Steak","Chips"], str(q.evaluate(NOTES, Ts)))
+    q.wait_for_timeout(9600)
+    check("undo: what is left to undo does not time out", q.evaluate(SAYS)=="Removed Toast", q.evaluate(SAYS))
+    q.click("#undoBtn"); q.wait_for_timeout(250)
+    check("undo: all the way back, and the bar goes with the last of it",
+          q.evaluate(NOTES, Ts)==["Toast","Steak","Chips"] and q.evaluate(SAYS)=="", str(q.evaluate(NOTES, Ts)))
+    q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
+    q.fill("#fCal","100"); q.fill("#fPro","10"); q.fill("#fNote","Apple"); q.click("#addFood"); q.wait_for_timeout(400)
+    check("undo: a change that cannot be undone ends the run", q.evaluate(SAYS)=="", q.evaluate(SAYS))
+    q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
+    gone=q.evaluate(SAYS)
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    check("undo: another screen does not show it", q.evaluate(SAYS)=="", q.evaluate(SAYS))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    check("undo: back where it was made, it can still be taken back",
+          gone.startswith("Removed") and q.evaluate(SAYS)==gone, "%s -> %s" % (gone, q.evaluate(SAYS)))
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    q.fill("#suppNameIn","Zinc"); q.click("#addSupp"); q.wait_for_timeout(300)
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    check("undo: a change that cannot be undone ends it, wherever it was made", q.evaluate(SAYS)=="", q.evaluate(SAYS))
     c.close()
 
     # ---------- AGAINST LAST TIME ----------

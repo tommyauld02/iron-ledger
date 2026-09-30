@@ -1191,10 +1191,8 @@
   .pan-item .rm:hover, .pan-item .rm:active { color: var(--danger); }
 
   /* ---------- pantry sections ---------- */
-  /* Move / Sort sits under Remove, in the same quiet style. A native picker
-     made invisible over the label, like the technique box: the row stays
-     narrow and the picker still names every section in full. Sort is in the
-     accent, because a food with no section is something to do. */
+  /* Meals sits under Remove, in the same quiet style, and opens the five
+     sections on the row itself. */
   .pan-item .mv {
     grid-column: 3;
     grid-row: 2 / 4;
@@ -1213,8 +1211,29 @@
     white-space: nowrap;
     color: var(--ink-3);
   }
-  .pan-item .mv.is-unsorted { color: var(--accent); }
-  .pan-item .mv select, .meal-pick select {
+  .pan-item .mv[aria-expanded="true"] { color: var(--accent); }
+  /* which meals it is for, under the name: the row is already 44px tall there
+     for Remove, so this costs no height */
+  .pan-item .nm .tags {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .pan-edit {
+    grid-column: 2 / -1;
+    grid-row: 4;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 8px;
+  }
+  .pan-edit .btn { align-self: flex-start; min-width: 96px; }
+  .meal-pick select {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -1255,21 +1274,6 @@
   }
   .sec-pick { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
   .pan-tabs { margin-bottom: 2px; }
-  .pan-group h4 {
-    margin: 12px 0 0;
-    font-family: var(--font-num);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: .16em;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-  .pan-hint {
-    margin: 4px 0 0;
-    font-family: var(--font-num);
-    font-size: 11px;
-    color: var(--ink-3);
-  }
 
   .photo-btn {
     display: block;
@@ -2733,7 +2737,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-28.45";
+  var BUILD = "2026-09-29.46";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2827,12 +2831,13 @@
   var estHint = "";        // "you have not filled anything in yet"
   var estSaving = false;   // the name field for saving this estimate as a meal is open
   var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
-  var estSaveSec = "";     // the section chosen for that saved meal, if any
+  var estSaveSecs = [];    // the sections chosen for that saved meal, if any
   var pantryForm = null;
-  // Which part of the pantry is on show: "all", a section id, or "none" for
-  // the foods not yet given a section. Transient — the app opens on All, so
-  // nothing saved is ever hidden behind a tab someone forgot they left open.
+  // Which part of the pantry is on show: "all" or a section id. Transient —
+  // the app opens on All, so nothing saved is ever hidden behind a tab someone
+  // forgot they left open.
   var panTab = "all";
+  var panEditing = null;   // the food whose meals are being chosen, if any
   var coachOpen = null;
   // Gym split editing. Transient view state, never saved: reopening the app
   // should show you your splits, not the half-finished act of renaming one.
@@ -2860,7 +2865,13 @@
   var imageTypes = "image/*";
   var lastError = null;
   var lastAdded = null;
-  var pendingUndo = null;
+  // Undo's state is declared up here with the rest, not beside the functions
+  // that use it: save() and render() both read it, and both run at startup.
+  var undoStack = [];        // [{ label, restore }], newest last
+  var undoScreen = "";       // the tab and day those changes were made on
+  var undoing = false;       // a restore is running: its save() is not new
+  var noticeTimer = null;    // a notice, not an offer, is on the bar
+  var taskStamp = 0, taskOpen = false, offeredIn = -1;
   var openMeal = null;    // which meal is expanded on the Macros tab
   var drag = null;        // the row currently being dragged, if any
 
@@ -2913,6 +2924,7 @@
 
   function save() {
     store.build = BUILD;   // so a backup always says which version wrote it
+    noteSave();            // a change with no undo beside it ends the undo run
     try {
       localStorage.setItem(KEY, JSON.stringify(store));
       saveError = null;
@@ -4265,9 +4277,10 @@
 
   // ---------- the pantry's sections ----------
   // Asked for once the pantry grew: somewhere to look for breakfast things at
-  // breakfast. A food carries `sec` only once it has been given one; foods
-  // saved before sections existed have none and are shown as not sorted
-  // until someone sorts them — never guessed into a meal they may not be.
+  // breakfast. Then, once sorting began, the obvious next thing: protein
+  // coffee is breakfast *and* a snack. So a food is in as many sections as it
+  // is eaten at — or none, and then it simply lives under All, as every food
+  // did before sections existed. Nothing is guessed into one.
   var PAN_SECS = [
     { id: "breakfast", name: "Breakfast" },
     { id: "lunch", name: "Lunch" },
@@ -4280,36 +4293,60 @@
     PAN_SECS.forEach(function (s) { if (s.id === id) hit = s.name; });
     return hit;
   }
-  // "" for not sorted — and for an id this build does not know, which keeps
-  // the food in view under Not sorted rather than filed somewhere invisible.
-  function panSec(raw) { return secName(raw.sec) ? raw.sec : ""; }
-  // The five sections as buttons. `attr` names what a press does, so the
-  // pantry form and the meal save row share the look without sharing
-  // handlers.
-  function secButtons(attr, chosen) {
-    return '<div class="sec-row" role="group" aria-label="Save under">' +
+  // `secs` is the list. `sec` is how b45 stored its one section; it is read
+  // the same way, so nothing saved then has to be rewritten to still count.
+  function rawSecs(raw) {
+    return Array.isArray(raw.secs) ? raw.secs.slice() : (raw.sec ? [raw.sec] : []);
+  }
+  // The sections this build knows, in the order a day runs.
+  function panSecs(raw) {
+    var have = rawSecs(raw);
+    return PAN_SECS.filter(function (s) { return have.indexOf(s.id) > -1; })
+                   .map(function (s) { return s.id; });
+  }
+  // An id this build does not know — a newer backup — is kept as it is while
+  // the known ones are changed around it: shown nowhere, lost nowhere.
+  function setPanSecs(raw, ids) {
+    var next = rawSecs(raw).filter(function (id) { return !secName(id); })
+      .concat(PAN_SECS.filter(function (s) { return ids.indexOf(s.id) > -1; })
+                      .map(function (s) { return s.id; }));
+    delete raw.sec;
+    if (next.length) raw.secs = next; else delete raw.secs;
+  }
+  // "Breakfast", "Breakfast and Snacks", "Breakfast, Lunch and Snacks"
+  function secList(ids) {
+    var names = ids.map(secName);
+    return names.length < 2 ? (names[0] || "")
+      : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
+  }
+  // The five sections as buttons, any number of them pressed. `attr` names
+  // what a press does, so the pantry form, a food's own row and the meal save
+  // row share the look without sharing handlers.
+  function secButtons(attr, chosen, label) {
+    return '<div class="sec-row" role="group" aria-label="' + (label || "Which meals it is for") + '">' +
       PAN_SECS.map(function (s) {
         return '<button type="button" ' + attr + '="' + s.id + '" aria-pressed="' +
-          (chosen === s.id ? 'true' : 'false') + '">' + s.name + '</button>';
+          (chosen.indexOf(s.id) > -1 ? 'true' : 'false') + '">' + s.name + '</button>';
       }).join("") +
     '</div>';
   }
   // Patched in place, never through render(): the fields around these keep
   // no draft of their own, and the meal's name box would snap back to its
-  // default. A second press on the chosen one clears it.
+  // default. Each press turns one on or off and leaves the rest alone.
   function pressSec(btn, attr) {
-    var on = btn.getAttribute("aria-pressed") !== "true";
+    btn.setAttribute("aria-pressed", btn.getAttribute("aria-pressed") === "true" ? "false" : "true");
+    var on = [];
     btn.parentNode.querySelectorAll("[" + attr + "]").forEach(function (b) {
-      b.setAttribute("aria-pressed", b === btn && on ? "true" : "false");
+      if (b.getAttribute("aria-pressed") === "true") on.push(b.getAttribute(attr));
     });
-    return on ? btn.getAttribute(attr) : "";
+    return on;
   }
 
   // A meal eaten often goes in the pantry as one entry: its totals as the
   // serving, so + and the quantity sheet work on it like anything else, and
   // its parts kept, so logging it puts a meal in the day rather than one
   // anonymous number. The unit is "meal", a count: two of them is twice.
-  function saveMealToPantry(name, parts, sec) {
+  function saveMealToPantry(name, parts, secs) {
     var items = parts.map(function (x) {
       return { cal: Math.round(Number(x.cal) || 0), pro: Math.round(Number(x.pro) || 0), note: x.note || "" };
     });
@@ -4324,14 +4361,16 @@
     var at = -1;
     store.pantry.forEach(function (x, i) { if (x.name.toLowerCase() === name.toLowerCase()) at = i; });
     var was = at > -1 ? store.pantry[at] : null;
-    // Saving over one without choosing a section keeps the one it had.
-    var into = secName(sec) ? sec : (was && secName(was.sec) ? was.sec : "");
-    if (into) entry.sec = into;
+    // Saving over one without choosing keeps the sections it had.
+    if (was && rawSecs(was).length) entry.secs = rawSecs(was);
+    var chosen = (secs || []).filter(secName);
+    if (chosen.length) setPanSecs(entry, chosen);
+    var into = panSecs(entry);
     if (was) { entry.id = was.id; store.pantry[at] = entry; } else store.pantry.push(entry);
     save();
     render();
     offerUndo((was ? "Updated " : "Saved ") + "\u201c" + name + "\u201d " +
-              (into ? "under " + secName(into) : "in your pantry"), function () {
+              (into.length ? "under " + secList(into) : "in your pantry"), function () {
       var i2 = -1;
       store.pantry.forEach(function (x, i) { if (x === entry) i2 = i; });
       if (i2 > -1) { if (was) store.pantry[i2] = was; else store.pantry.splice(i2, 1); }
@@ -4501,6 +4540,10 @@
     document.getElementById("todayBtn").hidden = (key === TODAY);
 
     drawRest();              // in the dock, outside #view, so not redrawn below
+    // The bar belongs to the screen its changes were made on. Looking at
+    // another tab or day hides it — nothing being undone could be seen from
+    // there — and coming back brings it back. Looking is not a change.
+    syncUndoBar();
 
     try {
       if (tab === "macros") renderMacros(key, d);
@@ -4661,8 +4704,8 @@
                 '<button class="btn" id="estSaveGo">Save</button>' +
                 '<button class="btn ghost" id="estSaveCancel">Cancel</button>' +
               '</div>' +
-              '<div class="sec-pick"><span class="sec-k">Save under</span>' +
-                secButtons("data-estsec", estSaveSec) + '</div>'
+              '<div class="sec-pick"><span class="sec-k">Which meals is it for?</span>' +
+                secButtons("data-estsec", estSaveSecs) + '</div>'
             : '<button class="meal-save" id="estSave">Save this meal to your pantry</button>') +
           (estHint && est ? '<p class="rev-assume" style="color:var(--miss)">' + esc(estHint) + '</p>' : '') +
           '<div class="rev-actions">' +
@@ -5217,7 +5260,7 @@
           estHint = "Put numbers on \u201c" + gap + "\u201d first \u2014 a saved meal is only as good as what\u2019s in it.";
           render(); return;
         }
-        estHint = ""; estSaving = true; estSaveSec = ""; render();
+        estHint = ""; estSaving = true; estSaveSecs = []; render();
         var f = document.getElementById("estSaveName");
         if (f) { f.focus(); f.select(); }
       });
@@ -5225,7 +5268,7 @@
     var estSaveCancel = document.getElementById("estSaveCancel");
     if (estSaveCancel) estSaveCancel.addEventListener("click", function () { estSaving = false; render(); });
     view.querySelectorAll("[data-estsec]").forEach(function (b) {
-      b.addEventListener("click", function () { estSaveSec = pressSec(b, "data-estsec"); });
+      b.addEventListener("click", function () { estSaveSecs = pressSec(b, "data-estsec"); });
     });
     var estSaveGo = document.getElementById("estSaveGo");
     if (estSaveGo) {
@@ -5234,7 +5277,7 @@
         var nm = (f.value || "").trim();
         if (!nm) { f.focus(); return; }
         estSaving = false;
-        saveMealToPantry(nm, estParts(), estSaveSec);
+        saveMealToPantry(nm, estParts(), estSaveSecs);
       });
     }
 
@@ -6318,13 +6361,13 @@
       return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
     });
 
-    // How many in each section, and how many not yet sorted. A tab left on
-    // something that no longer exists falls back to All rather than showing
-    // an empty list with nothing to say why.
-    var counts = { all: list.length, none: 0 };
+    // How many in each section — a food in two counts in both. A tab left on
+    // something that no longer exists falls back to All.
+    var counts = { all: list.length };
     PAN_SECS.forEach(function (s) { counts[s.id] = 0; });
-    list.forEach(function (raw) { counts[panSec(raw) || "none"]++; });
-    if (panTab === "none" ? !counts.none : panTab !== "all" && !secName(panTab)) panTab = "all";
+    list.forEach(function (raw) { panSecs(raw).forEach(function (id) { counts[id]++; }); });
+    if (panTab !== "all" && !secName(panTab)) panTab = "all";
+    if (panEditing && !list.some(function (raw) { return raw.id === panEditing; })) panEditing = null;
 
     function rowHtml(raw) {
       var n = normPantry(raw);
@@ -6350,54 +6393,43 @@
         : '<button class="add" data-addpan="' + raw.id + '" aria-label="Add ' +
             esc(raw.name) + ' to this day">+</button>';
 
-      // Where it lives, and the way to change that: the technique box's trick
-      // of a native picker made invisible over a short label, so the row
-      // stays narrow and the picker still names every section in full.
-      var sec = panSec(raw);
-      var move = '<label class="mv' + (sec ? '' : ' is-unsorted') + '">' + (sec ? 'Move' : 'Sort') + ' ▾' +
-        '<select data-movepan="' + raw.id + '" aria-label="' +
-          (sec ? 'Move ' + esc(raw.name) + ' to another section' : 'Choose a section for ' + esc(raw.name)) + '">' +
-          (sec ? '' : '<option value="" selected disabled>Pick a section</option>') +
-          PAN_SECS.map(function (s) {
-            return '<option value="' + s.id + '"' + (s.id === sec ? ' selected' : '') + '>' + s.name + '</option>';
-          }).join("") +
-        '</select></label>';
+      // Which meals it is for: named under the food, and changed from its own
+      // row — Meals opens the five as buttons, any number of them on.
+      var secs = panSecs(raw);
+      var editing = panEditing === raw.id;
+      var tags = secs.length ? '<span class="tags">' + secList(secs) + '</span>' : '';
+      var meals = '<button class="mv" data-panmeals="' + raw.id + '" aria-expanded="' + (editing ? 'true' : 'false') +
+        '" aria-label="Which meals ' + esc(raw.name) + ' is for">Meals ▾</button>';
+      var editor = editing
+        ? '<div class="pan-edit"><span class="sec-k">Which meals is it for?</span>' +
+            secButtons("data-pansecfor", secs, "Which meals " + esc(raw.name) + " is for") +
+            '<button class="btn ghost" id="panEditDone">Done</button></div>'
+        : '';
 
       return '<div class="pan-item"' + (bad ? ' style="background:var(--miss-bg)"' : '') + '>' +
         addBtn +
-        '<span class="nm">' + esc(raw.name) + '</span>' +
+        '<span class="nm">' + esc(raw.name) + tags + '</span>' +
         '<span class="macros"' + (bad ? ' style="color:var(--miss)"' : '') + '>' + right + '</span>' +
         '<span class="sub"' + (bad ? ' style="color:var(--miss)"' : '') + '>' + esc(sub) + '</span>' +
         '<button class="rm" data-' + (bad ? 'fixpan' : 'rmpan') + '="' + raw.id + '">' +
           (bad ? "Fix" : "Remove") + '</button>' +
-        move +
+        meals + editor +
       '</div>';
     }
 
-    // All shows every section under its own heading, in the order a day runs;
-    // a section's tab shows just that section. Foods with no section yet come
-    // last, under a heading that says what to do about them.
-    function group(name, items, hint) {
-      return items.length
-        ? '<div class="pan-group"><h4>' + name + '</h4>' +
-            (hint ? '<p class="pan-hint">' + hint + '</p>' : '') +
-            items.map(rowHtml).join("") + '</div>'
-        : '';
-    }
-    var unsorted = list.filter(function (raw) { return !panSec(raw); });
-    var SORT_HINT = "No section yet. Tap Sort on each to give it one.";
+    // All is every food, one list, the way the pantry always was. A section's
+    // tab is the foods eaten then. The food being edited stays in view even
+    // once it is taken out of the section on show — it must not vanish from
+    // under the finger mid-choice.
     var rows = panTab === "all"
-      ? PAN_SECS.map(function (s) {
-          return group(s.name, list.filter(function (raw) { return panSec(raw) === s.id; }));
-        }).join("") + group("Not sorted", unsorted, SORT_HINT)
-      : panTab === "none"
-        ? '<p class="pan-hint">' + SORT_HINT + '</p>' + unsorted.map(rowHtml).join("")
-        : list.filter(function (raw) { return panSec(raw) === panTab; }).map(rowHtml).join("") ||
-          '<p class="empty">Nothing under ' + secName(panTab) + ' yet. Choose ' + secName(panTab) +
-            ' when you save a food, or tap Move on one under All.</p>';
+      ? list.map(rowHtml).join("")
+      : list.filter(function (raw) { return panSecs(raw).indexOf(panTab) > -1 || raw.id === panEditing; })
+            .map(rowHtml).join("") ||
+          '<p class="empty">Nothing under ' + secName(panTab) + ' yet. Tap Meals on a food to add it here, ' +
+            'or choose ' + secName(panTab) + ' when you save one.</p>';
 
-    // The tabs: All, the five sections, and Not sorted only while something
-    // is. The count says where things are before anything is tapped.
+    // The tabs: All and the five sections. The count says where things are
+    // before anything is tapped.
     function tab(id, name, n) {
       return '<button type="button" data-pantab="' + id + '" aria-pressed="' + (panTab === id ? 'true' : 'false') + '">' +
         name + (n ? ' <span class="n">' + n + '</span>' : '') + '</button>';
@@ -6406,7 +6438,6 @@
       ? '<div class="sec-row pan-tabs" role="group" aria-label="Show">' +
           tab("all", "All", counts.all) +
           PAN_SECS.map(function (s) { return tab(s.id, s.name, counts[s.id]); }).join("") +
-          (counts.none ? tab("none", "Not sorted", counts.none) : '') +
         '</div>'
       : '';
 
@@ -6450,8 +6481,8 @@
 
     var f = pantryForm || { name: "", servingG: "", cal: "", pro: "" };
     // Standing in a section's tab, a new food starts out filed under it —
-    // the obvious place for it — and a press on another changes that.
-    var formSec = f.sec !== undefined ? f.sec : (secName(panTab) ? panTab : "");
+    // the obvious place for it — and presses add others or take it off.
+    var formSecs = f.secs !== undefined ? f.secs : (secName(panTab) ? [panTab] : []);
 
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:12px">' +
@@ -6490,8 +6521,8 @@
           '</div>' +
           '<p class="est-note">For anything pre-made, leave it at <strong>1</strong> and pick the container — bottle, bar, can. ' +
             'Only reach for grams or ounces when it’s something you actually portion out yourself, like rice or meat.</p>' +
-          '<div class="field"><span class="sec-k">Save under</span>' +
-            secButtons("data-pansec", formSec) + '</div>' +
+          '<div class="field"><span class="sec-k">Which meals is it for?</span>' +
+            secButtons("data-pansec", formSecs) + '</div>' +
           '<p class="est-note" id="panWarn" hidden style="color:var(--miss)"></p>' +
           '<button class="btn" id="savePan">Save to pantry</button>' +
         '</div>' +
@@ -6551,7 +6582,7 @@
         // And keep its section: fixing a number is not refiling it.
         pantryForm = { name: raw.name, servingG: "1", unit: "bottle",
                        cal: String(Math.round(n.sCal)), pro: String(Math.round(n.sPro)),
-                       sec: panSec(raw) };
+                       secs: panSecs(raw) };
         store.pantry = store.pantry.filter(function (x) { return x.id !== b.dataset.fixpan; });
         save(); render();
         var nameEl = document.getElementById("panName");
@@ -6608,10 +6639,12 @@
         serve = 1;
       }
 
-      // The section is read off the buttons as they stand, because that is
+      // The sections are read off the buttons as they stand, because that is
       // what was on screen when Save was pressed.
-      var chosen = view.querySelector('[data-pansec][aria-pressed="true"]');
-      var sec = chosen ? chosen.getAttribute("data-pansec") : "";
+      var chosen = [];
+      view.querySelectorAll('[data-pansec][aria-pressed="true"]').forEach(function (b) {
+        chosen.push(b.getAttribute("data-pansec"));
+      });
       var entry = {
         id: uid(),
         name: name,
@@ -6622,16 +6655,17 @@
         sPro: pro,
         aliases: []
       };
-      if (secName(sec)) entry.sec = sec;
+      if (chosen.length) setPanSecs(entry, chosen);
       store.pantry.push(entry);
       pantryForm = null;
       pantryShot = null;
       // Saved while looking at another section's tab, the new food would land
       // somewhere off screen — the Add button that saved perfectly and said
       // nothing. So the list follows it, and the bar says where it went.
-      if (panTab !== "all") panTab = entry.sec || "none";
+      var into = panSecs(entry);
+      if (panTab !== "all" && into.indexOf(panTab) === -1) panTab = into[0] || "all";
       var ok = save(); render();
-      if (ok) notify("Saved " + name + (entry.sec ? " under " + secName(entry.sec) : " to your pantry"));
+      if (ok) notify("Saved " + name + (into.length ? " under " + secList(into) : " to your pantry"));
       // Said after the redraw, because render() rebuilt the element. Changing
       // what someone typed and not mentioning it is its own kind of silence.
       if (normalised) {
@@ -6646,25 +6680,36 @@
     view.querySelectorAll("[data-pansec]").forEach(function (b) {
       b.addEventListener("click", function () {
         pantryForm = pantryForm || { name: "", servingG: "", cal: "", pro: "", unit: "" };
-        pantryForm.sec = pressSec(b, "data-pansec");
+        pantryForm.secs = pressSec(b, "data-pansec");
       });
     });
 
-    // Moving a food changes where it is filed and nothing else. It can leave
-    // the list on screen when a section's tab is open, so the bar says where
-    // it went, and undo puts it back where it was — including nowhere.
-    view.querySelectorAll("[data-movepan]").forEach(function (sel) {
-      sel.addEventListener("change", function () {
-        var id = sel.getAttribute("data-movepan"), raw = null;
+    // A food's meals, changed from its own row. Each press is its own change,
+    // said out loud and undoable — Undo walks back through them one at a time.
+    view.querySelectorAll("[data-panmeals]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.getAttribute("data-panmeals");
+        panEditing = panEditing === id ? null : id;
+        render();
+      });
+    });
+    var panEditDone = document.getElementById("panEditDone");
+    if (panEditDone) panEditDone.addEventListener("click", function () { panEditing = null; render(); });
+    view.querySelectorAll("[data-pansecfor]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = panEditing, sec = b.getAttribute("data-pansecfor"), raw = null;
         store.pantry.forEach(function (x) { if (x.id === id) raw = x; });
-        if (!raw || !secName(sel.value) || sel.value === panSec(raw)) return;
-        var had = raw.sec, from = panSec(raw);
-        raw.sec = sel.value;
+        if (!raw || !secName(sec)) return;
+        var before = { secs: raw.secs ? raw.secs.slice() : undefined, sec: raw.sec };
+        var now = panSecs(raw), adding = now.indexOf(sec) === -1;
+        setPanSecs(raw, adding ? now.concat([sec]) : now.filter(function (x) { return x !== sec; }));
         save(); render();
-        offerUndo((from ? "Moved " + raw.name + " to " : "Put " + raw.name + " under ") + secName(raw.sec), function () {
+        offerUndo(adding ? "Added " + raw.name + " to " + secName(sec)
+                         : "Took " + raw.name + " out of " + secName(sec), function () {
           store.pantry.forEach(function (x) {
             if (x.id !== id) return;
-            if (had === undefined) delete x.sec; else x.sec = had;
+            if (before.secs) x.secs = before.secs.slice(); else delete x.secs;
+            if (before.sec !== undefined) x.sec = before.sec; else delete x.sec;
           });
           save(); render();
         });
@@ -6848,8 +6893,8 @@
           unit: got.servingGrams > 0 ? "g" : "bottle",
           cal: got.calories ? String(got.calories) : "",
           pro: got.protein ? String(got.protein) : "",
-          // a section already chosen survives the label being read
-          sec: pantryForm ? pantryForm.sec : undefined
+          // sections already chosen survive the label being read
+          secs: pantryForm ? pantryForm.secs : undefined
         };
         pantryShot = (got.calories && got.protein) ? null
           : { status: "error", message: "Read what it could — fill in the blanks and give it a name before saving." };
@@ -6896,7 +6941,7 @@
           unit: grams > 0 ? "g" : "bottle",
           cal: out.calories ? String(Math.round(Number(out.calories))) : "",
           pro: out.protein ? String(Math.round(Number(out.protein))) : "",
-          sec: pantryForm ? pantryForm.sec : undefined
+          secs: pantryForm ? pantryForm.secs : undefined
         };
         pantryShot = null;
       }
@@ -7070,40 +7115,104 @@
     b.addEventListener("click", function () { setTab(b.dataset.tab); });
   });
 
-  // Every delete is reversible for a few seconds. Small targets plus instant
-  // destruction is a bad combination; undo beats a confirmation dialog you'd
-  // have to dismiss mid-set.
-  var undoTimer = null;
+  // ---------- undo ----------
+  // Every change that can be taken back is, one step at a time, for as long as
+  // you keep making them. Undo used to hold only the latest, for nine seconds:
+  // sort three foods, and the first two were already out of reach. Now each
+  // offer goes on a stack and the bar walks back down it — Undo, then Undo
+  // again — until a change that cannot be taken back (a set logged, a food
+  // saved) ends the run. The bar shows only on the screen — tab and day — the
+  // run was made on; an undoable change made on another screen starts a new
+  // run there.
+  //
+  // That rule is also what makes it safe. Every restore expects the world as
+  // its own change left it; because anything unundoable ends the run, the
+  // stack only ever holds changes made one straight after another, and taking
+  // them back newest first hands each restore exactly that world.
+  function screenKey() { return tab + "|" + ymd(cursor); }
 
-  function offerUndo(label, restore) {
+  // A "task" is one tap's worth of work: everything a handler does before the
+  // browser gets control back. A save() in the same task as an offerUndo() is
+  // that offer's own change; a save() with no offer beside it is a change that
+  // cannot be taken back, and it ends the run.
+  function thisTask() {
+    if (!taskOpen) {
+      taskOpen = true; taskStamp++;
+      setTimeout(function () { taskOpen = false; }, 0);
+    }
+    return taskStamp;
+  }
+  function noteSave() {
+    if (undoing || !undoStack.length) return;
+    var t = thisTask();
+    setTimeout(function () { if (offeredIn !== t) endUndoRun(); }, 0);
+  }
+
+  function showUndoTop() {
     var bar = document.getElementById("undobar");
     var lab = document.getElementById("undoLabel");
-    if (!bar || !lab) return;
-    lab.textContent = label;
-    bar.hidden = false;
-    // Nothing to restore means nothing to press: a dead Undo is a lie.
     var btn = document.getElementById("undoBtn");
-    if (btn) btn.hidden = !restore;
-    pendingUndo = restore;
-    clearTimeout(undoTimer);
-    undoTimer = setTimeout(function () {
-      bar.hidden = true;
-      pendingUndo = null;
-    }, 9000);
+    if (!bar || !lab || !btn) return;
+    var top = undoStack[undoStack.length - 1];
+    if (!top) { bar.hidden = true; return; }
+    lab.textContent = top.label;
+    btn.hidden = false;
+    bar.hidden = false;
+  }
+
+  function offerUndo(label, restore) {
+    if (!restore) { notify(label); return; }   // nothing to restore, nothing to press
+    if (undoStack.length && undoScreen !== screenKey()) undoStack = [];
+    undoScreen = screenKey();
+    undoStack.push({ label: label, restore: restore });
+    if (undoStack.length > 40) undoStack.shift();
+    offeredIn = thisTask();
+    clearTimeout(noticeTimer); noticeTimer = null;
+    showUndoTop();
   }
 
   // Something the app did by itself, said out loud (rule 3), with nothing on
   // the bar to press. The workout clock starting on the first set is the
   // case: an Undo there would sit right above the rest timer's Start, one wet
   // thumb away from quietly taking back the very thing that was just fixed.
-  // Discard, on the clock itself, is the way to throw it away.
-  function notify(label) { offerUndo(label, null); }
+  // Discard, on the clock itself, is the way to throw it away. A notice is
+  // news, so it still goes after nine seconds — and hands the bar back to
+  // whatever can still be undone.
+  function notify(label) {
+    var bar = document.getElementById("undobar");
+    var lab = document.getElementById("undoLabel");
+    var btn = document.getElementById("undoBtn");
+    if (!bar || !lab || !btn) return;
+    lab.textContent = label;
+    btn.hidden = true;
+    bar.hidden = false;
+    clearTimeout(noticeTimer);
+    noticeTimer = setTimeout(function () { noticeTimer = null; syncUndoBar(); }, 9000);
+  }
 
-  function hideUndo() {
+  function syncUndoBar() {
+    if (noticeTimer) return;                 // a notice is still being said
+    if (undoStack.length && undoScreen === screenKey()) { showUndoTop(); return; }
     var bar = document.getElementById("undobar");
     if (bar) bar.hidden = true;
-    pendingUndo = null;
-    clearTimeout(undoTimer);
+  }
+
+  // The run is over: nothing on it can be taken back any more. A notice on
+  // the bar is left to finish saying what it is saying.
+  function endUndoRun() {
+    undoStack = [];
+    if (!noticeTimer) {
+      var bar = document.getElementById("undobar");
+      if (bar) bar.hidden = true;
+    }
+  }
+
+  // Midnight passed: the day everything happened on is gone from the screen.
+  function hideUndo() {
+    undoStack = [];
+    clearTimeout(noticeTimer); noticeTimer = null;
+    var bar = document.getElementById("undobar");
+    if (bar) bar.hidden = true;
   }
 
   // Removing a row by its id, not its position — a row can't shift out from
@@ -7310,7 +7419,7 @@
     var parts = at.row.items.map(function (x) { return { cal: x.cal, pro: x.pro, note: x.note, pending: x.pending }; });
     if (unpricedPart(parts)) return;   // not offered; a note sits in its place
     // Its name as it reads in the day; "Name this meal" first to change it.
-    saveMealToPantry(rowNote(at.row) || "Saved meal", parts, sel.value);
+    saveMealToPantry(rowNote(at.row) || "Saved meal", parts, [sel.value]);
   });
   // ---------- drag a row onto another to combine them ----------
   // A press-and-hold starts the drag rather than a plain drag, so an ordinary
@@ -7589,10 +7698,15 @@
     document.getElementById("backupBtn").click();
   });
 
+  // Newest first, one per press. The bar then shows what the next press would
+  // take back, so walking down the run always says where it has got to.
   document.getElementById("undoBtn").addEventListener("click", function () {
-    var fn = pendingUndo;
-    hideUndo();
-    if (fn) fn();
+    var top = undoStack.pop();
+    if (top) {
+      undoing = true;
+      try { top.restore(); } finally { undoing = false; }
+    }
+    showUndoTop();
   });
 
   // Offline shell. Gated on our own manifest link rather than on the protocol:

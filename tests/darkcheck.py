@@ -48,7 +48,7 @@ def fixture(theme=None, accent=None):
          "pantry": [{"id": "p", "name": "protein coffee", "serveQty": 1, "serveUnit": "bottle",
                      "serveG": None, "sCal": 130, "sPro": 30, "aliases": []},
                     {"id": "p2", "name": "Eggs", "serveQty": 1, "serveUnit": "egg",
-                     "serveG": None, "sCal": 72, "sPro": 6, "aliases": [], "sec": "breakfast"},
+                     "serveG": None, "sCal": 72, "sPro": 6, "aliases": [], "secs": ["breakfast", "dinner"]},
                     {"id": "p3", "name": "Ice cream sandwich", "serveQty": 1, "serveUnit": "piece",
                      "serveG": None, "sCal": 180, "sPro": 3, "aliases": [], "sec": "desserts"}], "v": 1}
     P = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
@@ -128,20 +128,24 @@ def walk(p, label):
         low = p.evaluate(LOW)
         if low: found.append("%s: %s" % (tab, low))
         if tab == "pantry":
-            # the sections have looks of their own, and a chosen one in the
-            # form sits on the form's ground rather than the page's
+            # the sections have looks of their own: the tabs, a chosen one,
+            # the meals named under a food, and Meals itself
             painted = p.evaluate("""()=>({
               tabs: document.querySelectorAll('[data-pantab]').length,
               chosen: document.querySelectorAll('[data-pantab][aria-pressed=true]').length,
-              heading: document.querySelectorAll('.pan-group h4').length,
-              hint: document.querySelectorAll('.pan-hint').length,
-              sort: document.querySelectorAll('.pan-item .mv.is-unsorted').length,
-              move: document.querySelectorAll('.pan-item .mv:not(.is-unsorted)').length})""")
+              tags: document.querySelectorAll('.pan-item .nm .tags').length,
+              meals: document.querySelectorAll('.pan-item .mv').length})""")
             for k, n in painted.items():
                 if not n: found.append("pantry: the %s state is not on screen" % k)
+            # a chosen one in the form sits on the form's ground, and a food's
+            # own choices only exist once its Meals is pressed
             p.click('[data-pansec="snacks"]'); p.wait_for_timeout(100)
+            p.locator("[data-panmeals]").first.click(); p.wait_for_timeout(250)
+            if not p.locator('[data-pansecfor][aria-pressed="true"]').count():
+                found.append("pantry: a food's chosen meals are not on screen")
             low = p.evaluate(LOW)
-            if low: found.append("pantry (section chosen): %s" % low)
+            if low: found.append("pantry (choosing meals): %s" % low)
+            p.click("#panEditDone"); p.wait_for_timeout(150)
         if tab == "gym":
             # the set to beat has three looks, and a state the fixture stops
             # painting is a state this suite stops measuring — so say so

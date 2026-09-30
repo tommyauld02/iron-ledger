@@ -50,6 +50,7 @@ PROBES=[
  ("pantry","[data-fixpan]","fix legacy pantry entry",None),
  ("pantry",'[data-pantab="breakfast"]',"show one pantry section",None),
  ("pantry",'[data-pansec="lunch"]',"choose a section to save under",None),
+ ("pantry","[data-panmeals]","open a food's meals",None),
  ("log","#prevYear","previous year",None),
  ("log","#nextYear","next year",None),
  ("log",".cal-cell.hit, .cal-cell.miss","tap a logged day",None),

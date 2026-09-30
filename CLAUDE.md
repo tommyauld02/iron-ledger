@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~660 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~670 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -346,9 +346,9 @@ to win. It was proven by putting the old colour back and watching it fail.
 It also fails if the fixture stops painting any of the three looks of the set
 to beat — to beat, beaten, and beaten on a folded card — and `mobile` does the
 same for their fit, so a fixture edit cannot quietly turn either into a check
-of nothing. The pantry's sections carry the same guard: tabs, a chosen tab, a
-heading, the not-sorted hint, Sort and Move must all be on screen, and the
-walk opens the meal save row with a section chosen.
+of nothing. The pantry's sections carry the same guard: tabs, a chosen tab,
+the meals named under a food and Meals itself must all be on screen, and the
+walk opens a food's meals with some chosen, and the meal save row with one.
 
 **The app is installed, not just bookmarked.** `manifest.webmanifest` and
 `sw.js` make it a real PWA: standalone display, home-screen icon, and an
@@ -578,36 +578,40 @@ button's place rather than a button that cannot work.
 
 **The pantry is filed in sections.** Asked for once it grew: Breakfast,
 Lunch, Dinner, Snacks and Desserts (`PAN_SECS`), in the order a day runs — he
-listed them in another order; this one is for finding things. A food carries
-`sec` only once it has one. The list opens on *All*, each section under its
-own heading, with a tab per section and a count on each, so where things are
-is visible before anything is tapped. `panTab` is transient: the app always
-opens on All, so nothing saved is hidden behind a tab someone forgot they
-left open.
+listed them in another order; this one is for finding things. `panTab` is
+transient: the app always opens on All, so nothing saved is hidden behind a
+tab someone forgot they left open.
 
-**Nothing is guessed into a section.** Foods saved before sections existed
-carry none and wait under *Not sorted*, with a line saying what to do, and the
-*Not sorted* tab exists only while something is. An id this build does not
-know — a newer backup — displays as not sorted and is kept as it is: shown,
-not lost, and not rewritten until someone chooses.
+**A food is in as many sections as it is eaten at — or none.** b45 filed each
+food in exactly one, and the first morning of sorting showed why that was
+wrong: protein coffee is breakfast *and* a snack. `secs` is a list. *All* is
+every food in one alphabetical list, the way the pantry always was, each
+naming its meals under its name; a section's tab is the foods eaten then; a
+food in none simply lives in All, with nothing nagging it to be sorted. b45
+wrote a single `sec`, and `rawSecs()` reads it the same way, so nothing saved
+then had to be rewritten to still count. An id this build does not know — a
+newer backup — is kept as it is while the known ones change around it
+(`setPanSecs()`): shown nowhere, lost nowhere.
 
-**Saving says where it went.** The form has *Save under* buttons, starting on
-the section whose tab you are standing in. Saved under Lunch while Breakfast is
-showing, the new food would land off screen — the Add that saved perfectly and
-said nothing — so the list follows it to its tab and `notify()` names the
-section. Saving a meal from the estimate asks with the same buttons; on a meal
-already in the day, *Save to pantry* is a picker, so choosing the section is the
-save. Saving over a meal of the same name without choosing keeps its section.
+**Saving says where it went.** The form asks *Which meals is it for?* with the
+five as buttons, any number on, starting on the section whose tab you are
+standing in. Saved while another section is showing, the new food would land
+off screen — the Add that saved perfectly and said nothing — so the list
+follows it to one of its sections, or to All, and `notify()` names them.
+Saving a meal from the estimate asks with the same buttons; on a meal already
+in the day, *Save to pantry* is a picker, so the one section chosen is the
+save, and more can be added from the pantry. Saving over a meal of the same
+name without choosing keeps the sections it had.
 
-**Moving is a picker, not a mode.** *Move ▾* — *Sort ▾*, in the accent, for a
-food with no section — sits under Remove: the technique box's invisible native
-picker over a short label. It changes `sec` and nothing else, says where the
-food went, and undo puts it back, including back to no section at all. The
-row was rearranged for it: Remove beside the name, Move beside the two lines
-under it. Two 44px targets stacked need 91px; stacking them under the name as
-well came out at 134px a row. The section buttons flip `aria-pressed` in place
-through `pressSec()` rather than calling `render()`, because the meal's name box
-keeps no draft and would snap back to its default — the checklist ticks' rule.
+**A food's meals are changed on its own row.** *Meals ▾* sits under Remove and
+opens the five as buttons on the row, with Done. Each press is its own change,
+said out loud and undoable. The food being edited stays in view even once it
+is taken out of the section on show — it must not vanish from under the
+finger mid-choice — and goes when Done is pressed. Its meals are named under
+its name, where Remove already makes that row 44px tall, so they cost no
+height. The section buttons flip `aria-pressed` in place through `pressSec()`
+rather than calling `render()`, because the meal's name box keeps no draft and
+would snap back to its default — the checklist ticks' rule.
 
 **A `1fr` column will not shrink below its longest unbreakable line.** The
 pantry row's middle column was `1fr` and its macros line `nowrap`, so
@@ -615,6 +619,29 @@ pantry row's middle column was `1fr` and its macros line `nowrap`, so
 then zooms the whole app out, and every tap `mobile` made landed somewhere
 else. Any long unit could always do it; it took the sections fixture's
 container to show it. The column is `minmax(0, 1fr)` and the line may wrap.
+
+**Undo walks back, one press at a time, until the run ends.** Found using b45:
+sorting several foods, only the last could be taken back, and only for nine
+seconds. `offerUndo()` now pushes onto `undoStack`; the bar shows the newest,
+Undo takes it back, and the bar moves on to the one before. Only a change that
+cannot be undone — a set logged, a food added or saved — ends the run, and it
+does not time out. Looking is not a change: the bar belongs to the screen the
+run was made on (`screenKey()`, tab and day), so another tab hides it and
+coming back brings it back, which is what someone who checks the calendar and
+returns to undo expects — `sweep` and `share` both do exactly that. An undoable
+change made on another screen starts a new run there. A notice from `notify()`
+still goes after nine seconds, and hands the bar back to whatever can still be
+undone on the screen showing.
+
+The rule that ends a run is also what makes it safe. Every restore expects the
+world exactly as its own change left it. Because anything that cannot be
+undone ends the run, the stack only ever holds changes made one straight after
+another, and taking them back newest first gives each restore precisely that
+world. It is detected per tap: `save()` calls `noteSave()`, which looks, once
+the tap's work is finished, for an `offerUndo()` made during the same tap; if
+there was none, the change was not undoable and the run is over. A restore's
+own `save()` is exempt (`undoing`). Every call site saves first and offers
+second, in the same handler — keep it that way, or its own save ends its run.
 
 **Compared with last time.** A sheet, from *Compare with last time* under the
 movements. The session is set against the last session of the **same split**
