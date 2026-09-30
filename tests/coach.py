@@ -100,8 +100,10 @@ with sync_playwright() as pw:
     check("coach: new day starts empty",
           "No movements yet" in p.locator(".rt-moves").first.inner_text())
     p.click('[data-tab="gym"]'); p.wait_for_timeout(400)
+    # the routine's days, not the built-in Special day that always follows them
+    SPLITS='[data-cat]:not([data-cat="special"])'
     check("gym: new day appears as a split chip",
-          p.locator("[data-cat]").count()==4, str(p.locator("[data-cat]").count())+" chips")
+          p.locator(SPLITS).count()==4, str(p.locator(SPLITS).count())+" chips")
 
     # ---------- delete a day + undo ----------
     p.click('[data-tab="coach"]'); p.wait_for_timeout(300)

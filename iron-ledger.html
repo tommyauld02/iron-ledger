@@ -2777,12 +2777,18 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-29.47";
+  var BUILD = "2026-09-29.48";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
   // keep their original ids so workouts logged before routines existed still
   // resolve to the right day.
+  // A day outside the routine on purpose — training at home with two pairs of
+  // dumbbells, yoga instead, a friend's workout. It is not one of the splits,
+  // so it is never renamed, removed or scheduled, and a lift logged on it is
+  // still the movement it is: "Hammer Curl" at home is "Hammer Curl" at the
+  // gym, because every movement's history is looked up by its name.
+  var SPECIAL = "special";
   var DAY_COLORS = ["var(--cat-a)", "var(--cat-b)", "var(--cat-c)",
                     "var(--accent)", "var(--cat-a)", "var(--cat-b)", "var(--cat-c)"];
 
@@ -3027,6 +3033,10 @@
   function cat(id) {
     var found = cats().filter(function (c) { return c.id === id; })[0];
     if (found) return found;
+    if (id === SPECIAL) {
+      return { id: SPECIAL, tag: "S", name: "Special day", short: "Special",
+               color: "var(--ink-2)", special: true };
+    }
     // The day is gone from the routine, but the workout still happened. Look up
     // the name it was logged under so old sessions read the way they were logged.
     var was = (store.retired && store.retired[id]) || "Removed day";
@@ -3039,6 +3049,16 @@
   // implementation is how the two would quietly drift apart, and only one of
   // them would remember to write store.retired.
   function shortName(n) { return n.length > 18 ? n.slice(0, 17) + "…" : n; }
+
+  // Every movement you know, from every split and the special day's own,
+  // once each. A special day borrows from all of them.
+  function allMoves() {
+    var out = [];
+    cats().map(function (x) { return x.id; }).concat([SPECIAL]).forEach(function (id) {
+      (store.moves[id] || []).forEach(function (m) { if (out.indexOf(m) === -1) out.push(m); });
+    });
+    return out.sort();
+  }
 
   // ---------- how long the workout took ----------
   // d.workoutStart is a timestamp while it runs; d.workoutMs is what has been
@@ -5440,7 +5460,7 @@
     // Someone whose routine no longer contains the day we were showing (a reset,
     // a restore from another phone) must land on a real day, not an empty one.
     var live = cats();
-    if (!live.filter(function (x) { return x.id === activeCat; }).length && live.length) {
+    if (activeCat !== SPECIAL && !live.filter(function (x) { return x.id === activeCat; }).length && live.length) {
       activeCat = live[0].id;
     }
     var c = cat(activeCat);
@@ -5451,6 +5471,10 @@
       return '<button class="cat" data-cat="' + x.id + '" aria-pressed="' + (x.id === activeCat) + '" ' +
              'style="--catcolor:' + x.color + '"><span class="tag">' + x.tag + '</span>' + esc(x.short) + '</button>';
     }).join("") +
+      // The special day sits after the routine, not in it.
+      '<button class="cat" data-cat="' + SPECIAL + '" aria-pressed="' + (activeCat === SPECIAL) + '" ' +
+        'style="--catcolor:var(--ink-2)" aria-label="Special day — outside your routine">' +
+        '<span class="tag">S</span>Special</button>' +
       // Same box as the splits it sits beside, so it reads as "one more of
       // these" rather than as a control bolted on beneath them.
       '<button class="cat cat-add" id="addSplitChip" aria-label="Add a split">' +
@@ -5473,9 +5497,18 @@
       '</div>';
     }).join("");
 
-    var opts = (store.moves[activeCat] || []).slice().sort().map(function (m) {
-      return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
-    }).join("");
+    function opt(m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }
+    // A special day offers every split's movements, grouped by split so curls
+    // are found under Back and raises under Shoulders, then its own.
+    var opts = activeCat === SPECIAL
+      ? live.map(function (x) {
+          var ms = (store.moves[x.id] || []).slice().sort();
+          return ms.length ? '<optgroup label="' + esc(x.name) + '">' + ms.map(opt).join("") + '</optgroup>' : '';
+        }).join("") +
+        ((store.moves[SPECIAL] || []).length
+          ? '<optgroup label="Special days">' + store.moves[SPECIAL].slice().sort().map(opt).join("") + '</optgroup>'
+          : '')
+      : (store.moves[activeCat] || []).slice().sort().map(opt).join("");
 
     var locked = !!d.gymLocked;
     tidySupersets(d);
@@ -5562,7 +5595,7 @@
       var editing = liftEditing === i && !locked;
       var editOpts = "";
       if (editing) {
-        var pool = (store.moves[l.cat] || []).slice();
+        var pool = l.cat === SPECIAL ? allMoves() : (store.moves[l.cat] || []).slice();
         if (pool.indexOf(l.movement) === -1) pool.push(l.movement);
         editOpts = pool.sort().map(function (m) {
           return '<option value="' + esc(m) + '"' + (m === l.movement ? " selected" : "") + '>' +
@@ -5758,8 +5791,9 @@
           '<button class="btn" id="addLift">Add to today</button>' +
         '</section>') +
 
-      // Nothing logged yet is nothing to lock in.
-      (!locked && d.lifts.length
+      // Nothing logged yet is nothing to lock in — but a clock running is
+      // something: yoga on a special day has a time and no sets.
+      (!locked && (d.lifts.length || d.workoutStart)
         ? '<button class="btn ghost" id="lockDay" style="width:100%">Lock in the day</button>'
         : '');
 
@@ -5830,11 +5864,17 @@
     var mDrop = document.getElementById("mDrop");
     if (sel && neu) {
       // With "+ New movement" chosen there is nothing to take off the list, so
-      // the minus says so by being disabled rather than doing nothing.
-      if (mDrop) mDrop.disabled = sel.value === "__new";
+      // the minus says so by being disabled rather than doing nothing. On a
+      // special day it only takes off the special day's own: a split's
+      // movements are that split's to keep or drop.
+      var canDrop = function () {
+        return sel.value !== "__new" &&
+          (activeCat !== SPECIAL || (store.moves[SPECIAL] || []).indexOf(sel.value) > -1);
+      };
+      if (mDrop) mDrop.disabled = !canDrop();
       sel.addEventListener("change", function () {
         neu.hidden = sel.value !== "__new";
-        if (mDrop) mDrop.disabled = sel.value === "__new";
+        if (mDrop) mDrop.disabled = !canDrop();
         if (!neu.hidden) neu.focus();
       });
     }
@@ -5864,7 +5904,9 @@
         var name = sel.value === "__new" ? neu.value.trim() : sel.value;
         if (!name) { neu.focus(); return; }
         var mlist = store.moves[activeCat] || (store.moves[activeCat] = []);
-        if (mlist.indexOf(name) === -1) mlist.push(name);
+        // A special day keeps only the movements no split already has.
+        var known = activeCat === SPECIAL ? allMoves() : mlist;
+        if (known.indexOf(name) === -1) mlist.push(name);
         d.lifts.push({ id: uid(), cat: activeCat, movement: name, sets: [] });
         touch(key); save(); render();
       });
@@ -7117,7 +7159,10 @@
       var d = store.days[k];
       var label = parseYmd(k).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
       var ticks = suppTaken(d);
-      if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length) && !ticks))
+      // A day with only a session on its clock (yoga) or only a note still had
+      // something in it.
+      if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length) && !ticks &&
+                 !d.workoutMs && !d.gymNote))
         return label + " — nothing logged";
       var bits = [label];
       if (d.food && d.food.length) {
@@ -7130,6 +7175,8 @@
         var sets = d.lifts.reduce(function (a, l) { return a + l.sets.length; }, 0);
         bits.push(cats.map(function (id) { return cat(id).short; }).join(" + ") + " · " + sets + " sets" +
                   (d.workoutMs ? " · " + fmtDurShort(d.workoutMs) : ""));
+      } else if (d.workoutMs) {
+        bits.push("session · " + fmtDurShort(d.workoutMs));
       } else {
         bits.push("no gym");
       }
@@ -8090,8 +8137,12 @@
 
   function compareHtml(key, d) {
     var mine = d.lifts.filter(function (l) { return l.sets.length; });
+    // A special day is no session of a split, and never one to measure a
+    // split's session against: home with two dumbbells against a full back
+    // day would say nothing. Its movements are still each compared with the
+    // last time they were done, wherever that was.
     var cats = [];
-    mine.forEach(function (l) { if (cats.indexOf(l.cat) === -1) cats.push(l.cat); });
+    mine.forEach(function (l) { if (l.cat !== SPECIAL && cats.indexOf(l.cat) === -1) cats.push(l.cat); });
     var ofCats = function (l) { return cats.indexOf(l.cat) > -1 && l.sets.length; };
 
     // The last session of the same split, not simply the last session — legs
@@ -8112,7 +8163,7 @@
     var html = '<h2>Compared with last time</h2>';
     if (prevKey) {
       var pd = store.days[prevKey];
-      var now = sum(mine), was = sum((pd.lifts || []).filter(ofCats));
+      var now = sum(mine.filter(ofCats)), was = sum((pd.lifts || []).filter(ofCats));
       html += '<p class="cmp-sub">This session against ' + shortDate(prevKey) + ' · ' +
         esc(cats.map(function (c) { return cat(c).name; }).join(" + ")) +
         (pd.gymNote ? ' · \u201c' + esc(clip(pd.gymNote, 40)) + '\u201d' : '') + '</p>' +
@@ -8123,6 +8174,8 @@
           cmpRow("Volume · lb", was.vol, now.vol, num) +
           cmpRow("Time", pd.workoutMs || null, d.workoutMs || null, fmtDur) +
         '</div>';
+    } else if (!cats.length) {
+      html += '<p class="cmp-sub">A special day is compared movement by movement — each against the last time you did it, wherever that was.</p>';
     } else {
       html += '<p class="cmp-sub">No earlier session of this split yet — this one becomes the one to beat.</p>';
     }

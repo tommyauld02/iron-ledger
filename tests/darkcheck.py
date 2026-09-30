@@ -36,7 +36,9 @@ def fixture(theme=None, accent=None):
                       {"id": "l", "cat": "back", "movement": "Barbell Row", "note": "Grip gave out on the last set",
                        "sets": [{"w": 135, "r": 10}, {"w": 95, "r": 8, "tech": "drop"}]},
                       {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "note": "Slow negatives", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
-                      {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
+                      {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True},
+                      # a special day's movement: its own colour on the spine, tag and Done
+                      {"id": "l4", "cat": "special", "movement": "Hammer Curl", "sets": [{"w": 25, "r": 20}]}],
             "supps": {"s1": True},                       # one ticked, one not: both states
             "workoutStart": int(time.time() * 1000) - 45 * 60000,
             "gymNote": "Hotel gym, dumbbells only",
@@ -165,6 +167,11 @@ def walk(p, label):
               last: [...document.querySelectorAll('.lift .last')].filter(e=>e.textContent.includes('\u201c')).length})""")
             for k, n in notes.items():
                 if not n: found.append("notes: the %s note is not on screen" % k)
+            # the special day chosen: its chip pressed, its own movement list
+            p.click('[data-cat="special"]'); p.wait_for_timeout(250)
+            low = p.evaluate(LOW)
+            if low: found.append("gym (special day): %s" % low)
+            p.click('[data-cat="back"]'); p.wait_for_timeout(200)
             # the rest bar lives in the dock, and running looks different
             p.click("#restBtn"); p.wait_for_timeout(200)
             low = p.evaluate(LOW)

@@ -1895,6 +1895,112 @@ with sync_playwright() as pw:
           and "Grip gave out" in q.eval_on_selector(".lift","e=>e.textContent"))
     c.close()
 
+    # ---------- A SPECIAL DAY ----------
+    # Asked for from home: two pairs of dumbbells, no machines, so no Back /
+    # Bi / Tri day — biceps and shoulders instead. A day outside the routine,
+    # whose lifts still count: 25 lb hammer curls at home are the hammer curls
+    # to beat at the gym next time. Yoga, or a friend's workout, the same.
+    SPT=datetime.date.today(); SGYM=(SPT-datetime.timedelta(days=5)).isoformat(); SHOME=(SPT-datetime.timedelta(days=2)).isoformat()
+    SPG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    SPBASE={"days":{SGYM:{"food":[],"updated":1,"goal":SPG,"workoutMs":60*60000,
+               "lifts":[{"id":"g1","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10}]},
+                        {"id":"g2","cat":"back","movement":"Hammer Curl","sets":[{"w":35,"r":10},{"w":35,"r":9}]}]}},
+            "moves":None,"goal":SPG,"region":"United States","pantry":[],"v":1}
+    SPDAY="k=>(JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{})"
+    SPMOVES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves"
+    def sp_page(store):
+        c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+        c.add_init_script("delete window.claude;")
+        q = c.new_page(); q.on("pageerror", lambda e: errs.append("special: "+str(e)))
+        q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+        q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
+        q.reload(); q.wait_for_timeout(900)
+        try: q.click("text=Got it", timeout=1500)
+        except Exception: pass
+        q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+        return c, q
+    c, q = sp_page(SPBASE)
+    sb=q.locator('[data-cat="special"]').bounding_box()
+    check("special: a Special day sits after the splits, a proper target",
+          sb is not None and sb["height"]>=MIN_TAP
+          and q.eval_on_selector_all(".cats .cat","e=>e.map(x=>x.dataset.cat||x.id)")[-2:]==["special","addSplitChip"])
+    q.click('[data-cat="special"]'); q.wait_for_timeout(300)
+    groups=q.eval_on_selector_all("#mSel optgroup","e=>e.map(g=>g.label)")
+    check("special: it offers every split's movements, grouped by split",
+          groups==["Back / Bi / Rear Delt","Chest / Shoulder / Tri","Legs"], str(groups))
+    q.select_option("#mSel","Hammer Curl")
+    check("special: a split's movement cannot be taken off from here", q.eval_on_selector("#mDrop","e=>e.disabled"))
+    q.click("#addLift"); q.wait_for_timeout(300)
+    last=q.eval_on_selector(".lift .last","e=>e.textContent")
+    check("special: the movement's last time is found wherever it was", "Sep" in last and "35×10" in last, last)
+    q.fill('[data-w="0"]',"25"); q.fill('[data-r="0"]',"20"); q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    check("special: and home dumbbells can beat it, by the same rule",
+          q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 25×20 over 35×10",
+          q.eval_on_selector(".lift .beat","e=>e.textContent"))
+    q.select_option("#mSel","Lateral Raise"); q.click("#addLift"); q.wait_for_timeout(300)
+    lifts=q.evaluate(SPDAY, Ts)["lifts"]
+    check("special: movements from two splits on one day, logged as a special day",
+          [(x["movement"],x["cat"]) for x in lifts]==[("Hammer Curl","special"),("Lateral Raise","special")], str(lifts))
+    mv=q.evaluate(SPMOVES)
+    check("special: borrowing them leaves the splits' lists as they were",
+          not mv.get("special") and "Hammer Curl" in mv["back"])
+    q.select_option("#mSel","__new"); q.fill("#mNew","Band pull-apart"); q.click("#addLift"); q.wait_for_timeout(300)
+    check("special: a new one is kept as the special day's own", q.evaluate(SPMOVES).get("special")==["Band pull-apart"])
+    q.select_option("#mSel","Band pull-apart")
+    check("special: and only its own can be taken off here", not q.eval_on_selector("#mDrop","e=>e.disabled"))
+    q.click('[data-editlift="0"]'); q.wait_for_timeout(250)
+    check("special: changing a movement on it offers every movement",
+          q.eval_on_selector_all("#liftMove option","e=>e.map(o=>o.value)").count("Bench Press")==1
+          and "Hammer Curl" in q.eval_on_selector_all("#liftMove option","e=>e.map(o=>o.value)"))
+    q.click("#liftMoveCancel"); q.wait_for_timeout(200)
+    q.click("#openCompare"); q.wait_for_timeout(300)
+    body=q.eval_on_selector("#cmpBody","e=>e.innerText")
+    check("special: it is compared movement by movement, not as a split's session",
+          "movement by movement" in body and "This session against" not in body and "Hammer Curl" in body, body[:120])
+    q.click("#cmpDone"); q.wait_for_timeout(200)
+    q.click("#editSplits"); q.wait_for_timeout(250)
+    check("special: it is not one of the splits to rename or remove",
+          q.eval_on_selector_all(".split-name","e=>e.map(x=>x.value)")==["Back / Bi / Rear Delt","Chest / Shoulder / Tri","Legs"])
+    q.click("#editSplits"); q.wait_for_timeout(200)
+    q.click('.tabs button[data-tab="coach"]'); q.wait_for_timeout(300)
+    check("special: nor one of the routine's days", "Special" not in q.eval_on_selector("#view","e=>e.textContent"))
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    check("special: the calendar says what the day was",
+          "Special · 1 sets" in q.eval_on_selector(".cal-cell.is-today","e=>e.title"), q.eval_on_selector(".cal-cell.is-today","e=>e.title"))
+    c.close()
+
+    # two days later, back at the gym: the home session is the one to beat
+    later=json.loads(json.dumps(SPBASE))
+    later["days"][SHOME]={"food":[],"updated":1,"goal":SPG,"gymNote":"At home, dumbbells only",
+        "lifts":[{"id":"h1","cat":"special","movement":"Hammer Curl","sets":[{"w":25,"r":20}]}]}
+    c, q = sp_page(later)
+    q.click('[data-cat="back"]'); q.wait_for_timeout(300)
+    q.select_option("#mSel","Hammer Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    last=q.eval_on_selector(".lift .last","e=>e.textContent")
+    check("special: back at the gym, the home session is last time", "(At home, dumbbells only)" in last and "25×20" in last, last)
+    check("special: and the number to beat", q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 25×20")
+    q.fill('[data-w="0"]',"35"); q.fill('[data-r="0"]',"11"); q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    q.click("#openCompare"); q.wait_for_timeout(300)
+    body=q.eval_on_selector("#cmpBody","e=>e.innerText")
+    gymdate=q.evaluate("k=>new Date(k+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})", SGYM)
+    homedate=q.evaluate("k=>new Date(k+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})", SHOME)
+    check("special: the session is set against the last real back day, not the home one",
+          ("This session against " + gymdate) in body, body[:120])
+    check("special: while the movement is set against the home one", ("against " + homedate) in body, body[-160:])
+    c.close()
+
+    # yoga: nothing lifted, only a clock — still a session to lock in
+    c, q = sp_page(SPBASE)
+    q.click('[data-cat="special"]'); q.wait_for_timeout(200)
+    q.click("#startWorkout"); q.wait_for_timeout(1300)
+    check("special: a clock alone is enough to lock the day in", q.locator("#lockDay").count()==1)
+    q.click("#lockDay"); q.wait_for_timeout(500)
+    check("special: and it banks the time", (q.evaluate(SPDAY, Ts).get("workoutMs") or 0) > 0)
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    check("special: the calendar calls it a session, not no gym",
+          "session ·" in q.eval_on_selector(".cal-cell.is-today","e=>e.title"), q.eval_on_selector(".cal-cell.is-today","e=>e.title"))
+    c.close()
+
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:
         print("%-6s %-42s %s" % (st,name,detail))

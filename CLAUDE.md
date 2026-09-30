@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~695 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~715 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -651,6 +651,28 @@ the last time it was done: top weight, sets, reps, volume and time. Up is
 listed a longer session with the heavier weights, so time is coloured the same
 way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
+
+**A special day is outside the routine on purpose.** Asked for from home:
+two pairs of dumbbells and no machines, so no Back / Bi / Tri day — biceps and
+shoulders instead — and the same for yoga, or a friend's workout. `SPECIAL` is
+a built-in day, not a split: its chip sits after the splits, `cat()` always
+knows it, and it is never renamed, removed, scheduled or exported with a
+routine. Its Add movement list offers every split's movements, grouped by
+split, plus its own; borrowing one leaves the splits' lists alone
+(`allMoves()`), a new name typed there is kept as the special day's own, and
+the minus only takes off its own.
+
+**Its lifts still count, because history is by name.** "Hammer Curl" at home
+is "Hammer Curl" at the gym: `lastTime()` never looked at the split, so the
+home session is next time's *Last* and its *To beat* — which by the owner's
+five-pounds-a-rep rule makes a light, high-rep home set a real target: 25×20
+is worth more than 35×10. What it must not do is stand in for a split's
+session: `compareHtml()` leaves special lifts out when it finds the last
+session of the same split, so the next back day is set against the last real
+back day, while each movement is still set against the last time it was done,
+wherever that was. On the special day itself there is no session to compare,
+and it says so. A day with only a clock — yoga — can be locked in, which banks
+its time, and the calendar calls it a session rather than "no gym".
 
 **Notes: one for the day, one on each movement.** Asked for from the gym:
 *at home* or *hotel gym* for the day (`d.gymNote`), and *last set was really
