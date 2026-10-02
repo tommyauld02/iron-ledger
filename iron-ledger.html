@@ -1831,6 +1831,51 @@
   .split-new { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
   .split-new .btn { padding: 0 14px; }
 
+  /* ---------- where you train ---------- */
+  .gym-pick { display: flex; flex-direction: column; gap: 8px; }
+  .gym-was { margin: 0; font-size: 13px; color: var(--ink-2); }
+  .gym-list { display: flex; flex-direction: column; gap: 8px; }
+  .gym-row, .gym-new {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 72px 76px;   /* Add and Remove share a column, so the rows line up */
+    align-items: center;
+    gap: 8px;
+  }
+  .gym-row .split-rm, .gym-new .btn { width: 100%; padding: 0 6px; }
+  .gym-in {
+    width: 100%;
+    height: 46px;              /* 16px font on a phone: never lets iOS zoom */
+    padding: 0 10px;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    min-width: 0;
+  }
+  .gym-ask {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+  }
+  .gym-ask p { margin: 0; }
+  .gym-ask .sub { font-size: 13px; color: var(--ink-2); }
+  /* the gym beside a movement's name: "Pec Fly · APT" */
+  .gymtag {
+    margin-left: 8px;
+    font-family: var(--font-num);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+
   .liftgroup { display: flex; flex-direction: column; gap: 12px; }
 
   .lift {
@@ -1853,6 +1898,7 @@
     gap: 10px;
   }
   .lift-head h3 {
+    min-width: 0;
     margin: 0;
     font-size: 15px;
     font-weight: 600;
@@ -2179,6 +2225,7 @@
 
   /* The handle. Its own touch-action, so pressing it never scrolls the page. */
   .grip {
+    flex: none;               /* a long name and gym tag must not squeeze it under 44px */
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -2317,6 +2364,8 @@
   .se-goal { font-size: 13px; color: var(--ink); }
   .se-goal.is-beaten { color: var(--hit); }
   .se-ways { font-size: 11px; color: var(--ink-2); }
+  .se-gym { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .se-gym .seg { flex: 1; max-width: 250px; }
   .tech {
     position: relative;
     display: flex;
@@ -2808,6 +2857,12 @@
     </div>
     <p id="seGoal" class="se-goal" hidden></p>
     <p id="seWays" class="se-ways" hidden></p>
+    <!-- A machine at one gym is not the machine at another; a dumbbell is
+         the same everywhere. Which numbers this movement answers to. -->
+    <div id="seGym" class="se-gym" hidden>
+      <span class="eyebrow">Targets from</span>
+      <div class="seg two" id="seGymSeg" role="group" aria-label="Targets from"></div>
+    </div>
     <div class="pair">
       <div class="field"><label for="seW">Weight · lb</label>
         <input id="seW" inputmode="decimal"></div>
@@ -2859,7 +2914,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-01.52";
+  var BUILD = "2026-10-01.53";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2975,6 +3030,7 @@
   // Gym split editing. Transient view state, never saved: reopening the app
   // should show you your splits, not the half-finished act of renaming one.
   var splitEdit = false;
+  var gymEdit = false;      // the places you train, being added to or changed
   var splitAdding = false;
   // Coach inline editing, same idea: which day is being renamed, which is
   // taking a custom movement, and whether a new day is being named.
@@ -3397,6 +3453,207 @@
     // logged under it follows the new name. Rule 7 only bites on deletion.
     save();
     return true;
+  }
+
+  function cleanTag(t) { return String(t || "").trim().slice(0, 8); }
+
+  function addGym(name, tag) {
+    var n = String(name || "").trim();
+    if (!n) return null;
+    if (!Array.isArray(store.gyms)) store.gyms = [];
+    var g = { id: "g" + uid(), name: n, tag: cleanTag(tag) };
+    var todaySet = store.days[TODAY] && store.days[TODAY].gym && gymInfo(store.days[TODAY].gym);
+    // The first place added is where today is, unless today already says.
+    var first = !gymById(store.gymLast) && !todaySet;
+    store.gyms.push(g);
+    if (first) store.gymLast = g.id;
+    save();
+    notify("Added " + n + (first ? " — training there today" : ""));
+    return g.id;
+  }
+
+  // Renaming keeps the id, so every day trained there follows the new name.
+  function renameGym(id, name) {
+    var n = String(name || "").trim(), g = gymById(id);
+    if (!n || !g) return false;
+    if (g.name !== n) { g.name = n; save(); }
+    return true;
+  }
+  function retagGym(id, tag) {
+    var g = gymById(id);
+    if (!g) return;
+    g.tag = cleanTag(tag);
+    save();
+  }
+
+  function removeGym(id) {
+    var idx = -1;
+    gyms().forEach(function (g, i) { if (g.id === id) idx = i; });
+    if (idx === -1) return;
+    var g = store.gyms[idx], wasLast = store.gymLast;
+    store.gyms.splice(idx, 1);
+    // Days trained there keep saying so, by name, rather than being quietly
+    // relabelled as somewhere still on the list.
+    store.gymsRetired = store.gymsRetired || {};
+    store.gymsRetired[id] = { name: g.name, tag: g.tag };
+    if (store.gymLast === id) store.gymLast = null;
+    save(); render();
+    offerUndo("Removed " + g.name, function () {
+      store.gyms.splice(Math.min(idx, store.gyms.length), 0, g);
+      delete store.gymsRetired[id];
+      store.gymLast = wasLast;
+      save(); render();
+    });
+  }
+
+  // Picking where a day was trained. Today it also becomes the default for
+  // the days after; a past day being put right changes only itself.
+  function chooseGym(key, id) {
+    var g = gymById(id);
+    if (!g) return;
+    var d = day(key), was = d.gym, wasLast = store.gymLast, before = dayGym(key);
+    d.gym = id;
+    if (key === TODAY) store.gymLast = id;
+    touch(key); save(); render();
+    var label = key === TODAY ? "Training at " + g.name : shortDate(key) + " was at " + g.name;
+    if (before === id) { notify(label); return; }
+    offerUndo(label + " — targets from there", function () {
+      if (was) d.gym = was; else delete d.gym;
+      store.gymLast = wasLast;
+      touch(key); save(); render();
+    });
+  }
+
+  // Asked once, when there are gyms and earlier workouts with none.
+  function answerGymAsk(id) {
+    var ks = gymAskDays(), g = id ? gymById(id) : null;
+    store.gymAsked = true;
+    if (g) ks.forEach(function (k) { store.days[k].gym = id; store.days[k].updated = Date.now(); });
+    save(); render();
+    offerUndo(g
+      ? "Marked " + ks.length + " earlier workout" + (ks.length === 1 ? "" : "s") + " as " + g.name
+      : "Left earlier workouts unmarked — for reference, never a target",
+      function () {
+        if (g) ks.forEach(function (k) { if (store.days[k]) delete store.days[k].gym; });
+        store.gymAsked = false;
+        save(); render();
+      });
+  }
+
+  function setShared(name, on) {
+    store.gymShared = store.gymShared || {};
+    if (on) store.gymShared[name] = true;
+    else delete store.gymShared[name];
+    save();
+  }
+
+  // At the top of the Gym tab, under the clock: where you are training.
+  function gymPickHtml(key, d) {
+    var gl = gyms();
+    if (gymEdit) {
+      return '<div class="gym-pick">' +
+        '<div class="split-head"><span class="eyebrow">Where you train</span>' +
+          '<button id="editGyms">Done</button></div>' +
+        '<div class="gym-list">' +
+          gl.map(function (g) {
+            return '<div class="gym-row">' +
+              '<input class="gym-in" data-gymname="' + g.id + '" value="' + esc(g.name) +
+                '" aria-label="Name of ' + esc(g.name) + '">' +
+              '<input class="gym-in" data-gymtag="' + g.id + '" value="' + esc(g.tag || "") +
+                '" maxlength="8" placeholder="Tag" aria-label="Tag for ' + esc(g.name) + '">' +
+              '<button class="split-rm" data-rmgym="' + g.id + '" aria-label="Remove ' + esc(g.name) + '">Remove</button>' +
+            '</div>';
+          }).join("") +
+          '<div class="gym-new">' +
+            '<input class="gym-in" id="newGymName" placeholder="Apartment gym" aria-label="Name of a place you train">' +
+            '<input class="gym-in" id="newGymTag" placeholder="APT" maxlength="8" aria-label="Its tag">' +
+            '<button class="btn" id="saveGym">Add</button>' +
+          '</div>' +
+        '</div>' +
+        '<p class="gym-was">The tag goes beside each movement’s name, so you can tell whose numbers are whose.</p>' +
+      '</div>';
+    }
+    if (!gl.length) return '<button class="note-add" id="addGymFirst">+ Where you train</button>';
+
+    var here = dayGym(key), info = here ? gymInfo(here) : null;
+    var chips = gl.map(function (g) {
+      return '<button class="cat" data-gym="' + g.id + '" aria-pressed="' + (g.id === here) + '" ' +
+        'style="--catcolor:var(--accent)"><span class="tag">' + esc(gymTagOf(g)) + '</span>' + esc(g.name) + '</button>';
+    }).join("") +
+      '<button class="cat cat-add" id="addGymChip" aria-label="Add a place you train">' +
+        '<span class="tag">+</span>Add</button>';
+    var note = info && info.gone
+      ? '<p class="gym-was">Trained at <em>' + esc(info.name) + '</em> — a gym you no longer train at.</p>'
+      : !here && key === TODAY
+        ? '<p class="gym-was">Tap where you’re training today.</p>'
+        : !here && d.lifts.length
+          ? '<p class="gym-was">Not marked — tap where this was.</p>'
+          : '';
+    var askDays = store.gymAsked ? [] : gymAskDays();
+    var ask = askDays.length
+      ? '<div class="gym-ask">' +
+          '<p>Where were your earlier workouts?</p>' +
+          '<p class="sub">Marking them makes their numbers that gym’s targets. Left unmarked, they show for reference only, never as a target.</p>' +
+          gl.map(function (g) {
+            return '<button class="btn ghost" data-gymask="' + g.id + '">At ' + esc(g.name) + '</button>';
+          }).join("") +
+          '<button class="btn ghost" data-gymask="">Leave them unmarked</button>' +
+        '</div>'
+      : '';
+    return '<div class="gym-pick">' +
+      '<div class="split-head"><span class="eyebrow">Training at</span>' +
+        '<button id="editGyms">Edit gyms</button></div>' +
+      '<div class="cats">' + chips + '</div>' + note + ask +
+    '</div>';
+  }
+
+  function wireGyms(key) {
+    ["addGymFirst", "addGymChip"].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) b.addEventListener("click", function () {
+        gymEdit = true; splitEdit = false; splitAdding = false;
+        render();
+        var f = document.getElementById("newGymName");
+        if (f) f.focus();
+      });
+    });
+    var eg = document.getElementById("editGyms");
+    if (eg) eg.addEventListener("click", function () {
+      gymEdit = !gymEdit;
+      if (gymEdit) { splitEdit = false; splitAdding = false; }
+      render();
+    });
+    view.querySelectorAll("[data-gym]").forEach(function (b) {
+      b.addEventListener("click", function () { chooseGym(key, b.dataset.gym); });
+    });
+    view.querySelectorAll("[data-gymask]").forEach(function (b) {
+      b.addEventListener("click", function () { answerGymAsk(b.dataset.gymask); });
+    });
+    // Commit on change, the way a split's name does: no separate save to forget.
+    view.querySelectorAll("[data-gymname]").forEach(function (el) {
+      el.addEventListener("change", function () {
+        if (!renameGym(el.dataset.gymname, el.value)) {
+          var g = gymById(el.dataset.gymname);
+          if (g) el.value = g.name;                  // an empty name is not a gym
+        }
+      });
+    });
+    view.querySelectorAll("[data-gymtag]").forEach(function (el) {
+      el.addEventListener("change", function () { retagGym(el.dataset.gymtag, el.value); });
+    });
+    view.querySelectorAll("[data-rmgym]").forEach(function (b) {
+      b.addEventListener("click", function () { removeGym(b.dataset.rmgym); });
+    });
+    var nn = document.getElementById("newGymName"), nt = document.getElementById("newGymTag");
+    var sg = document.getElementById("saveGym");
+    function commit() {
+      if (!addGym(nn.value, nt.value)) { nn.focus(); return; }
+      render();
+    }
+    if (sg) sg.addEventListener("click", commit);
+    [nn, nt].forEach(function (el) {
+      if (el) el.addEventListener("keydown", function (e) { if (e.key === "Enter") commit(); });
+    });
   }
 
   function removeSplit(id) {
@@ -4626,9 +4883,56 @@
   }
 
   // last time this movement was trained, before `beforeKey`
-  function lastTime(movement, beforeKey) {
+  // ---------- where you train ----------
+  // The same movement on a different machine is a different number: a fly
+  // the owner does at 150 at the apartment gym is 110 at 24 Hour Fitness. So
+  // a day carries the gym it was trained at (d.gym), and a movement's target
+  // comes from the last time it was done *there*. A dumbbell weighs the same
+  // everywhere, so any movement can be set to take its numbers from every
+  // gym (store.gymShared, by name). Removed gyms keep their name in
+  // store.gymsRetired, so a day trained there still says where (rule 7).
+  function gyms() { return Array.isArray(store.gyms) ? store.gyms : []; }
+  function gymById(id) {
+    return gyms().filter(function (g) { return g.id === id; })[0] || null;
+  }
+  function gymInfo(id) {
+    var g = gymById(id);
+    if (g) return { id: g.id, name: g.name, tag: g.tag, gone: false };
+    var r = id && store.gymsRetired && store.gymsRetired[id];
+    return r ? { id: id, name: r.name, tag: r.tag, gone: true } : null;
+  }
+  // The tag the owner chose, or the name when he chose none.
+  function gymTagOf(g) { return (g && (g.tag || g.name)) || ""; }
+  // Where a day was trained. Today, before anything says otherwise, it is
+  // wherever he trained last — most days that is already right.
+  function dayGym(key) {
+    var d = store.days[key];
+    if (d && d.gym && gymInfo(d.gym)) return d.gym;
+    if (key === TODAY && gymById(store.gymLast)) return store.gymLast;
+    return null;
+  }
+  // Written onto today the moment something is logged, so the record says
+  // where it happened even if the default changes later.
+  function stampGym(key, d) {
+    if (!d.gym && key === TODAY && gymById(store.gymLast)) d.gym = store.gymLast;
+  }
+  function sharedMove(name) { return !!(store.gymShared && store.gymShared[name]); }
+  // Earlier workouts nobody has said the gym of, for the one-time question.
+  function gymAskDays() {
+    return Object.keys(store.days).filter(function (k) {
+      var d = store.days[k];
+      return k < TODAY && !d.gym && (d.lifts || []).length;
+    }).sort();
+  }
+
+  // Last time this movement was done, before a day. Given a gym, only days
+  // trained there count — unless the movement takes its numbers from every
+  // gym. A day nobody marked is never another gym's target.
+  function lastTime(movement, beforeKey, gym) {
     var keys = Object.keys(store.days).filter(function (k) { return k < beforeKey; }).sort().reverse();
+    var anyGym = !gym || sharedMove(movement);
     for (var i = 0; i < keys.length; i++) {
+      if (!anyGym && store.days[keys[i]].gym !== gym) continue;
       var lifts = store.days[keys[i]].lifts || [];
       for (var j = 0; j < lifts.length; j++) {
         if (lifts[j].movement === movement && lifts[j].sets.length) {
@@ -5674,6 +5978,9 @@
     // Several movements can be moved about; one cannot, and a locked day is
     // read-only. The grip and the superset zone only exist when it can.
     var movable = !locked && d.lifts.length > 1;
+    // Where today is: the targets below come from the last time at this gym.
+    var here = gyms().length ? dayGym(key) : null;
+    var hereInfo = here ? gymInfo(here) : null;
     var cardList = d.lifts.map(function (l, i) {
       var lc = cat(l.cat);
       var inGroup = !!l.ss;
@@ -5683,16 +5990,28 @@
         : '';
       var zone = movable ? '<span class="ss-zone" data-sszone="' + i + '">⛓ superset</span>' : '';
       var v = volume(l);
-      var prev = lastTime(l.movement, key);
+      var shared = sharedMove(l.movement);
+      var prev = lastTime(l.movement, key, here);
+      // Never done at this gym: what it was elsewhere is worth seeing, but
+      // as a reference, never as the number to beat — 150 on the apartment's
+      // fly is not a target on 24 Hour Fitness's.
+      var away = !prev && here && !shared ? lastTime(l.movement, key) : null;
+      var awayAt = away && store.days[away.key].gym ? gymInfo(store.days[away.key].gym) : null;
       // Last time's notes ride along: the day's — "hotel gym" explains a
       // light session — and the movement's own, "last set was really hard".
       var prevDay = prev ? store.days[prev.key] : null;
+      var prevAt = here && prevDay && prevDay.gym ? gymInfo(prevDay.gym) : null;
+      var gymTag = here ? '<span class="gymtag">' + (shared ? 'every gym' : esc(gymTagOf(hereInfo))) + '</span>' : '';
       var lastLine = prev
-        ? 'Last · ' + shortDate(prev.key) +
+        ? 'Last' + (prevAt ? ' at ' + esc(gymTagOf(prevAt)) : '') + ' · ' + shortDate(prev.key) +
           (prevDay && prevDay.gymNote ? ' (' + esc(clip(prevDay.gymNote, 32)) + ')' : '') + ' — <em>' +
           prev.lift.sets.map(setText).join(", ") + '</em>' +
           (prev.lift.note ? ' · \u201c' + esc(clip(prev.lift.note, 48)) + '\u201d' : '')
-        : 'First time logging this one.';
+        : away
+          ? 'First time at ' + esc(gymTagOf(hereInfo)) + '. ' +
+            (awayAt ? 'At ' + esc(gymTagOf(awayAt)) + ', ' : 'Unmarked, ') + shortDate(away.key) +
+            ' — <em>' + away.lift.sets.map(setText).join(", ") + '</em> · not a target here'
+          : 'First time logging this one.';
       // The set to pass, and the moment one of today's goes past it. A day
       // that is over only says so if it did: "To beat" with nothing left to
       // do about it is a nag.
@@ -5738,7 +6057,7 @@
         return '<article class="lift is-closed" data-li="' + i + '" style="--catcolor:' + lc.color + '">' +
           '<div class="spine"></div>' +
           '<div class="body">' +
-            '<div class="lift-head"><h3>' + esc(l.movement) + '</h3>' +
+            '<div class="lift-head"><h3>' + esc(l.movement) + gymTag + '</h3>' +
               // in a superset the time belongs to the group, on its header
               (inGroup ? '' : l.lapMs != null
                 ? '<span class="lap" title="Time on this movement">' + fmtDur(l.lapMs) + '</span>'
@@ -5775,10 +6094,10 @@
         }).join("") + '<option value="__new">+ New movement…</option>';
       }
       var nameHtml = locked
-        ? '<h3>' + esc(l.movement) + '</h3>'
+        ? '<h3>' + esc(l.movement) + gymTag + '</h3>'
         : '<h3><button class="lift-name" data-editlift="' + i + '" aria-label="Change ' +
             esc(l.movement) + '">' + esc(l.movement) + '<span class="chev" aria-hidden="true">▾</span>' +
-          '</button></h3>';
+          '</button>' + gymTag + '</h3>';
 
       return '<article class="lift" data-li="' + i + '" style="--catcolor:' + lc.color + '">' +
         '<div class="spine"></div>' +
@@ -5891,6 +6210,7 @@
     view.innerHTML =
       '<section style="display:flex;flex-direction:column;gap:10px">' +
         clock +
+        gymPickHtml(key, d) +
         dayNoteHtml(d) +
         '<div class="split-head">' +
           '<span class="eyebrow">Today’s split</span>' +
@@ -5968,12 +6288,14 @@
     view.querySelectorAll("[data-cat]").forEach(function (b) {
       b.addEventListener("click", function () { activeCat = b.dataset.cat; render(); });
     });
+    wireGyms(key);
 
     var editSplitsBtn = document.getElementById("editSplits");
     if (editSplitsBtn) {
       editSplitsBtn.addEventListener("click", function () {
         splitEdit = !splitEdit;
         splitAdding = false;      // one thing at a time
+        gymEdit = false;
         render();
       });
     }
@@ -5982,6 +6304,7 @@
     if (addChip) {
       addChip.addEventListener("click", function () {
         splitAdding = true;
+        gymEdit = false;
         render();
         var f = document.getElementById("newSplitName");
         if (f) f.focus();
@@ -6079,6 +6402,7 @@
         var known = activeCat === SPECIAL ? allMoves() : mlist;
         if (known.indexOf(name) === -1) mlist.push(name);
         d.lifts.push({ id: uid(), cat: activeCat, movement: name, sets: [] });
+        stampGym(key, d);
         touch(key); save(); render();
       });
     }
@@ -6091,6 +6415,7 @@
     if (startBtn) {
       startBtn.addEventListener("click", function () {
         d.workoutStart = Date.now();
+        stampGym(key, d);
         touch(key); save(); render();
       });
     }
@@ -7365,6 +7690,9 @@
       } else {
         bits.push("no gym");
       }
+      // Where, by name — and a gym since removed still says so (rule 7).
+      var gi = d.gym && ((d.lifts && d.lifts.length) || d.workoutMs) ? gymInfo(d.gym) : null;
+      if (gi) bits.push("at " + gi.name + (gi.gone ? " — a gym you no longer train at" : ""));
       if (d.gymNote) bits.push("\u201c" + d.gymNote + "\u201d");
       // Named, not just counted: "3 of 4" a month later tells you nothing
       // about which one you keep forgetting.
@@ -8354,13 +8682,16 @@
     var cats = [];
     mine.forEach(function (l) { if (l.cat !== SPECIAL && cats.indexOf(l.cat) === -1) cats.push(l.cat); });
     var ofCats = function (l) { return cats.indexOf(l.cat) > -1 && l.sets.length; };
+    var here = gyms().length ? dayGym(key) : null;
+    var at = here ? ' at ' + esc(gymTagOf(gymInfo(here))) : '';
 
     // The last session of the same split, not simply the last session — legs
-    // against yesterday's chest would say nothing at all.
+    // against yesterday's chest would say nothing at all. And at the same
+    // gym: a session on other machines is not the one to measure against.
     var prevKey = null;
     Object.keys(store.days).filter(function (k) { return k < key; }).sort().reverse().some(function (k) {
       var ls = store.days[k].lifts || [];
-      if (ls.some(ofCats)) { prevKey = k; return true; }
+      if (ls.some(ofCats) && (!here || store.days[k].gym === here)) { prevKey = k; return true; }
       return false;
     });
 
@@ -8374,7 +8705,7 @@
     if (prevKey) {
       var pd = store.days[prevKey];
       var now = sum(mine.filter(ofCats)), was = sum((pd.lifts || []).filter(ofCats));
-      html += '<p class="cmp-sub">This session against ' + shortDate(prevKey) + ' · ' +
+      html += '<p class="cmp-sub">This session against ' + shortDate(prevKey) + at + ' · ' +
         esc(cats.map(function (c) { return cat(c).name; }).join(" + ")) +
         (pd.gymNote ? ' · \u201c' + esc(clip(pd.gymNote, 40)) + '\u201d' : '') + '</p>' +
         '<div class="cmp-card">' +
@@ -8387,15 +8718,16 @@
     } else if (!cats.length) {
       html += '<p class="cmp-sub">A special day is compared movement by movement — each against the last time you did it, wherever that was.</p>';
     } else {
-      html += '<p class="cmp-sub">No earlier session of this split yet — this one becomes the one to beat.</p>';
+      html += '<p class="cmp-sub">No earlier session of this split' + at + ' yet — this one becomes the one to beat.</p>';
     }
 
     html += '<span class="eyebrow">Each movement</span>';
     mine.forEach(function (l) {
-      var prev = lastTime(l.movement, key);
+      var prev = lastTime(l.movement, key, here);
       html += '<div class="cmp-card"><h3>' + esc(l.movement) + '</h3>';
       if (!prev) {
-        html += '<p class="cmp-when">First time — nothing to compare yet.</p></div>';
+        html += '<p class="cmp-when">First time' + (here && !sharedMove(l.movement) ? at : '') +
+          ' — nothing to compare yet.</p></div>';
         return;
       }
       var a = liftStats(prev.lift), b = liftStats(l);
@@ -8448,6 +8780,7 @@
       !d.lifts.some(function (x) { return x.sets.length; });
     if (starts) d.workoutStart = now;
     l.sets.push(st);
+    stampGym(key, d);
     touch(key); save(); render();
     if (starts) notify("Workout started with your first set");
     return true;
@@ -8504,10 +8837,20 @@
     var adding = setEditing.si === null;
     document.getElementById("seTitle").textContent = l.movement + " · set " +
       (adding ? l.sets.length + 1 : (setEditing.si + 1) + " of " + l.sets.length);
-    // The card is behind the sheet, so the number to beat comes with it.
-    var bs = beatState(lastTime(l.movement, setEditing.key), l);
+    // The card is behind the sheet, so the number to beat comes with it —
+    // from this gym, or from every gym if this movement is set that way.
+    var here = gyms().length ? dayGym(setEditing.key) : null;
+    var shared = sharedMove(l.movement), hereInfo = here ? gymInfo(here) : null;
+    var bs = beatState(lastTime(l.movement, setEditing.key, here), l);
     var goalEl = document.getElementById("seGoal"), waysEl = document.getElementById("seWays");
-    goalEl.hidden = !bs.goal; waysEl.hidden = true;
+    var gymEl = document.getElementById("seGym");
+    gymEl.hidden = !here;
+    if (here) {
+      document.getElementById("seGymSeg").innerHTML =
+        '<button data-seshare="off" aria-pressed="' + !shared + '">' + esc(gymTagOf(hereInfo)) + ' only</button>' +
+        '<button data-seshare="on" aria-pressed="' + shared + '">Every gym</button>';
+    }
+    goalEl.hidden = !bs.goal && !(here && !shared); waysEl.hidden = true;
     goalEl.classList.toggle("is-beaten", !!(bs.passed || bs.extra));
     if (bs.passed) goalEl.textContent = "↑ Beaten · " + setText(bs.passed) + " over " + setText(bs.goal);
     else if (bs.extra) goalEl.textContent = "↑ Beaten · a " + ordinal(bs.goalSets + 1) + " set of " + setText(bs.goal);
@@ -8516,7 +8859,18 @@
       waysEl.textContent = waysText(bs);
       waysEl.hidden = false;
     }
+    else if (here && !shared) goalEl.textContent = "First time at " + gymTagOf(hereInfo) + " \u2014 nothing to beat here yet";
   }
+
+  // Which numbers it answers to. The cards behind redraw with it, and the
+  // target in the sheet changes in front of you — that is the confirmation.
+  document.getElementById("seGymSeg").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-seshare]"), l = sheetLift();
+    if (!b || !l) return;
+    setShared(l.movement, b.dataset.seshare === "on");
+    render();
+    drawSetSheet();
+  });
 
   // Adding opens on the weight of the set before, since sets so often
   // repeat it, with the field that was tapped ready to type into.
@@ -8922,6 +9276,24 @@
     if (incoming.theme) store.theme = incoming.theme;
     if (incoming.accent) store.accent = incoming.accent;
     if (typeof incoming.coachOn === "boolean") store.coachOn = incoming.coachOn;
+    // Gyms come back by id, so every restored day still says where it was.
+    if (incoming.gymsRetired) {
+      store.gymsRetired = store.gymsRetired || {};
+      Object.keys(incoming.gymsRetired).forEach(function (k) {
+        if (!store.gymsRetired[k]) store.gymsRetired[k] = incoming.gymsRetired[k];
+      });
+    }
+    (Array.isArray(incoming.gyms) ? incoming.gyms : []).forEach(function (g) {
+      if (!g || !g.id || gymById(g.id) || (store.gymsRetired && store.gymsRetired[g.id])) return;
+      if (!Array.isArray(store.gyms)) store.gyms = [];
+      store.gyms.push(g);
+    });
+    if (incoming.gymShared) {
+      store.gymShared = store.gymShared || {};
+      Object.keys(incoming.gymShared).forEach(function (k) { if (incoming.gymShared[k]) store.gymShared[k] = true; });
+    }
+    if (!gymById(store.gymLast) && gymById(incoming.gymLast)) store.gymLast = incoming.gymLast;
+    if (incoming.gymAsked) store.gymAsked = true;
     applyLook();
     applyTabs();
     if (incoming.suppsRetired) {

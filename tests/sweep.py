@@ -2298,6 +2298,187 @@ with sync_playwright() as pw:
     check("own: and it is done once, not every time", q.evaluate(OSAYS)=="" and q.evaluate(OWNMOVES)==mv)
     c.close()
 
+    # ---------- WHERE YOU TRAIN ----------
+    # Asked for from real use: the fly at the apartment gym goes 150 for
+    # reps, the one at 24 Hour Fitness 110. One target for both is wrong at
+    # both. A day carries its gym, a movement's target is the last time *at
+    # that gym*, and a dumbbell movement can take its numbers from every gym.
+    GG2={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    GA=(datetime.date.today()-datetime.timedelta(days=10)).isoformat()
+    GB=(datetime.date.today()-datetime.timedelta(days=5)).isoformat()
+    GYMSTORE={"days":{
+        GA:{"food":[],"updated":1,"goal":GG2,"lifts":[
+            {"id":"a1","cat":"back","movement":"Pec Fly","sets":[{"w":150,"r":10},{"w":150,"r":9}]},
+            {"id":"a2","cat":"back","movement":"Dumbbell Curl","sets":[{"w":30,"r":12}]}]},
+        GB:{"food":[],"updated":1,"goal":GG2,"lifts":[
+            {"id":"b1","cat":"back","movement":"Pec Fly","sets":[{"w":110,"r":10}]}]}},
+        "moves":{"back":["Pec Fly","Dumbbell Curl"]},"movesOwned":True,"goal":GG2,"region":"United States","pantry":[],"v":1}
+    GST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
+    GSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("gyms: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", GYMSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    ab=q.locator("#addGymFirst").bounding_box()
+    check("gyms: with none yet, one quiet button near the top to add where you train",
+          ab is not None and ab["height"]>=MIN_TAP and q.locator(".gymtag").count()==0)
+    q.click("#addGymFirst"); q.wait_for_timeout(300)
+    check("gyms: it opens on the name, ready to type",
+          q.evaluate("()=>document.activeElement.id")=="newGymName")
+    q.fill("#newGymName","Apartment gym"); q.fill("#newGymTag","APT"); q.click("#saveGym"); q.wait_for_timeout(300)
+    st=q.evaluate(GST)
+    APT=st["gyms"][0]["id"] if st.get("gyms") else None
+    check("gyms: Add keeps the name and the tag you chose",
+          [(g["name"],g["tag"]) for g in st.get("gyms",[])]==[("Apartment gym","APT")])
+    check("gyms: the first one is where today is, and it says so",
+          st.get("gymLast")==APT and q.evaluate(GSAYS)=="Added Apartment gym \u2014 training there today", q.evaluate(GSAYS))
+    q.fill("#newGymName","24 Hour Fitness"); q.fill("#newGymTag","24"); q.press("#newGymTag","Enter"); q.wait_for_timeout(300)
+    st=q.evaluate(GST)
+    G24=st["gyms"][1]["id"] if len(st.get("gyms",[]))>1 else None
+    check("gyms: Enter adds the next, and today stays where it was",
+          len(st["gyms"])==2 and st["gyms"][1]["tag"]=="24" and st["gymLast"]==APT)
+    rows=q.eval_on_selector_all(".gym-row input, .gym-row button, .gym-new input, .gym-new button",
+         "e=>e.filter(x=>x.getClientRects().length).map(x=>[x.tagName,Math.round(x.getBoundingClientRect().height),parseFloat(getComputedStyle(x).fontSize)])")
+    check("gyms: every control in the editor clears 44px and no field zooms the page",
+          len(rows)==9 and all(h>=MIN_TAP for _,h,_ in rows) and all(f>=16 for n,_,f in rows if n=="INPUT"), str(rows))
+    q.set_viewport_size({"width":320,"height":700}); q.wait_for_timeout(200)
+    check("gyms: the editor fits a 320px phone",
+          q.evaluate("()=>document.documentElement.scrollWidth")<=320, str(q.evaluate("()=>document.documentElement.scrollWidth")))
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.click("#editGyms"); q.wait_for_timeout(300)
+    check("gyms: Done shows them as choices, today's chosen",
+          q.eval_on_selector_all("[data-gym]","e=>e.map(x=>[x.textContent,x.getAttribute('aria-pressed')])")
+          ==[["APTApartment gym","true"],["2424 Hour Fitness","false"]],
+          str(q.eval_on_selector_all("[data-gym]","e=>e.map(x=>[x.textContent,x.getAttribute('aria-pressed')])")))
+    check("gyms: and asks once where the earlier workouts were",
+          q.eval_on_selector_all("[data-gymask]","e=>e.map(x=>x.textContent)")==["At Apartment gym","At 24 Hour Fitness","Leave them unmarked"])
+    q.click('[data-gymask="%s"]' % APT); q.wait_for_timeout(300)
+    st=q.evaluate(GST)
+    check("gyms: answering marks every earlier workout, and says how many",
+          st["days"][GA].get("gym")==APT and st["days"][GB].get("gym")==APT and st.get("gymAsked")
+          and q.evaluate(GSAYS)=="Marked 2 earlier workouts as Apartment gym", q.evaluate(GSAYS))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    st=q.evaluate(GST)
+    check("gyms: undo takes the marks off and asks again",
+          not st["days"][GA].get("gym") and not st["days"][GB].get("gym") and q.locator("[data-gymask]").count()==3)
+    q.click('[data-gymask="%s"]' % APT); q.wait_for_timeout(300)
+    check("gyms: and it is not asked a second time", q.locator("[data-gymask]").count()==0)
+
+    # the 24 Hour Fitness day was marked wrong: put it right from that day
+    for _ in range(5): q.click("#prevDay"); q.wait_for_timeout(150)
+    check("gyms: a past day shows where it was", q.eval_on_selector('[data-gym="%s"]' % APT, "e=>e.getAttribute('aria-pressed')")=="true")
+    q.click('[data-gym="%s"]' % G24); q.wait_for_timeout(300)
+    st=q.evaluate(GST)
+    check("gyms: a past day is put right on its own, without moving today",
+          st["days"][GB]["gym"]==G24 and st["gymLast"]==APT and "was at 24 Hour Fitness" in q.evaluate(GSAYS), q.evaluate(GSAYS))
+    for _ in range(5): q.click("#nextDay"); q.wait_for_timeout(150)
+
+    add_movement(q, "Pec Fly")
+    check("gyms: logging today writes down where", q.evaluate(GST)["days"][Ts].get("gym")==APT)
+    check("gyms: the movement wears the gym's tag beside its name",
+          q.eval_on_selector(".lift h3 .gymtag","e=>e.textContent")=="APT")
+    check("gyms: and its target is the last time at this gym, not the last time anywhere",
+          q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 150×10"
+          and q.eval_on_selector(".lift .last","e=>e.textContent").startswith("Last at APT · "),
+          q.eval_on_selector(".lift .beat","e=>e.textContent"))
+    q.click('[data-gym="%s"]' % G24); q.wait_for_timeout(300)
+    check("gyms: training somewhere else changes the target to that gym's",
+          q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 110×10"
+          and q.eval_on_selector(".lift h3 .gymtag","e=>e.textContent")=="24")
+    check("gyms: says so, and tomorrow starts there",
+          q.evaluate(GSAYS)=="Training at 24 Hour Fitness \u2014 targets from there" and q.evaluate(GST)["gymLast"]==G24,
+          q.evaluate(GSAYS))
+    add_movement(q, "Dumbbell Curl")
+    last1=q.eval_on_selector_all(".lift .last","e=>e.map(x=>x.textContent)")[1]
+    check("gyms: never done here: the other gym's numbers, as a reference and not a target",
+          last1.startswith("First time at 24. At APT, ") and last1.endswith("30×12 · not a target here")
+          and q.eval_on_selector_all(".lift","e=>e[1].querySelectorAll('.beat').length")==0, last1)
+    q.click('[data-w="1"]'); q.wait_for_timeout(250)
+    check("gyms: the set sheet says which numbers it answers to",
+          q.locator("#seGym").is_visible()
+          and q.eval_on_selector_all("#seGymSeg button","e=>e.map(x=>[x.textContent,x.getAttribute('aria-pressed')])")
+             ==[["24 only","true"],["Every gym","false"]]
+          and q.eval_on_selector("#seGoal","e=>e.textContent")=="First time at 24 \u2014 nothing to beat here yet")
+    sb=q.eval_on_selector_all("#seGymSeg button","e=>e.map(x=>x.getBoundingClientRect().height)")
+    check("gyms: both choices are proper targets", all(h>=MIN_TAP for h in sb), str(sb))
+    q.click('[data-seshare="on"]'); q.wait_for_timeout(300)
+    check("gyms: a dumbbell is the same everywhere: Every gym brings the target in",
+          q.eval_on_selector("#seGoal","e=>e.textContent")=="To beat · 30×12"
+          and q.evaluate(GST).get("gymShared",{}).get("Dumbbell Curl")==True)
+    check("gyms: and the card behind says so too",
+          q.eval_on_selector_all(".lift h3 .gymtag","e=>e.map(x=>x.textContent)")==["24","every gym"])
+    q.click("#seCancel"); q.wait_for_timeout(200)
+    log_set(q, 0, 110, 11)
+    q.click("#openCompare"); q.wait_for_timeout(300)
+    body=q.eval_on_selector("#cmpBody","e=>e.innerText")
+    check("gyms: compared with the last session at the same gym",
+          ("This session against %s at 24" % q.evaluate("k=>new Date(k+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})", GB)) in body, body[:140])
+    q.click("#cmpDone"); q.wait_for_timeout(200)
+
+    # changing a gym: the history follows by id
+    q.click("#editGyms"); q.wait_for_timeout(250)
+    q.fill('[data-gymtag="%s"]' % G24, "24HR")
+    q.eval_on_selector('[data-gymtag="%s"]' % G24, "e=>e.dispatchEvent(new Event('change'))")
+    q.fill('[data-gymname="%s"]' % APT, "")
+    q.eval_on_selector('[data-gymname="%s"]' % APT, "e=>e.dispatchEvent(new Event('change'))")
+    check("gyms: an emptied name is not a gym, and it comes back",
+          q.input_value('[data-gymname="%s"]' % APT)=="Apartment gym")
+    q.fill('[data-gymname="%s"]' % APT, "Apartment")
+    q.eval_on_selector('[data-gymname="%s"]' % APT, "e=>e.dispatchEvent(new Event('change'))")
+    q.click("#editGyms"); q.wait_for_timeout(250)
+    check("gyms: a new tag shows at once on today's movements",
+          q.eval_on_selector(".lift h3 .gymtag","e=>e.textContent")=="24HR")
+    check("gyms: and a new name on its choice",
+          q.eval_on_selector('[data-gym="%s"]' % APT, "e=>e.textContent")=="APTApartment")
+
+    # removing one: undo, and the days trained there still say where
+    q.click("#editGyms"); q.wait_for_timeout(250)
+    q.click('[data-rmgym="%s"]' % G24); q.wait_for_timeout(300)
+    st=q.evaluate(GST)
+    check("gyms: Remove offers undo and remembers the name",
+          [g["id"] for g in st["gyms"]]==[APT] and st.get("gymsRetired",{}).get(G24,{}).get("name")=="24 Hour Fitness"
+          and q.evaluate(GSAYS)=="Removed 24 Hour Fitness" and st["days"][GB]["gym"]==G24)
+    q.click("#editGyms"); q.wait_for_timeout(250)
+    check("gyms: a day trained there says so, rather than being relabelled",
+          "Trained at 24 Hour Fitness \u2014 a gym you no longer train at." in q.eval_on_selector("#view","e=>e.textContent"))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("gyms: undo puts it back where it was",
+          [g["id"] for g in q.evaluate(GST)["gyms"]]==[APT, G24] and q.locator('[data-gym="%s"][aria-pressed=true]' % G24).count()==1)
+    q.click("#editGyms"); q.wait_for_timeout(250)
+    q.click('[data-rmgym="%s"]' % G24); q.wait_for_timeout(300)
+    q.click("#editGyms"); q.wait_for_timeout(250)
+    for _ in range(5): q.click("#prevDay"); q.wait_for_timeout(150)
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(500)
+    tt=q.eval_on_selector('[data-go="%s"]' % GB, "e=>e.title")
+    check("gyms: and the calendar names it, as a gym no longer trained at",
+          "at 24 Hour Fitness \u2014 a gym you no longer train at" in tt, tt)
+    tt=q.eval_on_selector('[data-go="%s"]' % GA, "e=>e.title")
+    check("gyms: a renamed gym's days follow the new name", "at Apartment" in tt and "Apartment gym" not in tt, tt)
+
+    # it all travels with a backup
+    q.click("#backupBtn"); q.wait_for_timeout(300)
+    gtxt=q.evaluate("()=>document.getElementById('backupText').value")
+    q.click("#closeSheet"); q.wait_for_timeout(200)
+    before=q.evaluate(GST)
+    q.evaluate("()=>localStorage.removeItem('iron-ledger-v1')")
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click("#backupBtn"); q.wait_for_timeout(300)
+    q.evaluate("t=>{document.getElementById('backupText').value=t;}", gtxt)
+    q.click("#restoreBtn"); q.wait_for_timeout(600)
+    after=q.evaluate(GST)
+    check("gyms: a restore brings back the gyms, the removed one's name, and what is shared",
+          after.get("gyms")==before.get("gyms") and after.get("gymsRetired")==before.get("gymsRetired")
+          and after.get("gymShared")==before.get("gymShared") and after["days"][GB].get("gym")==G24,
+          "%s / %s" % (after.get("gyms"), after.get("gymsRetired")))
+    c.close()
+
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:
         print("%-6s %-42s %s" % (st,name,detail))

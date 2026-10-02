@@ -128,6 +128,8 @@ with sync_playwright() as pw:
     p.touchscreen.tap(tb["x"]+tb["width"]/2, tb["y"]+tb["height"]/2); p.wait_for_timeout(450)
     # the lists start empty: name it, the way the owner does
     p.fill("#mNew","Barbell Row")
+    # a finger scrolls to what it is about to press; under the dock it is not there
+    p.eval_on_selector("#addLift","e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(150)
     lb=p.locator("#addLift").bounding_box()
     p.touchscreen.tap(lb["x"]+lb["width"]/2, lb["y"]+lb["height"]/2); p.wait_for_timeout(450)
     sb=p.locator("[data-addset='0']").bounding_box()

@@ -42,8 +42,10 @@ def fixture(theme=None, accent=None):
             "supps": {"s1": True},                       # one ticked, one not: both states
             "workoutStart": int(time.time() * 1000) - 45 * 60000,
             "gymNote": "Hotel gym, dumbbells only",
+            "gym": "gA",
             "updated": 1, "goal": G}},
-         "moves": None, "coachOn": True, "goal": G, "region": "United States",
+         "gyms": [{"id": "gA", "name": "Apartment gym", "tag": "APT"}, {"id": "g24", "name": "24 Hour Fitness", "tag": "24"}],
+         "gymLast": "gA", "moves": None, "coachOn": True, "goal": G, "region": "United States",
          "supps": [{"id": "s1", "name": "Creatine", "dose": "5 g"},
                    {"id": "s2", "name": "Zinc", "dose": "50 mg"}],
          # sorted and not: the tabs, a heading, the hint and Sort in the
@@ -55,13 +57,17 @@ def fixture(theme=None, accent=None):
                     {"id": "p3", "name": "Ice cream sandwich", "serveQty": 1, "serveUnit": "piece",
                      "serveG": None, "sCal": 180, "sPro": 3, "aliases": [], "sec": "desserts"}], "v": 1}
     P = (datetime.date.today() - datetime.timedelta(days=3)).isoformat()
-    s["days"][P] = {"food": [], "updated": 1, "goal": G, "workoutMs": 40 * 60000, "gymNote": "At home",
+    s["days"][P] = {"food": [], "updated": 1, "goal": G, "workoutMs": 40 * 60000, "gymNote": "At home", "gym": "gA",
         # last time's sets decide the line under each open card: Barbell Row
         # is beaten today, Dumbbell Curl still to beat, and the folded Lat
         # Pulldown keeps its "Beaten" — every state of it on screen
         "lifts": [{"id": "p1", "cat": "back", "movement": "Barbell Row", "note": "Last set was really hard", "sets": [{"w": 115, "r": 10}]},
                   {"id": "p2", "cat": "back", "movement": "Dumbbell Curl", "sets": [{"w": 40, "r": 12}, {"w": 40, "r": 12}]},
                   {"id": "p3", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 110, "r": 10}]}]}
+    # an earlier workout nobody has said the gym of: the one-time question
+    P2 = (datetime.date.today() - datetime.timedelta(days=6)).isoformat()
+    s["days"][P2] = {"food": [], "updated": 1, "goal": G,
+        "lifts": [{"id": "q1", "cat": "back", "movement": "Face Pull", "sets": [{"w": 40, "r": 15}]}]}
     if theme: s["theme"] = theme
     if accent: s["accent"] = accent
     return s
@@ -186,6 +192,23 @@ def walk(p, label):
             low = p.evaluate(LOW)
             if low: found.append("gym (special day): %s" % low)
             p.click('[data-cat="back"]'); p.wait_for_timeout(200)
+            # where you train: a chosen gym, the tag on a card, the one-time
+            # question, the sheet's Targets row — then the editor, which only
+            # exists after a press
+            gyms = p.evaluate("""()=>({
+              chosen: document.querySelectorAll('[data-gym][aria-pressed=true]').length,
+              tag: document.querySelectorAll('.lift h3 .gymtag').length,
+              ask: document.querySelectorAll('[data-gymask]').length})""")
+            for k, n in gyms.items():
+                if not n: found.append("gyms: the %s is not on screen" % k)
+            p.locator("[data-addset]").first.click(); p.wait_for_timeout(250)
+            if not p.locator("#seGym").is_visible():
+                found.append("gyms: the set sheet's Targets row is not on screen")
+            p.click("#seCancel"); p.wait_for_timeout(200)
+            p.click("#editGyms"); p.wait_for_timeout(250)
+            low = p.evaluate(LOW)
+            if low: found.append("gym (editing gyms): %s" % low)
+            p.click("#editGyms"); p.wait_for_timeout(200)
             # the rest bar lives in the dock, and running looks different
             p.click("#restBtn"); p.wait_for_timeout(200)
             low = p.evaluate(LOW)

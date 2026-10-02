@@ -12,13 +12,14 @@ store={"days":{T:{"food":[
             "sets":[{"w":135,"r":10,"tech":"restpause"}]},
            {"id":"l2","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":452000,"closed":True},
            {"id":"l3","cat":"back","movement":"Seated Cable Row","sets":[]}],
-  "updated":1,"goal":G},
+  "gym":"gA","updated":1,"goal":G},
   # last time, so every card carries its set to beat, at its longest: a tag
   # on both sides of a beaten line, and one still to beat
-  (datetime.date.today()-datetime.timedelta(days=3)).isoformat():{"food":[],"updated":1,"goal":G,
+  (datetime.date.today()-datetime.timedelta(days=3)).isoformat():{"food":[],"updated":1,"goal":G,"gym":"gA",
   "lifts":[{"id":"p1","cat":"back","movement":"Barbell Row","sets":[{"w":125,"r":10,"tech":"restpause"}]},
            {"id":"p2","cat":"back","movement":"Lat Pulldown","sets":[{"w":110,"r":10}]},
            {"id":"p3","cat":"back","movement":"Seated Cable Row","sets":[{"w":225,"r":12,"tech":"restpause"}]}]}},
+ "gyms":[{"id":"gA","name":"Apartment building gym","tag":"APTGYM24"},{"id":"g24","name":"24 Hour Fitness","tag":"24"}],"gymLast":"gA",
  "moves":None,"coachOn":True,"goal":G,"region":"United States",
  # sorted and not, so the section tabs, headings and Move / Sort are measured
  "pantry":[{"id":"p1","name":"protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,

@@ -770,6 +770,39 @@ Any tag rides along with the number, so `120×12 rest-pause` never passes for
 a straight set of twelve. A finished day shows *Beaten* where it was and
 nothing where it was not: *To beat* with nothing left to do about it is a nag.
 
+**The target is from the same gym.** The owner trains in two places, and the
+same movement on different machines is a different number: the fly goes 150
+for reps at the apartment gym and 110 at 24 Hour Fitness, so one target was
+wrong at both. `store.gyms` holds `{id, name, tag}`, chosen under the clock
+(*Training at*), and a day carries `d.gym`. `lastTime(movement, before, gym)`
+then counts only days trained there. Today with nothing chosen is wherever he
+trained last (`store.gymLast`, via `dayGym()`), and `stampGym()` writes it onto
+the day the moment anything is logged, so the record says where even if the
+default moves on. Choosing on a past day puts that day right and leaves
+tomorrow's default alone.
+
+The gym is a **tag beside the name** (`Pec Fly · APT`), never part of it.
+That was his choice over a suffix in the name: with a suffix every movement is
+in the list twice, a new tag means renaming history, and dumbbells could not
+share numbers. That last point is what **Every gym** is for: a dumbbell weighs
+the same everywhere, so the set sheet's *Targets from* row
+switches a movement to take its numbers from any gym (`store.gymShared`, by
+name). New movements stay separate per gym. He picked that default because
+it is the safe one: a machine nobody flips never shows another gym's target.
+
+Never done at this gym, the card shows where it was done, with the numbers,
+and says *not a target here*. It never shows them as *To beat*. A day nobody
+marked is the same: never a target at a gym, only a reference. When the first
+gym goes in, the app asks once where the earlier workouts were
+(`store.gymAsked`). Marking them is one undo; leaving them unmarked is too.
+
+Rule 7 with a third noun: a removed gym's name goes into `store.gymsRetired`,
+and its days say *a gym you no longer train at* on the Gym tab and the
+calendar. Renaming keeps the id, so history follows. *Compare with last time*
+looks for the last session of the split **at the same gym**. With no gyms at
+all, nothing changes from before, so a phone that never adds one never
+notices the feature.
+
 **The save warning was 2.95:1 in dark mode.** `.savebar` was white on
 `--miss`, which is a deep red in light and a light coral in dark. It shows only
 when writes are failing, so nothing measured it until `darkcheck` widened from

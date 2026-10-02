@@ -37,7 +37,9 @@ store = {
                    "sets": [{"w": 135, "r": 10}, {"w": 155, "r": 8}]},
                   {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
                   {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
-        "updated": 1, "goal": G}},
+        "gym": "gA", "updated": 1, "goal": G}},
+    "gyms": [{"id": "gA", "name": "Apartment gym", "tag": "APT"}, {"id": "g24", "name": "24 Hour Fitness", "tag": "24"}],
+    "gymLast": "gA",
     "moves": None, "coachOn": True, "goal": G, "region": "United States",
     # one sorted and one not, so the section tabs, Move and Sort are all hit
     "pantry": [{"id": "p1", "name": "costco protein coffee", "serveQty": 1,
