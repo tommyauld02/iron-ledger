@@ -2479,6 +2479,105 @@ with sync_playwright() as pw:
           "%s / %s" % (after.get("gyms"), after.get("gymsRetired")))
     c.close()
 
+    # ---------- COMBINE FOODS INTO ONE ----------
+    # Asked for from real use: a shake made every night from three foods in
+    # the pantry, logged one at a time. Combining saves them as one meal under
+    # its own name, and the three stay exactly as they were.
+    CG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    CPAN=[{"id":"pw","name":"Protein powder","serveQty":1,"serveUnit":"scoop","serveG":None,"sCal":120,"sPro":24,"aliases":[]},
+          {"id":"mk","name":"Whole milk","serveQty":1,"serveUnit":"cup","serveG":None,"sCal":150,"sPro":8,"aliases":[],"secs":["snacks"]},
+          {"id":"bn","name":"Banana","serveQty":1,"serveUnit":"piece","serveG":None,"sCal":105,"sPro":1,"aliases":[]}]
+    CSTORE={"days":{},"moves":{},"movesOwned":True,"goal":CG,"region":"United States","pantry":CPAN,"v":1}
+    CST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
+    CSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("combine: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    cb=q.locator("#combStart").bounding_box()
+    check("combine: the pantry offers it, as a proper target", cb is not None and cb["height"]>=MIN_TAP)
+    q.click("#combStart"); q.wait_for_timeout(300)
+    check("combine: it opens a draft at the top of the list, with a name field that will not zoom",
+          q.locator(".combine").is_visible()
+          and q.eval_on_selector("#combName","e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
+    q.click("#combSave"); q.wait_for_timeout(250)
+    check("combine: Save with nothing in it says why, rather than doing nothing",
+          q.eval_on_selector("#combWarn","e=>e.textContent")=="Add at least two foods to combine.")
+    q.click('[data-addpan="pw"]'); q.wait_for_timeout(250)
+    check("combine: + asks how much, and says where it is going",
+          q.eval_on_selector("#panAddBtn","e=>e.textContent")=="Add to the mix"
+          and "Going into the combination" in q.eval_on_selector("#panSheetSub","e=>e.textContent"))
+    q.click("#panQtyUp"); q.wait_for_timeout(100)
+    q.click("#panAddBtn"); q.wait_for_timeout(300)
+    check("combine: in it goes, and it says so where the thumb is",
+          q.evaluate(CSAYS)=="Added Protein powder · 2 scoops \u2014 1 food in the combination", q.evaluate(CSAYS))
+    check("combine: and nothing is logged to the day", not (q.evaluate(CST)["days"].get(Ts) or {}).get("food"))
+    for pid in ["mk","bn"]:
+        q.click('[data-addpan="%s"]' % pid); q.wait_for_timeout(250)
+        q.click("#panAddBtn"); q.wait_for_timeout(300)
+    PARTS="()=>[...document.querySelectorAll('.comb-part .nm')].map(e=>e.textContent)"
+    check("combine: each food is listed with how much",
+          q.evaluate(PARTS)==["Protein powder · 2 scoops","Whole milk · 1 cup","Banana · 1 piece"], str(q.evaluate(PARTS)))
+    check("combine: with the total",
+          q.eval_on_selector(".comb-total","e=>e.textContent")=="Together · 495 kcal · 57 g protein",
+          q.eval_on_selector(".comb-total","e=>e.textContent"))
+    tb=q.eval_on_selector_all(".comb-part button","e=>e.map(x=>x.getBoundingClientRect().height)")
+    check("combine: Take out is a proper target on every food", len(tb)==3 and all(h>=MIN_TAP for h in tb), str(tb))
+    q.click('[data-combout="2"]'); q.wait_for_timeout(250)
+    check("combine: Take out takes just that one", q.evaluate(PARTS)==["Protein powder · 2 scoops","Whole milk · 1 cup"])
+    q.click('[data-addpan="bn"]'); q.wait_for_timeout(250)
+    q.click("#panAddBtn"); q.wait_for_timeout(300)
+    q.click("#combSave"); q.wait_for_timeout(250)
+    check("combine: no name, no save — and it says so",
+          q.eval_on_selector("#combWarn","e=>e.textContent").startswith("Give it a name")
+          and q.evaluate("()=>document.activeElement.id")=="combName")
+    q.fill("#combName","protein powder"); q.click("#combSave"); q.wait_for_timeout(250)
+    check("combine: a food's own name is refused, because saving would replace that food",
+          "already have a food called Protein powder" in q.eval_on_selector("#combWarn","e=>e.textContent")
+          and len(q.evaluate(CST)["pantry"])==3)
+    q.fill("#combName","Night time shake")
+    q.set_viewport_size({"width":320,"height":700}); q.wait_for_timeout(200)
+    check("combine: the draft fits a 320px phone",
+          q.evaluate("()=>document.documentElement.scrollWidth")<=320, str(q.evaluate("()=>document.documentElement.scrollWidth")))
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.click('[data-combsec="snacks"]'); q.wait_for_timeout(100)
+    q.click("#combSave"); q.wait_for_timeout(350)
+    pan=q.evaluate(CST)["pantry"]
+    shake=[x for x in pan if x["name"]=="Night time shake"]
+    check("combine: saved as one meal, under its own name and section",
+          len(shake)==1 and shake[0]["serveUnit"]=="meal" and shake[0]["sCal"]==495 and shake[0]["sPro"]==57
+          and [i["note"] for i in shake[0]["items"]]==["Protein powder · 2 scoops","Whole milk · 1 cup","Banana · 1 piece"]
+          and shake[0].get("secs")==["snacks"], str(shake))
+    check("combine: and the three foods are exactly as they were",
+          [x for x in pan if x["name"]!="Night time shake"]==CPAN)
+    check("combine: it says what it did, with undo",
+          q.evaluate(CSAYS)=="Saved \u201cNight time shake\u201d under Snacks" and q.locator("#undoBtn").is_visible(),
+          q.evaluate(CSAYS))
+    check("combine: and the draft is put away", q.locator(".combine").count()==0 and q.locator("#combStart").count()==1)
+    sid=shake[0]["id"] if shake else ""
+    q.click('[data-addpan="%s"]' % sid); q.wait_for_timeout(250)
+    check("combine: logging it again is the ordinary sheet", q.eval_on_selector("#panAddBtn","e=>e.textContent")=="Add to ledger")
+    q.click("#panAddBtn"); q.wait_for_timeout(300)
+    food=(q.evaluate(CST)["days"].get(Ts) or {}).get("food") or []
+    check("combine: one tap logs the shake as a meal, its parts inside",
+          len(food)==1 and food[0].get("note")=="Night time shake" and len(food[0].get("items",[]))==3, str(food))
+
+    # Cancel can be taken back: a draft took taps to build
+    q.click("#combStart"); q.wait_for_timeout(250)
+    q.click('[data-addpan="pw"]'); q.wait_for_timeout(250)
+    q.click("#panAddBtn"); q.wait_for_timeout(300)
+    q.click("#combCancel"); q.wait_for_timeout(250)
+    check("combine: Cancel puts it away, and offers it back",
+          q.locator(".combine").count()==0 and q.evaluate(CSAYS)=="Put the combination away")
+    q.click("#undoBtn"); q.wait_for_timeout(250)
+    check("combine: undo brings the draft back as it was", q.evaluate(PARTS)==["Protein powder · 1 scoop"])
+    c.close()
+
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:
         print("%-6s %-42s %s" % (st,name,detail))

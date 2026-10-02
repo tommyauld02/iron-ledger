@@ -160,6 +160,16 @@ def walk(p, label):
             low = p.evaluate(LOW)
             if low: found.append("pantry (editing sections): %s" % low)
             p.click("#editPanSecs"); p.wait_for_timeout(150)
+            # combining foods: a draft with a food in it, only after presses
+            p.click("#combStart"); p.wait_for_timeout(250)
+            p.locator("[data-addpan]").first.click(); p.wait_for_timeout(250)
+            p.click("#panAddBtn"); p.wait_for_timeout(250)
+            p.click("#combSave"); p.wait_for_timeout(250)    # one food: the warning shows
+            if not p.locator(".comb-part").count() or not p.locator("#combWarn").count():
+                found.append("pantry: the combination draft is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("pantry (combining): %s" % low)
+            p.click("#combCancel"); p.wait_for_timeout(150)
         if tab == "gym":
             # the set to beat has three looks, and a state the fixture stops
             # painting is a state this suite stops measuring — so say so

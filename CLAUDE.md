@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~830 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~890 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -602,6 +602,23 @@ One name is one entry: saving over it says *Updated*, and undo puts the old one
 back. A meal with a part still waiting for numbers cannot be saved, because it
 would bake a zero into every future log of it — and a note stands in the
 button's place rather than a button that cannot work.
+
+**Or combined in the pantry itself.** The owner was found making a shake every
+night from three foods already in the pantry and logging them one at a time.
+*+ Combine foods into one* opens a draft (`panCombine`) at the top of the list.
+Each food goes in through its own `+`, which opens **the same how-much sheet**
+with its button reading *Add to the mix*, so "2 scoops" is said the way it
+always is. *Save as one* hands the parts to `saveMealToPantry()`, so the result
+is an ordinary saved meal. The three foods are never touched. A saved meal
+added to a draft goes in as its parts, scaled, because meals never nest.
+
+What it refuses, and says why in `#combWarn` instead of acting like a dead button:
+fewer than two foods, no name, and **a name that is already one of your
+foods**. One name is one entry, so saving a shake as "Protein powder" would
+replace the protein powder, which is the one thing the owner asked to keep.
+The draft is not data, but it took several taps to build, so *Cancel* still
+offers undo. A food added to the draft shows a tick on its `+` and a notice,
+because the draft can be well above the row that was tapped.
 
 **The pantry is filed in sections.** Asked for once it grew: Breakfast,
 Lunch, Dinner, Snacks and Desserts (`PAN_SECS`), in the order a day runs — he

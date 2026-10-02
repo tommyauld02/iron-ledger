@@ -670,6 +670,8 @@ with sync_playwright() as pw:
                            ['.tabs button[data-tab="gym"]', "#addLift", "[data-liftnote]"], "#liftNoteIn"),
         ("the pantry's sections",
                            ['.tabs button[data-tab="pantry"]', "#editPanSecs"], "#newSecName"),
+        ("combining foods into one",
+                           ['.tabs button[data-tab="pantry"]', "#combStart"], "#combName"),
         # the set sheet, opened from the card, and its Edit for the movement
         ("a new set",      ['.tabs button[data-tab="gym"]', "#addLift", "[data-r]"], "#seR"),
         ("the movement, from the set sheet",

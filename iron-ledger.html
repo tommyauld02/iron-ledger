@@ -1159,6 +1159,42 @@
   }
   /* A record with impossible numbers gets no +; this keeps the rest aligned. */
   .pan-item .add-gap { grid-column: 1; grid-row: 1 / -1; min-width: 44px; }
+
+  /* Combining foods into one: a draft that sits at the top of the list */
+  .combine {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+  }
+  .combine p { margin: 0; }
+  .comb-part {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0 10px;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--rule);
+  }
+  .comb-part .nm { font-size: 14px; overflow-wrap: anywhere; }
+  .comb-part .mac { grid-column: 1; font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
+  .comb-part button {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    min-height: 44px;
+    padding: 0 10px;
+    margin-right: -10px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .comb-total { font-family: var(--font-num); font-size: 13px; color: var(--ink); }
+  .comb-warn { font-size: 13px; color: var(--miss); }
   .pan-item .nm { grid-column: 2; grid-row: 1; font-size: 15px; font-weight: 500; overflow-wrap: anywhere; }
   .pan-item .macros {
     grid-column: 2;
@@ -2914,7 +2950,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-01.53";
+  var BUILD = "2026-10-01.54";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3025,7 +3061,10 @@
   // forgot they left open.
   var panTab = "all";
   var panEditing = null;   // the food whose meals are being chosen, if any
-  var panSecEdit = false;  // the sections themselves are being edited
+  var panSecEdit = false;
+  // Foods being combined into one saved meal: { parts, name, secs, warn }.
+  // A draft only — nothing is written until Save as one.
+  var panCombine = null;  // the sections themselves are being edited
   var coachOpen = null;
   // Gym split editing. Transient view state, never saved: reopening the app
   // should show you your splits, not the half-finished act of renaming one.
@@ -7080,6 +7119,44 @@
         '</div>'
       : '';
 
+    // Asked for from real use: a shake made every night from three foods
+    // already in the pantry, logged one at a time. Combining makes them one
+    // saved meal under its own name — the three stay as they are. Each food
+    // goes in through its own +, with the same how-much sheet as logging, so
+    // "2 scoops" is said the way it always is.
+    var combineBlock = "";
+    if (panCombine) {
+      var cParts = panCombine.parts;
+      var cCal = cParts.reduce(function (a, x) { return a + x.cal; }, 0);
+      var cPro = cParts.reduce(function (a, x) { return a + x.pro; }, 0);
+      combineBlock = '<div class="combine">' +
+        '<span class="eyebrow">Combining into one</span>' +
+        (cParts.length
+          ? cParts.map(function (x, i) {
+              return '<div class="comb-part"><span class="nm">' + esc(x.note) + '</span>' +
+                '<span class="mac">' + fmt(x.cal) + ' kcal · ' + Math.round(x.pro) + ' g protein</span>' +
+                '<button data-combout="' + i + '" aria-label="Take ' + esc(x.note) + ' out">Take out</button></div>';
+            }).join("") +
+            '<p class="comb-total">Together · ' + fmt(cCal) + ' kcal · ' + Math.round(cPro) + ' g protein</p>'
+          : '') +
+        '<p class="est-note">Tap + on each food below and say how much. ' +
+          (cParts.length ? 'Add another, or name it and save.' : 'Your foods stay as they are.') + '</p>' +
+        '<div class="field"><label for="combName">Name it</label>' +
+          '<input id="combName" class="text" placeholder="Night time shake" value="' + esc(panCombine.name) + '"></div>' +
+        (panSections().length
+          ? '<div class="field"><span class="sec-k">Which meals is it for?</span>' +
+              secButtons("data-combsec", panCombine.secs) + '</div>'
+          : '') +
+        (panCombine.warn ? '<p class="comb-warn" id="combWarn">' + esc(panCombine.warn) + '</p>' : '') +
+        '<div class="sheet-actions">' +
+          '<button class="btn" id="combSave">Save as one</button>' +
+          '<button class="btn ghost" id="combCancel">Cancel</button>' +
+        '</div>' +
+      '</div>';
+    } else if (list.length > 1) {
+      combineBlock = '<button class="note-add" id="combStart">+ Combine foods into one</button>';
+    }
+
     var photoBlock = "";
     if (pantryShot && pantryShot.status === "loading") {
       photoBlock = '<div class="working"><i></i>Reading the label…</div>';
@@ -7174,6 +7251,7 @@
           '<span class="eyebrow">' + (list.length ? list.length + (list.length === 1 ? ' food saved' : ' foods saved') : 'Nothing saved yet') + '</span>' +
           '<button id="editPanSecs">' + (panSecEdit ? "Done" : "Edit sections") + '</button>' +
         '</div>' +
+        combineBlock +
         (panSecEdit ? secEditor : tabs) +
         (rows || '<p class="empty">Foods you save here are matched first — ahead of the built-in reference — every time you describe a meal.</p>') +
       '</section>' +
@@ -7417,6 +7495,64 @@
         store.pantry.forEach(function (x) { if (x.id === b.dataset.addpan) raw = x; });
         if (raw) openPanSheet(raw);
       });
+    });
+
+    var combStart = document.getElementById("combStart");
+    if (combStart) combStart.addEventListener("click", function () {
+      panCombine = { parts: [], name: "", secs: secName(panTab) ? [panTab] : [], warn: "" };
+      panSecEdit = false;
+      render();
+      var top = document.querySelector(".combine");
+      if (top && top.scrollIntoView) top.scrollIntoView({ block: "nearest" });
+    });
+    // The name and the sections keep a draft, because every food added
+    // redraws the tab and would otherwise wipe what was typed.
+    var combName = document.getElementById("combName");
+    if (combName) combName.addEventListener("input", function () { panCombine.name = combName.value; });
+    view.querySelectorAll("[data-combsec]").forEach(function (b) {
+      b.addEventListener("click", function () { panCombine.secs = pressSec(b, "data-combsec"); });
+    });
+    view.querySelectorAll("[data-combout]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        panCombine.parts.splice(Number(b.dataset.combout), 1);
+        panCombine.warn = "";
+        render();
+      });
+    });
+    var combCancel = document.getElementById("combCancel");
+    if (combCancel) combCancel.addEventListener("click", function () {
+      var draft = panCombine;
+      panCombine = null;
+      render();
+      // A draft with foods in it took a few taps to build, so putting it away
+      // can be taken back like anything else.
+      if (draft.parts.length) offerUndo("Put the combination away", function () { panCombine = draft; render(); });
+    });
+    var combSave = document.getElementById("combSave");
+    if (combSave) combSave.addEventListener("click", function () {
+      var name = String(panCombine.name || "").trim();
+      var warn = panCombine.parts.length < 2 ? "Add at least two foods to combine."
+        : !name ? "Give it a name \u2014 it is what you will tap next time."
+        : null;
+      // Saving under a food's own name would replace that food, and the
+      // whole point is keeping the parts as they are.
+      var clash = name && store.pantry.filter(function (x) {
+        return x.name.toLowerCase() === name.toLowerCase() && !(x.items && x.items.length);
+      })[0];
+      if (!warn && clash) warn = "You already have a food called " + clash.name + " \u2014 give the combination its own name.";
+      if (warn) {
+        panCombine.warn = warn;
+        render();
+        var f = document.getElementById(!name && panCombine.parts.length >= 2 ? "combName" : "combWarn");
+        if (f && f.focus) f.focus();
+        return;
+      }
+      var draft = panCombine, secs = draft.secs.slice();
+      panCombine = null;
+      // Saved under a section other than the one on show, the list follows it,
+      // the way saving a food does.
+      if (secs.length && panTab !== "all" && secs.indexOf(panTab) === -1) panTab = secs[0];
+      saveMealToPantry(name, draft.parts, secs);
     });
 
     var addSupp = document.getElementById("addSupp");
@@ -9008,8 +9144,11 @@
       " · " + Math.round(n.sCal) + " kcal · " + Math.round(n.sPro) + " g protein." +
       // The sheet covers the header, so a day that is not today has to say so
       // here or the date on screen is the one you cannot currently see.
-      (ymd(cursor) === TODAY ? "" : " Logging to " +
+      (panCombine ? " Going into the combination, not the day."
+        : ymd(cursor) === TODAY ? "" : " Logging to " +
         cursor.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) + ".");
+    // Combining, the same sheet says where the food is going.
+    document.getElementById("panAddBtn").textContent = panCombine ? "Add to the mix" : "Add to ledger";
 
     var units = panUnits(n);
     var field = document.getElementById("panUnitField");
@@ -9102,6 +9241,33 @@
     // gives no way to tell one slice from four when you read it back.
     var note = raw.name + " · " + got.amount;
     var q = Number(panAdd.qty);
+    if (panCombine) {
+      // Into the draft, not the day. A saved meal goes in as its parts, scaled:
+      // meals never nest, they flatten.
+      var parts = raw.items && raw.items.length > 1
+        ? raw.items.map(function (it) {
+            return { cal: Math.round(it.cal * q), pro: Math.round(it.pro * q),
+                     note: q === 1 ? it.note : it.note + " × " + q };
+          })
+        : [{ cal: c, pro: pr, note: note }];
+      Array.prototype.push.apply(panCombine.parts, parts);
+      panCombine.warn = "";
+      closePanSheet();
+      render();
+      // The draft is at the top of the list and this row may be well below
+      // it, so say so where the thumb is, and on the bar.
+      var tick = view.querySelector('[data-addpan="' + id + '"]');
+      if (tick) {
+        tick.textContent = "✓"; tick.classList.add("is-done");
+        setTimeout(function () {
+          var later = view.querySelector('[data-addpan="' + id + '"]');
+          if (later && later.textContent === "✓") { later.textContent = "+"; later.classList.remove("is-done"); }
+        }, 1400);
+      }
+      var nIn = panCombine.parts.length;
+      notify("Added " + note + " \u2014 " + nIn + (nIn === 1 ? " food" : " foods") + " in the combination");
+      return;
+    }
     if (raw.items && raw.items.length > 1) {
       // A saved meal lands as the meal it is, parts and all, so the day shows
       // what was in it and it can still be split apart. Its total is read
