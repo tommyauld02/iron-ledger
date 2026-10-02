@@ -23,7 +23,10 @@ def check(n, ok, det=""): res.append(("PASS" if ok else "FAIL", n, det))
 
 def store(days=None, moves=None, lifts=None):
     s = {"days": {T: {"food": [], "lifts": lifts or [], "updated": 1, "goal": G}},
-         "moves": moves, "goal": G, "region": "United States", "pantry": [], "v": 1}
+         "moves": moves if moves is not None else {"back": ["Barbell Row", "Lat Pulldown"], "push": ["Bench Press"]},
+         "goal": G, "region": "United States", "pantry": [], "v": 1, "coachOn": True,
+         # phones already on a build where the lists are the owner's own
+         "movesOwned": True}
     if days: s["routine"] = {"name": "My split", "days": days}
     return s
 

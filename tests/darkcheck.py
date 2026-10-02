@@ -43,7 +43,7 @@ def fixture(theme=None, accent=None):
             "workoutStart": int(time.time() * 1000) - 45 * 60000,
             "gymNote": "Hotel gym, dumbbells only",
             "updated": 1, "goal": G}},
-         "moves": None, "goal": G, "region": "United States",
+         "moves": None, "coachOn": True, "goal": G, "region": "United States",
          "supps": [{"id": "s1", "name": "Creatine", "dose": "5 g"},
                    {"id": "s2", "name": "Zinc", "dose": "50 mg"}],
          # sorted and not: the tabs, a heading, the hint and Sort in the
@@ -173,6 +173,14 @@ def walk(p, label):
               last: [...document.querySelectorAll('.lift .last')].filter(e=>e.textContent.includes('\u201c')).length})""")
             for k, n in notes.items():
                 if not n: found.append("notes: the %s note is not on screen" % k)
+            # the set sheet, adding a set with the target in it, then its Edit
+            p.locator("[data-addset]").first.click(); p.wait_for_timeout(250)
+            low = p.evaluate(LOW)
+            if low: found.append("set sheet (adding): %s" % low)
+            p.click("#seMoveBtn"); p.wait_for_timeout(200)
+            low = p.evaluate(LOW)
+            if low: found.append("set sheet (changing the movement): %s" % low)
+            p.click("#seCancel"); p.wait_for_timeout(200)
             # the special day chosen: its chip pressed, its own movement list
             p.click('[data-cat="special"]'); p.wait_for_timeout(250)
             low = p.evaluate(LOW)

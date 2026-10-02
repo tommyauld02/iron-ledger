@@ -23,6 +23,13 @@ def resume(p):
 
 def keys(p): return p.evaluate("()=>Object.keys(JSON.parse(localStorage.getItem('iron-ledger-v1')).days).sort()")
 
+
+def add_movement(pg, name, wait=350):
+    have = pg.eval_on_selector_all("#mSel option", "e=>e.map(o=>o.value)")
+    if name in have: pg.select_option("#mSel", name)
+    else: pg.select_option("#mSel", "__new"); pg.fill("#mNew", name)
+    pg.click("#addLift"); pg.wait_for_timeout(wait)
+
 with sync_playwright() as pw:
     b=pw.chromium.launch()
 
@@ -39,8 +46,9 @@ with sync_playwright() as pw:
     p.fill("#fCal","1800"); p.fill("#fPro","160"); p.fill("#fNote","Full day")
     p.click("#addFood"); p.wait_for_timeout(400)
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(400)
-    p.select_option("#mSel","Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
-    p.fill('[data-w="0"]',"135"); p.fill('[data-r="0"]',"10"); p.click('[data-addset="0"]'); p.wait_for_timeout(350)
+    add_movement(p, "Barbell Row")
+    p.click('[data-addset="0"]'); p.wait_for_timeout(200)
+    p.fill("#seW","135"); p.fill("#seR","10"); p.click("#seSave"); p.wait_for_timeout(350)
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(350)
     k0=keys(p)
     ck("day 0: logged", len(k0)==1, k0[0])
@@ -60,7 +68,7 @@ with sync_playwright() as pw:
 
     # ---- last-session lookup must reach back across the day boundary ----
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(400)
-    p.select_option("#mSel","Barbell Row"); p.click("#addLift"); p.wait_for_timeout(400)
+    add_movement(p, "Barbell Row", wait=400)
     last=p.eval_on_selector(".lift .last","e=>e.textContent")
     ck("rollover: last-session crosses days", "135" in last and "10" in last, last.strip())
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(300)
@@ -153,11 +161,12 @@ with sync_playwright() as pw:
         p.on("pageerror", lambda e: errs.append(str(e)))
         p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(900)
         p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(450)
-        p.select_option("#mSel","Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
+        add_movement(p, "Barbell Row")
         # Start first: a set logged first now starts the clock by itself, and
         # this is about what midnight does to a clock, however it started
         p.click("#startWorkout"); p.wait_for_timeout(500)
-        p.fill('[data-w="0"]',"135"); p.fill('[data-r="0"]',"10"); p.click('[data-addset="0"]'); p.wait_for_timeout(350)
+        p.click('[data-addset="0"]'); p.wait_for_timeout(200)
+        p.fill("#seW","135"); p.fill("#seR","10"); p.click("#seSave"); p.wait_for_timeout(350)
         started=keys(p)[0]
         p.evaluate("ms=>window.__bump(ms)", jump); resume(p)
         rec=p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]", started)

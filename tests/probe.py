@@ -9,7 +9,7 @@ STORE={"days":{
               {"id":"t2","cal":0,"pro":0,"note":"leftover curry","pending":True}],
       "lifts":[{"id":"tl","cat":"back","movement":"Barbell Row","sets":[{"w":185,"r":6},{"w":185,"r":5}]}],
       "updated":2,"goal":G}},
-  "moves":None,"goal":G,"region":"United States",
+  "moves":{"back":["Barbell Row","Lat Pulldown"]},"movesOwned":True,"goal":G,"region":"United States",
   "pantry":[{"id":"p1","name":"protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,"sCal":130,"sPro":30,"aliases":[]},
             {"id":"p2","name":"legacy bad","k":13000,"p":3000,"servingG":1,"aliases":[]}],"v":1}
 STUB="""window.claude={use:function(n){
@@ -41,7 +41,8 @@ PROBES=[
  ("gym",".cat:nth-child(2)","switch split",None),
  ("gym",".cat:nth-child(3)","switch split (legs)",None),
  ("gym","#addLift","add movement",None),
- ("gym",'[data-addset="0"]',"add a set",[('[data-w="0"]',"200"),('[data-r="0"]',"5")]),
+ ("gym",'[data-addset="0"]',"open the set sheet",None),
+ ("gym",'[data-r="0"]',"open the set sheet on the reps",None),
  ("gym",".set","open a set to change it",None),
  ("gym","#dayNoteAdd","write a note for the day",None),
  ("gym","[data-rmlift]","remove movement",None),

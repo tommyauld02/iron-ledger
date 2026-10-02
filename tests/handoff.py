@@ -53,7 +53,7 @@ STORE = {
                       {"id": "t4", "cal": None, "pro": None, "note": "malformed"}],
              "lifts": [], "updated": 1, "goal": G},
     },
-    "moves": None, "goal": G, "region": "United States",
+    "moves": {"back": ["Barbell Row", "Lat Pulldown"]}, "movesOwned": True, "coachOn": True, "goal": G, "region": "United States",
     "pantry": [{"id": "p1", "name": "costco protein coffee", "serveQty": 1,
                 "serveUnit": "bottle", "serveG": None, "sCal": 130, "sPro": 30, "aliases": []},
                {"id": "p2", "name": "legacy item", "serveQty": 100,
@@ -617,8 +617,9 @@ with sync_playwright() as pw:
     # timer, and a thumb on its way to Start rest must reach Start rest.
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(400)
     p.select_option("#mSel", "Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
-    p.fill('[data-w="0"]', "135"); p.fill('[data-r="0"]', "10")
-    p.click('[data-addset="0"]'); p.wait_for_timeout(400)
+    p.click('[data-addset="0"]'); p.wait_for_timeout(200)
+    p.fill("#seW", "135"); p.fill("#seR", "10")
+    p.click("#seSave"); p.wait_for_timeout(400)
     check("the first-set notice is showing for this check",
           not p.evaluate("() => document.getElementById('undobar').hidden")
           and "first set" in p.eval_on_selector("#undoLabel", "e => e.textContent"))
@@ -667,6 +668,10 @@ with sync_playwright() as pw:
                            ['.tabs button[data-tab="gym"]', "#addLift", "[data-liftnote]"], "#liftNoteIn"),
         ("the pantry's sections",
                            ['.tabs button[data-tab="pantry"]', "#editPanSecs"], "#newSecName"),
+        # the set sheet, opened from the card, and its Edit for the movement
+        ("a new set",      ['.tabs button[data-tab="gym"]', "#addLift", "[data-r]"], "#seR"),
+        ("the movement, from the set sheet",
+                           ['.tabs button[data-tab="gym"]', "#addLift", "[data-addset]", "#seMoveBtn"], "#seMove"),
     ]
     unopened, small, zoomy = [], [], []
     for name, steps, field in EDITORS:

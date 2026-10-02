@@ -36,6 +36,24 @@ window.claude={use:function(n){
 """
 
 results=[]
+# A set is logged in the set sheet: every part of a card's entry row — lb,
+# reps, the technique box and Set — opens it, and typing happens there.
+def log_set(pg, i, w, r, tech=None, wait=300):
+    pg.click('[data-addset="%d"]' % i); pg.wait_for_timeout(150)
+    pg.fill("#seW", str(w)); pg.fill("#seR", str(r))
+    if tech is not None: pg.select_option("#seT", tech)
+    pg.click("#seSave"); pg.wait_for_timeout(wait)
+
+# Movements are the owner's own names now: a split's list starts empty and
+# holds what he has named. Pick one if the list has it, otherwise name it.
+def add_movement(pg, name, wait=300):
+    have = pg.eval_on_selector_all("#mSel option", "e=>e.map(o=>o.value)")
+    if name in have:
+        pg.select_option("#mSel", name)
+    else:
+        pg.select_option("#mSel", "__new"); pg.fill("#mNew", name)
+    pg.click("#addLift"); pg.wait_for_timeout(wait)
+
 def check(name, ok, detail=""):
     results.append((("PASS" if ok else "FAIL"), name, detail))
 
@@ -275,17 +293,22 @@ with sync_playwright() as pw:
     p.eval_on_selector_all(".cat","e=>e[1].click()"); p.wait_for_timeout(350)
     check("gym: category switch", p.evaluate("()=>document.querySelectorAll('.cat')[1].getAttribute('aria-pressed')")=="true")
     p.eval_on_selector_all(".cat","e=>e[0].click()"); p.wait_for_timeout(350)
-    p.select_option("#mSel","Barbell Row"); p.click("#addLift"); p.wait_for_timeout(400)
+    add_movement(p, "Barbell Row", wait=400)
     check("gym: add movement", p.eval_on_selector_all(".lift","e=>e.length")==1)
     last=p.eval_on_selector(".lift .last","e=>e.textContent")
     check("gym: last-session lookup", "135" in last, last.strip())
-    p.fill('[data-w="0"]',"185"); p.fill('[data-r="0"]',"6")
-    p.click('[data-addset="0"]'); p.wait_for_timeout(400)
+    log_set(p, 0, 185, 6, wait=400)
     check("gym: add set", p.eval_on_selector_all(".set","e=>e.length")==1)
     check("gym: Start forgotten, the first set starts the clock",
           p.evaluate("()=>!!document.getElementById('workoutClock')"))
     check("gym: volume line", "1 set" in p.eval_on_selector(".lift-foot span","e=>e.textContent"))
-    p.fill('[data-w="0"]',"185"); p.fill('[data-r="0"]',"5"); p.press('[data-r="0"]',"Enter"); p.wait_for_timeout(400)
+    p.click('[data-r="0"]'); p.wait_for_timeout(200)
+    check("gym: tapping reps opens the set sheet, ready on the reps",
+          not p.evaluate("()=>document.getElementById('setEditSheet').hidden")
+          and p.evaluate("()=>document.activeElement.id")=="seR"
+          and p.eval_on_selector("#seSave","e=>e.textContent")=="Add set")
+    check("gym: it opens on the weight of the set before", p.input_value("#seW")=="185")
+    p.fill("#seR","5"); p.press("#seR","Enter"); p.wait_for_timeout(400)
     check("gym: Enter adds set", p.eval_on_selector_all(".set","e=>e.length")==2)
     # A tap on a set used to remove it outright — the same remove-and-add-again
     # the owner called out for movements. Now it opens an editor.
@@ -302,9 +325,12 @@ with sync_playwright() as pw:
     check("gym: and opens on its numbers",
           p.input_value("#seW")=="185" and p.input_value("#seR")=="6" and p.input_value("#seT")=="",
           "%s x %s %r" % (p.input_value("#seW"), p.input_value("#seR"), p.input_value("#seT")))
-    small=[x for x in p.eval_on_selector_all("#setEditSheet input, #setEditSheet select, #setEditSheet button",
-           "e=>e.map(b=>[b.id,Math.round(b.getBoundingClientRect().height)])") if x[1]<44]
-    check("gym: every control in it clears 44px", not small, str(small))
+    # only what is on screen: the Edit row is closed until asked for, and a
+    # hidden control measures 0 tall without meaning anything
+    shown=p.eval_on_selector_all("#setEditSheet input, #setEditSheet select, #setEditSheet button",
+           "e=>e.filter(b=>b.getClientRects().length).map(b=>[b.id,Math.round(b.getBoundingClientRect().height)])")
+    small=[x for x in shown if x[1]<44]
+    check("gym: every control in it clears 44px", len(shown)>=5 and not small, str(small or shown))
     zoomy=p.eval_on_selector_all("#setEditSheet input, #setEditSheet select",
           "e=>e.filter(x=>parseFloat(getComputedStyle(x).fontSize)<16).map(x=>x.id)")
     check("gym: and none of its fields zoom the page", not zoomy, str(zoomy))
@@ -822,7 +848,7 @@ with sync_playwright() as pw:
     ATTR="()=>[document.documentElement.getAttribute('data-theme'), document.documentElement.getAttribute('data-accent')]"
     ACC="()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()"
     META="()=>{const m=document.querySelector('meta[name=theme-color]');return m&&m.content;}"
-    for t in ["macros","pantry","gym","coach","log"]:
+    for t in ["macros","pantry","gym","log"]:
         p.click('.tabs button[data-tab="%s"]'%t); p.wait_for_timeout(250)
         if not p.locator("#setBtn").is_visible():
             check("settings: the gear is on %s"%t, False); break
@@ -836,7 +862,7 @@ with sync_playwright() as pw:
     check("settings: the gear opens the sheet",
           p.evaluate("()=>!document.getElementById('setSheet').hidden"))
     check("settings: it starts on the phone's own look and teal",
-          p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")==["Match phone","Teal"],
+          p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")==["Match phone","Teal","Hidden"],
           str(p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")))
     small=[x for x in p.eval_on_selector_all("#setSheet button",
            "e=>e.map(b=>[b.textContent.trim()||b.getAttribute('aria-label'),Math.round(b.getBoundingClientRect().height)])")
@@ -879,8 +905,47 @@ with sync_playwright() as pw:
     check("settings: and in the small key read before the first paint",
           p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-look')||'{}')")=={"theme":"dark","accent":"blue"},
           str(p.evaluate("()=>localStorage.getItem('iron-ledger-look')")))
-    # Left on dark and blue on purpose: the restore below wipes the phone and
-    # has to bring the look back along with everything else.
+
+    # ---------- THE COACH TAB ----------
+    # Put away until it is wanted: it is for writing a routine for someone
+    # else, which the owner is not doing yet. Off unless switched on, from
+    # Settings, and nothing in it is lost either way.
+    TABSHOWN="()=>[...document.querySelectorAll('.tabs button')].filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)"
+    ROUTINE="()=>JSON.stringify(JSON.parse(localStorage.getItem('iron-ledger-v1')).routine)"
+    check("coach tab: put away on a phone that never chose",
+          p.evaluate(TABSHOWN)==["macros","pantry","gym","log"], str(p.evaluate(TABSHOWN)))
+    tw=p.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.getBoundingClientRect().width)")
+    bw=p.evaluate("()=>document.querySelector('.tabs').clientWidth")
+    check("coach tab: the four left share the whole bar, evenly",
+          len(tw)==4 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
+    p.click("#setBtn"); p.wait_for_timeout(300)
+    check("coach tab: Settings has the switch, on Hidden",
+          p.eval_on_selector('[data-pick-coach="off"]',"e=>e.getAttribute('aria-pressed')")=="true")
+    p.click('[data-pick-coach="on"]'); p.wait_for_timeout(300)
+    check("coach tab: Shown puts it back at once, in its place",
+          p.evaluate(TABSHOWN)==["macros","pantry","gym","coach","log"]
+          and p.eval_on_selector('[data-pick-coach="on"]',"e=>e.getAttribute('aria-pressed')")=="true",
+          str(p.evaluate(TABSHOWN)))
+    check("coach tab: and the choice is saved",
+          p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).coachOn")==True)
+    p.click("#setDone"); p.wait_for_timeout(200)
+    rt=p.evaluate(ROUTINE)
+    p.click('.tabs button[data-tab="coach"]'); p.wait_for_timeout(400)
+    ndays=len(json.loads(rt)["days"]) if rt and rt!="null" else 3
+    check("coach tab: it opens on the routine, as it was",
+          p.locator(".rt-day").count()==ndays, "%d cards, %d days" % (p.locator(".rt-day").count(), ndays))
+    p.click("#setBtn"); p.wait_for_timeout(300)
+    p.click('[data-pick-coach="off"]'); p.wait_for_timeout(300)
+    check("coach tab: hidden while standing on it lands on Gym, not on nothing",
+          p.evaluate("()=>document.querySelector('.tabs [aria-selected=true]').dataset.tab")=="gym"
+          and "coach" not in p.evaluate(TABSHOWN) and p.locator("#addLift").count()==1)
+    check("coach tab: and the routine is untouched", p.evaluate(ROUTINE)==rt)
+    p.click('[data-pick-coach="on"]'); p.wait_for_timeout(300)
+    p.click("#setDone"); p.wait_for_timeout(200)
+    p.reload(); p.wait_for_timeout(900)
+    check("coach tab: the choice survives a reload", "coach" in p.evaluate(TABSHOWN))
+    # Left Shown, on dark and blue, on purpose: the restore below wipes the
+    # phone and has to bring all of it back along with everything else.
 
     # ---------- BACKUP / RESTORE ----------
     p.click("#backupBtn"); p.wait_for_timeout(400)
@@ -894,6 +959,7 @@ with sync_playwright() as pw:
     p.reload(); p.wait_for_timeout(900)
     check("restore: a wiped phone starts on the default look",
           p.evaluate(ATTR)==[None,None], str(p.evaluate(ATTR)))
+    check("restore: and with Coach put away", "coach" not in p.evaluate(TABSHOWN))
     p.click("#backupBtn"); p.wait_for_timeout(300)
     p.evaluate("t=>{document.getElementById('backupText').value=t;}", txt)
     p.click("#restoreBtn"); p.wait_for_timeout(600)
@@ -901,6 +967,8 @@ with sync_playwright() as pw:
     check("restore: the look comes back and is applied",
           [after.get("theme"), after.get("accent")]==["dark","blue"] and p.evaluate(ATTR)==["dark","blue"],
           "stored %s, on screen %s" % ([after.get("theme"), after.get("accent")], p.evaluate(ATTR)))
+    check("restore: the Coach tab comes back as it was",
+          after.get("coachOn")==True and "coach" in p.evaluate(TABSHOWN), str(p.evaluate(TABSHOWN)))
     check("restore: days come back", len(after.get("days",{}))==len(payload.get("days",{})),
           "%d of %d days" % (len(after.get("days",{})), len(payload.get("days",{}))))
     check("restore: pantry comes back", len(after.get("pantry",[]))==len(payload.get("pantry",[])),
@@ -955,11 +1023,10 @@ with sync_playwright() as pw:
         q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
         return c, q
     def add(q, mv):
-        q.select_option("#mSel", label=mv); q.click("#addLift"); q.wait_for_timeout(300)
+        add_movement(q, mv)
     def sets(q, i, n, gap):
         for _ in range(n):
-            q.fill('[data-w="%d"]'%i, "95"); q.fill('[data-r="%d"]'%i, "10")
-            q.click('[data-addset="%d"]'%i); q.wait_for_timeout(120)
+            log_set(q, i, 95, 10, wait=120)
             q.evaluate("ms=>window.__advance(ms)", gap)
     # The test clock moves by hand but also ticks with real time, and a drag
     # costs a few real seconds. Ten seconds is still far finer than any
@@ -1139,9 +1206,14 @@ with sync_playwright() as pw:
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    # a list the way an owner builds one: both curls, named by him
+    q.evaluate("""()=>localStorage.setItem('iron-ledger-v1',JSON.stringify({days:{},moves:{back:['Barbell Curl','Dumbbell Curl']},movesOwned:true,
+        goal:{cal:{dir:'-',v:2000},pro:{dir:'+',v:150}},region:'United States',pantry:[],v:1}))""")
+    q.reload(); q.wait_for_timeout(900)
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
     q.select_option("#mSel", "Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
     for _ in range(2):
-        q.fill('[data-w="0"]',"30"); q.fill('[data-r="0"]',"12"); q.click('[data-addset="0"]'); q.wait_for_timeout(150)
+        log_set(q, 0, 30, 12, wait=150)
     nb=q.locator("[data-editlift]").bounding_box()
     check("edit: the name is a proper target", nb and nb["height"]>=MIN_TAP, nb and "%dx%d"%(nb["width"],nb["height"]))
     q.click("[data-editlift]"); q.wait_for_timeout(300)
@@ -1176,28 +1248,24 @@ with sync_playwright() as pw:
           "Spider Curl" not in q.evaluate(EL)["moves"])
 
     # ---------- HOW A SET WAS DONE ----------
-    tb=q.locator(".tech").bounding_box()
+    tb=q.locator('[data-techopen="0"]').bounding_box()
     check("technique: the box sits beside weight and reps", tb is not None)
     check("technique: it is a proper target", tb and tb["height"]>=MIN_TAP, tb and "%dx%d"%(tb["width"],tb["height"]))
-    check("technique: its picker will not zoom the page",
-          q.eval_on_selector('[data-tech="0"]',"e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
-    check("technique: it starts on normal",
-          q.eval_on_selector('[data-techshow="0"]',"e=>e.textContent")=="normal")
-    q.fill('[data-w="0"]',"20"); q.fill('[data-r="0"]',"10")
-    q.select_option('[data-tech="0"]',"drop"); q.wait_for_timeout(200)
-    check("technique: picking one shows it",
-          q.eval_on_selector('[data-techshow="0"]',"e=>e.textContent")=="drop")
-    check("technique: and does not wipe weight and reps typed first",
-          q.input_value('[data-w="0"]')=="20" and q.input_value('[data-r="0"]')=="10",
-          "%r %r"%(q.input_value('[data-w="0"]'),q.input_value('[data-r="0"]')))
-    q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    check("technique: it reads normal", q.eval_on_selector('[data-techopen="0"]',"e=>e.textContent")=="normal")
+    q.click('[data-techopen="0"]'); q.wait_for_timeout(250)
+    check("technique: tapping it opens the set sheet on its picker",
+          q.evaluate("()=>document.activeElement.id")=="seT")
+    check("technique: the picker will not zoom the page, and starts on normal",
+          q.eval_on_selector("#seT","e=>parseFloat(getComputedStyle(e).fontSize)")>=16 and q.input_value("#seT")=="")
+    q.fill("#seW","20"); q.fill("#seR","10"); q.select_option("#seT","drop")
+    q.click("#seSave"); q.wait_for_timeout(300)
     check("technique: the set is stored with it",
           q.evaluate(EL)["lifts"][0]["sets"][-1]=="20x10:drop", str(q.evaluate(EL)["lifts"][0]["sets"]))
     check("technique: a normal set carries nothing extra",
           all(":" not in x for x in q.evaluate(EL)["lifts"][0]["sets"][:-1]))
-    check("technique: the box goes back to normal so a tag cannot ride along",
-          q.eval_on_selector('[data-techshow="0"]',"e=>e.textContent")=="normal"
-          and q.eval_on_selector('[data-tech="0"]',"e=>e.value")=="")
+    q.click('[data-addset="0"]'); q.wait_for_timeout(250)
+    check("technique: the next set starts on normal so a tag cannot ride along", q.input_value("#seT")=="")
+    q.click("#seCancel"); q.wait_for_timeout(200)
     check("technique: the chip says which set it was",
           q.eval_on_selector_all(".set","e=>e.map(x=>x.textContent)")[-1].endswith("drop"))
     check("technique: the row still fits the phone",
@@ -1213,14 +1281,14 @@ with sync_playwright() as pw:
       localStorage.setItem('iron-ledger-v1', JSON.stringify(s));}""")
     q.reload(); q.wait_for_timeout(900)
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(300)
-    q.select_option("#mSel","Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    add_movement(q, "Barbell Curl")
     check("technique: next time, Last says which set was the drop",
           "20×10 drop" in q.eval_on_selector(".lift .last","e=>e.textContent"),
           q.eval_on_selector(".lift .last","e=>e.textContent"))
     # Most sets are just sets. Never touching the box must be the ordinary
     # path, all the way to closing the movement out.
     for _ in range(3):
-        q.fill('[data-w="0"]',"30"); q.fill('[data-r="0"]',"12"); q.click('[data-addset="0"]'); q.wait_for_timeout(150)
+        log_set(q, 0, 30, 12, wait=150)
     plain=q.evaluate(EL)["lifts"][0]["sets"]
     check("technique: sets with none chosen add like any other",
           plain==["30x12","30x12","30x12"], str(plain))
@@ -1434,6 +1502,7 @@ with sync_playwright() as pw:
 
     # ---------- TAKE A MOVEMENT OFF THE LIST ----------
     OPTS="()=>[...document.querySelectorAll('#mSel option')].map(o=>o.value)"
+    add_movement(q, "Hammer Curl")
     q.select_option("#mSel","Hammer Curl")
     mb=q.locator("#mDrop").bounding_box()
     check("list: the minus is a proper target", mb["height"]>=MIN_TAP and mb["width"]>=MIN_TAP, "%dx%d"%(mb["width"],mb["height"]))
@@ -1753,12 +1822,9 @@ with sync_playwright() as pw:
     except Exception: pass
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
     def lift_set(i, w, r):
-        q.fill('[data-w="%d"]'%i, w); q.fill('[data-r="%d"]'%i, r)
-        q.click('[data-addset="%d"]'%i); q.wait_for_timeout(250)
+        log_set(q, i, w, r, wait=250)
     def add_move(mv):
-        q.select_option("#mSel", mv)
-        q.eval_on_selector("#addLift","e=>e.scrollIntoView({block:'center'})")
-        q.click("#addLift"); q.wait_for_timeout(300)
+        add_movement(q, mv)
     add_move("Barbell Row")
     # 135x10 and 145x8 are worth the same; the heavier is the one on the bar
     check("beat: a movement opens on last time's best set",
@@ -1851,13 +1917,13 @@ with sync_playwright() as pw:
     check("notes: and shown, and said", "Training at home" in q.eval_on_selector(".day-note","e=>e.textContent")
           and q.evaluate(NSAYS)=="Added a note for the day", q.evaluate(NSAYS))
 
-    q.select_option("#mSel","Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
+    add_movement(q, "Barbell Curl")
     last=q.eval_on_selector(".lift .last","e=>e.textContent")
     check("notes: last time's day note comes back beside its date", "(Hotel gym, dumbbells only)" in last, last)
     check("notes: and last time's note on the movement beside its sets", "\u201cLast set was really hard\u201d" in last, last)
     lb=q.locator("[data-liftnote]").bounding_box()
     check("notes: a movement offers a note, as a proper target", lb is not None and lb["height"]>=MIN_TAP)
-    q.fill('[data-w="0"]',"60"); q.fill('[data-r="0"]',"11"); q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    log_set(q, 0, 60, 11)
     q.click("[data-liftnote]"); q.wait_for_timeout(250)
     check("notes: its field will not zoom the page either",
           q.eval_on_selector("#liftNoteIn","e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
@@ -1920,7 +1986,7 @@ with sync_playwright() as pw:
     SPBASE={"days":{SGYM:{"food":[],"updated":1,"goal":SPG,"workoutMs":60*60000,
                "lifts":[{"id":"g1","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10}]},
                         {"id":"g2","cat":"back","movement":"Hammer Curl","sets":[{"w":35,"r":10},{"w":35,"r":9}]}]}},
-            "moves":None,"goal":SPG,"region":"United States","pantry":[],"v":1}
+            "moves":{"back":["Barbell Row","Hammer Curl","Barbell Curl"],"push":["Lateral Raise","Bench Press"],"legs":["Back Squat"]},"movesOwned":True,"coachOn":True,"goal":SPG,"region":"United States","pantry":[],"v":1}
     SPDAY="k=>(JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{})"
     SPMOVES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves"
     def sp_page(store):
@@ -1948,7 +2014,7 @@ with sync_playwright() as pw:
     q.click("#addLift"); q.wait_for_timeout(300)
     last=q.eval_on_selector(".lift .last","e=>e.textContent")
     check("special: the movement's last time is found wherever it was", "Sep" in last and "35×10" in last, last)
-    q.fill('[data-w="0"]',"25"); q.fill('[data-r="0"]',"20"); q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    log_set(q, 0, 25, 20)
     check("special: and home dumbbells can beat it, by the same rule",
           q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 25×20 over 35×10",
           q.eval_on_selector(".lift .beat","e=>e.textContent"))
@@ -1998,7 +2064,7 @@ with sync_playwright() as pw:
           "+1 rep 25×21" in q.eval_on_selector(".lift .beat-ways","e=>e.textContent")
           and "a 2nd set of 25×20" in q.eval_on_selector(".lift .beat-ways","e=>e.textContent"),
           q.eval_on_selector(".lift .beat-ways","e=>e.textContent"))
-    q.fill('[data-w="0"]',"35"); q.fill('[data-r="0"]',"11"); q.click('[data-addset="0"]'); q.wait_for_timeout(300)
+    log_set(q, 0, 35, 11)
     q.click("#openCompare"); q.wait_for_timeout(300)
     body=q.eval_on_selector("#cmpBody","e=>e.innerText")
     gymdate=q.evaluate("k=>new Date(k+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})", SGYM)
@@ -2093,6 +2159,143 @@ with sync_playwright() as pw:
           any(x["name"]=="Chicken and rice" for x in q.evaluate(YST)["pantry"]) and "in your pantry" in q.evaluate(YSAYS))
     q.reload(); q.wait_for_timeout(900)
     check("yours: they are kept, not just drawn", q.evaluate(YST)["panSecs"]==[])
+    c.close()
+
+    # ---------- THE SET SHEET ----------
+    # Asked for from real use: the sheet that changes a set lets you focus on
+    # the one thing you are doing, so logging a set happens there too, and the
+    # movement can be changed from it with Edit.
+    SSG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    SSP=(datetime.date.today()-datetime.timedelta(days=8)).isoformat()
+    SHEETSTORE={"days":{SSP:{"food":[],"updated":1,"goal":SSG,"lifts":[{"id":"a","cat":"back","movement":"Barbell Curl",
+                 "sets":[{"w":45,"r":15},{"w":45,"r":15},{"w":45,"r":15}]}]}},
+                "moves":{"back":["Barbell Curl","Dumbbell Curl"]},"movesOwned":True,"goal":SSG,"region":"United States","pantry":[],"v":1}
+    SSDAY="k=>(JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{})"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("sheet: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SHEETSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    add_movement(q, "Barbell Curl")
+    small=q.evaluate("""()=>[...document.querySelectorAll('.setadd > *')]
+        .filter(e=>{const r=e.getBoundingClientRect();return r.height<43.5||r.width<43.5;}).map(e=>e.textContent)""")
+    check("sheet: the entry row keeps its four parts, each a proper target",
+          q.eval_on_selector_all(".setadd > *","e=>e.map(x=>x.textContent)")==["lb","reps","normal","Set"] and not small, str(small))
+    q.click('[data-w="0"]'); q.wait_for_timeout(250)
+    check("sheet: tapping lb opens it, ready on the weight",
+          q.evaluate("()=>document.activeElement.id")=="seW"
+          and q.eval_on_selector("#seTitle","e=>e.textContent")=="Barbell Curl · set 1")
+    check("sheet: with the number to beat, since the card is behind it",
+          q.eval_on_selector("#seGoal","e=>e.textContent")=="To beat · 45×15"
+          and "+1 rep 45×16" in q.eval_on_selector("#seWays","e=>e.textContent"))
+    check("sheet: nothing to remove on a set not yet logged", q.locator("#seRemove").is_hidden())
+    q.fill("#seW","35"); q.click("#seSave"); q.wait_for_timeout(250)
+    check("sheet: reps are asked for, and nothing is logged without them",
+          "reps" in q.eval_on_selector("#seWarn","e=>e.textContent") and not q.evaluate(SSDAY, Ts)["lifts"][0]["sets"])
+    q.fill("#seR","20"); q.press("#seR","Enter"); q.wait_for_timeout(350)
+    check("sheet: Add set logs it and the sheet goes",
+          [(x["w"],x["r"]) for x in q.evaluate(SSDAY, Ts)["lifts"][0]["sets"]]==[(35,20)]
+          and q.evaluate("()=>document.getElementById('setEditSheet').hidden"))
+    check("sheet: the card says what it did", q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 35×20 over 45×15")
+    q.click('[data-addset="0"]'); q.wait_for_timeout(250)
+    check("sheet: the next set opens on the weight just used, and says it is set 2",
+          q.input_value("#seW")=="35" and q.eval_on_selector("#seTitle","e=>e.textContent")=="Barbell Curl · set 2")
+    eb=q.locator("#seMoveBtn").bounding_box()
+    check("sheet: Edit sits beside the title, a proper target", eb is not None and eb["height"]>=MIN_TAP)
+    q.click("#seMoveBtn"); q.wait_for_timeout(200)
+    check("sheet: Edit offers the split's movements, and a new one",
+          "Dumbbell Curl" in q.eval_on_selector_all("#seMove option","e=>e.map(o=>o.value)")
+          and q.eval_on_selector_all("#seMove option","e=>e.map(o=>o.value)")[-1]=="__new"
+          and q.eval_on_selector("#seMove","e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
+    erow=q.eval_on_selector_all("#seMoveRow select, #seMoveRow button",
+         "e=>e.filter(b=>b.getClientRects().length).map(b=>[b.id,Math.round(b.getBoundingClientRect().height)])")
+    check("sheet: and the open Edit row clears 44px everywhere",
+          len(erow)==3 and all(h>=MIN_TAP for _,h in erow), str(erow))
+    q.select_option("#seMove","Dumbbell Curl"); q.click("#seMoveSave"); q.wait_for_timeout(300)
+    check("sheet: changing it keeps the sets and stays in the sheet",
+          q.evaluate(SSDAY, Ts)["lifts"][0]["movement"]=="Dumbbell Curl"
+          and len(q.evaluate(SSDAY, Ts)["lifts"][0]["sets"])==1
+          and not q.evaluate("()=>document.getElementById('setEditSheet').hidden")
+          and q.eval_on_selector("#seTitle","e=>e.textContent")=="Dumbbell Curl · set 2")
+    q.click("#seMoveBtn"); q.wait_for_timeout(200)
+    q.select_option("#seMove","__new"); q.wait_for_timeout(100)
+    q.fill("#seMoveNew","Spider Curl"); q.click("#seMoveSave"); q.wait_for_timeout(300)
+    check("sheet: a new name can be typed there too",
+          q.evaluate(SSDAY, Ts)["lifts"][0]["movement"]=="Spider Curl"
+          and "Spider Curl" in q.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves.back"))
+    q.click("#seCancel"); q.wait_for_timeout(200)
+    q.click("#undoBtn"); q.wait_for_timeout(250)
+    check("sheet: undo takes the name back, and the typed one off the list",
+          q.evaluate(SSDAY, Ts)["lifts"][0]["movement"]=="Dumbbell Curl"
+          and "Spider Curl" not in q.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves.back"))
+    log_set(q, 0, 35, 12)
+    check("sheet: the next set goes on the movement as it is now named",
+          len(q.evaluate(SSDAY, Ts)["lifts"][0]["sets"])==2 and q.evaluate(SSDAY, Ts)["lifts"][0]["movement"]=="Dumbbell Curl")
+    q.eval_on_selector_all(".lift .set","e=>e[0].click()"); q.wait_for_timeout(250)
+    check("sheet: a logged set still opens to change, with Edit and Remove",
+          q.eval_on_selector("#seSave","e=>e.textContent")=="Save" and q.locator("#seRemove").is_visible()
+          and q.locator("#seMoveBtn").is_visible()
+          and q.eval_on_selector("#seTitle","e=>e.textContent")=="Dumbbell Curl · set 1 of 2")
+    q.click("#seCancel"); q.wait_for_timeout(200)
+    c.close()
+
+    # ---------- YOUR OWN NAMES ----------
+    # Asked for from real use: scrolling past a dozen built-in names to find
+    # one's own. A new phone starts with empty lists; an existing one loses
+    # only the starting names never logged, and says so once.
+    OG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    OP=(datetime.date.today()-datetime.timedelta(days=6)).isoformat()
+    OLDLISTS={"back":["Barbell Row","Lat Pulldown","Seated Cable Row","Pull-Up","T-Bar Row","Straight-Arm Pulldown",
+                      "Face Pull","Rear Delt Fly","Shrug","Barbell Curl","Dumbbell Curl","Hammer Curl","Preacher Curl",
+                      "Meadows Row"],
+              "push":["Bench Press","Incline DB Press","Cable Fly","Dip","Overhead Press","DB Shoulder Press",
+                      "Lateral Raise","Cable Lateral Raise","Triceps Pushdown","Skullcrusher","Overhead Triceps Ext",
+                      "Close-Grip Bench"],
+              "legs":["Back Squat","Front Squat","Hack Squat","Leg Press","Romanian Deadlift","Leg Curl","Leg Extension",
+                      "Walking Lunge","Bulgarian Split Squat","Hip Thrust","Standing Calf Raise"]}
+    OWNSTORE={"days":{OP:{"food":[],"updated":1,"goal":OG,"lifts":[
+                {"id":"a","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10}]},
+                {"id":"b","cat":"special","movement":"Lateral Raise","sets":[{"w":20,"r":15}]}]}},
+              "moves":OLDLISTS,"goal":OG,"region":"United States","pantry":[],"v":1}
+    OWNMOVES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves"
+    OSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("own: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(500)
+    check("own: a new phone starts with nothing on any list",
+          all(not v for v in q.evaluate(OWNMOVES).values()) if q.evaluate("()=>!!localStorage.getItem('iron-ledger-v1')") else True)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    check("own: with nothing named yet, the field to name one is simply there",
+          q.locator("#mNew").is_visible() and q.eval_on_selector_all("#mSel option","e=>e.map(o=>o.value)")==["__new"])
+    check("own: and it will not zoom the page",
+          q.eval_on_selector("#mNew","e=>parseFloat(getComputedStyle(e).fontSize)")>=16)
+    q.fill("#mNew","Cable Curl (rope)"); q.press("#mNew","Enter"); q.wait_for_timeout(350)
+    check("own: Enter adds it, named exactly as typed",
+          q.eval_on_selector(".lift h3","e=>e.textContent").startswith("Cable Curl (rope)"))
+    check("own: and it is on the list from then on",
+          q.eval_on_selector_all("#mSel option","e=>e.map(o=>o.value)")==["Cable Curl (rope)","__new"])
+
+    # a phone that had the old lists
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", OWNSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    mv=q.evaluate(OWNMOVES)
+    check("own: the starting names never logged are taken off",
+          mv["back"]==["Barbell Row","Meadows Row"] and mv["push"]==["Lateral Raise"] and mv["legs"]==[], str(mv))
+    check("own: a name the owner typed stays, and so does any he trained, on any split",
+          "Meadows Row" in mv["back"] and "Lateral Raise" in mv["push"])
+    check("own: it says how many, once",
+          q.evaluate(OSAYS)=="Took off 34 starting movements you never used", q.evaluate(OSAYS))
+    check("own: the history is untouched",
+          [l["movement"] for l in q.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts", OP)]==["Barbell Row","Lateral Raise"])
+    q.reload(); q.wait_for_timeout(900)
+    check("own: and it is done once, not every time", q.evaluate(OSAYS)=="" and q.evaluate(OWNMOVES)==mv)
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

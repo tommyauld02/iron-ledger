@@ -8,7 +8,7 @@ def fresh():
       {"id":"r2","cal":489,"pro":57,"note":"Top sirloin"},
       {"id":"r3","cal":190,"pro":21,"note":"Protein bar"}],
       "lifts":[],"updated":1,"goal":G}},
-     "moves":None,"goal":G,"region":"United States","pantry":[],"v":1}
+     "moves":None,"coachOn":True,"goal":G,"region":"United States","pantry":[],"v":1}
 res=[]
 def check(n, ok, dt=""): res.append((("PASS" if ok else "FAIL"), n, dt))
 
@@ -126,14 +126,18 @@ with sync_playwright() as pw:
     # ---- logging a set with a finger, the thing he'll do most at the gym ----
     tb=p.locator('.tabs button[data-tab="gym"]').bounding_box()
     p.touchscreen.tap(tb["x"]+tb["width"]/2, tb["y"]+tb["height"]/2); p.wait_for_timeout(450)
-    p.select_option("#mSel","Barbell Row")
+    # the lists start empty: name it, the way the owner does
+    p.fill("#mNew","Barbell Row")
     lb=p.locator("#addLift").bounding_box()
     p.touchscreen.tap(lb["x"]+lb["width"]/2, lb["y"]+lb["height"]/2); p.wait_for_timeout(450)
-    p.fill("[data-w='0']","135"); p.fill("[data-r='0']","10")
     sb=p.locator("[data-addset='0']").bounding_box()
     check("the Set button is a proper target",
           sb["height"]>=44 and sb["width"]>=44, "%dx%d"%(sb["width"],sb["height"]))
     p.touchscreen.tap(sb["x"]+sb["width"]/2, sb["y"]+sb["height"]/2); p.wait_for_timeout(450)
+    check("a finger on Set opens the set sheet", not p.evaluate("()=>document.getElementById('setEditSheet').hidden"))
+    p.fill("#seW","135"); p.fill("#seR","10")
+    ab=p.locator("#seSave").bounding_box()
+    p.touchscreen.tap(ab["x"]+ab["width"]/2, ab["y"]+ab["height"]/2); p.wait_for_timeout(450)
     check("a set logs with a finger", p.locator(".set").count()==1,
           "%d sets"%p.locator(".set").count())
 
@@ -142,7 +146,7 @@ with sync_playwright() as pw:
     # touch from being taken over by the page as a scroll. A mouse cannot test
     # that; this can.
     for mv in ["Barbell Curl", "Dumbbell Curl"]:
-        p.select_option("#mSel", mv)
+        p.select_option("#mSel", "__new"); p.fill("#mNew", mv)
         # a tap has to land on screen, and clear of the sticky tab bar
         p.eval_on_selector("#addLift", "e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(150)
         ab=p.locator("#addLift").bounding_box()

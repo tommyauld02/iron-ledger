@@ -19,7 +19,7 @@ store={"days":{T:{"food":[
   "lifts":[{"id":"p1","cat":"back","movement":"Barbell Row","sets":[{"w":125,"r":10,"tech":"restpause"}]},
            {"id":"p2","cat":"back","movement":"Lat Pulldown","sets":[{"w":110,"r":10}]},
            {"id":"p3","cat":"back","movement":"Seated Cable Row","sets":[{"w":225,"r":12,"tech":"restpause"}]}]}},
- "moves":None,"goal":G,"region":"United States",
+ "moves":None,"coachOn":True,"goal":G,"region":"United States",
  # sorted and not, so the section tabs, headings and Move / Sort are measured
  "pantry":[{"id":"p1","name":"protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,
             "sCal":130,"sPro":30,"aliases":[]},

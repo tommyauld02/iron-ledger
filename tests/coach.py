@@ -8,7 +8,9 @@ store={"days":{
   Y:{"lifts":[{"id":"yl","cat":"back","movement":"Barbell Row",
                "sets":[{"w":135,"r":10},{"w":145,"r":8}]}],
      "food":[{"id":"f1","cal":1800,"pro":160,"note":"Whole day"}],"updated":1,"goal":G}},
-  "moves":None,"goal":G,"region":"United States","pantry":[],"v":1}
+  # an owner's own lists: the app no longer starts them with names of its own
+  "moves":{"back":["Barbell Row","Lat Pulldown","Barbell Curl"],"push":["Bench Press"],"legs":["Back Squat"]},
+  "movesOwned":True,"coachOn":True,"goal":G,"region":"United States","pantry":[],"v":1}
 
 res=[]
 def check(n, ok, d=""): res.append((("PASS" if ok else "FAIL"), n, d))

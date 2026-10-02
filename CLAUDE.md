@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~740 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~830 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -492,13 +492,8 @@ which is where it pays off: you see which set was the drop. `techShort()`
 answers an id it does not know with the id itself, so a technique from a newer
 backup or a retired one still reads as itself rather than vanishing.
 
-Two things that are easy to get wrong. The box is a native picker made
-invisible and laid over a short label, so it stays narrow enough to sit in the
-row on a 320px phone while the picker still shows every technique in full.
-Choosing one **patches the label in place** — a `render()` would wipe the weight
-and reps typed but not yet set, the same trap the checklist ticks avoid. And the
-box goes back to normal after every set, so a drop tag cannot quietly ride
-along onto every set after it.
+The box goes back to normal for every new set, so a drop tag cannot quietly
+ride along onto every set after it. It is chosen in the set sheet now, below.
 
 **A tap on a set opens it; it no longer removes it.** Tapping a chip used to
 delete the set outright — the same remove-and-add-again the owner called out for
@@ -508,6 +503,20 @@ says so; weight may be nothing (bodyweight). Changing and removing both go
 through `offerUndo()`. The sheet re-finds the set by day, movement and position
 each time rather than holding the object, so a redraw or an undo in between
 cannot leave it writing to a set that is no longer on the page.
+
+**Logging a set happens in the set sheet too.** From real use: the sheet that
+changes a set lets you focus on the thing you are doing, with the rest of the
+card out of the way — so it is now how a set is added as well. The card's
+entry row keeps its look (lb, reps, the technique box, Set) but each part is a
+button that opens the sheet on the field it stands for, the cursor already
+there. Adding opens on the weight of the set before, because sets so often
+repeat it; Enter in the weight moves to the reps, and Enter in the reps adds
+the set. The sheet carries the number to beat and the ways past it, since the
+card is behind it, and *Edit* beside the title changes the movement without
+leaving it — `changeMovement()`, shared with the card's own picker, so both
+keep the sets, both undo, and both take a typed name back off the list.
+`logSet()` is the one way a set is added, which keeps the first-set clock
+start in one place. The suites log through it with a `log_set()` helper.
 
 **Supersets are a tag, not a nesting.** `l.ss` marks the members; every loop
 over `d.lifts` — totals, *Last*, laps, the calendar — keeps working untouched,
@@ -558,6 +567,24 @@ sets and iOS suspends the app. It keeps running while another tab is looked at.
 Because it sits in the dock, **`hittest`'s usable band now ends at the dock's
 top, not the tab bar's**, and the whole dock counts as chrome; otherwise
 anything scrolled under the rest bar reads as covered.
+
+**The movement lists are the owner's own names.** The app used to start every
+split with a dozen movements of its own, and in real use the owner spent time
+between sets scrolling past them for his — named his way. A new phone now
+starts with empty lists: with nothing named yet, the field to name one is
+simply there, Enter adds it, and it is on the list from then on.
+
+A phone that had the old lists is cleaned once (`store.movesOwned` marks it
+done): a starting name (`SEED_MOVES`, kept only for this) comes off a list
+unless it was ever logged, under any split. Anything typed stays, anything
+trained stays, history is untouched because every lift carries its own name,
+and the app says how many it took off rather than letting them vanish. The
+one case it cannot tell apart is a name someone typed that happens to match a
+starting name exactly and was never logged — rare, and typed again in a moment.
+Test fixtures that stand for a phone already on this build set `movesOwned`,
+or the clean-up runs on them; `share`'s did not at first and lost a typed
+"Hack Squat". The Coach tab's library is separate and stays: it only adds a
+name when one is tapped.
 
 **The Add movement list has a minus.** A native picker cannot hold a button per
 option, so `#mDrop` sits beside it and takes out whichever movement is chosen,
@@ -882,6 +909,17 @@ Two lessons paid for the hard way:
 The Coach tab exists so someone else can set a routine for the owner — a
 brother, a friend. Nothing ships for that yet, and the groundwork matters more
 than the feature.
+
+**Put away, not taken out.** The owner asked to bin it for now — it has a use,
+just not yet. `store.coachOn` is off unless switched on under Settings →
+*Coach tab*, and `applyTabs()` hides the tab; it is `hidden` in the markup as
+well, so a phone with it off never sees it flash in. Nothing is lost while it
+is hidden: its days are the same splits the Gym tab's *Edit splits* changes,
+and switching it back on finds it as it was. Hiding it while standing on it
+lands on Gym rather than on nothing. The tab bar is `grid-auto-flow: column`,
+so four tabs share it evenly. The choice travels with a backup. Every suite
+that walks the tabs sets `coachOn: true` in its fixture, so Coach is still
+measured for whoever turns it back on.
 
 **Built, and built to the shape below.** Coach has *Share this routine* and
 *Load a routine*. Sharing produces `ILROUTINE1:` followed by base64 — base64

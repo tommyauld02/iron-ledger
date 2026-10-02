@@ -282,6 +282,8 @@
 
   .set-group { display: flex; flex-direction: column; gap: 8px; }
   .seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .seg.two { grid-template-columns: repeat(2, 1fr); }
+  .set-hint { margin: 0; font-size: 13px; color: var(--ink-2); }
   .seg button {
     min-height: 44px;
     padding: 0 4px;
@@ -2271,8 +2273,50 @@
   #mDrop:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
   #mDrop:disabled { opacity: .45; }
 
-  /* weight · reps · technique · Set */
+  /* weight · reps · technique · Set — all four open the set sheet */
   .setadd { grid-template-columns: 1fr 1fr 76px auto; }
+  /* They keep the look of the fields they were, so the row reads as always. */
+  .setadd .sa-field {
+    height: 46px;
+    min-width: 0;
+    padding: 0 8px;
+    text-align: left;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-size: 16px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ink-3);
+  }
+  .setadd .tech {
+    min-width: 0;
+    padding: 0 4px;
+    border: 1px solid var(--rule);
+    background: var(--surface-2);
+    color: var(--ink-3);
+  }
+  .se-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .se-head h2 { margin: 0; }
+  .se-head button {
+    flex: none;
+    min-height: 44px;
+    padding: 0 12px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .se-move { display: flex; flex-direction: column; gap: 8px; }
+  .se-move .text { height: 46px; padding: 0 10px; font-size: 16px; }
+  .se-goal, .se-ways { margin: 0; font-family: var(--font-num); }
+  .se-goal { font-size: 13px; color: var(--ink); }
+  .se-goal.is-beaten { color: var(--hit); }
+  .se-ways { font-size: 11px; color: var(--ink-2); }
   .tech {
     position: relative;
     display: flex;
@@ -2616,13 +2660,16 @@
   .undobar button[hidden] { display: none; }
 
   /* ---------- tabs ---------- */
+  /* as many columns as there are tabs showing: Coach can be switched off */
   .tabs {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
     background: var(--surface);
     border-top: 1px solid var(--rule);
     padding-bottom: max(env(safe-area-inset-bottom), 4px);
   }
+  .tabs button[hidden] { display: none; }
   .tabs button {
     min-height: 48px;
     padding: 12px 2px 13px;
@@ -2690,7 +2737,7 @@
     <button role="tab" data-tab="macros" aria-selected="true">Macros</button>
     <button role="tab" data-tab="pantry" aria-selected="false">Pantry</button>
     <button role="tab" data-tab="gym" aria-selected="false">Gym</button>
-    <button role="tab" data-tab="coach" aria-selected="false">Coach</button>
+    <button role="tab" data-tab="coach" aria-selected="false" hidden>Coach</button>
     <button role="tab" data-tab="log" aria-selected="false">Log</button>
   </nav>
   </div>
@@ -2727,6 +2774,13 @@
       <span class="eyebrow">Accent color</span>
       <div class="swatches" id="setAccents" role="group" aria-label="Accent color"></div>
     </div>
+    <!-- Coach is for setting a routine for someone else. Put away until it is
+         wanted; nothing in it is lost either way. -->
+    <div class="set-group">
+      <span class="eyebrow">Coach tab</span>
+      <div class="seg two" id="setCoach" role="group" aria-label="Coach tab"></div>
+      <p class="set-hint">For writing a routine for someone else. Your splits and history stay the same either way.</p>
+    </div>
     <button class="btn ghost" id="setDone">Done</button>
   </div>
 </div>
@@ -2736,7 +2790,24 @@
      of the things you can do from it. -->
 <div class="sheet" id="setEditSheet" hidden>
   <div class="sheet-inner">
-    <h2 id="seTitle">Change this set</h2>
+    <!-- Logging a set and changing one happen here, with nothing else on
+         screen: the owner's words were that it lets you focus on the thing
+         you are actually doing. The movement can be changed from here too. -->
+    <div class="se-head">
+      <h2 id="seTitle">Change this set</h2>
+      <button id="seMoveBtn" aria-label="Change the movement">Edit</button>
+    </div>
+    <div id="seMoveRow" class="se-move" hidden>
+      <div class="field"><label for="seMove">Movement</label>
+        <select id="seMove"></select></div>
+      <input id="seMoveNew" class="text" placeholder="Name the movement" aria-label="Name the movement" hidden>
+      <div class="sheet-actions">
+        <button class="btn" id="seMoveSave">Change it</button>
+        <button class="btn ghost" id="seMoveCancel">Keep it</button>
+      </div>
+    </div>
+    <p id="seGoal" class="se-goal" hidden></p>
+    <p id="seWays" class="se-ways" hidden></p>
     <div class="pair">
       <div class="field"><label for="seW">Weight · lb</label>
         <input id="seW" inputmode="decimal"></div>
@@ -2788,7 +2859,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-09-30.50";
+  var BUILD = "2026-10-01.52";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -2812,6 +2883,10 @@
     ]
   };
 
+  // The names the app used to start every split with. It no longer does: the
+  // owner spent sets scrolling past a dozen of them looking for his own, named
+  // his own way. They are kept only so an existing list can be told which of
+  // its names the app put there and nobody ever used.
   var SEED_MOVES = {
     back: ["Barbell Row", "Lat Pulldown", "Seated Cable Row", "Pull-Up", "T-Bar Row",
            "Straight-Arm Pulldown", "Face Pull", "Rear Delt Fly", "Shrug",
@@ -2917,6 +2992,8 @@
   var suppEditing = null;   // which checklist item is being renamed
   var liftEditing = null;   // which movement on the day is having its name changed
   var dayNoting = false;    // the note for the day is being written
+  var movesTakenOff = 0;    // unused starting names cleared from the lists, said once
+  var movesNeedSaving = false;
   var liftNoting = null;    // the id of the movement whose note is being written
   var coachShare = null;
   var coachShareMsg = "";
@@ -2955,7 +3032,9 @@
       }
     } catch (e) { /* fresh start */ }
     if (!store.days) store.days = {};
-    if (!store.moves) store.moves = JSON.parse(JSON.stringify(SEED_MOVES));
+    // A new phone starts with empty lists: the movements are whatever the
+    // owner names, the way he will look for them.
+    if (!store.moves) { store.moves = {}; store.movesOwned = true; }
     store.goal = normGoal(store.goal);   // repairs a partial goal instead of tripping on it
     if (!store.region) store.region = "United States";
     if (!store.pantry) store.pantry = [];
@@ -2971,8 +3050,28 @@
       store.routine = JSON.parse(JSON.stringify(DEFAULT_ROUTINE));
     }
     store.routine.days.forEach(function (dy) {
-      if (!store.moves[dy.id]) store.moves[dy.id] = (SEED_MOVES[dy.id] || []).slice();
+      if (!store.moves[dy.id]) store.moves[dy.id] = [];
     });
+    // Once, on a phone that had the old lists: take off the names the app put
+    // there that were never logged. Anything typed, and anything trained under
+    // any split, stays — those are the owner's now. History is untouched
+    // either way, because every lift carries its own name.
+    if (!store.movesOwned) {
+      var trained = {};
+      Object.keys(store.days).forEach(function (k) {
+        (store.days[k].lifts || []).forEach(function (l) { trained[l.movement] = true; });
+      });
+      Object.keys(SEED_MOVES).forEach(function (id) {
+        if (!Array.isArray(store.moves[id])) return;
+        store.moves[id] = store.moves[id].filter(function (m) {
+          var drop = SEED_MOVES[id].indexOf(m) > -1 && !trained[m];
+          if (drop) movesTakenOff++;
+          return !drop;
+        });
+      });
+      store.movesOwned = true;
+      if (movesTakenOff) movesNeedSaving = true;
+    }
   }
 
   // Set while writes are failing, cleared the moment one succeeds. This used
@@ -4579,6 +4678,21 @@
     var v = n % 100, suf = ["th", "st", "nd", "rd"];
     return n + (suf[(v - 20) % 10] || suf[v] || suf[0]);
   }
+  // Where a movement stands against last time — read by its card and by the
+  // set sheet, so the two can never disagree about what is left to beat.
+  function beatState(prev, l) {
+    var goal = prev ? topSet(prev.lift.sets) : null;
+    if (!goal) return { goal: null, passed: null, extra: false, goalSets: 0, gw: 0, gr: 0 };
+    var passed = topSet(l.sets.filter(function (s) { return beats(s, goal); }));
+    var goalSets = setsAtLeast(prev.lift.sets, goal);
+    return { goal: goal, passed: passed, extra: !passed && setsAtLeast(l.sets, goal) > goalSets,
+             goalSets: goalSets, gw: Number(goal.w) || 0, gr: Number(goal.r) || 0 };
+  }
+  function waysText(bs) {
+    return (bs.gw ? "+" + LB_PER_REP + " lb " + (bs.gw + LB_PER_REP) + "×" + bs.gr + " · " : "") +
+      "+1 rep " + bs.gw + "×" + (bs.gr + 1) + " · +1 set a " + ordinal(bs.goalSets + 1) +
+      " set of " + bs.gw + "×" + bs.gr;
+  }
 
   function shortDate(key) {
     var d = parseYmd(key);
@@ -5582,16 +5696,14 @@
       // The set to pass, and the moment one of today's goes past it. A day
       // that is over only says so if it did: "To beat" with nothing left to
       // do about it is a nag.
-      var goal = prev ? topSet(prev.lift.sets) : null;
-      var passed = goal ? topSet(l.sets.filter(function (s) { return beats(s, goal); })) : null;
+      var bs = beatState(prev, l);
+      var goal = bs.goal, passed = bs.passed;
       // Every way past it, spelled out, because one number was not enough: a
       // light high-rep day at home made the gym's target 25×20, and the
       // honest answer is not "outdo that" but "25×21, or a second set of it".
       // The next tier of weight at the same reps, one more rep, or one more
       // set at that level — each is progressive overload, and any one counts.
-      var goalSets = goal ? setsAtLeast(prev.lift.sets, goal) : 0;
-      var extraSet = !!goal && !passed && setsAtLeast(l.sets, goal) > goalSets;
-      var gw = goal ? Number(goal.w) || 0 : 0, gr = goal ? Number(goal.r) || 0 : 0;
+      var goalSets = bs.goalSets, extraSet = bs.extra, gw = bs.gw, gr = bs.gr;
       var ways = goal
         ? '<p class="beat-ways">' +
             (gw ? '<span class="bw-k">+' + LB_PER_REP + ' lb</span> <b>' + (gw + LB_PER_REP) + '×' + gr + '</b> · ' : '') +
@@ -5657,9 +5769,7 @@
       var editing = liftEditing === i && !locked;
       var editOpts = "";
       if (editing) {
-        var pool = l.cat === SPECIAL ? allMoves() : (store.moves[l.cat] || []).slice();
-        if (pool.indexOf(l.movement) === -1) pool.push(l.movement);
-        editOpts = pool.sort().map(function (m) {
+        editOpts = movePool(l).map(function (m) {
           return '<option value="' + esc(m) + '"' + (m === l.movement ? " selected" : "") + '>' +
                  esc(m) + '</option>';
         }).join("") + '<option value="__new">+ New movement…</option>';
@@ -5693,21 +5803,16 @@
           beatLine +
           (sets ? '<div class="sets">' + sets + '</div>' : '') +
           (locked ? '' :
+            // The row looks as it always did, and every part of it opens the
+            // set sheet — at the weight, the reps or the technique, wherever
+            // the thumb landed. Typing happens there, away from everything
+            // else on the card.
             '<div class="setadd">' +
-              '<input inputmode="decimal" placeholder="lb" data-w="' + i + '">' +
-              '<input inputmode="numeric" placeholder="reps" data-r="' + i + '">' +
-              // The native picker, invisible, laid over a short label: the box
-              // stays narrow enough to sit beside weight and reps on a 320px
-              // phone, and the picker still shows every technique in full.
-              '<label class="tech">' +
-                '<span class="tech-show" data-techshow="' + i + '">normal</span>' +
-                '<select data-tech="' + i + '" aria-label="Technique for this set">' +
-                  TECHNIQUES.map(function (t) {
-                    return '<option value="' + t.id + '">' + t.name + '</option>';
-                  }).join("") +
-                '</select>' +
-              '</label>' +
-              '<button data-addset="' + i + '">Set</button>' +
+              '<button class="sa-field" data-w="' + i + '" aria-label="Weight for the next set of ' + esc(l.movement) + '">lb</button>' +
+              '<button class="sa-field" data-r="' + i + '" aria-label="Reps for the next set of ' + esc(l.movement) + '">reps</button>' +
+              '<button class="tech" data-techopen="' + i + '" aria-label="Technique for the next set of ' + esc(l.movement) + '">' +
+                '<span class="tech-show">normal</span></button>' +
+              '<button class="sa-set" data-addset="' + i + '">Set</button>' +
             '</div>') +
           // Nothing to be done with until there is a set. Full width and away
           // from Remove, because the whole point is ending a movement cleanly.
@@ -5848,7 +5953,8 @@
               '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select>' +
               '<button id="mDrop" aria-label="Take the chosen movement off this list">−</button>' +
             '</div></div>' +
-          '<input id="mNew" class="text" placeholder="Name the movement" hidden ' +
+          // With nothing named yet, the field to name one is simply there.
+          '<input id="mNew" class="text" placeholder="Name it the way you\u2019ll look for it" ' + (opts ? 'hidden ' : '') +
             'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);border-radius:2px;font-size:15px;width:100%">' +
           '<button class="btn" id="addLift">Add to today</button>' +
         '</section>') +
@@ -5961,6 +6067,9 @@
     }
 
     var addLiftBtn = document.getElementById("addLift");
+    if (addLiftBtn && neu) {
+      neu.addEventListener("keydown", function (e) { if (e.key === "Enter") addLiftBtn.click(); });
+    }
     if (addLiftBtn) {
       addLiftBtn.addEventListener("click", function () {
         var name = sel.value === "__new" ? neu.value.trim() : sel.value;
@@ -6099,57 +6208,17 @@
       });
     }
 
-    view.querySelectorAll("[data-addset]").forEach(function (b) {
-      b.addEventListener("click", function () { addSet(Number(b.dataset.addset)); });
-    });
-    view.querySelectorAll("[data-w], [data-r]").forEach(function (el) {
-      el.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") addSet(Number(el.dataset.w !== undefined ? el.dataset.w : el.dataset.r));
+    [["data-w", "w"], ["data-r", "r"], ["data-techopen", "t"], ["data-addset", "w"]].forEach(function (pair) {
+      view.querySelectorAll("[" + pair[0] + "]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          openSetEditor(key, Number(b.getAttribute(pair[0])), null, pair[1]);
+        });
       });
     });
-
-    function addSet(i) {
-      var w = num(view.querySelector('[data-w="' + i + '"]').value);
-      var r = num(view.querySelector('[data-r="' + i + '"]').value);
-      if (!r) { view.querySelector('[data-r="' + i + '"]').focus(); return; }
-      // t is what lets finishLift tell a movement worked in sequence from one
-      // worked alongside another. Twenty bytes a set.
-      var now = Date.now();
-      var st = { w: w, r: r, t: now };
-      var techEl = view.querySelector('[data-tech="' + i + '"]');
-      // Read here and not kept: the redraw below puts the box back to normal,
-      // so a drop tag cannot quietly ride along onto every set after it.
-      if (techEl && techEl.value) st.tech = techEl.value;
-      // Start forgotten: the first set of the day starts the clock, at that
-      // set, rather than whenever Start is finally remembered. Today only — a
-      // set typed into last Tuesday is a record being filled in, not a
-      // session beginning — and only on a day not yet timed and with no set
-      // on it, so a clock someone threw away mid-session stays thrown away.
-      var starts = key === TODAY && !d.workoutStart && !d.workoutMs &&
-        !d.lifts.some(function (x) { return x.sets.length; });
-      if (starts) d.workoutStart = now;
-      d.lifts[i].sets.push(st);
-      touch(key); save(); render();
-      if (starts) notify("Workout started with your first set");
-      var next = view.querySelector('[data-w="' + i + '"]');
-      if (next) next.focus();
-    }
 
     view.querySelectorAll("[data-set]").forEach(function (b) {
       b.addEventListener("click", function () {
         openSetEditor(key, Number(b.dataset.lift), Number(b.dataset.set));
-      });
-    });
-
-    // Choosing a technique patches the label in place. A render() here would
-    // wipe the weight and reps typed but not yet set — the same trap the
-    // checklist ticks avoid.
-    view.querySelectorAll("[data-tech]").forEach(function (sel) {
-      sel.addEventListener("change", function () {
-        var show = view.querySelector('[data-techshow="' + sel.dataset.tech + '"]');
-        if (!show) return;
-        show.textContent = techShort(sel.value);
-        show.parentNode.classList.toggle("is-set", !!sel.value);
       });
     });
 
@@ -6176,29 +6245,12 @@
     var liftMoveSave = document.getElementById("liftMoveSave");
     if (liftMoveSave) {
       liftMoveSave.addEventListener("click", function () {
-        var l = d.lifts[liftEditing];
-        if (!l) { liftEditing = null; render(); return; }
+        var li = liftEditing;
+        if (!d.lifts[li]) { liftEditing = null; render(); return; }
         var name = liftMove.value === "__new" ? liftMoveNew.value.trim() : liftMove.value;
         if (!name) { liftMoveNew.focus(); return; }
         liftEditing = null;
-        var was = l.movement;
-        if (name === was) { render(); return; }
-        var mlist = store.moves[l.cat] || (store.moves[l.cat] = []);
-        var added = mlist.indexOf(name) === -1;
-        if (added) mlist.push(name);
-        l.movement = name;
-        touch(key); save(); render();
-        // Undo takes back a name typed in error along with the change, so a
-        // typo does not stay behind in the split's movement list.
-        offerUndo("Changed " + was + " to " + name, function () {
-          l.movement = was;
-          if (added) {
-            var ml = store.moves[l.cat] || [];
-            var at = ml.indexOf(name);
-            if (at > -1) ml.splice(at, 1);
-          }
-          touch(key); save(); render();
-        });
+        if (!changeMovement(key, li, name)) render();
       });
     }
 
@@ -6588,7 +6640,7 @@
       var before = JSON.parse(JSON.stringify({ r: store.routine, m: store.moves }));
       store.routine = JSON.parse(JSON.stringify(DEFAULT_ROUTINE));
       store.routine.days.forEach(function (dy) {
-        if (!store.moves[dy.id]) store.moves[dy.id] = (SEED_MOVES[dy.id] || []).slice();
+        if (!store.moves[dy.id]) store.moves[dy.id] = [];
       });
       coachOpen = null;
       save(); render();
@@ -8218,6 +8270,15 @@
 
   var setSheet = document.getElementById("setSheet");
 
+  // Coach is off unless it has been switched on. It is put away, not taken
+  // out: its days are the same splits the Gym tab edits, so nothing in it is
+  // lost while it is hidden, and switching it back on finds it as it was.
+  function applyTabs() {
+    var cb = document.querySelector('.tabs [data-tab="coach"]');
+    if (cb) cb.hidden = !store.coachOn;
+    if (!store.coachOn && tab === "coach") setTab("gym");
+  }
+
   function drawSettings() {
     var l = look();
     document.getElementById("setThemes").innerHTML = LOOKS.map(function (t) {
@@ -8228,6 +8289,10 @@
       return '<button class="swatch" data-pick-accent="' + a.id + '" aria-pressed="' +
         (a.id === l.accent ? "true" : "false") + '" aria-label="' + a.name + ' accent">' +
         '<i class="sw-' + a.id + '"></i><span>' + a.name + '</span></button>';
+    }).join("");
+    document.getElementById("setCoach").innerHTML = [["off", "Hidden"], ["on", "Shown"]].map(function (o) {
+      return '<button data-pick-coach="' + o[0] + '" aria-pressed="' +
+        ((o[0] === "on") === !!store.coachOn ? "true" : "false") + '">' + o[1] + '</button>';
     }).join("");
   }
 
@@ -8243,11 +8308,14 @@
     if (e.target === setSheet) { setSheet.hidden = true; return; }
     var t = e.target.closest("[data-pick-theme]");
     var a = e.target.closest("[data-pick-accent]");
-    if (!t && !a) return;
+    var c = e.target.closest("[data-pick-coach]");
+    if (!t && !a && !c) return;
     if (t) store.theme = t.dataset.pickTheme;
     if (a) store.accent = a.dataset.pickAccent;
+    if (c) store.coachOn = c.dataset.pickCoach === "on";
     save();
     applyLook();
+    applyTabs();
     drawSettings();
   });
 
@@ -8358,50 +8426,185 @@
   // so a redraw or an undo in between cannot leave the editor writing to a
   // set that is no longer on the page.
   var setEditSheet = document.getElementById("setEditSheet");
-  var setEditing = null;    // { key, li, si }
+  var setEditing = null;    // { key, li, si } — si null when a set is being added
 
-  function editedSet() {
-    if (!setEditing) return null;
-    var dd = store.days[setEditing.key];
-    var l = dd && dd.lifts[setEditing.li];
-    var st = l && l.sets[setEditing.si];
-    return st ? { d: dd, l: l, st: st } : null;
+  // ---------- logging a set ----------
+  // The one way a set is added: from the sheet, which every part of a card's
+  // entry row opens.
+  function logSet(key, li, w, r, tech) {
+    var d = day(key), l = d.lifts[li];
+    if (!l) return false;
+    // t is what lets finishLift tell a movement worked in sequence from one
+    // worked alongside another. Twenty bytes a set.
+    var now = Date.now();
+    var st = { w: w, r: r, t: now };
+    if (tech) st.tech = tech;
+    // Start forgotten: the first set of the day starts the clock, at that
+    // set, rather than whenever Start is finally remembered. Today only — a
+    // set typed into last Tuesday is a record being filled in, not a
+    // session beginning — and only on a day not yet timed and with no set
+    // on it, so a clock someone threw away mid-session stays thrown away.
+    var starts = key === TODAY && !d.workoutStart && !d.workoutMs &&
+      !d.lifts.some(function (x) { return x.sets.length; });
+    if (starts) d.workoutStart = now;
+    l.sets.push(st);
+    touch(key); save(); render();
+    if (starts) notify("Workout started with your first set");
+    return true;
   }
 
-  function openSetEditor(key, li, si) {
-    setEditing = { key: key, li: li, si: si };
+  // The movements a card can change to: its split's, or every one on a
+  // special day, and whatever it is called now in case that is off the list.
+  function movePool(l) {
+    var pool = l.cat === SPECIAL ? allMoves() : (store.moves[l.cat] || []).slice();
+    if (pool.indexOf(l.movement) === -1) pool.push(l.movement);
+    return pool.sort();
+  }
+  // Picked Barbell Curl, meant Dumbbell Curl: the sets stay, only the name
+  // changes. Shared by the card's own picker and the set sheet's Edit.
+  function changeMovement(key, li, name) {
+    var d = day(key), l = d.lifts[li];
+    if (!l || !name || name === l.movement) return false;
+    var was = l.movement;
+    var mlist = store.moves[l.cat] || (store.moves[l.cat] = []);
+    // A special day keeps only the movements no split already has.
+    var added = (l.cat === SPECIAL ? allMoves() : mlist).indexOf(name) === -1;
+    if (added) mlist.push(name);
+    l.movement = name;
+    touch(key); save(); render();
+    // Undo takes back a name typed in error along with the change, so a
+    // typo does not stay behind in the split's movement list.
+    offerUndo("Changed " + was + " to " + name, function () {
+      l.movement = was;
+      if (added) {
+        var ml = store.moves[l.cat] || [];
+        var at = ml.indexOf(name);
+        if (at > -1) ml.splice(at, 1);
+      }
+      touch(key); save(); render();
+    });
+    return true;
+  }
+
+  function sheetLift() {
+    if (!setEditing) return null;
+    var dd = store.days[setEditing.key];
+    return (dd && dd.lifts[setEditing.li]) || null;
+  }
+  function editedSet() {
+    var l = sheetLift();
+    var st = l && setEditing.si !== null && l.sets[setEditing.si];
+    return st ? { d: store.days[setEditing.key], l: l, st: st } : null;
+  }
+
+  // The title and the target, drawn again whenever the movement changes.
+  function drawSetSheet() {
+    var l = sheetLift();
+    if (!l) return;
+    var adding = setEditing.si === null;
+    document.getElementById("seTitle").textContent = l.movement + " · set " +
+      (adding ? l.sets.length + 1 : (setEditing.si + 1) + " of " + l.sets.length);
+    // The card is behind the sheet, so the number to beat comes with it.
+    var bs = beatState(lastTime(l.movement, setEditing.key), l);
+    var goalEl = document.getElementById("seGoal"), waysEl = document.getElementById("seWays");
+    goalEl.hidden = !bs.goal; waysEl.hidden = true;
+    goalEl.classList.toggle("is-beaten", !!(bs.passed || bs.extra));
+    if (bs.passed) goalEl.textContent = "↑ Beaten · " + setText(bs.passed) + " over " + setText(bs.goal);
+    else if (bs.extra) goalEl.textContent = "↑ Beaten · a " + ordinal(bs.goalSets + 1) + " set of " + setText(bs.goal);
+    else if (bs.goal) {
+      goalEl.textContent = "To beat · " + setText(bs.goal);
+      waysEl.textContent = waysText(bs);
+      waysEl.hidden = false;
+    }
+  }
+
+  // Adding opens on the weight of the set before, since sets so often
+  // repeat it, with the field that was tapped ready to type into.
+  function openSetEditor(key, li, si, focus) {
+    setEditing = { key: key, li: li, si: si === undefined ? null : si };
+    var l = sheetLift();
     var at = editedSet();
-    if (!at) { setEditing = null; return; }
-    document.getElementById("seTitle").textContent =
-      at.l.movement + " · set " + (si + 1) + " of " + at.l.sets.length;
-    document.getElementById("seW").value = at.st.w;
-    document.getElementById("seR").value = at.st.r;
+    if (!l || (setEditing.si !== null && !at)) { setEditing = null; return; }
+    var adding = setEditing.si === null;
+    var before = l.sets[l.sets.length - 1];
+    document.getElementById("seW").value = adding ? (before ? before.w : "") : at.st.w;
+    document.getElementById("seR").value = adding ? "" : at.st.r;
+    var tech = adding ? "" : (at.st.tech || "");
     document.getElementById("seT").innerHTML = TECHNIQUES.map(function (t) {
-      return '<option value="' + t.id + '"' + ((at.st.tech || "") === t.id ? " selected" : "") + '>' +
-             t.name + '</option>';
+      return '<option value="' + t.id + '"' + (tech === t.id ? " selected" : "") + '>' + t.name + '</option>';
     }).join("");
+    document.getElementById("seSave").textContent = adding ? "Add set" : "Save";
+    document.getElementById("seRemove").hidden = adding;
+    document.getElementById("seMoveRow").hidden = true;
     document.getElementById("seWarn").hidden = true;
+    drawSetSheet();
     setEditSheet.hidden = false;
+    var target = document.getElementById(focus === "r" ? "seR" : focus === "t" ? "seT" : focus === "w" ? "seW" : "");
+    if (target) { target.focus(); if (target.select) target.select(); }
   }
 
   function closeSetEditor() { setEditing = null; setEditSheet.hidden = true; }
+
+  // Edit, beside the title: change the movement without leaving the sheet.
+  var seMoveRow = document.getElementById("seMoveRow");
+  var seMove = document.getElementById("seMove");
+  var seMoveNew = document.getElementById("seMoveNew");
+  document.getElementById("seMoveBtn").addEventListener("click", function () {
+    var l = sheetLift();
+    if (!l) return;
+    if (!seMoveRow.hidden) { seMoveRow.hidden = true; return; }
+    seMove.innerHTML = movePool(l).map(function (m) {
+      return '<option value="' + esc(m) + '"' + (m === l.movement ? " selected" : "") + '>' + esc(m) + '</option>';
+    }).join("") + '<option value="__new">+ New movement…</option>';
+    seMoveNew.hidden = true; seMoveNew.value = "";
+    seMoveRow.hidden = false;
+    seMove.focus();
+  });
+  seMove.addEventListener("change", function () {
+    seMoveNew.hidden = seMove.value !== "__new";
+    if (!seMoveNew.hidden) seMoveNew.focus();
+  });
+  document.getElementById("seMoveCancel").addEventListener("click", function () { seMoveRow.hidden = true; });
+  document.getElementById("seMoveSave").addEventListener("click", function () {
+    if (!setEditing) return;
+    var name = seMove.value === "__new" ? seMoveNew.value.trim() : seMove.value;
+    if (!name) { seMoveNew.focus(); return; }
+    changeMovement(setEditing.key, setEditing.li, name);
+    seMoveRow.hidden = true;
+    drawSetSheet();
+  });
+
+  // Enter moves on from the weight, and from the reps it saves.
+  document.getElementById("seW").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("seR").focus();
+  });
+  document.getElementById("seR").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") document.getElementById("seSave").click();
+  });
 
   document.getElementById("seCancel").addEventListener("click", closeSetEditor);
   setEditSheet.addEventListener("click", function (e) { if (e.target === setEditSheet) closeSetEditor(); });
 
   document.getElementById("seSave").addEventListener("click", function () {
-    var at = editedSet();
-    if (!at) { closeSetEditor(); return; }
+    if (!setEditing) return;
     var w = num(document.getElementById("seW").value);
     var r = num(document.getElementById("seR").value);
     var tech = document.getElementById("seT").value;
-    // Same rule as adding one: weight may be nothing (bodyweight), reps may not.
+    // Weight may be nothing (bodyweight); reps may not, and it says so.
     if (!r) {
       var warn = document.getElementById("seWarn");
       warn.hidden = false; warn.textContent = "How many reps?";
       document.getElementById("seR").focus();
       return;
     }
+    if (setEditing.si === null) {
+      var k = setEditing.key, li = setEditing.li;
+      closeSetEditor();
+      logSet(k, li, w, r, tech);
+      return;
+    }
+    var at = editedSet();
+    if (!at) { closeSetEditor(); return; }
     var key = setEditing.key, st = at.st;
     var was = { w: st.w, r: st.r, tech: st.tech };
     st.w = w; st.r = r;
@@ -8718,7 +8921,9 @@
     // A restored phone should look like the one it came from.
     if (incoming.theme) store.theme = incoming.theme;
     if (incoming.accent) store.accent = incoming.accent;
+    if (typeof incoming.coachOn === "boolean") store.coachOn = incoming.coachOn;
     applyLook();
+    applyTabs();
     if (incoming.suppsRetired) {
       store.suppsRetired = store.suppsRetired || {};
       Object.keys(incoming.suppsRetired).forEach(function (k) {
@@ -8841,6 +9046,7 @@
   // Reconciles the pre-paint guess with the log itself. They only disagree
   // after a restore or on a phone that has never saved a preference.
   applyLook();
+  applyTabs();
 
   // Stamp the build straight away, so a backup always reveals which code wrote
   // it — even if nothing has been logged since.
@@ -8876,7 +9082,11 @@
     else if (darkMq && darkMq.addListener) darkMq.addListener(applyLook);
   })();
 
+  if (movesNeedSaving) save();
   render();
+  // Said once: the first time the app opens on lists that held names it put
+  // there, it says how many it took off rather than letting them vanish.
+  if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
 })();
 </script>
 </body></html>

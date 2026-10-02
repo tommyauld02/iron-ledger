@@ -3,7 +3,7 @@ import os, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 store={"days":{T:{"food":[{"id":"a","cal":520,"pro":46,"note":"Eggs"}],"lifts":[],"updated":1,"goal":G}},
-       "moves":None,"goal":G,"region":"United States",
+       "moves":None,"coachOn":True,"goal":G,"region":"United States",
        "pantry":[{"id":"p","name":"protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,"sCal":130,"sPro":30,"aliases":[]}],"v":1}
 with sync_playwright() as pw:
     b=pw.chromium.launch(); ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True)
