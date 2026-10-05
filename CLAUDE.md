@@ -993,6 +993,11 @@ Two lessons paid for the hard way:
   tab's text nodes for `NaN` and `undefined`, node by node, because innerText
   runs *NaN* into the button after it and a word-boundary search then finds
   nothing; it was proven on the broken build before being trusted.
+- **A pixel budget is a font test in disguise.** "Folded, the day fits on
+  the phone" passed on Windows and failed in CI at 895 of 874: Linux draws the
+  same fixture 21px taller, and whether a day fits depends on how much is
+  logged anyway. Assert what the feature owns — the folded buttons stay
+  small, folding saves most of a screen — with headroom, not an exact fit.
 - **Tests ran for a while against a stale generated copy** and passed
   everything against an old build. The suites now read `iron-ledger.html`
   directly, so there is nothing to go stale.

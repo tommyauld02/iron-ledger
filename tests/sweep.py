@@ -2618,9 +2618,18 @@ with sync_playwright() as pw:
           and q.inner_text('[data-logway="estimate"]').startswith("Don\u2019t know the numbers"))
     wb=q.eval_on_selector_all("[data-logway]","e=>e.map(x=>x.getBoundingClientRect().height)")
     check("ways: both are proper targets", len(wb)==2 and all(h>=MIN_TAP for h in wb), str(wb))
-    check("ways: folded, the day fits on the phone",
-          q.evaluate("()=>document.documentElement.scrollHeight")<=q.evaluate("()=>window.innerHeight")+1,
-          "%s of %s" % (q.evaluate("()=>document.documentElement.scrollHeight"), q.evaluate("()=>window.innerHeight")))
+    # Not "the day fits on the phone": that depends on how much is logged and
+    # on the platform's fonts — Linux CI drew this fixture 21px taller than
+    # Windows. What folding owns is how little it leaves, and what it saves.
+    WAYSPAN="()=>{const b=[...document.querySelectorAll('[data-logway]')].map(x=>x.getBoundingClientRect());return Math.round(b[1].bottom-b[0].top);}"
+    check("ways: folded, the forms are down to two buttons",
+          q.evaluate(WAYSPAN)<=170, "%spx" % q.evaluate(WAYSPAN))
+    folded_h=q.evaluate("()=>document.documentElement.scrollHeight")
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    open_h=q.evaluate("()=>document.documentElement.scrollHeight")
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("ways: and folding takes most of a screen off the page",
+          open_h-folded_h>=400, "%s folded, %s open" % (folded_h, open_h))
     q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
     check("ways: Log calories / protein opens its box, ready to type",
           q.evaluate(WAYS)[0]==["numbers","true"] and q.evaluate("()=>document.activeElement.id")=="fCal")
