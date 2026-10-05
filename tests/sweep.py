@@ -12,8 +12,16 @@ MIN_TAP = 43.5
 
 def words(p):
     """Open the plain-words box; it lives behind the fill-in table now."""
+    # the estimate sits folded behind "Don't know the numbers" until asked for
+    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
+        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
         p.click("#estSwap"); p.wait_for_timeout(250)
+def way(p, w):
+    """Open one of the ways in under the checklist; they start folded."""
+    if p.locator('[data-logway="%s"][aria-expanded="false"]' % w).count():
+        p.click('[data-logway="%s"]' % w); p.wait_for_timeout(250)
+
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
 T=datetime.date.today(); Ts=T.isoformat()
 Y=(T-datetime.timedelta(days=2)).isoformat()
@@ -67,6 +75,7 @@ with sync_playwright() as pw:
     p.reload(); p.wait_for_timeout(1200)
 
     # ---------- MACROS ----------
+    way(p, "numbers")
     p.fill("#fCal","250"); p.fill("#fPro","25"); p.fill("#fNote","Yogurt")
     p.click("#addFood"); p.wait_for_timeout(400)
     check("macros: manual add", p.eval_on_selector_all(".t-row","e=>e.length")==1)
@@ -145,6 +154,7 @@ with sync_playwright() as pw:
     # Committing here also closes the review the section above left open, and
     # a later check reads the corrected weight back out of the ledger.
     p.click("#commitEst"); p.wait_for_timeout(600)
+    way(p, "estimate")
     if p.locator("#estText").count(): p.click("#estSwap"); p.wait_for_timeout(300)
     check("entry: you land on a table, not a blank box",
           p.locator(".et-row").count()==1 and p.locator("#estText").count()==0)
@@ -217,6 +227,7 @@ with sync_playwright() as pw:
     ROW = """()=>({g:document.querySelector('[data-ig]').value,
                    u:document.querySelector('[data-iu]').value,
                    cal:Number(document.querySelector('[data-ic]').value)})"""
+    way(p, "estimate")
     check("units: grams is what you get until you say otherwise",
           p.eval_on_selector("#wUnitIn","e=>e.value")=="g")
     ub=p.locator("#wUnitIn").bounding_box()
@@ -249,6 +260,7 @@ with sync_playwright() as pw:
 
     # it has to survive a reload, or it is a setting that resets every morning
     p.reload(); p.wait_for_timeout(1000)
+    way(p, "estimate")
     check("units: and it survives a reload", p.eval_on_selector("#wUnitIn","e=>e.value")=="oz")
     words(p);p.fill("#estText","chicken breast and white rice"); p.click("#runEst"); p.wait_for_timeout(1300)
     check("units: rows you did not weigh follow the setting",
@@ -285,7 +297,8 @@ with sync_playwright() as pw:
 
     # region persists
     # blur onto something that exists in both entry modes
-    p.fill("#regionIn","Canada"); p.click(".est .eyebrow"); p.wait_for_timeout(300)
+    way(p, "estimate")
+    p.fill("#regionIn","Canada"); p.eval_on_selector("#regionIn","e=>e.blur()"); p.wait_for_timeout(300)
     check("macros: region persists", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).region")=="Canada")
 
     # ---------- GYM ----------
@@ -748,9 +761,9 @@ with sync_playwright() as pw:
     if not p.evaluate("()=>document.getElementById('todayBtn').hidden"):
         p.click("#todayBtn"); p.wait_for_timeout(400)
     check("checklist: it appears on macros", p.locator(".supp").count()==2)
-    check("checklist: under the target bar and above the add form",
+    check("checklist: under the target bar and above the ways to add food",
           p.evaluate("()=>{const s=document.querySelector('.supps'),"
-                     "g=document.querySelector('.goalbar'),e=document.querySelector('.entry');"
+                     "g=document.querySelector('.goalbar'),e=document.querySelector('.log-ways');"
                      " return s.getBoundingClientRect().top>g.getBoundingClientRect().top"
                      " && s.getBoundingClientRect().top<e.getBoundingClientRect().top;}"))
     for i in range(2):
@@ -762,6 +775,7 @@ with sync_playwright() as pw:
           p.eval_on_selector(".supp-count","e=>e.textContent"))
 
     # the whole reason this is patched in place instead of redrawn
+    way(p, "numbers")
     p.fill("#fCal","450"); p.fill("#fNote","half typed")
     p.locator(".supp").first.click(); p.wait_for_timeout(400)
     check("checklist: ticking does not wipe a half-typed entry",
@@ -1519,7 +1533,7 @@ with sync_playwright() as pw:
     # ---------- A MEAL EATEN OFTEN, SAVED ----------
     c, q = lap_page()
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
-    if not q.locator("#estText").count(): q.click("#estSwap"); q.wait_for_timeout(200)
+    words(q)
     q.fill("#estText","chicken breast and white rice"); q.click("#runEst"); q.wait_for_timeout(1200)
     sb=q.locator("#estSave").bounding_box()
     check("meal: the estimate offers to save it", sb is not None and sb["height"]>=MIN_TAP,
@@ -1675,7 +1689,7 @@ with sync_playwright() as pw:
 
     # the estimate's save row asks the same question
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
-    if not q.locator("#estText").count(): q.click("#estSwap"); q.wait_for_timeout(200)
+    words(q)
     q.fill("#estText","chicken breast and white rice"); q.click("#runEst"); q.wait_for_timeout(1200)
     q.click("#estSave"); q.wait_for_timeout(300)
     q.fill("#estSaveName","Usual lunch")
@@ -1729,6 +1743,7 @@ with sync_playwright() as pw:
     check("undo: all the way back, and the bar goes with the last of it",
           q.evaluate(NOTES, Ts)==["Toast","Steak","Chips"] and q.evaluate(SAYS)=="", str(q.evaluate(NOTES, Ts)))
     q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
+    way(q, "numbers")
     q.fill("#fCal","100"); q.fill("#fPro","10"); q.fill("#fNote","Apple"); q.click("#addFood"); q.wait_for_timeout(400)
     check("undo: a change that cannot be undone ends the run", q.evaluate(SAYS)=="", q.evaluate(SAYS))
     q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
@@ -2576,6 +2591,64 @@ with sync_playwright() as pw:
           q.locator(".combine").count()==0 and q.evaluate(CSAYS)=="Put the combination away")
     q.click("#undoBtn"); q.wait_for_timeout(250)
     check("combine: undo brings the draft back as it was", q.evaluate(PARTS)==["Protein powder · 1 scoop"])
+    c.close()
+
+    # ---------- THE WAYS IN ARE FOLDED ----------
+    # Asked for from real use: two whole forms under the checklist made the
+    # Macros screen twice the height of a phone. They are buttons now, named
+    # for what they are for, and each opens its box right under it.
+    FG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    FSTORE={"days":{Ts:{"food":[{"id":"a","cal":520,"pro":46,"note":"Eggs"},
+                                 {"id":"b","cal":0,"pro":0,"note":"chicken breast","pending":True}],
+                        "lifts":[],"updated":1,"goal":FG,"supps":{}}},
+            "supps":[{"id":"s1","name":"Creatine","dose":"5 g"}],
+            "moves":{},"movesOwned":True,"goal":FG,"region":"United States","pantry":[],"v":1,"seen":True}
+    WAYS="()=>[...document.querySelectorAll('[data-logway]')].map(b=>[b.dataset.logway,b.getAttribute('aria-expanded')])"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("ways: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", FSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    check("ways: both start folded, and neither form is on the page",
+          q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]]
+          and q.locator("#fCal").count()==0 and q.locator("#runEst").count()==0, str(q.evaluate(WAYS)))
+    check("ways: each says what it is for",
+          q.inner_text('[data-logway="numbers"]').startswith("Log calories / protein")
+          and q.inner_text('[data-logway="estimate"]').startswith("Don\u2019t know the numbers"))
+    wb=q.eval_on_selector_all("[data-logway]","e=>e.map(x=>x.getBoundingClientRect().height)")
+    check("ways: both are proper targets", len(wb)==2 and all(h>=MIN_TAP for h in wb), str(wb))
+    check("ways: folded, the day fits on the phone",
+          q.evaluate("()=>document.documentElement.scrollHeight")<=q.evaluate("()=>window.innerHeight")+1,
+          "%s of %s" % (q.evaluate("()=>document.documentElement.scrollHeight"), q.evaluate("()=>window.innerHeight")))
+    q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
+    check("ways: Log calories / protein opens its box, ready to type",
+          q.evaluate(WAYS)[0]==["numbers","true"] and q.evaluate("()=>document.activeElement.id")=="fCal")
+    check("ways: and its box sits right under its own button",
+          q.evaluate("()=>document.querySelector('[data-logway=numbers]').nextElementSibling.id")=="wayNumbers")
+    q.fill("#fCal","300"); q.fill("#fPro","25"); q.fill("#fNote","Yogurt"); q.click("#addFood"); q.wait_for_timeout(400)
+    check("ways: adding says so, and the box stays open for the next one",
+          "Added Yogurt" in q.inner_text(".added-flash") and q.locator("#fCal").count()==1)
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("ways: one open at a time — the other folds",
+          q.evaluate(WAYS)==[["numbers","false"],["estimate","true"]] and q.locator("#fCal").count()==0
+          and q.evaluate("()=>document.activeElement.dataset.eq")=="0")
+    check("ways: the confirmation still shows with the numbers box folded",
+          q.locator(".added-flash").count()==1)
+    q.fill('[data-ef="0"]',"toast")
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("ways: pressing the open one folds it", q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]])
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("ways: and what was typed is still there when it opens again", q.input_value('[data-ef="0"]')=="toast")
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    # a row waiting on numbers: its button must not land in a folded box
+    q.click('[data-est="b"]'); q.wait_for_timeout(900)
+    check("ways: a waiting row's button opens its answer even with everything folded",
+          q.locator("#commitEst").count()==1 and q.evaluate(WAYS)[1]==["estimate","true"], str(q.evaluate(WAYS)))
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("ways: folding puts the review aside", q.locator("#commitEst").count()==0)
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("ways: and opening brings it back, not lost", q.locator("#commitEst").count()==1)
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

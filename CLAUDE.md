@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~890 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~900 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -244,8 +244,33 @@ twice without noticing. And pressing *Work out the macros* with nothing filled
 in sets `estHint` and says so; doing nothing at all would read exactly like a
 dead button.
 
+**Both ways in are folded until asked for.** The owner, from real use: the
+two forms under the checklist made Macros twice the height of a phone. They are
+two buttons now, named for when you would reach for each: *Log calories /
+protein* ("You know the numbers") and *Don't know the numbers* ("Name the food
+and how much — it works them out"). Each opens its box directly under itself
+with the cursor in the first field, the way the set sheet opens. One is open
+at a time, and pressing the open one folds it again. `logWay` is that state.
+It is transient but survives redraws, so adding an entry leaves the box open
+for the next one. Folded, a normal day fits on the phone without scrolling.
+
+Two things keep folding from hiding a result. The *✓ Added* confirmation sits
+above the buttons, not inside a box, because the pantry's `+` lands there too.
+And an estimate that is working or waiting for review opens its box by itself,
+because a pending row's *Tap to estimate* would otherwise run an estimate into
+a folded box and look dead. Folding while one is showing puts it aside in
+`estShut`, opening brings it back, and a new estimate opens the box again.
+
+The forms only exist after a press now, which is this project's known blind
+spot, so the walks in `mobile`, `hittest` and `handoff` visit Macros three
+times: folded, then with each box open. Each says so if its box fails to open,
+rather than passing on nothing. `darkcheck` opens both, and `handoff` measures
+both first fields for 44px and the 16px zoom rule.
+
 The suites feed the resolver through the words box, so the ones testing food
-matching rather than entry call a local `words(p)` helper first. `sweep` and
+matching rather than entry call a local `words(p)` helper first. It opens
+*Don't know the numbers* if it is folded; `way(p, "numbers")` does the same
+for the numbers box. `sweep` and
 `estmeal` drive the table itself, because that is the front door now.
 
 **Grams are the basis; the unit is only how it is shown.** The whole food

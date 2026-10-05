@@ -1708,6 +1708,27 @@
   }
 
   /* ---------- entry forms ---------- */
+  /* The ways in, under the checklist: two buttons that each open their box
+     right beneath them, so the screen is the day and not two forms. */
+  .log-ways { display: flex; flex-direction: column; gap: 8px; }
+  .log-way {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 12px;
+    min-height: 56px;
+    padding: 10px 14px;
+    text-align: left;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+  }
+  .log-way .lw-t { grid-column: 1; font-size: 16px; font-weight: 600; }
+  .log-way .lw-s { grid-column: 1; font-size: 13px; color: var(--ink-2); }
+  .log-way .lw-c { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; color: var(--accent); }
+  .log-way[aria-expanded="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+
   .entry {
     background: var(--surface-2);
     border: 1px solid var(--rule);
@@ -2950,7 +2971,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-01.54";
+  var BUILD = "2026-10-04.55";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3050,7 +3071,14 @@
   // the shape. Transient like estDraft: reopening the app should show an empty
   // form, not yesterday's half-finished thought.
   var estRows = [{ qty: "", unit: "", food: "" }];
-  var estWords = false;    // true while the plain-words box has taken over
+  var estWords = false;
+  // Which way in is open under the checklist — "numbers", "estimate" or
+  // neither. Both start folded. An estimate under way or waiting for review
+  // opens its box by itself, because it is the answer to a press (a pending
+  // row's "Tap to estimate" among them); folding it away while one is showing
+  // puts that one aside in estShut, and the next one opens it again.
+  var logWay = null;
+  var estShut = null;    // true while the plain-words box has taken over
   var estHint = "";        // "you have not filled anything in yet"
   var estSaving = false;   // the name field for saving this estimate as a meal is open
   var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
@@ -5198,7 +5226,7 @@
     if (est && est.status === "loading") {
       return '<section class="entry est">' +
         '<span class="eyebrow">Working it out</span>' +
-        '<div class="working"><i></i>Estimating “' + esc(est.text) + '”</div>' +
+        '<div class="working" id="wayEstimate"><i></i>Estimating “' + esc(est.text) + '”</div>' +
       '</section>';
     }
 
@@ -5280,7 +5308,6 @@
       '</section>';
     }
 
-    var pend = pendingCount(d);
     var errHtml = (est && est.status === "error")
       ? '<p class="est-note" style="color:var(--miss)">' + esc(est.message) + '</p>' : '';
 
@@ -5312,8 +5339,7 @@
       '</div>';
     }).join("");
 
-    return '<section class="entry est">' +
-      '<span class="eyebrow">Need help counting?</span>' +
+    return '<section class="entry est" id="wayEstimate">' +
       (estWords
         ? '<textarea id="estText" placeholder="Half a protein coffee, 6 oz sirloin and a cup of rice" ' +
             'spellcheck="false">' + esc(estDraft) + '</textarea>'
@@ -5345,11 +5371,6 @@
           ? 'Describe the meal in plain words. Your pantry and the built-in food table answer first; anything they don’t recognise goes to Claude. The country above decides which version of a product gets used. You’ll see the breakdown and can edit it before it goes in the ledger.'
           : 'Your pantry and the built-in food table work offline — most everyday foods resolve straight away, and anything without an amount gets a typical serving. Whatever it doesn’t recognise is saved as a placeholder you can fill in by hand.') +
       '</p>' +
-      (pend
-        ? '<p class="est-note">' + pend + (pend === 1 ? ' entry is' : ' entries are') +
-          ' waiting on an estimate. Today stays uncoloured on the calendar until ' +
-          (pend === 1 ? 'it is' : 'they are') + ' filled in.</p>'
-        : '') +
     '</section>';
   }
 
@@ -5493,8 +5514,8 @@
           '<p>A gym and food log built to replace a paper one. Everything stays on this phone — ' +
             'nobody else sees what you log, including whoever shared this with you.</p>' +
           '<dl>' +
-            '<dt>Macros</dt><dd>Calories left, protein right, totals at the bottom. Type the numbers, ' +
-              'or describe the meal — “chicken and rice” works, and you can correct it before it goes in.</dd>' +
+            '<dt>Macros</dt><dd>Calories left, protein right, totals at the bottom. Under them, log the numbers ' +
+              'if you know them — or tap Don\u2019t know the numbers and name the food: “chicken and rice” works, and you can correct it before it goes in.</dd>' +
             '<dt>Pantry</dt><dd>Save things you eat often, once. Pre-made items are counted in bottles ' +
               'and bars, not weighed.</dd>' +
             '<dt>Gym</dt><dd>Pick a split, add movements, log weight and reps. It shows what you lifted last time.</dd>' +
@@ -5506,6 +5527,14 @@
           '<button class="btn ghost" id="dismissWelcome">Got it</button>' +
         '</section>'
       : '';
+
+    var estOpen = logWay === "estimate" || (!!est && est !== estShut);
+    var numOpen = logWay === "numbers" && !estOpen;
+    function wayBtn(id, title, sub, open) {
+      return '<button class="log-way" data-logway="' + id + '" aria-expanded="' + open + '">' +
+        '<span class="lw-t">' + title + '</span><span class="lw-s">' + sub + '</span>' +
+        '<span class="lw-c" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></button>';
+    }
 
     view.innerHTML =
       welcome +
@@ -5532,23 +5561,39 @@
 
       suppsHtml(d) +
 
-      '<section class="entry">' +
-        '<div class="pair">' +
-          '<div class="field"><label for="fCal">Calories</label>' +
-            '<input id="fCal" inputmode="numeric" placeholder="0"></div>' +
-          '<div class="field"><label for="fPro">Protein · g</label>' +
-            '<input id="fPro" inputmode="numeric" placeholder="0"></div>' +
-        '</div>' +
-        '<div class="field"><label for="fNote">What was it (optional)</label>' +
-          '<input id="fNote" class="text"></div>' +
-        '<button class="btn" id="addFood">Add to ledger</button>' +
+      // Two ways in, folded until asked for: the screen is the day, not two
+      // forms. Each opens right under its own button.
+      '<section class="log-ways" id="logWays" aria-label="Add food">' +
+        // Above the buttons, not inside a box, so it still says so with both
+        // folded — the pantry's + lands here too.
         ((lastAdded && Date.now() - lastAdded.at < 8000)
           ? '<p class="added-flash">✓ Added ' + esc(lastAdded.label) + ' · ' +
               fmt(lastAdded.cal) + ' kcal · ' + fmt(lastAdded.pro) + ' g' +
               '<span>Day now ' + fmt(t.cal) + ' kcal · ' + fmt(t.pro) + ' g protein</span></p>'
           : '') +
-      '</section>' +
-      estimatorHtml(key, d);
+        // Said whether or not a box is open: it is about the day, not a form.
+        (pendingCount(d)
+          ? '<p class="est-note">' + pendingCount(d) + (pendingCount(d) === 1 ? ' entry is' : ' entries are') +
+            ' waiting on an estimate. Today stays uncoloured on the calendar until ' +
+            (pendingCount(d) === 1 ? 'it is' : 'they are') + ' filled in.</p>'
+          : '') +
+        wayBtn("numbers", "Log calories / protein", "You know the numbers", numOpen) +
+        (numOpen
+          ? '<div class="entry" id="wayNumbers">' +
+              '<div class="pair">' +
+                '<div class="field"><label for="fCal">Calories</label>' +
+                  '<input id="fCal" inputmode="numeric" placeholder="0"></div>' +
+                '<div class="field"><label for="fPro">Protein · g</label>' +
+                  '<input id="fPro" inputmode="numeric" placeholder="0"></div>' +
+              '</div>' +
+              '<div class="field"><label for="fNote">What was it (optional)</label>' +
+                '<input id="fNote" class="text"></div>' +
+              '<button class="btn" id="addFood">Add to ledger</button>' +
+            '</div>'
+          : '') +
+        wayBtn("estimate", "Don\u2019t know the numbers", "Name the food and how much \u2014 it works them out", estOpen) +
+        (estOpen ? estimatorHtml(key, d) : '') +
+      '</section>';
 
     // Deleting is delegated too — see the handler near setTab.
 
@@ -5663,6 +5708,28 @@
         estRows.splice(i, 1);
         if (!estRows.length) estRows = [{ qty: "", unit: "", food: "" }];
         render();
+      });
+    });
+
+    // One open at a time. Opening puts the cursor in the first field, ready,
+    // the way the set sheet does; pressing the open one again folds it.
+    view.querySelectorAll("[data-logway]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var w = b.dataset.logway, wasOpen = b.getAttribute("aria-expanded") === "true";
+        if (est) estShut = est;
+        logWay = wasOpen ? null : w;
+        if (logWay === "estimate") estShut = null;
+        render();
+        if (wasOpen) return;
+        // Up to just under the top bar, which is sticky: scrolled to the very
+        // top, the button would sit behind it.
+        var top = view.querySelector('[data-logway="' + w + '"]');
+        var bar = document.querySelector(".topbar");
+        if (top) window.scrollBy(0, top.getBoundingClientRect().top -
+          (bar ? bar.getBoundingClientRect().bottom : 0) - 8);
+        var f = w === "numbers" ? document.getElementById("fCal")
+          : est ? null : view.querySelector(estWords ? "#estText" : "[data-eq]");
+        if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
       });
     });
 

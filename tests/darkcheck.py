@@ -240,6 +240,15 @@ def walk(p, label):
             p.evaluate("""()=>{document.body.classList.remove('arranging');
               document.querySelectorAll('.ss-zone.is-over').forEach(z=>z.classList.remove('is-over'));}""")
         if tab == "macros":
+            # both boxes are folded until a press: open each and measure it
+            p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
+            if not p.locator("#fCal").count(): found.append("macros: the numbers box is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("macros (log calories / protein): %s" % low)
+            p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+            if not p.locator('[data-ef="0"]').count(): found.append("macros: the estimate table is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("macros (don't know the numbers): %s" % low)
             # the review header sits on the soft tint too
             if not p.locator("#estText").count():
                 p.click("#estSwap"); p.wait_for_timeout(200)

@@ -18,6 +18,9 @@ import os, io, re, json
 # "Or just describe it in words". This suite is about what the resolver makes
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
+    # the estimate sits folded behind "Don't know the numbers" until asked for
+    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
+        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
         p.click("#estSwap"); p.wait_for_timeout(250)
 

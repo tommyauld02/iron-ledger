@@ -36,7 +36,8 @@ store={"days":{T:{"food":[
 DEVICES=[("iPhone SE",320,568),("iPhone 13 mini",375,812),("iPhone 15",393,852),
          ("iPhone 17 Pro",402,874),("iPhone 17 Pro Max",440,956),
          ("iPhone 15 Pro Max",430,932),("landscape 17 Pro",874,402)]
-TABS=["macros","pantry","gym","coach","log"]
+# Macros three times: folded, then with each way in open.
+TABS=["macros","macros:numbers","macros:estimate","pantry","gym","coach","log"]
 
 # iOS zooms the page whenever you focus a field smaller than 16px, and never zooms back
 ZOOM="""()=>{const bad=[];
@@ -73,7 +74,11 @@ with sync_playwright() as pw:
         p.reload(); p.wait_for_timeout(700)
         zoom=set(); over=[]; small=set()
         for t in TABS:
-            p.click('.tabs button[data-tab="%s"]'%t); p.wait_for_timeout(350)
+            p.click('.tabs button[data-tab="%s"]'%t.split(":")[0]); p.wait_for_timeout(350)
+            if ":" in t:
+                p.click('[data-logway="%s"]'%t.split(":")[1]); p.wait_for_timeout(300)
+                if not p.locator("#fCal" if t.endswith("numbers") else '[data-ef="0"]').count():
+                    FAILS.append("%s: %s box not on screen to measure" % (name, t))
             if t=="coach" and p.locator("[data-openday]").count():
                 p.locator("[data-openday]").first.click(); p.wait_for_timeout(300)
             # the set-to-beat lines are what could burst a narrow card, so a

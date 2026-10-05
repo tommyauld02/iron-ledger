@@ -29,6 +29,11 @@ def add_movement(pg, name, wait=350):
     if name in have: pg.select_option("#mSel", name)
     else: pg.select_option("#mSel", "__new"); pg.fill("#mNew", name)
     pg.click("#addLift"); pg.wait_for_timeout(wait)
+def way(p, w):
+    """Open one of the ways in under the checklist; they start folded."""
+    if p.locator('[data-logway="%s"][aria-expanded="false"]' % w).count():
+        p.click('[data-logway="%s"]' % w); p.wait_for_timeout(250)
+
 
 with sync_playwright() as pw:
     b=pw.chromium.launch()
@@ -43,7 +48,7 @@ with sync_playwright() as pw:
     day0=p.text_content("#dateFull")
 
     # log food + a workout on day 0
-    p.fill("#fCal","1800"); p.fill("#fPro","160"); p.fill("#fNote","Full day")
+    way(p, "numbers"); p.fill("#fCal","1800"); p.fill("#fPro","160"); p.fill("#fNote","Full day")
     p.click("#addFood"); p.wait_for_timeout(400)
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(400)
     add_movement(p, "Barbell Row")
@@ -61,7 +66,7 @@ with sync_playwright() as pw:
     ck("rollover: 'back to today' hidden", p.evaluate("()=>document.getElementById('todayBtn').hidden"))
     ck("rollover: yesterday untouched", len(keys(p))==1)
 
-    p.fill("#fCal","2400"); p.fill("#fPro","120"); p.fill("#fNote","Over day")
+    way(p, "numbers"); p.fill("#fCal","2400"); p.fill("#fPro","120"); p.fill("#fNote","Over day")
     p.click("#addFood"); p.wait_for_timeout(400)
     k1=keys(p)
     ck("rollover: logs to the NEW day", len(k1)==2 and k1[1]!=k1[0], " + ".join(k1))
@@ -122,11 +127,11 @@ with sync_playwright() as pw:
         p=ctx.new_page(); p.on("pageerror", lambda e: errs.append(str(e)))
         p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(800)
         before=p.text_content("#dateFull")
-        p.fill("#fCal","500"); p.fill("#fPro","40"); p.fill("#fNote","Before midnight")
+        way(p, "numbers"); p.fill("#fCal","500"); p.fill("#fPro","40"); p.fill("#fNote","Before midnight")
         p.click("#addFood"); p.wait_for_timeout(400)
         p.evaluate("()=>window.__jump(4*3600*1000)"); resume(p)
         after=p.text_content("#dateFull")
-        p.fill("#fCal","600"); p.fill("#fPro","50"); p.fill("#fNote","After midnight")
+        way(p, "numbers"); p.fill("#fCal","600"); p.fill("#fPro","50"); p.fill("#fNote","After midnight")
         p.click("#addFood"); p.wait_for_timeout(400)
         ks=keys(p)
         ck(label, len(ks)==2 and after!=before, "%s -> %s (%s)" % (before.strip(), after.strip(), " + ".join(ks)))

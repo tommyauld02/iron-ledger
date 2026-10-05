@@ -5,6 +5,9 @@ import os, datetime
 # "Or just describe it in words". This suite is about what the resolver makes
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
+    # the estimate sits folded behind "Don't know the numbers" until asked for
+    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
+        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
         p.click("#estSwap"); p.wait_for_timeout(250)
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
@@ -29,8 +32,10 @@ with sync_playwright() as pw:
     def food(): return p.evaluate("()=>(JSON.parse(localStorage['iron-ledger-v1']).days['%s']||{}).food||[]"%T)
 
     reset()
-    check("heading is 'Need help counting?'",
-          "NEED HELP COUNTING" in p.locator("#view").inner_text().upper())
+    check("folded until asked for, behind a button that names it",
+          "Don\u2019t know the numbers" in p.inner_text('[data-logway="estimate"]')
+          and p.locator(".et-row").count()==0)
+    p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     check("the way in is a table you fill in, not a blank box",
           p.locator(".et-row").count()==1 and p.locator("#estText").count()==0,
           "rows=%d box=%d" % (p.locator(".et-row").count(), p.locator("#estText").count()))

@@ -24,6 +24,9 @@ import os, io, re, json, datetime, threading, functools
 # "Or just describe it in words". This suite is about what the resolver makes
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
+    # the estimate sits folded behind "Don't know the numbers" until asked for
+    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
+        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
         p.click("#estSwap"); p.wait_for_timeout(250)
 
@@ -155,7 +158,9 @@ with sync_playwright() as pw:
         // Sticky chrome sitting over scrollable content is expected — you
         // scroll and it is there. What must never happen is the chrome itself
         // being unreachable, which is asserted separately further down.
-        const underDock = !!(hit && hit.closest && hit.closest('.dock'));
+        // The top bar is sticky too: content scrolled up under it is behind it
+        // by design, the same as under the dock (hittest has the same rule).
+        const underDock = !!(hit && hit.closest && hit.closest('.dock, .topbar'));
         const reachable = !inView || underDock ||
                           (!!hit && (hit === el || el.contains(hit) || hit.contains(el)));
         out.push({
@@ -170,10 +175,15 @@ with sync_playwright() as pw:
       return out;
     }"""
 
-    tabs = ["macros", "pantry", "gym", "coach", "log"]
+    # Macros three times: folded, then with each way in open.
+    tabs = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "coach", "log"]
     small, blocked, seen, cal_cells = [], [], 0, 0
     for t in tabs:
-        p.click('.tabs button[data-tab="%s"]' % t); p.wait_for_timeout(500)
+        p.click('.tabs button[data-tab="%s"]' % t.split(":")[0]); p.wait_for_timeout(500)
+        if ":" in t:
+            p.click('[data-logway="%s"]' % t.split(":")[1]); p.wait_for_timeout(350)
+            check("%s opens, so it is measured" % t,
+                  p.locator("#fCal" if t.endswith("numbers") else '[data-ef="0"]').count() == 1)
         for el in p.evaluate(MEASURE):
             seen += 1
             # Calendar day cells are exempt by a decision this project already
@@ -223,6 +233,7 @@ with sync_playwright() as pw:
 
     # writes must persist with everything cut
     n_before = p.evaluate("() => (JSON.parse(localStorage.getItem('iron-ledger-v1')).days['%s'].food || []).length" % Ts)
+    p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
     p.fill("#fCal", "300"); p.fill("#fPro", "25"); p.fill("#fNote", "offline entry")
     p.click("#addFood"); p.wait_for_timeout(700)
     n_after = p.evaluate("() => (JSON.parse(localStorage.getItem('iron-ledger-v1')).days['%s'].food || []).length" % Ts)
@@ -567,6 +578,8 @@ with sync_playwright() as pw:
     except Exception:
         pass
 
+    if p.locator('[data-logway="numbers"][aria-expanded="false"]').count():
+        p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
     p.fill("#fCal", "999"); p.fill("#fPro", "99"); p.fill("#fNote", "CANARY")
     p.click("#addFood"); p.wait_for_timeout(700)
     check("a failed write says so", not p.evaluate("() => document.getElementById('savebar').hidden"))
@@ -586,6 +599,8 @@ with sync_playwright() as pw:
 
     # and it has to get out of the way once writing works again
     p.evaluate("() => { for (let i = 0; i < 400; i++) localStorage.removeItem('f' + i); }")
+    if p.locator('[data-logway="numbers"][aria-expanded="false"]').count():
+        p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
     p.fill("#fCal", "100"); p.fill("#fPro", "10"); p.fill("#fNote", "after space freed")
     p.click("#addFood"); p.wait_for_timeout(700)
     check("the warning clears once writes work",
@@ -648,6 +663,8 @@ with sync_playwright() as pw:
 
     EDITORS = [
         ("meal name",      ['.tabs button[data-tab="macros"]', "[data-openmeal]", "[data-renamemeal]"], "#mealName"),
+        ("log calories / protein", ['.tabs button[data-tab="macros"]', '[data-logway="numbers"]'], "#fCal"),
+        ("don't know the numbers", ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], '[data-ef="0"]'),
         ("rename a day",   ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-renameday]"], "#rtRename"),
         ("add a movement", ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-newmove]"], "#rtNewMove"),
         ("add a day",      ['.tabs button[data-tab="coach"]', "#addDay"], "#rtNewDay"),

@@ -142,7 +142,9 @@ def sweep(p):
     return list(found.values())
 
 
-TABS = ["macros", "pantry", "gym", "coach", "log"]
+# Macros is walked three times: folded, then with each way in open, because
+# a control that only exists after a press is the one nothing else measures.
+TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "coach", "log"]
 covered = []          # anything a tap cannot reach — this suite gates on it
 
 with sync_playwright() as pw:
@@ -165,8 +167,12 @@ with sync_playwright() as pw:
     print("=== CONTROLS WITH SOMETHING ON TOP OF THEM ===")
     found = 0
     for tab in TABS:
-        p.click('.tabs button[data-tab="%s"]' % tab)
+        p.click('.tabs button[data-tab="%s"]' % tab.split(":")[0])
         p.wait_for_timeout(450)
+        if ":" in tab:
+            p.click('[data-logway="%s"]' % tab.split(":")[1]); p.wait_for_timeout(350)
+            if not p.locator('[data-logway="%s"][aria-expanded="true"]' % tab.split(":")[1]).count():
+                covered.append("%s did not open, so nothing in it was tested" % tab)
         # open the panels that only exist once something is expanded
         if tab == "coach" and p.locator("[data-openday]").count():
             p.locator("[data-openday]").first.click()

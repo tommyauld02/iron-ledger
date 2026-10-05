@@ -35,8 +35,10 @@ PROBES=[
  ("macros","#nextDay","next day",None),
  ("macros",".t-del:nth-of-type(1)","delete a row",None),
  ("macros","#openGoal","open target editor",None),
- ("macros","#addFood","add entry",[("#fCal","300"),("#fPro","30")]),
- ("macros","#runEst","run estimate",[('[data-eq="0"]',"200"),('[data-ef="0"]',"chicken breast")]),
+ ("macros",'[data-logway="numbers"]',"open Log calories / protein",None),
+ ("macros",'[data-logway="estimate"]',"open Don't know the numbers",None),
+ ("macros","#addFood","add entry",[('[data-logway="numbers"]',None),("#fCal","300"),("#fPro","30")]),
+ ("macros","#runEst","run estimate",[('[data-logway="estimate"]',None),('[data-eq="0"]',"200"),('[data-ef="0"]',"chicken breast")]),
  ("macros",".pending-chip","resolve pending entry",None),
  ("gym",".cat:nth-child(2)","switch split",None),
  ("gym",".cat:nth-child(3)","switch split (legs)",None),
@@ -72,7 +74,10 @@ with sync_playwright() as pw:
         note=""
         try:
             if fills:
-                for s2,v in fills: p.fill(s2,v)
+                # a value of None is a press: the boxes open from their buttons
+                for s2,v in fills:
+                    if v is None: p.click(s2); p.wait_for_timeout(250)
+                    else: p.fill(s2,v)
                 p.wait_for_timeout(150)
             el=p.query_selector(sel)
             if not el:

@@ -16,6 +16,7 @@ with sync_playwright() as pw:
     p.reload(); p.wait_for_timeout(800)
     print(not p.evaluate("()=>!!document.querySelector('.welcome')"))
     # they can still log straight away
+    p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
     p.fill("#fCal","400"); p.fill("#fPro","30"); p.fill("#fNote","Test meal")
     p.click("#addFood"); p.wait_for_timeout(400)
     print("tester can log:", p.eval_on_selector_all(".t-row","e=>e.length")==1)
