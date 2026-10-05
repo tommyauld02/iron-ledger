@@ -876,7 +876,7 @@ with sync_playwright() as pw:
     check("settings: the gear opens the sheet",
           p.evaluate("()=>!document.getElementById('setSheet').hidden"))
     check("settings: it starts on the phone's own look and teal",
-          p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")==["Match phone","Teal","Hidden"],
+          p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")==["Match phone","Teal","In place","Hidden"],
           str(p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")))
     small=[x for x in p.eval_on_selector_all("#setSheet button",
            "e=>e.map(b=>[b.textContent.trim()||b.getAttribute('aria-label'),Math.round(b.getBoundingClientRect().height)])")
@@ -2649,6 +2649,100 @@ with sync_playwright() as pw:
     check("ways: folding puts the review aside", q.locator("#commitEst").count()==0)
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     check("ways: and opening brings it back, not lost", q.locator("#commitEst").count()==1)
+    c.close()
+
+    # ---------- HOW THE WAYS IN OPEN ----------
+    # The owner could not choose from pictures between a box opening in place,
+    # a pop-up like the set sheet, and a mix of the two, and asked to try
+    # each. Settings -> Adding food opens.
+    LG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    LSTORE={"days":{Ts:{"food":[{"id":"a","cal":520,"pro":46,"note":"Eggs"},
+                                 {"id":"b","cal":0,"pro":0,"note":"chicken breast","pending":True}],
+                        "lifts":[],"updated":1,"goal":LG}},
+            "moves":{},"movesOwned":True,"goal":LG,"region":"United States","pantry":[],"v":1,"seen":True}
+    LST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
+    SHEETS="()=>[...document.querySelectorAll('[data-waysheet]')].map(x=>x.dataset.waysheet)"
+    INLINE="()=>[!!document.querySelector('.log-ways #wayNumbers'),!!document.querySelector('.log-ways #wayEstimate')]"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("opens: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    def pick(mode):
+        q.click("#setBtn"); q.wait_for_timeout(250)
+        q.click('[data-pick-logopen="%s"]' % mode); q.wait_for_timeout(250)
+        q.click("#setDone"); q.wait_for_timeout(250)
+    q.click("#setBtn"); q.wait_for_timeout(250)
+    check("opens: Settings offers in place, pop-up and mix, starting in place",
+          q.eval_on_selector_all("[data-pick-logopen]","e=>e.map(x=>[x.textContent,x.getAttribute('aria-pressed')])")
+          ==[["In place","true"],["Pop-up","false"],["Mix","false"]])
+    check("opens: and says what the choice does",
+          q.inner_text("#setLogOpenHint")=="Each box opens right under its button on the Macros screen.")
+    q.click('[data-pick-logopen="popup"]'); q.wait_for_timeout(250)
+    check("opens: choosing says what it does instead, and is kept",
+          q.inner_text("#setLogOpenHint").startswith("Each box slides up")
+          and q.evaluate(LST).get("logOpen")=="popup")
+    q.click("#setDone"); q.wait_for_timeout(250)
+
+    # pop-up
+    q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
+    check("opens: pop-up — Log calories / protein slides up, ready to type",
+          q.evaluate(SHEETS)==["numbers"] and q.evaluate(INLINE)==[False,False]
+          and q.evaluate("()=>document.activeElement.id")=="fCal")
+    sb=q.eval_on_selector_all('[data-waysheet] input, [data-waysheet] button',
+        "e=>e.filter(x=>x.getClientRects().length).map(x=>[x.id||x.textContent,Math.round(x.getBoundingClientRect().height),x.tagName=='INPUT'?parseFloat(getComputedStyle(x).fontSize):16])")
+    check("opens: everything in it is a proper target and no field zooms",
+          len(sb)>=5 and all(h>=MIN_TAP and f>=16 for _,h,f in sb), str(sb))
+    q.click('[data-wayclose="numbers"]'); q.wait_for_timeout(250)
+    check("opens: Cancel puts it away", q.evaluate(SHEETS)==[] and q.locator("#fCal").count()==0)
+    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    q.mouse.click(200, 120); q.wait_for_timeout(250)
+    check("opens: so does a tap on the dimmed page", q.evaluate(SHEETS)==[])
+    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    q.fill("#fCal","300"); q.fill("#fPro","25"); q.fill("#fNote","Yogurt"); q.click("#addFood"); q.wait_for_timeout(400)
+    check("opens: adding goes in, the pop-up goes, and the page says so",
+          q.evaluate(SHEETS)==[] and "Added Yogurt" in q.inner_text(".added-flash")
+          and any(f.get("note")=="Yogurt" for f in q.evaluate(LST)["days"][Ts]["food"]))
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("opens: pop-up — Don't know the numbers slides up too",
+          q.evaluate(SHEETS)==["estimate"] and q.evaluate("()=>document.activeElement.dataset.eq")=="0")
+    q.fill('[data-ef="0"]',"white rice"); q.click("#runEst"); q.wait_for_timeout(1000)
+    check("opens: its review stays in the pop-up", q.locator('[data-waysheet] #commitEst').count()==1)
+    q.click('[data-wayclose="estimate"]'); q.wait_for_timeout(250)
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(250)
+    check("opens: Close puts the review aside, not away", q.locator('[data-waysheet] #commitEst').count()==1)
+    q.click("#commitEst"); q.wait_for_timeout(400)
+    check("opens: adding from the review closes it and says what went in",
+          q.evaluate(SHEETS)==[] and q.inner_text(".added-flash").startswith("✓ Added"), q.inner_text(".added-flash"))
+    q.click('[data-est="b"]'); q.wait_for_timeout(900)
+    check("opens: a waiting row's button pops its answer up", q.locator('[data-waysheet] #commitEst').count()==1)
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("opens: the pop-up fits a 320px phone",
+          q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.click('[data-wayclose="estimate"]'); q.wait_for_timeout(250)
+
+    # mix
+    pick("mix")
+    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    check("opens: mix — the numbers pop up", q.evaluate(SHEETS)==["numbers"])
+    q.click('[data-wayclose="numbers"]'); q.wait_for_timeout(250)
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(250)
+    check("opens: mix — the estimate opens in place", q.evaluate(SHEETS)==[] and q.evaluate(INLINE)==[False,True])
+
+    # a box already open changes at once
+    pick("popup")
+    check("opens: changing it with a box open shows the box the new way",
+          q.evaluate(SHEETS)==["estimate"] and q.evaluate(INLINE)==[False,False])
+    q.click('[data-wayclose="estimate"]'); q.wait_for_timeout(250)
+    q.reload(); q.wait_for_timeout(900)
+    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    check("opens: the choice survives a reload", q.evaluate(SHEETS)==["numbers"])
+    q.click('[data-wayclose="numbers"]'); q.wait_for_timeout(250)
+    pick("inplace")
+    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    check("opens: and in place is in place again", q.evaluate(SHEETS)==[] and q.evaluate(INLINE)==[True,False])
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

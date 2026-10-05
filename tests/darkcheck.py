@@ -249,6 +249,24 @@ def walk(p, label):
             if not p.locator('[data-ef="0"]').count(): found.append("macros: the estimate table is not on screen")
             low = p.evaluate(LOW)
             if low: found.append("macros (don't know the numbers): %s" % low)
+            # and as pop-ups, chosen in Settings, then back to in place; the
+            # open box is folded first, or it would come back as a pop-up over
+            # the very button the next step presses
+            p.click('[data-logway="estimate"]'); p.wait_for_timeout(200)
+            p.click("#setBtn"); p.wait_for_timeout(250)
+            p.click('[data-pick-logopen="popup"]'); p.wait_for_timeout(200)
+            p.click("#setDone"); p.wait_for_timeout(250)
+            for w in ("numbers", "estimate"):
+                p.click('[data-logway="%s"]' % w); p.wait_for_timeout(250)
+                if not p.locator('[data-waysheet="%s"]' % w).count():
+                    found.append("macros: the %s pop-up is not on screen" % w)
+                low = p.evaluate(LOW)
+                if low: found.append("macros (%s pop-up): %s" % (w, low))
+                p.click('[data-wayclose="%s"]' % w); p.wait_for_timeout(200)
+            p.click("#setBtn"); p.wait_for_timeout(250)
+            p.click('[data-pick-logopen="inplace"]'); p.wait_for_timeout(200)
+            p.click("#setDone"); p.wait_for_timeout(250)
+            p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
             # the review header sits on the soft tint too
             if not p.locator("#estText").count():
                 p.click("#estSwap"); p.wait_for_timeout(200)

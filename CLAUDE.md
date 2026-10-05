@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~900 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~920 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -260,6 +260,24 @@ And an estimate that is working or waiting for review opens its box by itself,
 because a pending row's *Tap to estimate* would otherwise run an estimate into
 a folded box and look dead. Folding while one is showing puts it aside in
 `estShut`, opening brings it back, and a new estimate opens the box again.
+
+**How they open is a setting, because the owner wanted to try each.** Shown
+pictures of a box opening in place and of the same box as a pop-up like the
+set sheet, he could not choose, so Settings → *Adding food opens* offers *In
+place*, *Pop-up* and *Mix* (`store.logOpen`, read through `logOpen()`;
+`popsUp(w)` answers per box). Mix pops up the short numbers form and opens the
+long estimate in place. The choice travels with a backup, and a box already
+open changes at once when it is switched.
+
+A pop-up is drawn **inside `#view`** like the in-place box, as a `.sheet`. That
+is deliberate: the delegated Add and every handler wired after a draw reach it
+unchanged, and there is no second copy of either form. Closing it is folding
+it: *Cancel* on the numbers, which keep no draft, *Close* on the estimate,
+whose table and review are kept. A tap on the dimmed page does the same. After
+a successful add a pop-up goes and the confirmation above the buttons says
+what went in. That confirmation is now also set when an estimate is committed,
+which used to go in without a word: in place the rows appearing was the only
+sign, and behind a closing pop-up even that was hidden.
 
 The forms only exist after a press now, which is this project's known blind
 spot, so the walks in `mobile`, `hittest` and `handoff` visit Macros three

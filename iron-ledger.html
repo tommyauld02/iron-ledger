@@ -1728,6 +1728,8 @@
   .log-way .lw-s { grid-column: 1; font-size: 13px; color: var(--ink-2); }
   .log-way .lw-c { grid-column: 2; grid-row: 1 / span 2; font-size: 12px; color: var(--accent); }
   .log-way[aria-expanded="true"] { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  /* In a pop-up the sheet is the box, so the form drops its own frame. */
+  .way-sheet .entry { background: transparent; border: 0; padding: 0; }
 
   .entry {
     background: var(--surface-2);
@@ -2880,6 +2882,13 @@
       <span class="eyebrow">Accent color</span>
       <div class="swatches" id="setAccents" role="group" aria-label="Accent color"></div>
     </div>
+    <!-- How the two ways in on Macros open. The owner could not choose
+         between them from pictures, so he can try each. -->
+    <div class="set-group">
+      <span class="eyebrow">Adding food opens</span>
+      <div class="seg" id="setLogOpen" role="group" aria-label="Adding food opens"></div>
+      <p class="set-hint" id="setLogOpenHint"></p>
+    </div>
     <!-- Coach is for setting a routine for someone else. Put away until it is
          wanted; nothing in it is lost either way. -->
     <div class="set-group">
@@ -2971,7 +2980,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-04.55";
+  var BUILD = "2026-10-05.56";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3078,7 +3087,25 @@
   // row's "Tap to estimate" among them); folding it away while one is showing
   // puts that one aside in estShut, and the next one opens it again.
   var logWay = null;
-  var estShut = null;    // true while the plain-words box has taken over
+  var estShut = null;
+
+  // How a way in opens, chosen under Settings: in place under its button, as
+  // a pop-up like the set sheet, or the mix — the short numbers form pops up
+  // and the longer estimate opens in place. store.logOpen; in place until
+  // something else is chosen.
+  var LOG_OPENS = [
+    { id: "inplace", name: "In place", hint: "Each box opens right under its button on the Macros screen." },
+    { id: "popup", name: "Pop-up", hint: "Each box slides up from the bottom, like the set pop-up." },
+    { id: "mix", name: "Mix", hint: "Log calories / protein slides up; Don\u2019t know the numbers opens in place." }
+  ];
+  function logOpen() {
+    var m = store.logOpen;
+    return LOG_OPENS.some(function (x) { return x.id === m; }) ? m : "inplace";
+  }
+  function popsUp(w) {
+    var m = logOpen();
+    return m === "popup" || (m === "mix" && w === "numbers");
+  }    // true while the plain-words box has taken over
   var estHint = "";        // "you have not filled anything in yet"
   var estSaving = false;   // the name field for saving this estimate as a meal is open
   var estAsMeal = false;   // commit the estimate as one meal rather than separate rows
@@ -4940,7 +4967,17 @@
     estRows = [{ qty: "", unit: "", food: "" }];
     estHint = "";
     estAsMeal = false;
-    touch(key); save(); render();
+    touch(key);
+    // It used to go in without a word, the review simply vanishing; a pop-up
+    // closing over the page made that silence total. Said the way the numbers
+    // form says it, above the buttons.
+    var ok = save();
+    var addCal = 0, addPro = 0;
+    made.forEach(function (r) { addCal += rowCal(r); addPro += rowPro(r); });
+    lastAdded = ok ? { label: made.length === 1 ? rowNote(made[0]) || "Entry" : made.length + " items",
+                       cal: addCal, pro: addPro, at: Date.now() } : null;
+    if (ok && popsUp("estimate")) logWay = null;
+    render();
   }
 
   function volume(l) {
@@ -5095,6 +5132,10 @@
     // Only claim it went in if it actually did. The row still renders — it is
     // real for this session — but the savebar says it will not survive.
     lastAdded = ok ? { label: label, cal: c, pro: p, at: Date.now() } : null;
+    // A pop-up goes once it has done its job, leaving the confirmation above
+    // the buttons; in place, the box stays for the next entry. A write that
+    // failed keeps the pop-up up, so its button can say "Not saved".
+    if (ok && logWay === "numbers" && popsUp("numbers")) logWay = null;
     render();
 
     // The new row lands above the fold, so confirm it down here where the thumb is.
@@ -5262,7 +5303,7 @@
         '</div>';
       }).join("");
 
-      return '<section class="review">' +
+      return '<section class="review" id="wayEstimate">' +
         '<header><b>Estimate</b><span>' + fmt(tc) + ' kcal · ' + fmt(tp) + ' g</span></header>' +
         '<div class="rev-units"><span></span><span>kcal</span><span>protein</span></div>' +
         items +
@@ -5530,6 +5571,26 @@
 
     var estOpen = logWay === "estimate" || (!!est && est !== estShut);
     var numOpen = logWay === "numbers" && !estOpen;
+    var numSheet = numOpen && popsUp("numbers"), estSheet = estOpen && popsUp("estimate");
+    var numBody = '<div class="entry" id="wayNumbers">' +
+        '<div class="pair">' +
+          '<div class="field"><label for="fCal">Calories</label>' +
+            '<input id="fCal" inputmode="numeric" placeholder="0"></div>' +
+          '<div class="field"><label for="fPro">Protein · g</label>' +
+            '<input id="fPro" inputmode="numeric" placeholder="0"></div>' +
+        '</div>' +
+        '<div class="field"><label for="fNote">What was it (optional)</label>' +
+          '<input id="fNote" class="text"></div>' +
+        '<button class="btn" id="addFood">Add to ledger</button>' +
+      '</div>';
+    // Cancel on the numbers, which keep no draft; Close on the estimate, whose
+    // table and review are kept and come back when it opens again.
+    function waySheet(w, title, body, done) {
+      return '<div class="sheet way-sheet" data-waysheet="' + w + '">' +
+        '<div class="sheet-inner"><h2>' + title + '</h2>' + body +
+          '<button class="btn ghost" data-wayclose="' + w + '">' + done + '</button>' +
+        '</div></div>';
+    }
     function wayBtn(id, title, sub, open) {
       return '<button class="log-way" data-logway="' + id + '" aria-expanded="' + open + '">' +
         '<span class="lw-t">' + title + '</span><span class="lw-s">' + sub + '</span>' +
@@ -5578,22 +5639,14 @@
             (pendingCount(d) === 1 ? 'it is' : 'they are') + ' filled in.</p>'
           : '') +
         wayBtn("numbers", "Log calories / protein", "You know the numbers", numOpen) +
-        (numOpen
-          ? '<div class="entry" id="wayNumbers">' +
-              '<div class="pair">' +
-                '<div class="field"><label for="fCal">Calories</label>' +
-                  '<input id="fCal" inputmode="numeric" placeholder="0"></div>' +
-                '<div class="field"><label for="fPro">Protein · g</label>' +
-                  '<input id="fPro" inputmode="numeric" placeholder="0"></div>' +
-              '</div>' +
-              '<div class="field"><label for="fNote">What was it (optional)</label>' +
-                '<input id="fNote" class="text"></div>' +
-              '<button class="btn" id="addFood">Add to ledger</button>' +
-            '</div>'
-          : '') +
+        (numOpen && !numSheet ? numBody : '') +
         wayBtn("estimate", "Don\u2019t know the numbers", "Name the food and how much \u2014 it works them out", estOpen) +
-        (estOpen ? estimatorHtml(key, d) : '') +
-      '</section>';
+        (estOpen && !estSheet ? estimatorHtml(key, d) : '') +
+      '</section>' +
+      // A pop-up is drawn inside #view like everything else, so the delegated
+      // Add and every handler wired after this draw reach it unchanged.
+      (numSheet ? waySheet("numbers", "Log calories / protein", numBody, "Cancel") : '') +
+      (estSheet ? waySheet("estimate", "Don\u2019t know the numbers", estimatorHtml(key, d), "Close") : '');
 
     // Deleting is delegated too — see the handler near setTab.
 
@@ -5722,15 +5775,25 @@
         render();
         if (wasOpen) return;
         // Up to just under the top bar, which is sticky: scrolled to the very
-        // top, the button would sit behind it.
+        // top, the button would sit behind it. A pop-up needs no scrolling.
         var top = view.querySelector('[data-logway="' + w + '"]');
         var bar = document.querySelector(".topbar");
-        if (top) window.scrollBy(0, top.getBoundingClientRect().top -
+        if (top && !popsUp(w)) window.scrollBy(0, top.getBoundingClientRect().top -
           (bar ? bar.getBoundingClientRect().bottom : 0) - 8);
         var f = w === "numbers" ? document.getElementById("fCal")
           : est ? null : view.querySelector(estWords ? "#estText" : "[data-eq]");
         if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
       });
+    });
+
+    // Closing a pop-up is folding its box: an estimate showing in it is put
+    // aside, not lost. Its Cancel / Close, or a tap on the dimmed page.
+    function foldWay() { if (est) estShut = est; logWay = null; render(); }
+    view.querySelectorAll("[data-wayclose]").forEach(function (b) {
+      b.addEventListener("click", foldWay);
+    });
+    view.querySelectorAll("[data-waysheet]").forEach(function (sh) {
+      sh.addEventListener("click", function (e) { if (e.target === sh) foldWay(); });
     });
 
     var swap = document.getElementById("estSwap");
@@ -8821,6 +8884,12 @@
         (a.id === l.accent ? "true" : "false") + '" aria-label="' + a.name + ' accent">' +
         '<i class="sw-' + a.id + '"></i><span>' + a.name + '</span></button>';
     }).join("");
+    document.getElementById("setLogOpen").innerHTML = LOG_OPENS.map(function (o) {
+      return '<button data-pick-logopen="' + o.id + '" aria-pressed="' +
+        (o.id === logOpen() ? "true" : "false") + '">' + o.name + '</button>';
+    }).join("");
+    document.getElementById("setLogOpenHint").textContent =
+      LOG_OPENS.filter(function (o) { return o.id === logOpen(); })[0].hint;
     document.getElementById("setCoach").innerHTML = [["off", "Hidden"], ["on", "Shown"]].map(function (o) {
       return '<button data-pick-coach="' + o[0] + '" aria-pressed="' +
         ((o[0] === "on") === !!store.coachOn ? "true" : "false") + '">' + o[1] + '</button>';
@@ -8840,7 +8909,15 @@
     var t = e.target.closest("[data-pick-theme]");
     var a = e.target.closest("[data-pick-accent]");
     var c = e.target.closest("[data-pick-coach]");
-    if (!t && !a && !c) return;
+    var lo = e.target.closest("[data-pick-logopen]");
+    if (!t && !a && !c && !lo) return;
+    if (lo) {
+      store.logOpen = lo.dataset.pickLogopen;
+      save();
+      drawSettings();
+      render();        // a box already open changes how it is shown at once
+      return;
+    }
     if (t) store.theme = t.dataset.pickTheme;
     if (a) store.accent = a.dataset.pickAccent;
     if (c) store.coachOn = c.dataset.pickCoach === "on";
@@ -9509,6 +9586,7 @@
     if (incoming.theme) store.theme = incoming.theme;
     if (incoming.accent) store.accent = incoming.accent;
     if (typeof incoming.coachOn === "boolean") store.coachOn = incoming.coachOn;
+    if (incoming.logOpen) store.logOpen = incoming.logOpen;
     // Gyms come back by id, so every restored day still says where it was.
     if (incoming.gymsRetired) {
       store.gymsRetired = store.gymsRetired || {};

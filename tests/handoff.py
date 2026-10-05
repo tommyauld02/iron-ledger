@@ -691,6 +691,13 @@ with sync_playwright() as pw:
                            ['.tabs button[data-tab="pantry"]', "#combStart"], "#combName"),
         # the set sheet, opened from the card, and its Edit for the movement
         ("a new set",      ['.tabs button[data-tab="gym"]', "#addLift", "[data-r]"], "#seR"),
+        # Last, because the choice is saved and every later editor would
+        # open in it: the same two fields, as pop-ups.
+        ("log calories / protein, as a pop-up",
+                           ["#setBtn", '[data-pick-logopen="popup"]', "#setDone",
+                            '.tabs button[data-tab="macros"]', '[data-logway="numbers"]'], "#fCal"),
+        ("don't know the numbers, as a pop-up",
+                           ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], '[data-ef="0"]'),
         ("the movement, from the set sheet",
                            ['.tabs button[data-tab="gym"]', "#addLift", "[data-addset]", "#seMoveBtn"], "#seMove"),
     ]
