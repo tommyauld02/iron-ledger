@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright
-import os, json, datetime
+import io, os, json, datetime
 import re
 
 # Rule 5 is 44px, measured. This suite measures controls straight after the
@@ -2752,6 +2752,85 @@ with sync_playwright() as pw:
     pick("inplace")
     q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
     check("opens: and in place is in place again", q.evaluate(SHEETS)==[] and q.evaluate(INLINE)==[True,False])
+    c.close()
+
+    # ---------- TEAL MEANS YOU CAN TAP IT ----------
+    # Asked for from real use: which small words are buttons? Twenty kinds were
+    # the same grey as the labels around them. The rule now runs both ways, and
+    # this walks the screens to hold it: a button with no box of its own is
+    # teal (or carries a teal marker — a name with its ▾ or "tap to open"), and
+    # teal text is never something that cannot be pressed.
+    TG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    TSTORE={"days":{Ts:{"updated":1,"goal":TG,"supps":{"s1":True},"gymNote":"Hotel gym",
+        "food":[{"id":"m1","note":"","items":[{"id":"i1","cal":330,"pro":52,"note":"Chicken breast"},
+                                               {"id":"i2","cal":215,"pro":4,"note":"White rice"}]},
+                {"id":"f1","cal":130,"pro":30,"note":"Protein coffee"}],
+        "lifts":[{"id":"l1","cat":"back","movement":"Dumbbell Curl","ss":"g1","sets":[{"w":30,"r":12}]},
+                 {"id":"l2","cat":"back","movement":"Barbell Curl","ss":"g1","sets":[{"w":60,"r":10}]},
+                 {"id":"l3","cat":"back","movement":"Barbell Row","note":"Grip gave out","sets":[{"w":135,"r":10}]},
+                 {"id":"l4","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":300000,"closed":True}]}},
+        "supps":[{"id":"s1","name":"Creatine","dose":"5 g"},{"id":"s2","name":"Zinc","dose":"50 mg"}],
+        "pantry":[{"id":"p1","name":"Eggs","serveQty":1,"serveUnit":"egg","serveG":None,"sCal":72,"sPro":6,"aliases":[],"secs":["breakfast","dinner"]},
+                  {"id":"p2","name":"Protein coffee","serveQty":1,"serveUnit":"bottle","serveG":None,"sCal":130,"sPro":30,"aliases":[]}],
+        "moves":{"back":["Dumbbell Curl","Barbell Curl","Barbell Row","Lat Pulldown"]},"movesOwned":True,
+        "coachOn":True,"goal":TG,"region":"United States","v":1,"seen":True}
+    TEALJS=r"""()=>{const t=document.createElement('i');t.style.color='var(--accent)';document.body.appendChild(t);
+      const acc=getComputedStyle(t).color;t.remove();return acc;}"""
+    BARE=r"""(acc)=>{const out=[];
+      document.querySelectorAll('main button, main [role=button]').forEach(el=>{
+        const r=el.getBoundingClientRect(),s=getComputedStyle(el);
+        if(!r.width||!r.height||s.display==='none'||s.visibility==='hidden'||el.classList.contains('cal-cell')) return;
+        const filled=s.backgroundColor!=='rgba(0, 0, 0, 0)'&&s.backgroundColor!=='transparent';
+        const border=parseFloat(s.borderTopWidth)+parseFloat(s.borderLeftWidth)>0&&s.borderTopColor!=='rgba(0, 0, 0, 0)'&&s.borderStyle!=='none';
+        if(filled||border) return;
+        const marked=s.color===acc||[...el.querySelectorAll('*')].some(c=>getComputedStyle(c).color===acc&&c.textContent.trim());
+        out.push([(el.innerText||el.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim().slice(0,24),marked]);});
+      return out;}"""
+    STRAY=r"""(acc)=>{const out=[];
+      document.querySelectorAll('.topbar *, main *').forEach(el=>{
+        if(![...el.childNodes].some(n=>n.nodeType===3&&n.nodeValue.trim())) return;
+        const s=getComputedStyle(el),r=el.getBoundingClientRect();
+        if(!r.width||s.display==='none'||s.visibility==='hidden'||s.color!==acc) return;
+        if(el.closest('button,a,label,select,input,textarea,[role=button],[data-tab]')) return;
+        out.push(el.textContent.trim().replace(/\s+/g,' ').slice(0,30));});
+      return out;}"""
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("teal: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", TSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    acc=q.evaluate(TEALJS)
+    bare_all, stray_all = [], []
+    for t in ["macros","gym","pantry","coach","log"]:
+        q.click('.tabs button[data-tab="%s"]'%t); q.wait_for_timeout(400)
+        if t=="macros": q.click(".meal-open"); q.wait_for_timeout(300)
+        if t=="coach" and q.locator("[data-openday]").count(): q.locator("[data-openday]").first.click(); q.wait_for_timeout(300)
+        bare_all += [(t,)+tuple(x) for x in q.evaluate(BARE, acc)]
+        stray_all += [(t,x) for x in q.evaluate(STRAY, acc)]
+    check("teal: the walk met the small buttons it is about",
+          sum(1 for x in bare_all if x[0] in ("macros","gym","pantry"))>=12, str(len(bare_all)))
+    check("teal: every button without a box of its own is teal, or carries a teal marker",
+          all(m for _,_,m in bare_all), str([x for x in bare_all if not x[2]][:6]))
+    check("teal: and nothing teal is a word that cannot be pressed", not stray_all, str(stray_all[:6]))
+
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    row=q.evaluate("""()=>{const r=document.querySelector('.supp-item'),b=n=>r.querySelector(n).getBoundingClientRect();
+      const btns=[...r.querySelectorAll('button')].map(x=>x.getBoundingClientRect());
+      return {nmLeft:b('.nm').left, btnLeft:Math.min(...btns.map(x=>x.left)), nmTop:b('.nm').top, doseTop:b('.dose').top,
+              doseLeft:b('.dose').left};}""")
+    check("teal: a checklist row reads name first, its buttons beside it",
+          row["nmLeft"]<row["btnLeft"] and row["nmTop"]<row["doseTop"] and abs(row["doseLeft"]-row["nmLeft"])<2, str(row))
+
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    eb=q.locator("#editSplits").bounding_box()
+    q.mouse.move(eb["x"]+eb["width"]/2, eb["y"]+eb["height"]/2); q.mouse.down(); q.wait_for_timeout(80)
+    pressed=q.eval_on_selector("#editSplits","e=>parseFloat(getComputedStyle(e).opacity)")
+    q.mouse.up(); q.wait_for_timeout(200)
+    check("teal: a button shows it is being pressed", pressed<1, str(pressed))
+    # Chromium applies :active with or without it, so only the source can say
+    check("teal: and the touch hook iOS needs for that is there (checked in the source)",
+          'document.addEventListener("touchstart"' in io.open("iron-ledger.html", encoding="utf-8").read())
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

@@ -349,7 +349,7 @@
     font-size: 11px;
     letter-spacing: .16em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--ink-2);
     display: block;
   }
   .datelabel .full {
@@ -1098,7 +1098,7 @@
     font-weight: 600;
     letter-spacing: .16em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--ink-2);
   }
   .lib-add {
     min-height: 44px;
@@ -1300,7 +1300,7 @@
     font-weight: 400;
     letter-spacing: .1em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--ink-2);
   }
   .pan-edit {
     grid-column: 2 / -1;
@@ -1521,7 +1521,7 @@
     text-transform: uppercase;
     color: var(--ink-2);
   }
-  .month.is-now h4 { color: var(--accent); }
+  .month.is-now h4 { color: var(--ink); font-weight: 700; }
   .dow-row, .month-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
@@ -1636,9 +1636,13 @@
     border: 1px solid var(--rule);
     border-radius: 2px;
   }
-  .supp-item .nm { font-size: 15px; }
+  /* Placed outright: the buttons carry a row span, and grid places items
+     with a definite row first, so a name left to auto-placement landed in
+     the last column and the row read backwards. */
+  .supp-item .nm { grid-column: 1; grid-row: 1; font-size: 15px; }
   .supp-item .dose {
     grid-column: 1;
+    grid-row: 2;
     font-family: var(--font-num);
     font-size: 11px;
     color: var(--ink-3);
@@ -2257,7 +2261,7 @@
     font-size: 11px;
     letter-spacing: .12em;
     text-transform: uppercase;
-    color: var(--accent);
+    color: var(--ink-2);
   }
   .ss-head .lap {
     font-family: var(--font-num);
@@ -2767,6 +2771,25 @@
   /* a notice has nothing to undo, so it has no button */
   .undobar button[hidden] { display: none; }
 
+  /* ---------- teal means you can tap it ---------- */
+  /* The owner could not tell which small words were buttons: twenty kinds of
+     them were set in the same grey as the labels around them. One rule now —
+     a word in the accent is something you can press, and a grey word is only
+     a label — so it is stated once here, after every component's own rule,
+     rather than patched into twenty places. Hover keeps each one's own colour
+     (red for Remove). Teal words that are not buttons were made grey for the
+     rule to hold; sweep checks both directions. */
+  .split-head button, .day-note button, .lift-note button, .note-add,
+  .lift-foot button, .ss-head button, .pan-item .rm, .pan-item .mv,
+  .supp-item button, .meal-actions button, .meal-item .mi-out, .t-del, .split-rm,
+  .meal-open .mc, .rt-head .ct, .pending-chip, .grip, .lift-name .chev { color: var(--accent); }
+  .lift-name .chev { font-size: 13px; }
+
+  /* Every press shows. Most buttons gave no sign a tap had landed, which is
+     how a tap gets repeated. iOS only applies :active once a touchstart
+     listener exists — the script adds an empty one. */
+  button:active:not(:disabled) { opacity: .6; }
+
   /* ---------- tabs ---------- */
   /* as many columns as there are tabs showing: Coach can be switched off */
   .tabs {
@@ -2980,7 +3003,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-05.56";
+  var BUILD = "2026-10-06.57";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -9724,6 +9747,10 @@
   st.setAttribute("name", "apple-mobile-web-app-status-bar-style");
   st.setAttribute("content", "default");
   document.head.appendChild(st);
+
+  // Without any touchstart listener, iOS Safari never applies :active, so
+  // the press state above would not exist on the phone.
+  document.addEventListener("touchstart", function () {}, { passive: true });
 
   load();
   // Reconciles the pre-paint guess with the log itself. They only disagree

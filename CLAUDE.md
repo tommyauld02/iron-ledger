@@ -10,7 +10,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~920 checks, 14
+**1. Nothing ships without `./verify.sh` passing.** 21 suites, ~930 checks, 14
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -378,6 +378,30 @@ an unticked one. The `.sw-*` swatch colours repeat the palette on purpose, so
 the picker shows each accent as it would look in the current theme; `sweep`
 applies every accent in both themes and fails if a swatch and what it applies
 ever disagree.
+
+**Teal means you can tap it; grey is only a label.** Asked for by the owner,
+who could not tell which small words were buttons: an audit found twenty kinds
+of text-only control (Edit splits, + Note, Remove, Meals ▾, Take out, ✕…) in
+the same grey as the labels beside them. They are teal now, set once in a block
+headed *teal means you can tap it* placed after every component's own rule,
+rather than patched into twenty places. A button that is a name (a movement, a
+meal, a Coach day) keeps its ink and carries a teal marker instead: its ▾, or
+*tap to open*. For the rule to mean anything it runs both ways, so teal words
+that could not be pressed went grey: the header's day name, the meal tags under
+a pantry food, *Superset · 2*, the current month on the Log tab, and the Coach
+library's headings. `sweep` walks every tab and fails on either kind of
+exception, so the next grey button or teal label is caught, not discovered.
+
+Every press now shows (`button:active` fades to 60%), because most buttons
+gave no sign that a tap had landed, and that is how taps get repeated. iOS
+Safari applies `:active` only once some `touchstart` listener exists, so the
+script adds an empty one. Chromium needs none, so that part is checked against
+the source, and the check says so.
+
+The checklist rows on the Pantry tab read backwards for as long as they had
+existed: the buttons carried a row span, grid places items with a definite row
+first, and the name, left to auto-placement, landed in the last column. Name
+and dose are now placed outright.
 
 **`darkcheck` measures only what its fixture puts on screen.** It carried no
 meal, no checklist, no running clock and no open review, so every state that
