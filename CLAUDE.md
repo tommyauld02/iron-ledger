@@ -1022,6 +1022,11 @@ Two lessons paid for the hard way:
   same fixture 21px taller, and whether a day fits depends on how much is
   logged anyway. Assert what the feature owns — the folded buttons stay
   small, folding saves most of a screen — with headroom, not an exact fit.
+- **A month written into a check is a date bomb.** The fixtures place days
+  relative to today, so "five days ago" is September for a while and then is
+  not: a special-day check that looked for "Sep" passed for weeks and failed
+  in CI on October 6th — CI runs on UTC, so it crossed first. Work out the
+  expected date from the fixture's own date.
 - **Tests ran for a while against a stale generated copy** and passed
   everything against an old build. The suites now read `iron-ledger.html`
   directly, so there is nothing to go stale.

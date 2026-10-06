@@ -2028,7 +2028,11 @@ with sync_playwright() as pw:
     check("special: a split's movement cannot be taken off from here", q.eval_on_selector("#mDrop","e=>e.disabled"))
     q.click("#addLift"); q.wait_for_timeout(300)
     last=q.eval_on_selector(".lift .last","e=>e.textContent")
-    check("special: the movement's last time is found wherever it was", "Sep" in last and "35×10" in last, last)
+    # The date as the app writes it ("Oct 1"), worked out rather than assumed:
+    # this said "Sep" when it was written, and failed the day five days back
+    # crossed into October.
+    gd=datetime.date.fromisoformat(SGYM); gday="%s %d" % (gd.strftime("%b"), gd.day)
+    check("special: the movement's last time is found wherever it was", ("Last · "+gday) in last and "35×10" in last, last)
     log_set(q, 0, 25, 20)
     check("special: and home dumbbells can beat it, by the same rule",
           q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 25×20 over 35×10",
