@@ -12,6 +12,7 @@ store={"days":{T:{"food":[
             "sets":[{"w":135,"r":10,"tech":"restpause"}]},
            {"id":"l2","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":452000,"closed":True},
            {"id":"l3","cat":"back","movement":"Seated Cable Row","sets":[]}],
+  "cardio":[{"id":"c1","type":"Incline walk on the treadmill","min":30,"dist":3.1,"cal":265,"t":1}],
   "gym":"gA","updated":1,"goal":G},
   # last time, so every card carries its set to beat, at its longest: a tag
   # on both sides of a beaten line, and one still to beat
@@ -19,6 +20,7 @@ store={"days":{T:{"food":[
   "lifts":[{"id":"p1","cat":"back","movement":"Barbell Row","sets":[{"w":125,"r":10,"tech":"restpause"}]},
            {"id":"p2","cat":"back","movement":"Lat Pulldown","sets":[{"w":110,"r":10}]},
            {"id":"p3","cat":"back","movement":"Seated Cable Row","sets":[{"w":225,"r":12,"tech":"restpause"}]}]}},
+ "cardioTypes":["Incline walk on the treadmill","Bike"],
  "gyms":[{"id":"gA","name":"Apartment building gym","tag":"APTGYM24"},{"id":"g24","name":"24 Hour Fitness","tag":"24"}],"gymLast":"gA",
  "moves":None,"coachOn":True,"goal":G,"region":"United States",
  # sorted and not, so the section tabs, headings and Move / Sort are measured
@@ -37,7 +39,7 @@ DEVICES=[("iPhone SE",320,568),("iPhone 13 mini",375,812),("iPhone 15",393,852),
          ("iPhone 17 Pro",402,874),("iPhone 17 Pro Max",440,956),
          ("iPhone 15 Pro Max",430,932),("landscape 17 Pro",874,402)]
 # Macros three times: folded, then with each way in open.
-TABS=["macros","macros:numbers","macros:estimate","pantry","gym","coach","log"]
+TABS=["macros","macros:numbers","macros:estimate","pantry","gym","cardio","coach","log"]
 
 # iOS zooms the page whenever you focus a field smaller than 16px, and never zooms back
 ZOOM="""()=>{const bad=[];
@@ -87,6 +89,8 @@ with sync_playwright() as pw:
                 FAILS.append("%s: set-to-beat lines not on screen to measure" % name)
             if t=="gym" and not p.eval_on_selector_all(".day-note, .lift .lift-note","e=>e.length")>=2:
                 FAILS.append("%s: notes not on screen to measure" % name)
+            if t=="cardio" and not p.eval_on_selector_all(".cardio-card","e=>e.length"):
+                FAILS.append("%s: no cardio session on screen to measure" % name)
             if t=="pantry" and p.eval_on_selector_all("[data-pantab]","e=>e.length")<6:
                 FAILS.append("%s: pantry section tabs not on screen to measure" % name)
             # A stray "+" once turned a whole paragraph of the pantry form into

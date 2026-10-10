@@ -37,9 +37,10 @@ store = {
                    "sets": [{"w": 135, "r": 10}, {"w": 155, "r": 8}]},
                   {"id": "l2", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 120, "r": 10}, {"w": 120, "r": 9}], "doneAt": 1, "lapMs": 452000, "closed": True},
                   {"id": "l3", "cat": "back", "movement": "Seated Cable Row", "sets": [{"w": 100, "r": 12}], "doneAt": 2, "lapMs": None, "closed": True}],
+        "cardio": [{"id": "c1", "type": "Incline walk", "min": 30, "dist": 3.1, "cal": 265, "t": 1}],
         "gym": "gA", "updated": 1, "goal": G}},
     "gyms": [{"id": "gA", "name": "Apartment gym", "tag": "APT"}, {"id": "g24", "name": "24 Hour Fitness", "tag": "24"}],
-    "gymLast": "gA",
+    "gymLast": "gA", "cardioTypes": ["Incline walk", "Bike"],
     "moves": None, "coachOn": True, "goal": G, "region": "United States",
     # one sorted and one not, so the section tabs, Move and Sort are all hit
     "pantry": [{"id": "p1", "name": "costco protein coffee", "serveQty": 1,
@@ -144,7 +145,7 @@ def sweep(p):
 
 # Macros is walked three times: folded, then with each way in open, because
 # a control that only exists after a press is the one nothing else measures.
-TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "coach", "log"]
+TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "log"]
 covered = []          # anything a tap cannot reach — this suite gates on it
 
 with sync_playwright() as pw:

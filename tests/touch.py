@@ -113,7 +113,7 @@ with sync_playwright() as pw:
           and p.locator(".t-row").count()==3)
 
     # ---- every tab reachable by finger, and the whole tab bar is 48px ----
-    for t in ["pantry","gym","coach","log","macros"]:
+    for t in ["pantry","gym","cardio","coach","log","macros"]:
         tb=p.locator('.tabs button[data-tab="%s"]'%t).bounding_box()
         p.touchscreen.tap(tb["x"]+tb["width"]/2, tb["y"]+tb["height"]/2); p.wait_for_timeout(400)
         check("tab %s opens on tap"%t,

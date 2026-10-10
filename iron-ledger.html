@@ -2771,6 +2771,58 @@
   /* a notice has nothing to undo, so it has no button */
   .undobar button[hidden] { display: none; }
 
+  /* ---------- cardio ---------- */
+  .cardio-goal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+  }
+  .cg-top, .cg-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .cg-top { align-items: baseline; }
+  .cg-num { font-family: var(--font-num); font-size: 13px; color: var(--ink-2); white-space: nowrap; }
+  .cg-num b { font-size: 20px; color: var(--ink); }
+  .cg-track { height: 8px; background: var(--rule); border-radius: 4px; overflow: hidden; }
+  .cg-fill { height: 100%; background: var(--ink-3); }
+  .cg-fill.is-met { background: var(--hit); }
+  .cg-left { font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
+  .cg-left.is-met { color: var(--hit); }
+  .cardio-goal .field input { font-size: 15px; }
+  .c-edit { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  /* minutes · miles · calories: three short numbers side by side */
+  .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .seg.four { grid-template-columns: repeat(2, 1fr); }
+  .c-acts { display: flex; gap: 2px; }
+  #cDrop {
+    height: 46px;
+    font-size: 22px;
+    line-height: 1;
+    color: var(--ink-2);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  #cDrop:disabled { opacity: .45; }
+  /* the Log tab's last eight weeks */
+  .cardio-track { display: flex; flex-direction: column; gap: 8px; }
+  .ct-chart {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    align-items: end;
+    height: 110px;
+    border-bottom: 1px solid var(--rule);
+  }
+  /* grey under the goal, green on it: not teal, which means "tap" */
+  .ct-bar { min-height: 2px; background: var(--ink-3); border-radius: 2px 2px 0 0; }
+  .ct-bar.is-met { background: var(--hit); }
+  .ct-goal { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--ink-2); }
+  .ct-axis { display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-num); font-size: 10px; color: var(--ink-2); }
+
   /* ---------- teal means you can tap it ---------- */
   /* The owner could not tell which small words were buttons: twenty kinds of
      them were set in the same grey as the labels around them. One rule now —
@@ -2868,6 +2920,7 @@
     <button role="tab" data-tab="macros" aria-selected="true">Macros</button>
     <button role="tab" data-tab="pantry" aria-selected="false">Pantry</button>
     <button role="tab" data-tab="gym" aria-selected="false">Gym</button>
+    <button role="tab" data-tab="cardio" aria-selected="false">Cardio</button>
     <button role="tab" data-tab="coach" aria-selected="false" hidden>Coach</button>
     <button role="tab" data-tab="log" aria-selected="false">Log</button>
   </nav>
@@ -3003,7 +3056,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-06.57";
+  var BUILD = "2026-10-09.58";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3161,6 +3214,11 @@
   // variable — it is always (now - workoutStart), so a phone that suspends the
   // app mid-session comes back with the right number instead of a stopped one.
   var workoutTick = null;
+  var cardioTick = null;          // the running cardio clock's once-a-second redraw
+  var cardioPicking = false;      // Start pressed: choosing what the session is
+  var cardioGoalEditing = false;
+  var cardioEditing = null;       // the id of a session being changed
+  var cardioLastType = null;      // the add form opens on the type last used
   // null, "share" or "load" — which routine-sharing panel is open on Coach
   var suppEditing = null;   // which checklist item is being renamed
   var liftEditing = null;   // which movement on the day is having its name changed
@@ -3389,6 +3447,98 @@
     var ran = Math.max(0, Date.now() - d.workoutStart);
     delete d.workoutStart;
     if (ran <= MAX_SESSION_MS) d.workoutMs = (Number(d.workoutMs) || 0) + ran;
+  }
+
+  // ---------- cardio ----------
+  // Asked for by a tester, Nygle, and built to the Gym tab's shape but kept
+  // simple: a day carries d.cardio, a list of {id, type, min, dist?, t};
+  // the types are the owner's own names (store.cardioTypes), like movements;
+  // and a weekly goal (store.cardioGoal) in minutes or in sessions. Weeks run
+  // Sunday to Saturday, the way the calendar is drawn.
+  function cardioTypes() {
+    if (!Array.isArray(store.cardioTypes)) store.cardioTypes = [];
+    return store.cardioTypes;
+  }
+  // What the goal counts and how often. Minutes a week is the default — the
+  // owner's choice — and the owner asked for distance and calories burned as
+  // goals too, each by the day, the week or the month. Switching what is
+  // counted or how often goes to that pair's starting number: minutes do not
+  // convert to miles, and re-reading 150 a week as 150 a day would be the
+  // unit picker's trap in another form.
+  var CARDIO_KINDS = [["min", "Minutes"], ["dist", "Distance"], ["cal", "Calories"], ["sessions", "Sessions"]];
+  var CARDIO_PERIODS = [["day", "Daily"], ["week", "Weekly"], ["month", "Monthly"]];
+  var CARDIO_GOAL_START = {
+    min: { day: 30, week: 150, month: 600 }, dist: { day: 2, week: 10, month: 40 },
+    cal: { day: 300, week: 1500, month: 6000 }, sessions: { day: 1, week: 3, month: 12 }
+  };
+  function cardioGoal() {
+    var g = store.cardioGoal || {};
+    var kind = CARDIO_GOAL_START[g.kind] ? g.kind : "min";
+    var period = g.period === "day" || g.period === "month" ? g.period : "week";
+    return { kind: kind, period: period, v: Number(g.v) > 0 ? Number(g.v) : CARDIO_GOAL_START[kind][period] };
+  }
+  function cardioMs(d) { return d && d.cardioStart ? Math.max(0, Date.now() - d.cardioStart) : 0; }
+  function weekStart(key) {
+    var dt = parseYmd(key);
+    dt.setDate(dt.getDate() - dt.getDay());
+    return ymd(dt);
+  }
+  // The first day of the period a day falls in.
+  function periodStart(key, period) {
+    if (period === "day") return key;
+    if (period === "month") return key.slice(0, 8) + "01";
+    return weekStart(key);
+  }
+  // Totals over the period a day falls in: the day, its week or its month.
+  function cardioTotals(key, period) {
+    var t = { min: 0, sessions: 0, dist: 0, cal: 0 }, s0 = parseYmd(periodStart(key, period));
+    var n = period === "day" ? 1 : period === "week" ? 7 : new Date(s0.getFullYear(), s0.getMonth() + 1, 0).getDate();
+    for (var i = 0; i < n; i++) {
+      var dt = new Date(s0); dt.setDate(s0.getDate() + i);
+      ((store.days[ymd(dt)] || {}).cardio || []).forEach(function (c) {
+        t.min += Number(c.min) || 0; t.sessions++; t.dist += Number(c.dist) || 0; t.cal += Number(c.cal) || 0;
+      });
+    }
+    return t;
+  }
+  function fmtDist(x) { return String(Math.round(Number(x) * 100) / 100); }
+  function cardioText(c) {
+    return c.min + " min" + (Number(c.dist) ? " · " + fmtDist(c.dist) + " mi" : "") +
+      (Number(c.cal) ? " · " + fmt(c.cal) + " kcal" : "");
+  }
+  function goalWord(kind, n) {
+    return kind === "min" ? "min" : kind === "dist" ? "mi" : kind === "cal" ? "kcal" : (n === 1 ? "session" : "sessions");
+  }
+  function goalNum(kind, n) { return kind === "dist" ? fmtDist(n) : fmt(n); }
+  function periodWord(period) { return period === "day" ? "a day" : period === "month" ? "a month" : "a week"; }
+  // "This week", "Today", "This month" — or which one, when looking back.
+  function periodLabel(key, period) {
+    var mine = periodStart(key, period) === periodStart(TODAY, period);
+    if (period === "day") return mine ? "Today" : shortDate(key);
+    if (period === "month") return mine ? "This month" : parseYmd(key).toLocaleDateString("en-US", { month: "long" });
+    return mine ? "This week" : "Week of " + shortDate(weekStart(key));
+  }
+  // The last time this type was done before a day, for the card's Last line.
+  function cardioLast(type, beforeKey) {
+    var keys = Object.keys(store.days).filter(function (k) { return k < beforeKey; }).sort().reverse();
+    for (var i = 0; i < keys.length; i++) {
+      var cs = store.days[keys[i]].cardio || [];
+      for (var j = cs.length - 1; j >= 0; j--) if (cs[j].type === type) return { key: keys[i], c: cs[j] };
+    }
+    return null;
+  }
+  // The clock becomes a session. The workout clock's bound applies: past six
+  // hours it was forgotten, not ridden, and logging it would be a confident
+  // wrong number. Under a minute it was a mis-tap.
+  function stopCardio(d) {
+    if (!d || !d.cardioStart) return { none: true };
+    var ran = Math.max(0, Date.now() - d.cardioStart), type = d.cardioType;
+    delete d.cardioStart; delete d.cardioType;
+    if (ran > MAX_SESSION_MS) return { stale: true };
+    if (ran < 60000 || !type) return { short: true };
+    var c = { id: uid(), type: type, min: Math.round(ran / 60000), t: Date.now() };
+    (d.cardio || (d.cardio = [])).push(c);
+    return { c: c };
   }
 
   // ---------- the daily checklist ----------
@@ -5198,6 +5348,7 @@
     try {
       if (tab === "macros") renderMacros(key, d);
       else if (tab === "gym") renderGym(key, d);
+      else if (tab === "cardio") renderCardio(key, d);
       else if (tab === "pantry") renderPantry();
     else if (tab === "coach") renderCoach();
       else renderLog();
@@ -5583,6 +5734,7 @@
             '<dt>Pantry</dt><dd>Save things you eat often, once. Pre-made items are counted in bottles ' +
               'and bars, not weighed.</dd>' +
             '<dt>Gym</dt><dd>Pick a split, add movements, log weight and reps. It shows what you lifted last time.</dd>' +
+            '<dt>Cardio</dt><dd>Time a session or add one, named your way, and see the week against your goal.</dd>' +
             '<dt>Log</dt><dd>The year at a glance. Green means you hit your target, red means you missed.</dd>' +
           '</dl>' +
           '<p>The daily target below starts at under 2,000 calories and above 150 g protein — ' +
@@ -6108,6 +6260,436 @@
     }
     return locked ? '' : '<button class="note-add" data-liftnote="' + esc(l.id) + '" aria-label="Add a note on ' +
       esc(l.movement) + '">+ Note</button>';
+  }
+
+  function renderCardio(key, d) {
+    var list = d.cardio || [];
+    var done = !!d.cardioDone;
+    var types = cardioTypes();
+    var g = cardioGoal(), wk = cardioTotals(key, g.period);
+    var have = wk[g.kind];
+    var met = have >= g.v;
+    var running = !!d.cardioStart, stale = running && cardioMs(d) > MAX_SESSION_MS;
+    var newStyle = 'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);' +
+      'border-radius:2px;font-size:15px;width:100%"';
+    if (cardioEditing && !list.some(function (c) { return c.id === cardioEditing; })) cardioEditing = null;
+
+    function typeOpts(chosen) {
+      return types.map(function (t) {
+        return '<option value="' + esc(t) + '"' + (t === chosen ? ' selected' : '') + '>' + esc(t) + '</option>';
+      }).join("") + '<option value="__new">+ New type\u2026</option>';
+    }
+    var pickFirst = types.indexOf(cardioLastType) > -1 ? cardioLastType : types[0];
+
+    // Start, the chooser it opens, or the running clock — at the top, where
+    // the Gym tab keeps its own.
+    var clock = done ? ''
+      : running
+        ? '<div class="workout is-running' + (stale ? ' is-stale' : '') + '">' +
+            '<span class="wo-label">' + (stale ? 'Left running' : esc(d.cardioType || 'Cardio')) + '</span>' +
+            '<span class="wo-clock" id="cardioClock">' + fmtDur(cardioMs(d)) + '</span>' +
+            '<button id="cardioDiscard">Discard</button>' +
+          '</div>' +
+          (stale
+            ? '<p class="wo-note">Longer than a session \u2014 this will not be logged. Discard it and add the minutes below.</p>'
+            : '<button class="btn" id="cardioStop" style="width:100%">Stop and log it</button>')
+        : cardioPicking
+          ? '<section class="entry" id="cardioPick">' +
+              '<div class="field"><label for="cPickSel">What are you doing?</label>' +
+                '<select id="cPickSel">' + typeOpts(pickFirst) + '</select></div>' +
+              '<input id="cPickNew" class="text" placeholder="Name it \u2014 Incline walk, Bike\u2026" aria-label="Name this cardio" ' +
+                (types.length ? 'hidden ' : '') + newStyle + '>' +
+              '<div class="sheet-actions"><button class="btn" id="cPickGo">Start</button>' +
+                '<button class="btn ghost" id="cPickCancel">Cancel</button></div>' +
+            '</section>'
+          : '<button class="btn ghost" id="cardioStart" style="width:100%">Start cardio session</button>';
+
+    var dayMin = 0, dayDist = 0, dayCal = 0;
+    list.forEach(function (c) { dayMin += Number(c.min) || 0; dayDist += Number(c.dist) || 0; dayCal += Number(c.cal) || 0; });
+    var stats = [[list.length, list.length === 1 ? 'session' : 'sessions'], [fmt(dayMin), 'minutes']];
+    if (dayDist) stats.push([fmtDist(dayDist), 'miles']);
+    if (dayCal) stats.push([fmt(dayCal), 'kcal']);
+    if (g.period !== "day" && stats.length < 4) stats.push([goalNum(g.kind, have), goalWord(g.kind, have) + ' ' + (periodStart(key, g.period) === periodStart(TODAY, g.period) ? 'this ' : 'that ') + g.period]);
+    var doneCard = done
+      ? '<section class="daydone">' +
+          '<div class="dd-head"><span class="dd-title">Cardio complete</span><button id="cardioUnlock">Unlock</button></div>' +
+          '<div class="dd-stats" style="grid-template-columns:repeat(' + stats.length + ',1fr)">' +
+            stats.map(function (x) { return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join("") +
+          '</div>' +
+          '<div class="dd-time">' + (met ? 'Goal met \u00b7 ' + goalNum(g.kind, g.v) + ' ' + goalWord(g.kind, g.v) + ' ' + periodWord(g.period)
+                                          : goalNum(g.kind, g.v - have) + ' ' + goalWord(g.kind, g.v - have) + ' to go on the goal of ' +
+                                            goalNum(g.kind, g.v) + ' ' + goalWord(g.kind, g.v) + ' ' + periodWord(g.period)) + '</div>' +
+        '</section>'
+      : '';
+
+    var weekLabel = periodLabel(key, g.period);
+    var leftText = met
+      ? '\u2713 Goal met' + (have > g.v ? ' \u00b7 ' + goalNum(g.kind, have - g.v) + ' ' + goalWord(g.kind, have - g.v) + ' over' : '')
+      : goalNum(g.kind, g.v - have) + ' ' + goalWord(g.kind, g.v - have) + ' to go';
+    function goalLabel(kind, period) {
+      return (kind === "min" ? "Minutes" : kind === "dist" ? "Miles" : kind === "cal" ? "Calories" : "Sessions") + " " + periodWord(period);
+    }
+    var goalHtml = cardioGoalEditing
+      ? '<div class="cardio-goal" id="cgEdit">' +
+          '<span class="eyebrow">Cardio goal \u00b7 what to count</span>' +
+          '<div class="seg four" id="cgKind" role="group" aria-label="What the goal counts">' +
+            CARDIO_KINDS.map(function (o) {
+              return '<button data-cgkind="' + o[0] + '" aria-pressed="' + (o[0] === g.kind) + '">' + o[1] + '</button>';
+            }).join("") + '</div>' +
+          '<span class="eyebrow">How often</span>' +
+          '<div class="seg" id="cgPeriod" role="group" aria-label="How often">' +
+            CARDIO_PERIODS.map(function (o) {
+              return '<button data-cgperiod="' + o[0] + '" aria-pressed="' + (o[0] === g.period) + '">' + o[1] + '</button>';
+            }).join("") + '</div>' +
+          '<div class="field"><label for="cgVal" id="cgValLab">' + goalLabel(g.kind, g.period) + '</label>' +
+            '<input id="cgVal" inputmode="decimal" value="' + g.v + '"></div>' +
+          '<p class="est-note" id="cgHint" hidden style="color:var(--miss)"></p>' +
+          '<div class="sheet-actions"><button class="btn" id="cgSave">Save goal</button>' +
+            '<button class="btn ghost" id="cgCancel">Cancel</button></div>' +
+        '</div>'
+      : '<div class="cardio-goal">' +
+          '<div class="cg-top"><span class="eyebrow">' + weekLabel + '</span>' +
+            '<span class="cg-num"><b>' + goalNum(g.kind, have) + '</b> of ' + goalNum(g.kind, g.v) + ' ' + goalWord(g.kind, g.v) + '</span></div>' +
+          '<div class="cg-track"><div class="cg-fill' + (met ? ' is-met' : '') + '" style="width:' +
+            Math.min(100, Math.round(have / g.v * 100)) + '%"></div></div>' +
+          '<div class="cg-foot"><span class="cg-left' + (met ? ' is-met' : '') + '">' + leftText + ' \u00b7 ' +
+              wk.sessions + (wk.sessions === 1 ? ' session' : ' sessions') + ' so far</span>' +
+            '<button class="note-add" id="cgOpen">Goal \u00b7 edit</button></div>' +
+        '</div>';
+
+    var cards = list.map(function (c) {
+      var prev = cardioLast(c.type, key);
+      var editing = cardioEditing === c.id && !done;
+      return '<article class="lift cardio-card" data-cid="' + esc(c.id) + '" style="--catcolor:var(--accent)">' +
+        '<div class="spine"></div><div class="body">' +
+          '<div class="lift-head"><h3>' + esc(c.type) + '</h3></div>' +
+          '<p class="last">' + (prev ? 'Last \u00b7 ' + shortDate(prev.key) + ' \u2014 <em>' + esc(cardioText(prev.c)) + '</em>'
+                                     : 'First time logging this one.') + '</p>' +
+          (editing
+            ? '<div class="c-edit">' +
+                '<div class="trio">' +
+                  '<div class="field"><label for="ceMin">Minutes</label><input id="ceMin" inputmode="numeric" value="' + esc(c.min) + '"></div>' +
+                  '<div class="field"><label for="ceDist">Miles</label><input id="ceDist" inputmode="decimal" placeholder="opt." value="' +
+                    (Number(c.dist) ? fmtDist(c.dist) : '') + '"></div>' +
+                  '<div class="field"><label for="ceCal">Calories</label><input id="ceCal" inputmode="numeric" placeholder="opt." value="' +
+                    (Number(c.cal) ? Math.round(c.cal) : '') + '"></div>' +
+                '</div>' +
+                '<p class="est-note" id="ceHint" hidden style="color:var(--miss)"></p>' +
+                '<div class="sheet-actions"><button class="btn" id="ceSave">Save</button>' +
+                  '<button class="btn ghost" id="ceCancel">Cancel</button></div>' +
+              '</div>'
+            : '') +
+          '<div class="lift-foot"><span>' + esc(cardioText(c)) + '</span>' +
+            (done || editing ? '' :
+              '<span class="c-acts"><button data-cedit="' + esc(c.id) + '" aria-label="Change ' + esc(c.type) + '">Change</button>' +
+              '<button data-crm="' + esc(c.id) + '" aria-label="Remove ' + esc(c.type) + '">Remove</button></span>') +
+          '</div>' +
+        '</div></article>';
+    }).join("");
+
+    var addForm = done ? '' :
+      '<section class="entry" id="cardioAdd">' +
+        '<div class="field"><label for="cSel">Add cardio</label>' +
+          '<div class="msel-row"><select id="cSel">' + typeOpts(pickFirst) + '</select>' +
+            '<button id="cDrop" aria-label="Take the chosen type off this list"' + (types.length ? '' : ' disabled') + '>\u2212</button></div></div>' +
+        '<input id="cNew" class="text" placeholder="Name it the way you\u2019ll look for it" aria-label="Name this cardio" ' +
+          (types.length ? 'hidden ' : '') + newStyle + '>' +
+        '<div class="trio">' +
+          '<div class="field"><label for="cMin">Minutes</label><input id="cMin" inputmode="numeric" placeholder="30"></div>' +
+          '<div class="field"><label for="cDist">Miles</label><input id="cDist" inputmode="decimal" placeholder="opt."></div>' +
+          '<div class="field"><label for="cCal">Calories</label><input id="cCal" inputmode="numeric" placeholder="opt."></div>' +
+        '</div>' +
+        // The app does not guess this: it does not know your weight, and a
+        // made-up number is the confident wrong one. Type what the machine says.
+        '<p class="est-note">Calories burned: what the machine or your watch says.</p>' +
+        '<p class="est-note" id="cHint" hidden style="color:var(--miss)"></p>' +
+        '<button class="btn" id="cAdd">Add to ' + (key === TODAY ? 'today' : shortDate(key)) + '</button>' +
+      '</section>';
+
+    view.innerHTML =
+      '<section style="display:flex;flex-direction:column;gap:10px">' +
+        clock + doneCard + goalHtml +
+        '<div class="split-head"><span class="eyebrow">' + (key === TODAY ? 'Today\u2019s cardio' : 'Cardio \u00b7 ' + shortDate(key)) + '</span></div>' +
+        (cards ? '<section class="liftgroup">' + cards + '</section>'
+               : '<p class="empty">No cardio logged for this day.<br>Start a session above, or add one below.</p>') +
+        addForm +
+        (!done && (list.length || running)
+          ? '<button class="btn ghost" id="cardioFinish" style="width:100%">Finish cardio</button>' : '') +
+      '</section>';
+
+    // ---- wiring ----
+    function redo() { touch(key); save(); render(); }
+    function typeFrom(sel, neu) {
+      var name = sel.value === "__new" ? neu.value.trim() : sel.value;
+      return name;
+    }
+    function keepType(name) {
+      var added = cardioTypes().indexOf(name) === -1;
+      if (added) cardioTypes().push(name);
+      cardioLastType = name;
+      return added;
+    }
+    function showNew(sel, neu, drop) {
+      sel.addEventListener("change", function () {
+        neu.hidden = sel.value !== "__new";
+        if (drop) drop.disabled = sel.value === "__new";
+        if (!neu.hidden) neu.focus();
+      });
+    }
+
+    var startBtn = document.getElementById("cardioStart");
+    if (startBtn) startBtn.addEventListener("click", function () {
+      cardioPicking = true; render();
+      var f = document.getElementById(cardioTypes().length ? "cPickSel" : "cPickNew");
+      if (f) f.focus();
+    });
+    var pSel = document.getElementById("cPickSel"), pNew = document.getElementById("cPickNew");
+    if (pSel && pNew) {
+      showNew(pSel, pNew, null);
+      pNew.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("cPickGo").click(); });
+      document.getElementById("cPickGo").addEventListener("click", function () {
+        var name = typeFrom(pSel, pNew);
+        if (!name) { pNew.hidden = false; pNew.focus(); return; }
+        keepType(name);
+        d.cardioStart = Date.now(); d.cardioType = name;
+        cardioPicking = false;
+        redo();
+      });
+      document.getElementById("cPickCancel").addEventListener("click", function () { cardioPicking = false; render(); });
+    }
+
+    var stopBtn = document.getElementById("cardioStop");
+    if (stopBtn) stopBtn.addEventListener("click", function () {
+      var wasStart = d.cardioStart, wasType = d.cardioType;
+      var got = stopCardio(d);
+      redo();
+      if (got.c) {
+        offerUndo("Logged " + got.c.type + " \u00b7 " + got.c.min + " min", function () {
+          var at = (d.cardio || []).indexOf(got.c);
+          if (at > -1) d.cardio.splice(at, 1);
+          d.cardioStart = wasStart; d.cardioType = wasType;
+          redo();
+        });
+      } else notify("Under a minute, so nothing was logged");
+    });
+    var discard = document.getElementById("cardioDiscard");
+    if (discard) discard.addEventListener("click", function () {
+      var wasStart = d.cardioStart, wasType = d.cardioType;
+      delete d.cardioStart; delete d.cardioType;
+      redo();
+      offerUndo("Discarded the running cardio clock", function () {
+        d.cardioStart = wasStart; d.cardioType = wasType; redo();
+      });
+    });
+    // One interval, like the workout clock's, writing digits rather than
+    // redrawing — a redraw a second would wipe what is being typed below.
+    if (cardioTick) { clearInterval(cardioTick); cardioTick = null; }
+    if (running && !stale) {
+      cardioTick = setInterval(function () {
+        var el = document.getElementById("cardioClock");
+        if (!el) { clearInterval(cardioTick); cardioTick = null; return; }
+        var run = cardioMs(day(key));
+        if (run > MAX_SESSION_MS) { clearInterval(cardioTick); cardioTick = null; render(); return; }
+        el.textContent = fmtDur(run);
+      }, 1000);
+    }
+
+    var cgOpen = document.getElementById("cgOpen");
+    if (cgOpen) cgOpen.addEventListener("click", function () {
+      cardioGoalEditing = true; render();
+      var f = document.getElementById("cgVal"); if (f) f.focus();
+    });
+    var cgVal = document.getElementById("cgVal");
+    if (cgVal) {
+      var kind = g.kind, period = g.period;
+      // In place, not a redraw, so a number being typed is not wiped. A new
+      // pairing goes to its own starting number rather than re-reading this one.
+      function regoal() {
+        view.querySelectorAll("[data-cgkind]").forEach(function (x) {
+          x.setAttribute("aria-pressed", String(x.dataset.cgkind === kind));
+        });
+        view.querySelectorAll("[data-cgperiod]").forEach(function (x) {
+          x.setAttribute("aria-pressed", String(x.dataset.cgperiod === period));
+        });
+        document.getElementById("cgValLab").textContent = goalLabel(kind, period);
+        cgVal.value = CARDIO_GOAL_START[kind][period];
+      }
+      view.querySelectorAll("[data-cgkind]").forEach(function (b) {
+        b.addEventListener("click", function () { if (b.dataset.cgkind !== kind) { kind = b.dataset.cgkind; regoal(); } });
+      });
+      view.querySelectorAll("[data-cgperiod]").forEach(function (b) {
+        b.addEventListener("click", function () { if (b.dataset.cgperiod !== period) { period = b.dataset.cgperiod; regoal(); } });
+      });
+      cgVal.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("cgSave").click(); });
+      document.getElementById("cgSave").addEventListener("click", function () {
+        var v = Number(cgVal.value);
+        v = kind === "dist" ? Math.round(v * 10) / 10 : Math.round(v);
+        if (!(v > 0)) {
+          var h = document.getElementById("cgHint");
+          h.textContent = "A goal needs a number above zero."; h.hidden = false; cgVal.focus(); return;
+        }
+        var was = store.cardioGoal;
+        store.cardioGoal = { kind: kind, period: period, v: v };
+        cardioGoalEditing = false;
+        save(); render();
+        offerUndo("Cardio goal: " + goalNum(kind, v) + " " + goalWord(kind, v) + " " + periodWord(period), function () {
+          if (was) store.cardioGoal = was; else delete store.cardioGoal;
+          save(); render();
+        });
+      });
+      document.getElementById("cgCancel").addEventListener("click", function () { cardioGoalEditing = false; render(); });
+    }
+
+    view.querySelectorAll("[data-cedit]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        cardioEditing = b.dataset.cedit; render();
+        var f = document.getElementById("ceMin"); if (f) { f.focus(); f.select(); }
+      });
+    });
+    var ceSave = document.getElementById("ceSave");
+    if (ceSave) {
+      var cur = list.filter(function (c) { return c.id === cardioEditing; })[0];
+      ceSave.addEventListener("click", function () {
+        var m = Math.round(Number(document.getElementById("ceMin").value));
+        var dv = document.getElementById("ceDist").value.trim(), dn = Number(dv);
+        var h = document.getElementById("ceHint");
+        if (!(m > 0)) { h.textContent = "How many minutes?"; h.hidden = false; document.getElementById("ceMin").focus(); return; }
+        if (dv && !(dn >= 0)) { h.textContent = "Distance is a number of miles, or nothing."; h.hidden = false; return; }
+        var kv = document.getElementById("ceCal").value.trim(), kn = Math.round(Number(kv));
+        if (kv && !(kn >= 0)) { h.textContent = "Calories is a number, or nothing."; h.hidden = false; return; }
+        var was = { min: cur.min, dist: cur.dist, cal: cur.cal };
+        cur.min = m;
+        if (dv && dn > 0) cur.dist = dn; else delete cur.dist;
+        if (kv && kn > 0) cur.cal = kn; else delete cur.cal;
+        cardioEditing = null;
+        redo();
+        offerUndo("Changed " + cur.type + " to " + cardioText(cur), function () {
+          cur.min = was.min;
+          if (was.dist) cur.dist = was.dist; else delete cur.dist;
+          if (was.cal) cur.cal = was.cal; else delete cur.cal;
+          redo();
+        });
+      });
+      document.getElementById("ceCancel").addEventListener("click", function () { cardioEditing = null; render(); });
+    }
+
+    view.querySelectorAll("[data-crm]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var at = -1;
+        list.forEach(function (c, i) { if (c.id === b.dataset.crm) at = i; });
+        if (at === -1) return;
+        var gone = list.splice(at, 1)[0];
+        redo();
+        offerUndo("Removed " + gone.type + " \u00b7 " + cardioText(gone), function () {
+          (d.cardio || (d.cardio = [])).splice(Math.min(at, d.cardio.length), 0, gone);
+          redo();
+        });
+      });
+    });
+
+    var cSel = document.getElementById("cSel"), cNew = document.getElementById("cNew"), cDrop = document.getElementById("cDrop");
+    if (cSel && cNew) {
+      showNew(cSel, cNew, cDrop);
+      cDrop.disabled = !cardioTypes().length || cSel.value === "__new";
+      // Only the list of choices changes: a session already logged keeps its
+      // type, because it carries its own name (rule 7).
+      cDrop.addEventListener("click", function () {
+        var name = cSel.value, ts = cardioTypes(), at = ts.indexOf(name);
+        if (at === -1) return;
+        ts.splice(at, 1);
+        save(); render();
+        offerUndo("Took " + name + " off your cardio list", function () {
+          cardioTypes().splice(Math.min(at, cardioTypes().length), 0, name);
+          save(); render();
+        });
+      });
+      ["cMin", "cDist", "cCal", "cNew"].forEach(function (id) {
+        document.getElementById(id).addEventListener("keydown", function (e) {
+          if (e.key === "Enter") document.getElementById("cAdd").click();
+        });
+      });
+      document.getElementById("cAdd").addEventListener("click", function () {
+        var h = document.getElementById("cHint");
+        var name = typeFrom(cSel, cNew);
+        var m = Math.round(Number(document.getElementById("cMin").value));
+        var dv = document.getElementById("cDist").value.trim(), dn = Number(dv);
+        // Said in place rather than redrawn, so nothing typed is lost.
+        if (!name) { h.textContent = "Name the cardio first."; h.hidden = false; cNew.hidden = false; cNew.focus(); return; }
+        if (!(m > 0)) { h.textContent = "How many minutes?"; h.hidden = false; document.getElementById("cMin").focus(); return; }
+        if (dv && !(dn >= 0)) { h.textContent = "Distance is a number of miles, or nothing."; h.hidden = false; return; }
+        var kv = document.getElementById("cCal").value.trim(), kn = Math.round(Number(kv));
+        if (kv && !(kn >= 0)) { h.textContent = "Calories is a number, or nothing."; h.hidden = false; return; }
+        keepType(name);
+        var c = { id: uid(), type: name, min: m, t: Date.now() };
+        if (dv && dn > 0) c.dist = dn;
+        if (kv && kn > 0) c.cal = kn;
+        (d.cardio || (d.cardio = [])).push(c);
+        redo();
+        notify("Added " + name + " \u00b7 " + cardioText(c));
+      });
+    }
+
+    var fin = document.getElementById("cardioFinish");
+    if (fin) fin.addEventListener("click", function () {
+      // Finishing stops a clock still running, the way Lock in the day does.
+      if (d.cardioStart) stopCardio(d);
+      d.cardioDone = true;
+      cardioPicking = false; cardioEditing = null;
+      redo();
+      celebrate();
+    });
+    var unlock = document.getElementById("cardioUnlock");
+    if (unlock) unlock.addEventListener("click", function () { delete d.cardioDone; redo(); });
+  }
+
+  // The Log tab's view of it: the last eight weeks against the goal, and the
+  // year's tiles. Nothing at all until something has been logged.
+  function cardioTrackerHtml() {
+    var any = Object.keys(store.days).some(function (k) { return (store.days[k].cardio || []).length; });
+    if (!any) return '';
+    // Eight of whatever the goal counts by: days, weeks or months.
+    var g = cardioGoal(), weeks = [], s0 = parseYmd(periodStart(TODAY, g.period));
+    for (var i = 7; i >= 0; i--) {
+      var w = new Date(s0);
+      if (g.period === "month") w = new Date(s0.getFullYear(), s0.getMonth() - i, 1);
+      else w.setDate(s0.getDate() - (g.period === "day" ? 1 : 7) * i);
+      weeks.push({ key: ymd(w), v: cardioTotals(ymd(w), g.period)[g.kind] });
+    }
+    var plural = g.period === "day" ? "days" : g.period === "month" ? "months" : "weeks";
+    function pLabel(k) {
+      return g.period === "month" ? parseYmd(k).toLocaleDateString("en-US", { month: "short" })
+           : g.period === "week" ? "Week of " + shortDate(k) : shortDate(k);
+    }
+    var top = Math.max(g.v * 1.25, Math.max.apply(null, weeks.map(function (x) { return x.v; })));
+    var days = 0, mins = 0, sessions = 0, dist = 0, cals = 0;
+    Object.keys(store.days).forEach(function (k) {
+      if (k.slice(0, 4) !== String(logYear)) return;
+      var cs = store.days[k].cardio || [];
+      if (cs.length) days++;
+      cs.forEach(function (c) { sessions++; mins += Number(c.min) || 0; dist += Number(c.dist) || 0; cals += Number(c.cal) || 0; });
+    });
+    // An even number of tiles, so none sits alone on a row.
+    var tiles = [[days, "Cardio days"], [weeks.filter(function (x) { return x.v >= g.v; }).length + " of 8",
+                  plural.charAt(0).toUpperCase() + plural.slice(1) + " on goal"],
+                 [sessions ? Math.round(mins / sessions) + "m" : "\u2014", "Avg session"]];
+    if (dist) tiles.push([fmtDist(dist), "Miles in " + logYear]);
+    if (cals) tiles.push([fmt(cals), "kcal in " + logYear]);
+    if (tiles.length % 2) tiles.push([fmtDurShort(mins * 60000), "Time in " + logYear]);
+    return '<section class="cardio-track" aria-label="Cardio, the last eight ' + plural + '">' +
+      '<span class="eyebrow">Cardio \u00b7 last 8 ' + plural + '</span>' +
+      '<div class="ct-chart"><div class="ct-goal" style="bottom:' + Math.round(g.v / top * 100) + '%"></div>' +
+        weeks.map(function (x) {
+          return '<div class="ct-bar' + (x.v >= g.v ? ' is-met' : '') + '" style="height:' + Math.round(x.v / top * 100) +
+            '%" title="' + pLabel(x.key) + ': ' + goalNum(g.kind, x.v) + ' ' + goalWord(g.kind, x.v) + '"></div>';
+        }).join("") +
+      '</div>' +
+      '<div class="ct-axis"><span>' + pLabel(weeks[0].key) + '</span><span>dashed line \u00b7 ' + goalNum(g.kind, g.v) + ' ' +
+        goalWord(g.kind, g.v) + ' ' + periodWord(g.period) + '</span><span>' +
+        (g.period === "day" ? "today" : g.period === "month" ? "this month" : "this week") + '</span></div>' +
+      '<div class="yearstats">' +
+        tiles.map(function (x) { return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>'; }).join("") +
+      '</div>' +
+    '</section>';
   }
 
   function renderGym(key, d) {
@@ -7961,7 +8543,7 @@
       // A day with only a session on its clock (yoga) or only a note still had
       // something in it.
       if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length) && !ticks &&
-                 !d.workoutMs && !d.gymNote))
+                 !d.workoutMs && !d.gymNote && !(d.cardio && d.cardio.length)))
         return label + " — nothing logged";
       var bits = [label];
       if (d.food && d.food.length) {
@@ -7983,6 +8565,12 @@
       var gi = d.gym && ((d.lifts && d.lifts.length) || d.workoutMs) ? gymInfo(d.gym) : null;
       if (gi) bits.push("at " + gi.name + (gi.gone ? " — a gym you no longer train at" : ""));
       if (d.gymNote) bits.push("\u201c" + d.gymNote + "\u201d");
+      if (d.cardio && d.cardio.length) {
+        var cMin = d.cardio.reduce(function (a, c) { return a + (Number(c.min) || 0); }, 0);
+        var cCal = d.cardio.reduce(function (a, c) { return a + (Number(c.cal) || 0); }, 0);
+        bits.push("cardio \u00b7 " + d.cardio.map(function (c) { return c.type; }).join(", ") + " \u00b7 " + cMin + " min" +
+                  (cCal ? " \u00b7 " + fmt(cCal) + " kcal" : ""));
+      }
       // Named, not just counted: "3 of 4" a month later tells you nothing
       // about which one you keep forgetting.
       if (supps().length) {
@@ -8065,6 +8653,7 @@
               '<div><b>' + suppStreak(suppDone) + '</b><span>Best run</span></div>'
             : '') +
         '</div>' +
+        cardioTrackerHtml() +
         legend +
         '<div class="months">' + months + '</div>' +
         '<p style="margin:0;font-size:12px;line-height:1.55;color:var(--ink-3)">' +
@@ -8677,10 +9266,19 @@
     // later and offer to bank 160 hours the moment that day was locked in.
     var leaving = store.days[TODAY];
     if (leaving && leaving.workoutStart) { stopWorkout(leaving); save(); }
+    // The cardio clock too: logged on the day it started, if it was a real
+    // session, and said out loud, since nobody pressed anything.
+    var cardioSaid = null;
+    if (leaving && leaving.cardioStart) {
+      var got = stopCardio(leaving);
+      save();
+      if (got.c) cardioSaid = "Logged " + got.c.type + " \u00b7 " + got.c.min + " min to " + shortDate(TODAY);
+    }
     TODAY = nowKey;
     if (wasOnToday) cursor = new Date();
     hideUndo();
     render();
+    if (cardioSaid) notify(cardioSaid);
   }
 
   document.addEventListener("visibilitychange", function () {
@@ -9610,6 +10208,11 @@
     if (incoming.accent) store.accent = incoming.accent;
     if (typeof incoming.coachOn === "boolean") store.coachOn = incoming.coachOn;
     if (incoming.logOpen) store.logOpen = incoming.logOpen;
+    // Cardio: the types are merged like movements; the goal is the phone's own.
+    (Array.isArray(incoming.cardioTypes) ? incoming.cardioTypes : []).forEach(function (t) {
+      if (cardioTypes().indexOf(t) === -1) cardioTypes().push(t);
+    });
+    if (incoming.cardioGoal) store.cardioGoal = incoming.cardioGoal;
     // Gyms come back by id, so every restored day still says where it was.
     if (incoming.gymsRetired) {
       store.gymsRetired = store.gymsRetired || {};

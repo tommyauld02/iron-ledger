@@ -176,7 +176,7 @@ with sync_playwright() as pw:
     }"""
 
     # Macros three times: folded, then with each way in open.
-    tabs = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "coach", "log"]
+    tabs = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "log"]
     small, blocked, seen, cal_cells = [], [], 0, 0
     for t in tabs:
         p.click('.tabs button[data-tab="%s"]' % t.split(":")[0]); p.wait_for_timeout(500)
@@ -670,6 +670,9 @@ with sync_playwright() as pw:
         ("add a day",      ['.tabs button[data-tab="coach"]', "#addDay"], "#rtNewDay"),
         ("add a split",    ['.tabs button[data-tab="gym"]', "#addSplitChip"], "#newSplitName"),
         ("where you train", ['.tabs button[data-tab="gym"]', "#addGymFirst"], "#newGymName"),
+        ("a cardio session, by name", ['.tabs button[data-tab="cardio"]', "#cardioStart"], "#cPickNew"),
+        ("the cardio goal",  ['.tabs button[data-tab="cardio"]', "#cgOpen"], "#cgVal"),
+        ("cardio minutes",   ['.tabs button[data-tab="cardio"]'], "#cMin"),
         ("a gym's tag",    ['.tabs button[data-tab="gym"]', "#addGymFirst"], "#newGymTag"),
         # Sheets rather than inline editors, but the same blind spot: neither
         # exists until something is pressed, so nothing that walks the tabs as

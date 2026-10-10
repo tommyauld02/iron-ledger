@@ -862,7 +862,7 @@ with sync_playwright() as pw:
     ATTR="()=>[document.documentElement.getAttribute('data-theme'), document.documentElement.getAttribute('data-accent')]"
     ACC="()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()"
     META="()=>{const m=document.querySelector('meta[name=theme-color]');return m&&m.content;}"
-    for t in ["macros","pantry","gym","log"]:
+    for t in ["macros","pantry","gym","cardio","log"]:
         p.click('.tabs button[data-tab="%s"]'%t); p.wait_for_timeout(250)
         if not p.locator("#setBtn").is_visible():
             check("settings: the gear is on %s"%t, False); break
@@ -927,17 +927,17 @@ with sync_playwright() as pw:
     TABSHOWN="()=>[...document.querySelectorAll('.tabs button')].filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)"
     ROUTINE="()=>JSON.stringify(JSON.parse(localStorage.getItem('iron-ledger-v1')).routine)"
     check("coach tab: put away on a phone that never chose",
-          p.evaluate(TABSHOWN)==["macros","pantry","gym","log"], str(p.evaluate(TABSHOWN)))
+          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","log"], str(p.evaluate(TABSHOWN)))
     tw=p.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.getBoundingClientRect().width)")
     bw=p.evaluate("()=>document.querySelector('.tabs').clientWidth")
-    check("coach tab: the four left share the whole bar, evenly",
-          len(tw)==4 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
+    check("coach tab: the five left share the whole bar, evenly",
+          len(tw)==5 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
     p.click("#setBtn"); p.wait_for_timeout(300)
     check("coach tab: Settings has the switch, on Hidden",
           p.eval_on_selector('[data-pick-coach="off"]',"e=>e.getAttribute('aria-pressed')")=="true")
     p.click('[data-pick-coach="on"]'); p.wait_for_timeout(300)
     check("coach tab: Shown puts it back at once, in its place",
-          p.evaluate(TABSHOWN)==["macros","pantry","gym","coach","log"]
+          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","coach","log"]
           and p.eval_on_selector('[data-pick-coach="on"]',"e=>e.getAttribute('aria-pressed')")=="true",
           str(p.evaluate(TABSHOWN)))
     check("coach tab: and the choice is saved",
@@ -2806,7 +2806,7 @@ with sync_playwright() as pw:
     q.reload(); q.wait_for_timeout(900)
     acc=q.evaluate(TEALJS)
     bare_all, stray_all = [], []
-    for t in ["macros","gym","pantry","coach","log"]:
+    for t in ["macros","gym","pantry","cardio","coach","log"]:
         q.click('.tabs button[data-tab="%s"]'%t); q.wait_for_timeout(400)
         if t=="macros": q.click(".meal-open"); q.wait_for_timeout(300)
         if t=="coach" and q.locator("[data-openday]").count(): q.locator("[data-openday]").first.click(); q.wait_for_timeout(300)
@@ -2835,6 +2835,154 @@ with sync_playwright() as pw:
     # Chromium applies :active with or without it, so only the source can say
     check("teal: and the touch hook iOS needs for that is there (checked in the source)",
           'document.addEventListener("touchstart"' in io.open("iron-ledger.html", encoding="utf-8").read())
+    c.close()
+
+    # ---------- CARDIO ----------
+    # Asked for by Nygle, a tester: a tab of its own where Coach used to sit,
+    # shaped like the Gym tab but simple. Start a timed session or add one,
+    # named your own way; a goal by the day, week or month in minutes,
+    # distance, calories or sessions; Finish with confetti; and a tracker on
+    # the Log tab.
+    CG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    CSTORE={"days":{}, "moves":{},"movesOwned":True,"goal":CG,"region":"United States","pantry":[],"v":1,"seen":True}
+    CST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
+    CSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
+    CARDS="()=>[...document.querySelectorAll('.cardio-card')].map(c=>c.querySelector('h3').textContent+' | '+c.querySelector('.lift-foot span').textContent)"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("cardio: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    tabs=q.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)")
+    check("cardio: a tab of its own, between Gym and Log", tabs==["macros","pantry","gym","cardio","log"], str(tabs))
+    q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
+    check("cardio: no rest timer here", q.evaluate("()=>document.getElementById('restbar').hidden"))
+    check("cardio: an empty day says what to do", "Start a session above" in q.inner_text("#view"))
+    check("cardio: the goal starts at 150 minutes a week",
+          q.inner_text(".cardio-goal .cg-num")=="0 of 150 min" and q.inner_text(".cardio-goal .eyebrow")=="THIS WEEK")
+    q.click("#cardioStart"); q.wait_for_timeout(250)
+    check("cardio: Start asks what it is, and with nothing named yet the name field is ready",
+          q.locator("#cPickNew").is_visible() and q.evaluate("()=>document.activeElement.id")=="cPickNew")
+    q.fill("#cPickNew","Incline walk"); q.press("#cPickNew","Enter"); q.wait_for_timeout(300)
+    check("cardio: a running clock, named, with Stop and Discard",
+          q.inner_text(".workout .wo-label").upper()=="INCLINE WALK" and q.locator("#cardioStop").count()==1
+          and q.locator("#cardioDiscard").count()==1 and q.evaluate(CST).get("cardioTypes")==["Incline walk"])
+    q.click("#cardioStop"); q.wait_for_timeout(300)
+    check("cardio: stopped under a minute, nothing is logged — and it says so",
+          q.evaluate(CSAYS)=="Under a minute, so nothing was logged" and q.locator(".cardio-card").count()==0)
+    q.click("#cardioStart"); q.wait_for_timeout(250); q.click("#cPickGo"); q.wait_for_timeout(300)
+    q.evaluate("k=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); s.days[k].cardioStart=Date.now()-25*60000-5000; localStorage.setItem('iron-ledger-v1',JSON.stringify(s));}", Ts)
+    q.reload(); q.wait_for_timeout(900); q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
+    check("cardio: the clock is a timestamp, so it is right after the app was away",
+          q.inner_text("#cardioClock").startswith("25:"), q.inner_text("#cardioClock"))
+    q.click("#cardioStop"); q.wait_for_timeout(300)
+    check("cardio: Stop logs the session with its minutes, and says so",
+          q.evaluate(CARDS)==["Incline walk | 25 min"] and q.evaluate(CSAYS)=="Logged Incline walk · 25 min", q.evaluate(CSAYS))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("cardio: undo puts the clock back running", q.locator("#cardioClock").count()==1 and q.locator(".cardio-card").count()==0)
+    q.click("#cardioDiscard"); q.wait_for_timeout(300)
+    check("cardio: Discard throws it away, with undo", q.locator("#cardioClock").count()==0 and q.evaluate(CSAYS)=="Discarded the running cardio clock")
+    q.click("#undoBtn"); q.wait_for_timeout(300); q.click("#cardioStop"); q.wait_for_timeout(300)
+
+    # adding by hand
+    q.click("#cAdd"); q.wait_for_timeout(200)
+    check("cardio: Add with no minutes says so, and adds nothing",
+          q.inner_text("#cHint")=="How many minutes?" and len(q.evaluate(CARDS))==1)
+    q.select_option("#cSel","__new"); q.fill("#cNew","Bike"); q.fill("#cMin","20"); q.fill("#cCal","180"); q.click("#cAdd"); q.wait_for_timeout(300)
+    check("cardio: a new type, minutes and calories go in, and it says so",
+          q.evaluate(CARDS)==["Incline walk | 25 min","Bike | 20 min · 180 kcal"] and q.evaluate(CSAYS)=="Added Bike · 20 min · 180 kcal"
+          and q.evaluate(CST)["cardioTypes"]==["Incline walk","Bike"], str(q.evaluate(CARDS)))
+    check("cardio: the next add opens on the type just used", q.input_value("#cSel")=="Bike")
+    q.fill("#cMin","30"); q.fill("#cDist","3.1"); q.select_option("#cSel","Incline walk"); q.click("#cAdd"); q.wait_for_timeout(300)
+    check("cardio: distance rides along", q.evaluate(CARDS)[2]=="Incline walk | 30 min · 3.1 mi")
+    fields=q.eval_on_selector_all("#cardioAdd input, #cardioAdd select, #cardioAdd button",
+          "e=>e.filter(x=>x.getClientRects().length).map(x=>[x.id,Math.round(x.getBoundingClientRect().height),x.tagName=='BUTTON'?16:parseFloat(getComputedStyle(x).fontSize)])")
+    check("cardio: every control in the form clears 44px and no field zooms",
+          len(fields)>=6 and all(h>=MIN_TAP and f>=16 for _,h,f in fields), str(fields))
+    q.click('[data-cedit]'); q.wait_for_timeout(250)
+    q.fill("#ceMin","27"); q.fill("#ceDist","2.6"); q.click("#ceSave"); q.wait_for_timeout(300)
+    check("cardio: Change keeps the session and changes its numbers",
+          q.evaluate(CARDS)[0]=="Incline walk | 27 min · 2.6 mi" and q.evaluate(CSAYS)=="Changed Incline walk to 27 min · 2.6 mi")
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("cardio: and undo puts them back", q.evaluate(CARDS)[0]=="Incline walk | 25 min")
+    q.locator("[data-crm]").nth(2).click(); q.wait_for_timeout(300)
+    check("cardio: Remove offers undo", len(q.evaluate(CARDS))==2 and q.evaluate(CSAYS).startswith("Removed Incline walk"))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("cardio: and undo puts it back where it was", q.evaluate(CARDS)[2]=="Incline walk | 30 min · 3.1 mi")
+    q.select_option("#cSel","Bike"); q.click("#cDrop"); q.wait_for_timeout(300)
+    check("cardio: the minus takes a type off the list, not off the sessions",
+          q.evaluate(CST)["cardioTypes"]==["Incline walk"] and "Bike | 20 min · 180 kcal" in q.evaluate(CARDS))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+
+    # the goal
+    check("cardio: the week counts what was logged",
+          q.inner_text(".cardio-goal .cg-num")=="75 of 150 min" and "3 sessions so far" in q.inner_text(".cg-left"), q.inner_text(".cardio-goal"))
+    q.click("#cgOpen"); q.wait_for_timeout(250)
+    check("cardio: the goal can count minutes, distance, calories or sessions, by the day, week or month",
+          q.eval_on_selector_all("[data-cgkind]","e=>e.map(x=>x.textContent)")==["Minutes","Distance","Calories","Sessions"]
+          and q.eval_on_selector_all("[data-cgperiod]","e=>e.map(x=>x.textContent)")==["Daily","Weekly","Monthly"])
+    q.click('[data-cgkind="cal"]'); q.click('[data-cgperiod="day"]'); q.wait_for_timeout(100)
+    check("cardio: a new pairing starts on its own number, not this one re-read",
+          q.input_value("#cgVal")=="300" and q.inner_text("#cgValLab").upper()=="CALORIES A DAY")
+    q.fill("#cgVal","0"); q.click("#cgSave"); q.wait_for_timeout(200)
+    check("cardio: a goal of nothing is refused, and says why", q.inner_text("#cgHint").startswith("A goal needs"))
+    q.fill("#cgVal","250"); q.click("#cgSave"); q.wait_for_timeout(300)
+    check("cardio: a daily calories goal, counted",
+          q.inner_text(".cardio-goal .eyebrow")=="TODAY" and q.inner_text(".cardio-goal .cg-num")=="180 of 250 kcal"
+          and q.evaluate(CSAYS)=="Cardio goal: 250 kcal a day", q.inner_text(".cardio-goal"))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("cardio: and undo puts the old goal back", q.inner_text(".cardio-goal .cg-num")=="75 of 150 min")
+    q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgkind="dist"]'); q.click('[data-cgperiod="month"]'); q.fill("#cgVal","3"); q.click("#cgSave"); q.wait_for_timeout(300)
+    check("cardio: met, it says so in green",
+          q.inner_text(".cardio-goal .cg-num")=="3.1 of 3 mi" and q.inner_text(".cg-left").startswith("✓ Goal met")
+          and q.eval_on_selector(".cg-left","e=>e.classList.contains('is-met')"), q.inner_text(".cardio-goal"))
+    q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgkind="min"]'); q.click('[data-cgperiod="week"]'); q.click("#cgSave"); q.wait_for_timeout(300)
+
+    # finished
+    q.click("#cardioFinish"); q.wait_for_timeout(300)
+    check("cardio: Finish shows the day complete, with confetti",
+          q.inner_text(".daydone .dd-title").upper()=="CARDIO COMPLETE" and q.locator(".confetti").count()==1
+          and q.locator("#cardioAdd").count()==0 and q.locator("[data-crm]").count()==0)
+    check("cardio: and it is kept", q.evaluate(CST)["days"][Ts].get("cardioDone")==True)
+    q.click("#cardioUnlock"); q.wait_for_timeout(300)
+    check("cardio: Unlock opens it again", q.locator("#cardioAdd").count()==1)
+
+    # a clock left running is not a session
+    q.evaluate("k=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); s.days[k].cardioStart=Date.now()-7*3600000; s.days[k].cardioType='Bike'; localStorage.setItem('iron-ledger-v1',JSON.stringify(s));}", Ts)
+    q.reload(); q.wait_for_timeout(900); q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
+    check("cardio: a clock left running for hours says it will not be logged",
+          q.inner_text(".workout .wo-label").upper()=="LEFT RUNNING" and q.locator("#cardioStop").count()==0)
+    q.click("#cardioDiscard"); q.wait_for_timeout(300)
+
+    q.set_viewport_size({"width":320,"height":640}); q.click("#cgOpen"); q.wait_for_timeout(250)
+    check("cardio: the tab fits a 320px phone, goal editor open",
+          q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    q.click("#cgCancel"); q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+
+    # the Log tab
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(500)
+    track=q.inner_text(".cardio-track") if q.locator(".cardio-track").count() else ""
+    check("log: a cardio tracker, the last eight weeks against the goal",
+          "LAST 8 WEEKS" in track.upper() and q.locator(".ct-bar").count()==8 and q.locator(".ct-goal").count()==1, track[:80])
+    check("log: and the year's cardio in tiles", "CARDIO DAYS" in track.upper() and "WEEKS ON GOAL" in track.upper())
+    tt=q.eval_on_selector('[data-go="%s"]' % Ts, "e=>e.title")
+    check("log: a day's title names its cardio", "cardio · Incline walk, Bike, Incline walk · 75 min · 180 kcal" in tt, tt)
+
+    # it travels with a backup
+    q.click("#backupBtn"); q.wait_for_timeout(300)
+    ctxt=q.evaluate("()=>document.getElementById('backupText').value")
+    q.click("#closeSheet"); q.wait_for_timeout(200)
+    q.evaluate("()=>localStorage.removeItem('iron-ledger-v1')"); q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click("#backupBtn"); q.wait_for_timeout(300)
+    q.evaluate("t=>{document.getElementById('backupText').value=t;}", ctxt)
+    q.click("#restoreBtn"); q.wait_for_timeout(600)
+    after=q.evaluate(CST)
+    check("cardio: a restore brings back the sessions, the types and the goal",
+          len(after["days"][Ts].get("cardio",[]))==3 and after.get("cardioTypes")==["Incline walk","Bike"]
+          and after.get("cardioGoal",{}).get("kind")=="min")
     c.close()
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))

@@ -16,7 +16,7 @@ with sync_playwright() as pw:
     print("tab order:", p.eval_on_selector_all(".tabs button","e=>e.map(x=>x.textContent)"))
     print("header build:", p.text_content("#buildTag"))
     # every tab still routes to the right screen
-    checks=[("macros","logWays"),("pantry","savePan"),("gym","addLift"),("coach","addDay"),("log","prevYear")]
+    checks=[("macros","logWays"),("pantry","savePan"),("gym","addLift"),("cardio","cardioAdd"),("coach","addDay"),("log","prevYear")]
     for name, marker in checks:
         p.click('.tabs button[data-tab="%s"]'%name); p.wait_for_timeout(450)
         sel = p.evaluate("n=>document.querySelector('.tabs button[data-tab='+n+']').getAttribute('aria-selected')", name)

@@ -35,10 +35,11 @@ with sync_playwright() as pw:
     # ---------- tab reachable ----------
     check("coach: tab exists", p.locator('[data-tab="coach"]').count()==1)
     p.click('[data-tab="coach"]'); p.wait_for_timeout(400)
-    check("coach: 5 tabs all visible in viewport",
-          all(p.locator('[data-tab]').nth(i).bounding_box()["x"]>=0 and
+    ntabs=p.locator('[data-tab]').count()
+    check("coach: all %d tabs visible in viewport" % ntabs,
+          ntabs==6 and all(p.locator('[data-tab]').nth(i).bounding_box()["x"]>=0 and
               p.locator('[data-tab]').nth(i).bounding_box()["x"]+
-              p.locator('[data-tab]').nth(i).bounding_box()["width"]<=394 for i in range(5)))
+              p.locator('[data-tab]').nth(i).bounding_box()["width"]<=394 for i in range(ntabs)))
     check("coach: default 3 day cards", p.locator(".rt-day").count()==3,
           str(p.locator(".rt-day").count()))
     check("coach: routine name field", p.locator("#rtName").count()==1)

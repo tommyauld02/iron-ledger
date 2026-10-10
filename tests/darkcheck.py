@@ -43,9 +43,10 @@ def fixture(theme=None, accent=None):
             "workoutStart": int(time.time() * 1000) - 45 * 60000,
             "gymNote": "Hotel gym, dumbbells only",
             "gym": "gA",
+            "cardio": [{"id": "c1", "type": "Incline walk", "min": 30, "dist": 3.1, "cal": 265, "t": 1}],
             "updated": 1, "goal": G}},
          "gyms": [{"id": "gA", "name": "Apartment gym", "tag": "APT"}, {"id": "g24", "name": "24 Hour Fitness", "tag": "24"}],
-         "gymLast": "gA", "moves": None, "coachOn": True, "goal": G, "region": "United States",
+         "gymLast": "gA", "cardioTypes": ["Incline walk", "Bike"], "moves": None, "coachOn": True, "goal": G, "region": "United States",
          "supps": [{"id": "s1", "name": "Creatine", "dose": "5 g"},
                    {"id": "s2", "name": "Zinc", "dose": "50 mg"}],
          # sorted and not: the tabs, a heading, the hint and Sort in the
@@ -128,7 +129,7 @@ FAILS = []
 def walk(p, label):
     """Every tab, plus the states and panels that only exist after a press."""
     found = []
-    for tab in ["macros", "gym", "pantry", "coach", "log"]:
+    for tab in ["macros", "gym", "pantry", "cardio", "coach", "log"]:
         p.click('.tabs button[data-tab="%s"]' % tab); p.wait_for_timeout(350)
         if tab == "coach" and p.locator("[data-openday]").count():
             p.locator("[data-openday]").first.click(); p.wait_for_timeout(300)
@@ -170,6 +171,27 @@ def walk(p, label):
             low = p.evaluate(LOW)
             if low: found.append("pantry (combining): %s" % low)
             p.click("#combCancel"); p.wait_for_timeout(150)
+        if tab == "cardio":
+            # every look of it: the goal met and not, its editor, the chooser,
+            # a running clock, a session being changed, and finished
+            if not p.locator(".cardio-card").count():
+                found.append("cardio: no session on screen to measure")
+            for step, sel, undo in [("goal editor", "#cgOpen", "#cgCancel"), ("choosing a session", "#cardioStart", "#cPickCancel"),
+                                    ("changing a session", "[data-cedit]", "#ceCancel")]:
+                p.locator(sel).first.click(); p.wait_for_timeout(250)
+                low = p.evaluate(LOW)
+                if low: found.append("cardio (%s): %s" % (step, low))
+                p.click(undo); p.wait_for_timeout(200)
+            p.click("#cardioStart"); p.wait_for_timeout(200); p.click("#cPickGo"); p.wait_for_timeout(300)
+            low = p.evaluate(LOW)
+            if low: found.append("cardio (running): %s" % low)
+            p.click("#cardioDiscard"); p.wait_for_timeout(200)
+            p.click("#cardioFinish"); p.wait_for_timeout(300)
+            low = p.evaluate(LOW)
+            if low: found.append("cardio (finished): %s" % low)
+            p.click("#cardioUnlock"); p.wait_for_timeout(200)
+        if tab == "log" and not p.locator(".cardio-track").count():
+            found.append("log: the cardio tracker is not on screen")
         if tab == "gym":
             # the set to beat has three looks, and a state the fixture stops
             # painting is a state this suite stops measuring — so say so
