@@ -1006,6 +1006,13 @@
   .lib-hit .ls { grid-column: 1; font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
   .lib-hit .lm { grid-column: 2; grid-row: 1 / span 2; font-family: var(--font-num); font-size: 12px; color: var(--ink-2); text-align: right; white-space: nowrap; }
   .lib-hit .lm b { font-size: 15px; color: var(--ink); }
+  .lib-group { font-family: var(--font-num); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+  .lib-offer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+  .news { display: flex; flex-direction: column; gap: 16px; }
+  .news h3 { margin: 0; font-size: 15px; font-weight: 600; }
+  .news .nb { font-family: var(--font-num); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+  .news ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--ink); }
+  .news li + li { margin-top: 4px; }
   .lib-keep {
     align-self: flex-start;
     min-height: 44px;
@@ -2994,6 +3001,16 @@
      afterwards. -->
 <!-- Settings. Colours for now; built as groups so later settings slot in as
      another .set-group rather than a redesign. -->
+<!-- What's new: shown once after an update, with what changed since the
+     build that last saved this phone's data. -->
+<div class="sheet" id="newsSheet" hidden>
+  <div class="sheet-inner">
+    <h2>What’s new</h2>
+    <div class="news" id="newsBody"></div>
+    <button class="btn" id="newsDone">Got it</button>
+  </div>
+</div>
+
 <div class="sheet" id="setSheet" hidden>
   <div class="sheet-inner">
     <h2>Settings</h2>
@@ -3011,6 +3028,13 @@
       <span class="eyebrow">Adding food opens</span>
       <div class="seg" id="setLogOpen" role="group" aria-label="Adding food opens"></div>
       <p class="set-hint" id="setLogOpenHint"></p>
+    </div>
+    <!-- The food library: everyday foods ship with the app; grocery brands are
+         a one-time download, offered rather than forced. -->
+    <div class="set-group">
+      <span class="eyebrow">Food library</span>
+      <p class="set-hint" id="setLibHint"></p>
+      <button class="btn ghost" id="setBrands"></button>
     </div>
     <!-- Coach is for setting a routine for someone else. Put away until it is
          wanted; nothing in it is lost either way. -->
@@ -3103,7 +3127,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-12.59";
+  var BUILD = "2026-10-13.60";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3214,6 +3238,7 @@
   // The food library's panel under one review row: which row, what was
   // searched, what came back, and "loading" / "error" while it is not ready.
   var libFor = null, libQuery = "", libHits = null, libStatus = "";
+  var libBrandHits = null, brandsStatus = "";    // "" | "loading" | "error"
 
   // How a way in opens, chosen under Settings: in place under its button, as
   // a pop-up like the set sheet, or the mix — the short numbers form pops up
@@ -3590,6 +3615,48 @@
     (d.cardio || (d.cardio = [])).push(c);
     return { c: c };
   }
+
+  // ---------- what's new ----------
+  // Asked for by the owner: after an update, a one-time pop-up saying what
+  // changed, in plain words. Shown when the build that last saved this phone's
+  // data is older than this one — so never to someone opening the app for the
+  // first time, who gets the welcome instead — and only once, because the
+  // build is stamped onto the data as soon as the app opens. Newest first; a
+  // phone several updates behind sees each of them, up to four.
+  var NEWS = [
+    { b: "2026-10-13.60", t: "Grocery brands, and this pop-up", items: [
+      "The food library can now search about 400,000 grocery products by brand \u2014 Kirkland, Great Value, Chobani \u2014 with each label\u2019s own numbers. One 8 MB download from the library or Settings, then it works offline.",
+      "After each update, this shows what changed, once." ] },
+    { b: "2026-10-12.59", t: "A food library on your phone", items: [
+      "Don\u2019t know the numbers can look things up in 13,500 USDA foods \u2014 every cut of meat, home dishes, McDonald\u2019s and other chains \u2014 with no internet.",
+      "When only part of what you typed matched, it says so instead of guessing quietly.",
+      "Quarter Pounder with cheese no longer adds a stray serving of cheese." ] },
+    { b: "2026-10-09.58", t: "Cardio", items: [
+      "A Cardio tab: time a session or add one, with a goal by minutes, distance, calories or sessions, and eight weeks of it on the Log tab." ] },
+    { b: "2026-10-06.57", t: "Clearer buttons", items: [
+      "Anything teal can be tapped, and every button fades for a moment when pressed." ] },
+    { b: "2026-10-05.56", t: "Pop-up or in place", items: [
+      "Settings \u2192 Adding food opens chooses whether the two Macros buttons open in place, as a pop-up, or a mix." ] },
+    { b: "2026-10-04.55", t: "A shorter Macros screen", items: [
+      "Adding food folds into two buttons \u2014 Log calories / protein, and Don\u2019t know the numbers \u2014 so a normal day fits without scrolling." ] }
+  ];
+  function buildAfter(a, b) {           // "2026-10-12.60" after "2026-10-12.59"
+    var x = String(a).split("."), y = String(b).split(".");
+    return x[0] !== y[0] ? x[0] > y[0] : Number(x[1] || 0) > Number(y[1] || 0);
+  }
+  var newsSheet = document.getElementById("newsSheet");
+  function showNews(since) {
+    if (!since || since === BUILD) return;
+    var fresh = NEWS.filter(function (n) { return buildAfter(n.b, since) && !buildAfter(n.b, BUILD); }).slice(0, 4);
+    if (!fresh.length) return;
+    document.getElementById("newsBody").innerHTML = fresh.map(function (n) {
+      return '<section><span class="nb">b' + n.b.split(".").pop() + '</span><h3>' + esc(n.t) + '</h3>' +
+        '<ul>' + n.items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></section>';
+    }).join("");
+    newsSheet.hidden = false;
+  }
+  document.getElementById("newsDone").addEventListener("click", function () { newsSheet.hidden = true; });
+  newsSheet.addEventListener("click", function (e) { if (e.target === newsSheet) newsSheet.hidden = true; });
 
   // ---------- the daily checklist ----------
   // Creatine and a multivitamin have no calories worth logging, but whether
@@ -5015,6 +5082,129 @@
     s.src = "vendor/usda/foods.js";
     document.head.appendChild(s);
   }
+  // Grocery brands: USDA's Branded Foods, ~400,000 products as sold, with each
+  // label's serving and barcode. Built by tools/make-brands.py into a file
+  // named for USDA's release, kept by the service worker in a store of its
+  // own that app updates leave alone. It is a download the owner chooses
+  // (store.brandsOn), from the library or Settings, never a surprise one.
+  // Held as columns, not records: one long lowercase "brand|name" line per
+  // product, searched with indexOf, so half a million small objects never
+  // have to exist on a phone.
+  var BRANDS_FILE = "vendor/usda/brands-2026-04-30.js";
+  var BRANDS_ABOUT = "about 400,000 products";
+  var BRANDS_SIZE = "8 MB";
+  var BR = null, brWaiters = null;
+  function loadBrands(done) {
+    if (BR) { done(BR); return; }
+    if (brWaiters) { brWaiters.push(done); return; }
+    brWaiters = [done];
+    var s = document.createElement("script");
+    function finish() {
+      var d = window.IRON_LEDGER_BRANDS;
+      if (d && d.text) {
+        var starts = new Int32Array(d.count + 1), n = 1;
+        for (var i = d.text.indexOf("\n"); i > -1 && n <= d.count; i = d.text.indexOf("\n", i + 1)) starts[n++] = i + 1;
+        starts[d.count] = d.text.length + 1;
+        BR = { release: d.release, n: d.count, text: d.text, starts: starts, k: d.k, p: d.p, sg: d.sg,
+               serving: d.serving.split("\n"), upc: d.upc };
+        window.IRON_LEDGER_BRANDS = null;
+      }
+      var ws = brWaiters; brWaiters = null;
+      ws.forEach(function (fn) { fn(BR); });
+      if (!BR) s.remove();
+    }
+    s.onload = finish;
+    s.onerror = finish;
+    s.src = BRANDS_FILE;
+    document.head.appendChild(s);
+  }
+  function brLine(i) { return BR.text.slice(BR.starts[i], BR.starts[i + 1] - 1); }
+  function brAt(pos) {                       // which product a position in the text is in
+    var lo = 0, hi = BR.n - 1;
+    while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (BR.starts[mid] <= pos) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+  function titled(s) { return s.replace(/(^|[\s(\/-])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
+  function brandRecord(i) {
+    var line = brLine(i), bar = line.indexOf("|");
+    return { i: i, brand: titled(line.slice(0, bar)), name: titled(line.slice(bar + 1)),
+             k: BR.k[i], p: BR.p[i], sg: BR.sg[i], serving: BR.serving[i] || "" };
+  }
+  // Look first where the rarest typed word is, then rank those products the
+  // way the everyday library ranks: most typed words, then the plainest name,
+  // with a nudge for words that are the brand.
+  function searchBrands(text) {
+    if (!BR) return [];
+    var qs = libWords(text).filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
+    if (!qs.length) return [];
+    function needle(w) { return w.length > 4 && /es$/.test(w) ? w.slice(0, -2) : w.length > 3 && /s$/.test(w) ? w.slice(0, -1) : w; }
+    function starts(t, pos) { var c = pos ? t.charCodeAt(pos - 1) : 10; return c === 10 || c === 32 || c === 124 || c === 40 || c === 45; }
+    var t = BR.text, needles = [];
+    qs.forEach(function (w) {
+      var nd = needle(w), cnt = 0;
+      for (var pos = t.indexOf(nd); pos > -1 && cnt < 20000; pos = t.indexOf(nd, pos + 1)) if (starts(t, pos)) cnt++;
+      if (cnt) needles.push({ nd: nd, cnt: cnt });
+    });
+    if (!needles.length) return [];
+    // Rarest word first, then the next, until there are enough to rank: one
+    // odd word that happens to be in a single product must not hide the
+    // products that match everything else.
+    needles.sort(function (a, b) { return a.cnt - b.cnt; });
+    var seen = {}, cands = [];
+    for (var j = 0; j < needles.length && cands.length < 1500; j++) {
+      var nd = needles[j].nd;
+      for (var pos = t.indexOf(nd); pos > -1 && cands.length < 6000; pos = t.indexOf(nd, pos + 1)) {
+        if (!starts(t, pos)) continue;
+        var i = brAt(pos);
+        if (!seen[i]) { seen[i] = true; cands.push(i); }
+      }
+    }
+    var scored = cands.map(function (i) {
+      var line = brLine(i), bar = line.indexOf("|");
+      var all = libWords(line.replace("|", " ")), bw = libWords(line.slice(0, bar));
+      var hits = 0;
+      qs.forEach(function (q) { if (all.some(function (w) { return libHit(q, w); })) hits++; });
+      // Was the brand itself typed? Whole words only, so "rice" is not
+      // Riceland, and all of a brand's words or a long first one, so "big
+      // mac" is not the Big Y supermarket while "kirkland" is still Kirkland
+      // Signature.
+      var bq = bw.filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
+      var typed = function (w) { return qs.some(function (q) { return w === q || w === q + "s" || w + "s" === q; }); };
+      var named = bq.length && (bq.every(typed) || (bq[0].length >= 5 && typed(bq[0]))) ? 1 : 0;
+      return { i: i, hits: hits, named: named, score: hits * 100 - Math.max(0, all.length - hits) * 2 + named * 10 };
+    });
+    var most = scored.reduce(function (m, x) { return Math.max(m, x.hits); }, 0);
+    return scored.filter(function (x) { return x.hits && x.hits === most; })
+      .sort(function (a, b) { return b.score - a.score; })
+      .slice(0, 8).map(function (x) { var r = brandRecord(x.i); r.hits = x.hits; r.named = x.named; return r; });
+  }
+  // How much of a product: the weight typed, or servings as the label states
+  // them — "2 yogurts" is two of its containers — or 100 g if the label gave
+  // no weight, said as such.
+  function brandItem(b, from) {
+    var p = parseQty(from.chunk || ""), q = p.qty || 1, g, label = "", unit = null;
+    if (p.unit && p.unit.kind === "weight") {
+      g = q * p.unit.grams;
+      var lab = p.unit.grams === 1 ? "g" : p.unit.grams === 28.3495 ? "oz" : p.unit.grams === 453.592 ? "lb" : null;
+      unit = WEIGH[lab] ? lab : null;
+    } else if (b.sg) {
+      g = q * b.sg;
+      // a label whose serving is only its weight would read "60 g \u00b7 60 g"
+      var said = /^\s*[\d.]+\s*g\s*$/i.test(b.serving) ? "" : b.serving;
+      label = (q === 1 ? "" : q + " \u00d7 ") + (said || "1 serving");
+    } else {
+      g = q * 100;
+      label = q === 1 ? "" : q + " \u00d7 100 g";       // never "100 g \u00b7 100 g"
+    }
+    g = Math.round(g);
+    return {
+      food: b.brand + " " + b.name, grams: g, unit: unit, per100: { k: b.k, p: b.p },
+      pre: label, amount: (label ? label + " \u00b7 " : "") + g + " g",
+      calories: Math.round(b.k * g / 100), protein: Math.round(b.p * g / 100),
+      src: "label", yr: BR ? BR.release.slice(0, 4) : "", chunk: from.chunk
+    };
+  }
+
   var LIB_SKIP = " a an the of with and or my some ";
   function libHit(q, w) {
     if (q === w) return true;
@@ -5068,7 +5258,7 @@
     var one = us.filter(function (x) { return /^1 (item|serving|sandwich|burger|piece|order|bowl|regular|medium)\b/i.test(x[0]); })[0] ||
               us.filter(function (x) { return /^1\b/.test(x[0]); })[0] || us[0];
     if (one) return { g: q * one[1], label: (q === 1 ? "" : q + " \u00d7 ") + one[0] };
-    return { g: q * 100, label: (q === 1 ? "" : q + " \u00d7 ") + "100 g" };
+    return { g: q * 100, label: q === 1 ? "" : q + " \u00d7 100 g" };      // never "100 g \u00b7 100 g"
   }
   function libItem(f, from) {
     var por = libPortion(f, from.chunk);
@@ -5576,7 +5766,7 @@
   // Hoisted so the weight editor can relabel a row after it stops being an
   // assumed portion; it used to be local to the render.
   var SRC = { pantry: "your pantry", table: "built-in reference",
-              typical: "typical serving", usda: "USDA",
+              typical: "typical serving", usda: "USDA", label: "brand label",
               claude: "estimated", unknown: "needs numbers" };
   // USDA's fast-food numbers date from 2018 and chains change recipes, so a
   // library answer says how old its data is.
@@ -5727,22 +5917,56 @@
         (unknown ? '' : '<button class="lib-keep" data-libkeep="' + i + '">Keep this match</button>') +
       '</div>';
     }
+    function libQueryHits(f) {
+      var qs = libWords(libQuery).filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
+      return qs.filter(function (q) { return f.w.some(function (w) { return libHit(q, w); }); }).length;
+    }
     function libPanelHtml(it, i) {
       var body;
       if (libStatus === "loading") body = '<div class="working"><i></i>Opening the food library\u2026</div>';
       else if (libStatus === "error") body = '<p class="why">The food library could not be opened. It comes with the app ' +
         'and is kept for offline use \u2014 open the app once while online, then it works anywhere.</p>';
-      else if (!libHits || !libHits.length) body = '<p class="hush">Nothing in the library matches \u201c' + esc(libQuery) +
-        '\u201d. Try fewer or different words \u2014 or describe it as its parts, like \u201c4 oz chicken & 1 cup rice\u201d.</p>';
-      else body = libHits.map(function (f, j) {
+      else {
+        var brandRows = (libBrandHits || []).map(function (b, j) {
+          var x = brandItem(b, it);
+          return '<button class="lib-hit" data-brandpick="' + j + '">' +
+            '<span class="ln">' + esc(b.brand) + ' \u00b7 ' + esc(b.name) + '</span>' +
+            '<span class="ls">Label \u00b7 ' + esc(x.amount) + '</span>' +
+            '<span class="lm"><b>' + fmt(x.calories) + '</b> kcal<br>' + fmt(x.protein) + ' g</span>' +
+          '</button>';
+        }).join("");
+        var foodRows = (libHits || []).map(function (f, j) {
           var x = libItem(f, it);
           return '<button class="lib-hit" data-libpick="' + j + '">' +
             '<span class="ln">' + esc(f.n) + '</span>' +
             '<span class="ls">USDA \u00b7 ' + esc((LIB && LIB.sets[f.t]) || "") + ' \u00b7 ' + esc(x.amount) + '</span>' +
             '<span class="lm"><b>' + fmt(x.calories) + '</b> kcal<br>' + fmt(x.protein) + ' g</span>' +
           '</button>';
-        }).join("") +
-        '<p class="hush">From USDA FoodData Central, searched on your phone \u2014 nothing is sent anywhere.</p>';
+        }).join("");
+        // Whichever matched more of what was typed goes first, and on a tie
+        // the brands only when a brand was named: "great value whole milk"
+        // wants the carton, "rice cooked" wants plain cooked rice.
+        var foodHits = libHits && libHits.length ? libQueryHits(libHits[0]) : 0;
+        var brandFirst = libBrandHits && libBrandHits.length &&
+          (libBrandHits[0].hits > foodHits || (libBrandHits[0].hits === foodHits && libBrandHits[0].named > 0));
+        var groups = [
+          brandRows ? '<span class="lib-group">Grocery brands</span>' + brandRows : '',
+          foodRows ? '<span class="lib-group">Everyday foods</span>' + foodRows : ''
+        ];
+        if (!brandFirst) groups.reverse();
+        body = (brandRows || foodRows) ? groups.join("")
+          : '<p class="hush">Nothing in the library matches \u201c' + esc(libQuery) +
+            '\u201d. Try fewer or different words \u2014 or describe it as its parts, like \u201c4 oz chicken & 1 cup rice\u201d.</p>';
+        if (brandsStatus === "loading") body += '<div class="working"><i></i>' +
+          (store.brandsOn ? 'Opening grocery brands\u2026' : 'Downloading grocery brands (' + BRANDS_SIZE + ', once)\u2026') + '</div>';
+        else if (brandsStatus === "error") body += '<p class="why">Grocery brands could not be downloaded. ' +
+          'Check the connection and try again \u2014 everyday foods still work.</p>';
+        else if (!store.brandsOn) body += '<div class="lib-offer">' +
+          '<p class="hush">Grocery brands aren\u2019t on this phone yet: ' + BRANDS_ABOUT + ' as sold \u2014 Kirkland, ' +
+            'Great Value, Chobani \u2014 each with its label\u2019s numbers. One download, then they work offline.</p>' +
+          '<button class="btn ghost" data-brandsget>Download grocery brands \u00b7 ' + BRANDS_SIZE + '</button></div>';
+        body += '<p class="hush">From USDA FoodData Central, searched on your phone \u2014 nothing is sent anywhere.</p>';
+      }
       return '<div class="lib-flag" id="libPanel">' +
         '<div class="lib-search">' +
           '<input id="libQ" type="search" enterkeyhint="search" value="' + esc(libQuery) + '" aria-label="Search the food library">' +
@@ -6285,9 +6509,11 @@
     // ---- the food library ----
     if (!est || est.status !== "review" || (libFor !== null && !est.items[libFor])) libFor = null;
     function runLibrary(i, text) {
-      libFor = i; libQuery = text; libHits = null;
+      libFor = i; libQuery = text; libHits = null; libBrandHits = null;
       libStatus = LIB ? "" : "loading";
       if (LIB) libHits = searchLibrary(text);
+      if (BR) libBrandHits = searchBrands(text);
+      else if (store.brandsOn) brandsStatus = "loading";
       render();
       if (!LIB) loadLibrary(function (lib) {
         if (libFor !== i) return;
@@ -6297,7 +6523,33 @@
         var panel = document.getElementById("libPanel");
         if (panel && panel.scrollIntoView) panel.scrollIntoView({ block: "nearest" });
       });
+      if (!BR && store.brandsOn) openBrands(i);
     }
+    // The brands file: from the phone's own store once downloaded, so this is
+    // a short wait offline, and the one real download is the first.
+    function openBrands(i) {
+      brandsStatus = "loading";
+      loadBrands(function (br) {
+        brandsStatus = br ? "" : "error";
+        if (br && !store.brandsOn) { store.brandsOn = true; save(); }
+        if (libFor !== i) return;
+        if (br) libBrandHits = searchBrands(libQuery);
+        render();
+        if (br) notify("Grocery brands downloaded \u00b7 they work offline");
+      });
+    }
+    view.querySelectorAll("[data-brandsget]").forEach(function (b) {
+      b.addEventListener("click", function () { openBrands(libFor); render(); });
+    });
+    view.querySelectorAll("[data-brandpick]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var r = libBrandHits && libBrandHits[Number(b.dataset.brandpick)], old = est.items[libFor];
+        if (!r || !old) return;
+        est.items[libFor] = brandItem(r, old);
+        libFor = null; libHits = null; libBrandHits = null;
+        render();
+      });
+    });
     view.querySelectorAll("[data-libopen]").forEach(function (b) {
       b.addEventListener("click", function () {
         var it = est.items[Number(b.dataset.libopen)];
@@ -6317,7 +6569,7 @@
         // editable as anything from the built-in table. It goes into the
         // review, never straight into the ledger.
         est.items[libFor] = libItem(f, old);
-        libFor = null; libHits = null;
+        libFor = null; libHits = null; libBrandHits = null;
         render();
       });
     });
@@ -9782,6 +10034,13 @@
         (a.id === l.accent ? "true" : "false") + '" aria-label="' + a.name + ' accent">' +
         '<i class="sw-' + a.id + '"></i><span>' + a.name + '</span></button>';
     }).join("");
+    document.getElementById("setLibHint").textContent = store.brandsOn
+      ? "Everyday foods and grocery brands (" + BRANDS_ABOUT + ") are on this phone, and work offline."
+      : "Everyday foods are built in. Grocery brands \u2014 " + BRANDS_ABOUT + " \u2014 are one download of " + BRANDS_SIZE + ".";
+    var sb = document.getElementById("setBrands");
+    sb.disabled = brandsStatus === "loading";
+    sb.textContent = brandsStatus === "loading" ? "Downloading grocery brands\u2026"
+      : store.brandsOn ? "Remove grocery brands" : "Download grocery brands \u00b7 " + BRANDS_SIZE;
     document.getElementById("setLogOpen").innerHTML = LOG_OPENS.map(function (o) {
       return '<button data-pick-logopen="' + o.id + '" aria-pressed="' +
         (o.id === logOpen() ? "true" : "false") + '">' + o.name + '</button>';
@@ -9799,6 +10058,26 @@
     setSheet.hidden = false;
   });
   document.getElementById("setDone").addEventListener("click", function () { setSheet.hidden = true; });
+
+  // Download or remove the grocery brands from Settings. Removing drops the
+  // file from the phone's store; what was logged from it stays logged.
+  document.getElementById("setBrands").addEventListener("click", function () {
+    if (store.brandsOn) {
+      store.brandsOn = false; BR = null; libBrandHits = null;
+      try { if (window.caches) caches.open("iron-ledger-data").then(function (c) { c.delete(BRANDS_FILE, { ignoreSearch: true }); }); } catch (e) {}
+      save(); drawSettings();
+      notify("Grocery brands removed from this phone");
+      return;
+    }
+    brandsStatus = "loading"; drawSettings();
+    loadBrands(function (br) {
+      brandsStatus = br ? "" : "error";
+      if (br) { store.brandsOn = true; save(); }
+      drawSettings();
+      notify(br ? "Grocery brands downloaded \u00b7 they work offline"
+                : "Grocery brands could not be downloaded \u2014 check the connection and try again");
+    });
+  });
 
   // Applied the instant it is tapped — the whole app changing colour behind
   // the sheet is the confirmation, and it is a better preview than any swatch.
@@ -10633,6 +10912,9 @@
   document.addEventListener("touchstart", function () {}, { passive: true });
 
   load();
+  // Which build last saved this phone's data, before this one stamps it: the
+  // "What's new" pop-up shows what changed since then, once.
+  var prevBuild = store.build;
   // Reconciles the pre-paint guess with the log itself. They only disagree
   // after a restore or on a phone that has never saved a preference.
   applyLook();
@@ -10674,6 +10956,7 @@
 
   if (movesNeedSaving) save();
   render();
+  showNews(prevBuild);
   // Said once: the first time the app opens on lists that held names it put
   // there, it says how many it took off rather than letting them vanish.
   if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");

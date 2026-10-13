@@ -68,13 +68,45 @@ with sync_playwright() as pw:
     p.wait_for_timeout(1200)
     cached = p.evaluate("""async () => {
         const ks = await caches.keys();
-        const c = await caches.open(ks.find(k => k.startsWith('iron-ledger-')));
+        const c = await caches.open(ks.find(k => k.startsWith('iron-ledger-') && k !== 'iron-ledger-data'));
         return (await c.keys()).map(r => new URL(r.url).pathname);
     }""")
     check("shell is cached", len(cached) >= 9, "%d entries" % len(cached))
     check("fonts are cached", sum(".woff2" in c for c in cached) >= 8,
           "%d font files" % sum(".woff2" in c for c in cached))
     check("the food library is kept from install", any(c.endswith("/vendor/usda/foods.js") for c in cached))
+    check("grocery brands are not downloaded at install", not any("/vendor/usda/brands-" in c for c in cached))
+
+    # Grocery brands are 8 MB, downloaded when asked for, and kept in a store
+    # of their own: an update clears the old build's cache, and must not make
+    # every phone download them again.
+    DATA_KEYS = """async () => {
+        const c = await caches.open('iron-ledger-data');
+        return (await c.keys()).map(r => new URL(r.url).pathname);
+    }"""
+    p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
+    words(p); p.fill("#estText", "great value whole milk"); p.click("#runEst"); p.wait_for_timeout(800)
+    if p.locator("[data-libopen]").count():
+        p.click("[data-libopen]"); p.wait_for_timeout(1500)
+    if p.locator("[data-brandsget]").count():
+        p.click("[data-brandsget]")
+        try: p.wait_for_selector("[data-brandpick]", timeout=30000)
+        except Exception: pass
+    p.wait_for_timeout(500)
+    data = p.evaluate(DATA_KEYS)
+    check("grocery brands are kept in a store of their own once downloaded",
+          any("/vendor/usda/brands-" in x for x in data), str(data))
+    p.evaluate("""async () => {
+        const r = await navigator.serviceWorker.register('sw.js?v=next-build');
+        const w = r.installing || r.waiting || r.active;
+        if (w.state !== 'activated') await new Promise(res => w.addEventListener('statechange', () => { if (w.state === 'activated') res(); }));
+    }""")
+    p.wait_for_timeout(500)
+    keys = p.evaluate("async () => await caches.keys()")
+    data = p.evaluate(DATA_KEYS)
+    check("an update clears the old build's cache but keeps the grocery brands",
+          ("iron-ledger-" + build) not in keys and "iron-ledger-next-build" in keys
+          and any("/vendor/usda/brands-" in x for x in data), "%s / %s" % (keys, data))
 
     # --- the actual promise -------------------------------------------------
     ctx.set_offline(True)
@@ -103,6 +135,13 @@ with sync_playwright() as pw:
     check("the food library answers offline",
           p.locator(".lib-hit").count() > 0 and "BIG MAC" in p.inner_text("#libPanel").upper(),
           p.inner_text("#libPanel")[:120] if p.locator("#libPanel").count() else "no panel")
+
+    p.fill("#libQ", "great value whole milk"); p.press("#libQ", "Enter")
+    try: p.wait_for_selector("[data-brandpick]", timeout=30000)
+    except Exception: pass
+    check("grocery brands answer offline too",
+          p.locator("[data-brandpick]").count() > 0 and "GREAT VALUE" in p.inner_text("#libPanel").upper(),
+          p.inner_text("#libPanel")[:160] if p.locator("#libPanel").count() else "no panel")
 
     check("no page errors", not errs, str(errs))
     ctx.close(); b.close()

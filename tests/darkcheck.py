@@ -71,6 +71,7 @@ def fixture(theme=None, accent=None):
         "lifts": [{"id": "q1", "cat": "back", "movement": "Face Pull", "sets": [{"w": 40, "r": 15}]}]}
     if theme: s["theme"] = theme
     if accent: s["accent"] = accent
+    s["build"] = "2026-10-09.58"        # last opened on an older build: What's new is drawn
     return s
 
 
@@ -129,6 +130,14 @@ FAILS = []
 def walk(p, label):
     """Every tab, plus the states and panels that only exist after a press."""
     found = []
+    # What's new only exists on the first open after an update: the fixture
+    # carries an older build so that it is drawn, and it is measured first
+    if not p.is_visible("#newsSheet") or not p.locator("#newsBody h3").count():
+        found.append("what's new: the pop-up is not on screen")
+    else:
+        low = p.evaluate(LOW)
+        if low: found.append("what's new: %s" % low)
+        p.click("#newsDone"); p.wait_for_timeout(200)
     for tab in ["macros", "gym", "pantry", "cardio", "coach", "log"]:
         p.click('.tabs button[data-tab="%s"]' % tab); p.wait_for_timeout(350)
         if tab == "coach" and p.locator("[data-openday]").count():
@@ -309,8 +318,15 @@ def walk(p, label):
             if low: found.append("macros (partial match): %s" % low)
             p.click("[data-libopen]"); p.wait_for_timeout(1500)
             if not p.locator(".lib-hit").count(): found.append("macros: the food library's results are not on screen")
+            if not p.locator("[data-brandsget]").count(): found.append("macros: the grocery brands offer is not on screen")
             low = p.evaluate(LOW)
             if low: found.append("macros (food library): %s" % low)
+            # grocery brands: their group headings and rows only exist once downloaded
+            p.click("[data-brandsget]")
+            try: p.wait_for_selector("[data-brandpick]", timeout=30000)
+            except Exception: found.append("macros: the grocery brands' rows are not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("macros (grocery brands): %s" % low)
             p.click("#discardEst"); p.wait_for_timeout(300)
     p.click("#setBtn"); p.wait_for_timeout(350)
     low = p.evaluate(LOW)
@@ -334,7 +350,7 @@ with sync_playwright() as pw:
         p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(400)
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fixture())
         p.reload(); p.wait_for_timeout(800)
-        try: p.click("text=Got it", timeout=1500)
+        try: p.click("#dismissWelcome", timeout=1500)     # the welcome only; What's new is measured first
         except Exception: pass
         found = walk(p, "phone-%s" % scheme)
         print("phone %-5s  teal      %s" % (scheme, "; ".join(found) if found else "clean"))
@@ -353,7 +369,7 @@ with sync_playwright() as pw:
             p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(400)
             p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fixture(theme, accent))
             p.reload(); p.wait_for_timeout(800)
-            try: p.click("text=Got it", timeout=1500)
+            try: p.click("#dismissWelcome", timeout=1500)     # the welcome only; What's new is measured first
             except Exception: pass
             pairs = p.evaluate(PAIRS)
             for x in pairs["bad"]:

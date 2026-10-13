@@ -3056,6 +3056,112 @@ with sync_playwright() as pw:
     check("library: Close puts the panel away", q.locator("#libPanel").count()==0)
     c.close()
 
+    # ---------- GROCERY BRANDS ----------
+    # Step 2 of the one-stop shop: products as sold, by brand, from USDA's
+    # Branded Foods, each with its own label. Too big to land on a phone
+    # unasked, so it is a download the owner chooses, offered in the library
+    # and in Settings — and once taken it works offline like everything else.
+    BHITS="()=>[...document.querySelectorAll('#libPanel .lib-group, #libPanel .lib-hit')].map(x=>x.innerText.split(String.fromCharCode(10)).join(' | '))"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("brands: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LBSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    estimate("great value whole milk", "1")
+    q.click("[data-libopen]"); q.wait_for_timeout(1500)
+    offer=q.locator("[data-brandsget]")
+    check("brands: the library offers them as one download, saying how big",
+          offer.count()==1 and "8 MB" in offer.inner_text() and "work offline" in q.inner_text("#libPanel")
+          and offer.bounding_box()["height"]>=MIN_TAP, q.inner_text("#libPanel")[-300:])
+    check("brands: nothing is downloaded until it is asked for",
+          q.evaluate("()=>!document.querySelector('script[src*=\"brands-\"]')"))
+    offer.click()
+    try: q.wait_for_selector("[data-brandpick]", timeout=30000)
+    except Exception: pass
+    q.wait_for_timeout(300)
+    hits=q.evaluate(BHITS)
+    check("brands: once downloaded, a brand that was typed comes first, with its label's serving",
+          len(hits)>1 and hits[0]=="GROCERY BRANDS" and hits[1].startswith("Great Value · Whole Milk | Label · 1 cup (240 ml) · 240 g | 149 kcal"), str(hits[:3]))
+    check("brands: and the download says so, and is remembered on this phone",
+          "Grocery brands downloaded" in q.inner_text(".undobar") and q.evaluate(LBST).get("brandsOn") is True,
+          q.inner_text(".undobar"))
+    check("brands: everyday foods are still offered below them", "EVERYDAY FOODS" in hits, str(hits))
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("brands: their rows fit a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.locator("[data-brandpick]").first.click(); q.wait_for_timeout(400)
+    tag=q.inner_text(".rev-item .src-tag")
+    check("brands: the pick takes the row's place, from the label, with the release year",
+          q.evaluate(ROWS)[0]=="Great Value Whole Milk" and tag.upper()=="BRAND LABEL · 2026" and q.input_value('[data-ic="0"]')=="149",
+          "%s / %s / %s" % (q.evaluate(ROWS), tag, q.input_value('[data-ic="0"]')))
+    estimate("xyzzy"); q.click("[data-libopen]"); q.wait_for_timeout(600)
+    q.fill("#libQ","rice cooked"); q.press("#libQ","Enter"); q.wait_for_timeout(800)
+    hits=q.evaluate(BHITS)
+    check("brands: with no brand named, plain foods come first",
+          bool(hits) and hits[0]=="EVERYDAY FOODS" and "GROCERY BRANDS" in hits, str(hits[:2]))
+    q.fill("#libQ","big mac"); q.press("#libQ","Enter"); q.wait_for_timeout(800)
+    hits=q.evaluate(BHITS)
+    check("brands: a word that happens to be part of a brand is not naming it — Big Mac, not the Big Y store",
+          len(hits)>1 and hits[0]=="EVERYDAY FOODS" and "Big Mac" in hits[1], str(hits[:2]))
+    q.reload(); q.wait_for_timeout(900)
+    estimate("chobani greek yogurt", "2")
+    q.click("[data-libopen]")
+    try: q.wait_for_selector("[data-brandpick]", timeout=30000)
+    except Exception: pass
+    hits=q.evaluate(BHITS)
+    check("brands: on the next open they are simply there, with no offer",
+          q.locator("[data-brandsget]").count()==0 and len(hits)>1 and hits[1].startswith("Chobani · Greek Yogurt | Label · 2 × "), str(hits[:2]))
+    q.click("#setBtn"); q.wait_for_timeout(300)
+    sb=q.locator("#setBrands")
+    check("brands: Settings says they are on the phone and offers to remove them",
+          "are on this phone" in q.inner_text("#setLibHint") and sb.inner_text().upper()=="REMOVE GROCERY BRANDS" and sb.bounding_box()["height"]>=MIN_TAP,
+          "%s / %s" % (q.inner_text("#setLibHint"), sb.inner_text()))
+    sb.click(); q.wait_for_timeout(300)
+    check("brands: removing them says so, and offers the download again",
+          q.evaluate(LBST).get("brandsOn") is False and sb.inner_text().upper()=="DOWNLOAD GROCERY BRANDS · 8 MB"
+          and "removed" in q.inner_text(".undobar"), "%s / %s" % (sb.inner_text(), q.inner_text(".undobar")))
+    q.click("#setDone"); q.wait_for_timeout(200)
+    c.close()
+
+    # ---------- WHAT'S NEW ----------
+    # Asked for by the owner: after an update, a one-time pop-up saying what
+    # changed. Keyed on the build that last saved the phone's data, so it shows
+    # what is new since that phone last opened the app — once — and never to
+    # someone opening it for the first time.
+    BUILDNOW=re.search(r'var BUILD = "([^"]+)"', io.open("iron-ledger.html", encoding="utf-8").read()).group(1)
+    NEWS="()=>[...document.querySelectorAll('#newsBody h3')].map(x=>x.textContent)"
+    def opened(store):
+        q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
+        q.reload(); q.wait_for_timeout(900)
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("news: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    opened(dict(LBSTORE, build="2026-10-09.58"))
+    titles=q.evaluate(NEWS)
+    check("news: after an update it shows what changed since, newest first",
+          q.is_visible("#newsSheet") and len(titles)==2 and titles[1]=="A food library on your phone", str(titles))
+    check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
+    nb=q.locator("#newsDone").bounding_box()
+    check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("news: it fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.click("#newsDone"); q.wait_for_timeout(200)
+    check("news: Got it closes it, and the phone is marked as on this build",
+          not q.is_visible("#newsSheet") and q.evaluate(LBST).get("build")==BUILDNOW, q.evaluate(LBST).get("build"))
+    q.reload(); q.wait_for_timeout(900)
+    check("news: it is shown once, not on every open", not q.is_visible("#newsSheet"))
+    opened(dict(LBSTORE, build="2026-08-01.30"))
+    titles=q.evaluate(NEWS)
+    check("news: a phone far behind sees the latest four, not the whole history", len(titles)==4, str(titles))
+    q.mouse.click(200, 12); q.wait_for_timeout(200)
+    check("news: a tap on the dimmed page closes it too", not q.is_visible("#newsSheet"))
+    opened(LBSTORE)
+    check("news: a phone opening the app for the first time is not told what changed", not q.is_visible("#newsSheet"))
+    c.close()
+
     # A heredoc once turned \b into backspace characters inside the app's own
     # source — invisible, harmless that time, and found only by accident.
     src=io.open("iron-ledger.html", encoding="utf-8").read()

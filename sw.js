@@ -15,6 +15,12 @@
  */
 const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE = "iron-ledger-" + VERSION;
+// Big data files that change on USDA's schedule, not the app's: the grocery
+// brands (8 MB). They live in a store of their own that a new build does not
+// clear — otherwise every update would make every phone download them again.
+// The release is in the file name, so a new release is a new file.
+const DATA = "iron-ledger-data";
+const isData = (url) => /\/vendor\/usda\/brands-[^/]+\.js$/.test(url.pathname);
 
 const SHELL = [
   "./",
@@ -49,7 +55,7 @@ self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(
-        keys.filter((k) => k.startsWith("iron-ledger-") && k !== CACHE).map((k) => caches.delete(k))))
+        keys.filter((k) => k.startsWith("iron-ledger-") && k !== CACHE && k !== DATA).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -70,6 +76,18 @@ self.addEventListener("fetch", (e) => {
           return res;
         })
         .catch(() => caches.match("./", { ignoreSearch: true }).then((r) => r || caches.match(req)))
+    );
+    return;
+  }
+
+  // Data files: their own store, cache first, kept across builds.
+  if (isData(url)) {
+    e.respondWith(
+      caches.open(DATA).then((c) => c.match(req, { ignoreSearch: true }).then((hit) =>
+        hit || fetch(req).then((res) => {
+          if (res && res.ok && res.type === "basic") c.put(req, res.clone());
+          return res;
+        })))
     );
     return;
   }
