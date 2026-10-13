@@ -2985,6 +2985,83 @@ with sync_playwright() as pw:
           and after.get("cardioGoal",{}).get("kind")=="min")
     c.close()
 
+    # ---------- THE FOOD LIBRARY ----------
+    # Asked for by the owner: an answer for anything eaten, with no internet
+    # and no cost. USDA FoodData Central ships with the app (public domain),
+    # searched on the phone. And a match that covered only part of what was
+    # typed says so: "Cava harissa avocado bowl" used to log a plain avocado.
+    LBG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    LBSTORE={"days":{},"moves":{},"movesOwned":True,"goal":LBG,"region":"United States","pantry":[],"v":1,"seen":True}
+    LBST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
+    ROWS="()=>[...document.querySelectorAll('.rev-item .food')].map(x=>x.textContent)"
+    HITS="()=>[...document.querySelectorAll('.lib-hit')].map(x=>x.innerText.split(String.fromCharCode(10)).join(' | '))"
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("library: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LBSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    def estimate(food, qty=""):
+        if q.locator("#discardEst").count(): q.click("#discardEst"); q.wait_for_timeout(250)
+        way(q, "estimate")
+        q.fill('[data-eq="0"]', qty); q.fill('[data-ef="0"]', food); q.click("#runEst"); q.wait_for_timeout(900)
+    estimate("cava harissa avocado bowl", "1")
+    check("library: a match that covered only part of the name says so",
+          q.inner_text(".lib-flag .why")=="Matched \u201cAvocado\u201d \u2014 \u201ccava\u201d, \u201charissa\u201d, \u201cbowl\u201d weren\u2019t part of the match.",
+          q.inner_text(".lib-flag .why") if q.locator(".lib-flag .why").count() else "no flag")
+    fb=q.eval_on_selector_all(".lib-flag button","e=>e.map(x=>x.getBoundingClientRect().height)")
+    check("library: and offers the library, or keeping the match, both proper targets",
+          q.locator("[data-libopen]").count()==1 and q.locator("[data-libkeep]").count()==1 and all(h>=MIN_TAP for h in fb), str(fb))
+    q.click("[data-libkeep]"); q.wait_for_timeout(250)
+    check("library: Keep this match quiets it", q.locator(".lib-flag").count()==0)
+    estimate("1 quarter pounder with cheese")
+    check("library: a food named with 'with' stays one food — no stray cheddar",
+          q.evaluate(ROWS)==["Quarter Pounder with cheese"] and q.locator(".lib-flag").count()==0, str(q.evaluate(ROWS)))
+    estimate("medium mcdonalds french fries", "2")
+    check("library: the amount reads as typed, not '2 eachs'",
+          "eachs" not in q.inner_text(".rev-item") and q.inner_text(".lib-flag .why").find("\u201cmcdonalds\u201d")>-1, q.inner_text(".rev-item"))
+    q.click("[data-libopen]"); q.wait_for_timeout(1500)
+    hits=q.evaluate(HITS)
+    check("library: it opens on the phone and finds the chain's own item, at the size typed",
+          bool(hits) and hits[0].startswith("McDONALD'S, french fries | USDA · 2018 · 2 × 1 medium serving · 234 g | 756 kcal"), str(hits[:2]))
+    check("library: and says nothing was sent anywhere", "nothing is sent anywhere" in q.inner_text("#libPanel"))
+    pb=q.eval_on_selector_all("#libPanel button, #libPanel input","e=>e.filter(x=>x.getClientRects().length).map(x=>[x.tagName,Math.round(x.getBoundingClientRect().height),parseFloat(getComputedStyle(x).fontSize)])")
+    check("library: every control in the panel clears 44px and the search field will not zoom",
+          len(pb)>=4 and all(h>=MIN_TAP for _,h,_ in pb) and all(f>=16 for t,_,f in pb if t=="INPUT"), str(pb))
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("library: the panel fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.fill("#libQ","big mac"); q.press("#libQ","Enter"); q.wait_for_timeout(400)
+    hits=q.evaluate(HITS)
+    check("library: searching again finds the Big Mac, both USDA years shown",
+          any(h.startswith("Big Mac (McDonalds) | USDA · 2024") for h in hits) and any(h.startswith("McDONALD'S, BIG MAC | USDA · 2018") for h in hits), str(hits[:3]))
+    q.locator("[data-libpick]").filter(has_text="McDONALD'S, BIG MAC").first.click(); q.wait_for_timeout(400)
+    tag=q.inner_text(".rev-item .src-tag")
+    check("library: the pick takes the row's place, labelled with its source and year",
+          q.evaluate(ROWS)[0]=="McDONALD'S, BIG MAC" and tag.upper()=="USDA · 2018" and q.locator("#libPanel").count()==0, "%s / %s" % (q.evaluate(ROWS), tag))
+    check("library: two of them, from USDA's own weight",
+          q.input_value('[data-ic="0"]')=="1126" and q.input_value('[data-ig="0"]')=="438", "%s kcal %s g" % (q.input_value('[data-ic="0"]'), q.input_value('[data-ig="0"]')))
+    q.fill('[data-ig="0"]',"219"); q.wait_for_timeout(200)
+    check("library: and its weight is editable like any other food", q.input_value('[data-ic="0"]')=="563")
+    q.click("#commitEst"); q.wait_for_timeout(400)
+    food=[f for f in q.evaluate(LBST)["days"][Ts]["food"]]
+    check("library: it goes into the ledger under its own name", food and food[-1]["note"].startswith("McDONALD'S, BIG MAC") and food[-1]["cal"]==563,
+          str(food[-1:] if food else food))
+    estimate("xyzzy")
+    check("library: a food nobody knows says so", q.inner_text(".lib-flag .why")=="Not in your pantry or the built-in list.")
+    q.click("[data-libopen]"); q.wait_for_timeout(400)
+    check("library: and a search that finds nothing says what to try",
+          "Nothing in the library matches \u201cxyzzy\u201d" in q.inner_text("#libPanel") and q.locator(".lib-hit").count()==0)
+    q.click("[data-libclose]"); q.wait_for_timeout(250)
+    check("library: Close puts the panel away", q.locator("#libPanel").count()==0)
+    c.close()
+
+    # A heredoc once turned \b into backspace characters inside the app's own
+    # source — invisible, harmless that time, and found only by accident.
+    src=io.open("iron-ledger.html", encoding="utf-8").read()
+    ctl=[i for i,ch in enumerate(src) if ord(ch)<32 and ch not in "\n\r\t"]
+    check("source: no control characters hiding in the app (checked in the source)", not ctl, str(ctl[:5]))
+
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:
         print("%-6s %-42s %s" % (st,name,detail))

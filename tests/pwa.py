@@ -74,6 +74,7 @@ with sync_playwright() as pw:
     check("shell is cached", len(cached) >= 9, "%d entries" % len(cached))
     check("fonts are cached", sum(".woff2" in c for c in cached) >= 8,
           "%d font files" % sum(".woff2" in c for c in cached))
+    check("the food library is kept from install", any(c.endswith("/vendor/usda/foods.js") for c in cached))
 
     # --- the actual promise -------------------------------------------------
     ctx.set_offline(True)
@@ -94,6 +95,14 @@ with sync_playwright() as pw:
     before = p.evaluate("() => (JSON.parse(localStorage.getItem('iron-ledger-v1')||'{}').days)||{}")
     words(p); p.fill("#estText", "2 eggs"); p.wait_for_timeout(150)
     check("can type a food entry offline", p.input_value("#estText") == "2 eggs")
+    # the library's whole point is answering with no connection
+    p.fill("#estText", "xyzzy"); p.click("#runEst"); p.wait_for_timeout(800)
+    if p.locator("[data-libopen]").count():
+        p.click("[data-libopen]"); p.wait_for_timeout(1500)
+        p.fill("#libQ", "big mac"); p.press("#libQ", "Enter"); p.wait_for_timeout(500)
+    check("the food library answers offline",
+          p.locator(".lib-hit").count() > 0 and "BIG MAC" in p.inner_text("#libPanel").upper(),
+          p.inner_text("#libPanel")[:120] if p.locator("#libPanel").count() else "no panel")
 
     check("no page errors", not errs, str(errs))
     ctx.close(); b.close()

@@ -963,11 +963,58 @@
     letter-spacing: .1em;
     text-transform: uppercase;
   }
-  .src-tag.pantry { color: var(--accent); }
+  /* not the accent: teal means a thing you can press, and a tag is not one */
+  .src-tag.pantry { color: var(--ink-2); font-weight: 600; }
+  .src-tag.usda { color: var(--ink-2); }
   .src-tag.table { color: var(--ink-3); }
   .src-tag.typical { color: var(--cat-b); }
   .src-tag.claude { color: var(--ink-3); }
   .src-tag.unknown { color: var(--miss); }
+
+  /* ---------- the food library ---------- */
+  .lib-flag { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-top: 1px dashed var(--rule); }
+  .lib-flag p { margin: 0; font-size: 13px; line-height: 1.45; }
+  .lib-flag .why { color: var(--miss); }
+  .lib-flag .hush { font-size: 12px; color: var(--ink-2); }
+  .lib-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .lib-search input {
+    min-width: 0;
+    height: 46px;
+    padding: 0 10px;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+  }
+  .lib-search .btn { padding: 0 14px; }
+  .lib-hit {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2px 10px;
+    width: 100%;
+    min-height: 56px;
+    padding: 9px 12px;
+    text-align: left;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 3px;
+  }
+  .lib-hit .ln { grid-column: 1; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+  .lib-hit .ls { grid-column: 1; font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
+  .lib-hit .lm { grid-column: 2; grid-row: 1 / span 2; font-family: var(--font-num); font-size: 12px; color: var(--ink-2); text-align: right; white-space: nowrap; }
+  .lib-hit .lm b { font-size: 15px; color: var(--ink); }
+  .lib-keep {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: 0 2px;
+    font-family: var(--font-num);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
 
   /* ---------- coach ---------- */
   .rt-day {
@@ -2834,7 +2881,7 @@
   .split-head button, .day-note button, .lift-note button, .note-add,
   .lift-foot button, .ss-head button, .pan-item .rm, .pan-item .mv,
   .supp-item button, .meal-actions button, .meal-item .mi-out, .t-del, .split-rm,
-  .meal-open .mc, .rt-head .ct, .pending-chip, .grip, .lift-name .chev { color: var(--accent); }
+  .meal-open .mc, .rt-head .ct, .pending-chip, .grip, .lift-name .chev, .lib-keep { color: var(--accent); }
   .lift-name .chev { font-size: 13px; }
 
   /* Every press shows. Most buttons gave no sign a tap had landed, which is
@@ -3056,7 +3103,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-09.58";
+  var BUILD = "2026-10-12.59";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3164,6 +3211,9 @@
   // puts that one aside in estShut, and the next one opens it again.
   var logWay = null;
   var estShut = null;
+  // The food library's panel under one review row: which row, what was
+  // searched, what came back, and "loading" / "error" while it is not ready.
+  var libFor = null, libQuery = "", libHits = null, libStatus = "";
 
   // How a way in opens, chosen under Settings: in place under its button, as
   // a pop-up like the set sheet, or the mix — the short numbers form pops up
@@ -4387,7 +4437,7 @@
     // fast food — brand values are approximations and chains reformulate,
     // so treat them as a close estimate rather than a label reading
     { n: "Big Mac", k: 257.1, d: 219, p: 11.9, a: ["big mac", "big macs"], u: { each: 219 } },
-    { n: "Quarter Pounder with cheese", k: 257.4, d: 202, p: 14.9, a: ["quarter pounder"], u: { each: 202 } },
+    { n: "Quarter Pounder with cheese", k: 257.4, d: 202, p: 14.9, a: ["quarter pounder", "quarter pounder with cheese"], u: { each: 202 } },
     { n: "McDouble", k: 264.9, d: 151, p: 14.6, a: ["mcdouble", "mcdoubles"], u: { each: 151 } },
     { n: "McDonalds cheeseburger", k: 263.2, d: 114, p: 13.2, a: ["mcdonalds cheeseburger", "mcd cheeseburger"], u: { each: 114 } },
     { n: "McChicken", k: 279.7, d: 143, p: 9.8, a: ["mcchicken", "mcchickens"], u: { each: 143 } },
@@ -4395,7 +4445,7 @@
     { n: "McDonalds fries, medium", k: 288.3, d: 111, p: 4.5, a: ["mcdonalds fries", "mcdonalds medium fries"], u: { each: 111 } },
     { n: "McDonalds fries, large", k: 311.7, d: 154, p: 4.5, a: ["mcdonalds large fries"], u: { each: 154 } },
     { n: "Egg McMuffin", k: 229.6, d: 135, p: 12.6, a: ["egg mcmuffin", "mcmuffin"], u: { each: 135 } },
-    { n: "Sausage McMuffin with egg", k: 294.5, d: 163, p: 12.3, a: ["sausage mcmuffin"], u: { each: 163 } },
+    { n: "Sausage McMuffin with egg", k: 294.5, d: 163, p: 12.3, a: ["sausage mcmuffin", "sausage mcmuffin with egg"], u: { each: 163 } },
     { n: "McDonalds hash brown", k: 264.2, d: 53, p: 1.9, a: ["mcdonalds hash brown"], u: { each: 53 } },
     { n: "McFlurry", k: 178.9, d: 285, p: 4.2, a: ["mcflurry"], u: { each: 285 } },
     { n: "Whopper", k: 243.3, d: 270, p: 11.5, a: ["whopper", "whoppers"], u: { each: 270 } },
@@ -4669,6 +4719,11 @@
     JOINED = [];
     FOODS.forEach(function (f) {
       (f.a || []).forEach(function (a) { if (/\s(?:and|with)\s/.test(a)) JOINED.push(a); });
+      // A food's own name protects itself too: "Quarter Pounder with cheese"
+      // had only "quarter pounder" as an alias, so typing its full name split
+      // on "with" and logged a second, separate serving of cheddar.
+      var own = normalize(f.n);
+      if (/\s(?:and|with)\s/.test(own) && JOINED.indexOf(own) === -1) JOINED.push(own);
     });
     JOINED.sort(function (x, y) { return y.length - x.length; });   // longest first
     return JOINED;
@@ -4680,7 +4735,7 @@
       // aliases are plain words and spaces, so only the spaces need loosening
       var pattern = a.split(/\s+/).join("\\s+");
       s = s.replace(new RegExp(pattern, "gi"), function (hit) {
-        return hit.replace(/\s+/g, "_");   // a word char, so and cannot match across it
+        return hit.replace(/\s+/g, "_");   // a word char, so \band\b cannot match across it
       });
     });
     return s.split(/\s*(?:&|,|\+|;|\band\b|\bwith\b|\n)\s*/i)
@@ -4690,7 +4745,13 @@
 
 
   // Longest whole-word alias wins, so "top sirloin" beats "sirloin".
+  // The longest name in the table found inside what was typed — and which
+  // name it was, so the review can say when it covered only part of it.
   function matchIn(list, q) {
+    var h = matchAlias(list, q);
+    return h ? h.f : null;
+  }
+  function matchAlias(list, q) {
     var norm = " " + normalize(q) + " ";
     var wantsDry = /\b(dry|uncooked|raw)\b/.test(norm);
     var best = null, bestLen = 0;
@@ -4701,10 +4762,25 @@
         var dryAlias = /\b(dry|uncooked|raw)\b/.test(alias);
         if (wantsDry && dryAlias) len += 20;      // prefer the dry entry when asked
         if (!wantsDry && dryAlias) len -= 20;     // and avoid it otherwise
-        if (len > bestLen) { bestLen = len; best = f; }
+        if (len > bestLen) { bestLen = len; best = { f: f, alias: alias }; }
       });
     });
     return bestLen > 0 ? best : null;
+  }
+
+  // Words typed that the match did not cover. "Cava harissa avocado bowl"
+  // matched "avocado" and logged a 240 kcal avocado for a bowl several times
+  // that, with nothing to say it had guessed: the confident wrong number this
+  // app exists to avoid. Cooking words and sizes do not count as missed —
+  // "grilled chicken breast" is still chicken breast.
+  var NEUTRAL_WORDS = " a an the of with and or my some fresh homemade home made plain cooked large small medium " +
+    "regular big little piece pieces serving servings grilled baked roasted steamed boiled sliced chopped diced whole ";
+  function missedWords(name, alias) {
+    var aw = normalize(alias).split(" ");
+    return normalize(name).split(" ").filter(function (w) {
+      if (!w || /^\d/.test(w) || NEUTRAL_WORDS.indexOf(" " + w + " ") > -1) return false;
+      return !aw.some(function (a) { return a === w || a + "s" === w || a === w + "s" || a + "es" === w; });
+    });
   }
 
   function matchFood(q) {
@@ -4776,8 +4852,10 @@
   // Resolve one chunk against the built-in table. Null when it can't answer.
   function resolveTable(chunk) {
     var p = parseQty(chunk);
-    var food = matchFood(p.name) || matchFood(p.whole);
+    var hit = matchAlias(FOODS, p.name) || matchAlias(FOODS, p.whole);
+    var food = hit && hit.f;
     if (!food) return null;
+    var missed = missedWords(p.name, hit.alias + " " + normalize(food.n));
 
     var grams = null, amount = "", showGrams = true, assumed = false, typedUnit = null;
     if (p.unit && p.unit.kind === "weight") {
@@ -4793,7 +4871,10 @@
       var per = food.u && food.u[p.unit.key];
       if (!per) return null;                       // unit we can't weigh for this food
       grams = (p.qty || 1) * per;
-      amount = (p.qty || 1) + " " + p.unit.key + (p.qty > 1 ? "s" : "");
+      // "each" is how the table weighs one of a thing, not a word to show:
+      // "2 medium fries" read back as "2 eachs".
+      amount = p.unit.key === "each" ? String(p.qty || 1)
+        : (p.qty || 1) + " " + p.unit.key + (p.qty > 1 ? "s" : "");
     } else if (p.qty && food.u && (food.u.each || food.u.slice)) {
       var one = food.u.each || food.u.slice;
       grams = p.qty * one;
@@ -4833,7 +4914,10 @@
       pre: showGrams ? amount : "",     // "1 cup", "2 ×" — describes the weight
       calories: Math.round((food.k * grams) / 100),
       protein: Math.round((food.p * grams) / 100),
-      src: assumed ? "typical" : "table"
+      src: assumed ? "typical" : "table",
+      // what was typed, for the library to search, and what the match missed
+      chunk: chunk,
+      partial: missed.length ? missed : null
     };
   }
 
@@ -4893,7 +4977,108 @@
   }
 
   function unknownItem(chunk) {
-    return { food: chunk, amount: "", calories: 0, protein: 0, src: "unknown" };
+    return { food: chunk, amount: "", calories: 0, protein: 0, src: "unknown", chunk: chunk };
+  }
+
+  // ---------- the food library ----------
+  // USDA FoodData Central — public domain, shipped with the app, searched on
+  // the phone: everyday foods, every cut of meat raw and cooked, home and
+  // restaurant dishes with their typical portions, and a fast-food group
+  // (McDonald's, Wendy's...). Built by tools/make-foods.py into
+  // vendor/usda/foods.js, which the service worker keeps from install, so a
+  // lookup needs no connection and sends nothing anywhere. It is loaded with a
+  // script tag on first use, not fetch(): a page opened from disk cannot fetch
+  // a file beside it, and the suites open the app from disk.
+  var LIB = null, libWaiters = null;
+  function libWords(name) {
+    return String(name).toLowerCase().replace(/[\u2019']s\b/g, "s").replace(/[^a-z0-9]+/g, " ").trim().split(" ");
+  }
+  function loadLibrary(done) {
+    if (LIB) { done(LIB); return; }
+    if (libWaiters) { libWaiters.push(done); return; }
+    libWaiters = [done];
+    var s = document.createElement("script");
+    function finish() {
+      var d = window.IRON_LEDGER_FOODS;
+      if (d && d.foods) {
+        LIB = { sets: d.sets || {}, foods: d.foods.map(function (f) {
+          return { n: f[0], t: f[1], k: f[2], p: f[3], u: f[4] || [], w: libWords(f[0]) };
+        }) };
+        window.IRON_LEDGER_FOODS = null;      // the index is kept; the raw copy need not be
+      }
+      var ws = libWaiters; libWaiters = null;
+      ws.forEach(function (fn) { fn(LIB); });
+      if (!LIB) s.remove();                   // so a later press can try again
+    }
+    s.onload = finish;
+    s.onerror = finish;
+    s.src = "vendor/usda/foods.js";
+    document.head.appendChild(s);
+  }
+  var LIB_SKIP = " a an the of with and or my some ";
+  function libHit(q, w) {
+    if (q === w) return true;
+    if (q.length > 3 && (w === q + "s" || w + "s" === q || w === q + "es" || w + "es" === q)) return true;
+    return q.length >= 4 && w.indexOf(q) === 0;       // "chick" finds chicken
+  }
+  // The closest foods to what was typed: as many of its words as possible,
+  // then the plainest name. Raw and baby food sink unless they were asked for.
+  function searchLibrary(text) {
+    if (!LIB) return [];
+    var qs = libWords(text).filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
+    if (!qs.length) return [];
+    var wantsRaw = qs.some(function (w) { return w === "raw" || w === "uncooked" || w === "dry"; });
+    var scored = [];
+    LIB.foods.forEach(function (f) {
+      var hits = 0;
+      qs.forEach(function (q) { if (f.w.some(function (w) { return libHit(q, w); })) hits++; });
+      if (!hits) return;
+      var score = hits * 100 - Math.max(0, f.w.length - hits) * 2;
+      if (!wantsRaw && f.w.some(function (w) { return w === "raw" || w === "uncooked"; })) score -= 25;
+      if (f.w.some(function (w) { return w === "babyfood" || w === "infant"; })) score -= 60;
+      if (libHit(qs[0], f.w[0])) score += 8;
+      if (f.u.length) score += 3;
+      scored.push({ f: f, hits: hits, score: score });
+    });
+    var most = scored.reduce(function (m, x) { return Math.max(m, x.hits); }, 0);
+    return scored.filter(function (x) { return x.hits === most; })
+      .sort(function (a, b) { return b.score - a.score; })
+      .slice(0, 8).map(function (x) { return x.f; });
+  }
+  // How much of a library food: the weight typed, a portion named for the unit
+  // typed ("1 cup"), or its typical one ("1 item") times how many — and 100 g
+  // when USDA gives no portion, said as such rather than dressed up.
+  function libPortion(f, chunk) {
+    var p = parseQty(chunk || ""), q = p.qty || 1;
+    if (p.unit && p.unit.kind === "weight") {
+      var lab = p.unit.grams === 1 ? "g" : p.unit.grams === 28.3495 ? "oz" : p.unit.grams === 453.592 ? "lb" : null;
+      return { g: q * p.unit.grams, label: "", unit: WEIGH[lab] ? lab : null };
+    }
+    var us = f.u || [];
+    // "medium fries" means the medium portion, when USDA lists sizes
+    var size = (String(chunk || "").toLowerCase().match(/\b(small|medium|large|kids?|regular|jumbo|snack)\b/) || [])[1];
+    if (size) {
+      var sized = us.filter(function (x) { return x[0].toLowerCase().indexOf(size) > -1; })[0];
+      if (sized) return { g: q * sized[1], label: (q === 1 ? "" : q + " × ") + sized[0] };
+    }
+    if (p.unit && p.unit.key && p.unit.key !== "each") {
+      var named = us.filter(function (x) { return new RegExp("\\b" + p.unit.key + "s?\\b", "i").test(x[0]); })[0];
+      if (named) return { g: q * named[1], label: (q === 1 ? "" : q + " \u00d7 ") + named[0] };
+    }
+    var one = us.filter(function (x) { return /^1 (item|serving|sandwich|burger|piece|order|bowl|regular|medium)\b/i.test(x[0]); })[0] ||
+              us.filter(function (x) { return /^1\b/.test(x[0]); })[0] || us[0];
+    if (one) return { g: q * one[1], label: (q === 1 ? "" : q + " \u00d7 ") + one[0] };
+    return { g: q * 100, label: (q === 1 ? "" : q + " \u00d7 ") + "100 g" };
+  }
+  function libItem(f, from) {
+    var por = libPortion(f, from.chunk);
+    var g = Math.round(por.g);
+    return {
+      food: f.n, grams: g, unit: por.unit || null, per100: { k: f.k, p: f.p },
+      pre: por.label, amount: (por.label ? por.label + " \u00b7 " : "") + g + " g",
+      calories: Math.round(f.k * g / 100), protein: Math.round(f.p * g / 100),
+      src: "usda", yr: (LIB && LIB.sets[f.t]) || "", chunk: from.chunk
+    };
   }
 
   function runEstimate(text, replacingId) {
@@ -5391,8 +5576,11 @@
   // Hoisted so the weight editor can relabel a row after it stops being an
   // assumed portion; it used to be local to the render.
   var SRC = { pantry: "your pantry", table: "built-in reference",
-              typical: "typical serving",
+              typical: "typical serving", usda: "USDA",
               claude: "estimated", unknown: "needs numbers" };
+  // USDA's fast-food numbers date from 2018 and chains change recipes, so a
+  // library answer says how old its data is.
+  function srcLabel(it) { return SRC[it.src || "claude"] + (it.yr ? " \u00b7 " + it.yr : ""); }
 
   // Sits under the target bar and above the add form: it belongs to the day
   // you are looking at, like the food does, and it is the last thing you check
@@ -5449,7 +5637,7 @@
       var tc = 0, tp = 0;
       est.items.forEach(function (it) { tc += it.calories; tp += it.protein; });
       var items = est.items.map(function (it, i) {
-        var tag = '<span class="src-tag ' + it.src + '">' + SRC[it.src || "claude"] + '</span>';
+        var tag = '<span class="src-tag ' + it.src + '">' + esc(srcLabel(it)) + '</span>';
         // Anything with a gram basis gets its weight as a field rather than as
         // text, so a portion you did not choose can be corrected to one you did.
         var u = it.unit || wunit();
@@ -5474,7 +5662,7 @@
           '<input inputmode="numeric" data-ic="' + i + '" value="' + it.calories + '" aria-label="Calories">' +
           '<input inputmode="numeric" data-ip="' + i + '" value="' + it.protein + '" aria-label="Protein grams">' +
           amt +
-        '</div>';
+        '</div>' + libFlagHtml(it, i);
       }).join("");
 
       return '<section class="review" id="wayEstimate">' +
@@ -5521,6 +5709,47 @@
           '</div>' +
         '</div>' +
       '</section>';
+    }
+
+    // A row that matched only part of what was typed, or nothing, says so and
+    // offers the library — never a quiet guess logged as fact.
+    function libFlagHtml(it, i) {
+      if (libFor === i) return libPanelHtml(it, i);
+      var unknown = it.src === "unknown";
+      if (!unknown && !(it.partial && !it.partialOk)) return '';
+      var why = unknown ? 'Not in your pantry or the built-in list.'
+        : 'Matched \u201c' + esc(it.food) + '\u201d \u2014 ' +
+          it.partial.map(function (w) { return '\u201c' + esc(w) + '\u201d'; }).join(", ") +
+          (it.partial.length === 1 ? ' wasn\u2019t' : ' weren\u2019t') + ' part of the match.';
+      return '<div class="lib-flag">' +
+        '<p class="why">' + why + '</p>' +
+        '<button class="btn ghost" data-libopen="' + i + '">Look it up in the food library</button>' +
+        (unknown ? '' : '<button class="lib-keep" data-libkeep="' + i + '">Keep this match</button>') +
+      '</div>';
+    }
+    function libPanelHtml(it, i) {
+      var body;
+      if (libStatus === "loading") body = '<div class="working"><i></i>Opening the food library\u2026</div>';
+      else if (libStatus === "error") body = '<p class="why">The food library could not be opened. It comes with the app ' +
+        'and is kept for offline use \u2014 open the app once while online, then it works anywhere.</p>';
+      else if (!libHits || !libHits.length) body = '<p class="hush">Nothing in the library matches \u201c' + esc(libQuery) +
+        '\u201d. Try fewer or different words \u2014 or describe it as its parts, like \u201c4 oz chicken & 1 cup rice\u201d.</p>';
+      else body = libHits.map(function (f, j) {
+          var x = libItem(f, it);
+          return '<button class="lib-hit" data-libpick="' + j + '">' +
+            '<span class="ln">' + esc(f.n) + '</span>' +
+            '<span class="ls">USDA \u00b7 ' + esc((LIB && LIB.sets[f.t]) || "") + ' \u00b7 ' + esc(x.amount) + '</span>' +
+            '<span class="lm"><b>' + fmt(x.calories) + '</b> kcal<br>' + fmt(x.protein) + ' g</span>' +
+          '</button>';
+        }).join("") +
+        '<p class="hush">From USDA FoodData Central, searched on your phone \u2014 nothing is sent anywhere.</p>';
+      return '<div class="lib-flag" id="libPanel">' +
+        '<div class="lib-search">' +
+          '<input id="libQ" type="search" enterkeyhint="search" value="' + esc(libQuery) + '" aria-label="Search the food library">' +
+          '<button class="btn" id="libGo">Search</button>' +
+        '</div>' + body +
+        '<button class="lib-keep" data-libclose="' + i + '">' + (it.src === "unknown" ? 'Close' : 'Keep \u201c' + esc(it.food) + '\u201d') + '</button>' +
+      '</div>';
     }
 
     var errHtml = (est && est.status === "error")
@@ -6053,6 +6282,54 @@
 
     // Change the weight, the macros follow. Updated in place rather than by a
     // re-render, so the field keeps focus while you are still typing into it.
+    // ---- the food library ----
+    if (!est || est.status !== "review" || (libFor !== null && !est.items[libFor])) libFor = null;
+    function runLibrary(i, text) {
+      libFor = i; libQuery = text; libHits = null;
+      libStatus = LIB ? "" : "loading";
+      if (LIB) libHits = searchLibrary(text);
+      render();
+      if (!LIB) loadLibrary(function (lib) {
+        if (libFor !== i) return;
+        libStatus = lib ? "" : "error";
+        if (lib) libHits = searchLibrary(libQuery);
+        render();
+        var panel = document.getElementById("libPanel");
+        if (panel && panel.scrollIntoView) panel.scrollIntoView({ block: "nearest" });
+      });
+    }
+    view.querySelectorAll("[data-libopen]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var it = est.items[Number(b.dataset.libopen)];
+        if (it) runLibrary(Number(b.dataset.libopen), parseQty(it.chunk || it.food).name || it.food);
+      });
+    });
+    var libGo = document.getElementById("libGo"), libQ = document.getElementById("libQ");
+    if (libGo && libQ) {
+      libGo.addEventListener("click", function () { if (libQ.value.trim()) runLibrary(libFor, libQ.value.trim()); });
+      libQ.addEventListener("keydown", function (e) { if (e.key === "Enter") libGo.click(); });
+    }
+    view.querySelectorAll("[data-libpick]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var f = libHits && libHits[Number(b.dataset.libpick)], old = est.items[libFor];
+        if (!f || !old) return;
+        // The picked food takes the row's place, weight and all, and is as
+        // editable as anything from the built-in table. It goes into the
+        // review, never straight into the ledger.
+        est.items[libFor] = libItem(f, old);
+        libFor = null; libHits = null;
+        render();
+      });
+    });
+    view.querySelectorAll("[data-libkeep], [data-libclose]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = Number(b.dataset.libkeep || b.dataset.libclose), it = est.items[i];
+        if (it && it.src !== "unknown") it.partialOk = true;
+        libFor = null; libHits = null;
+        render();
+      });
+    });
+
     view.querySelectorAll("[data-ig]").forEach(function (input) {
       input.addEventListener("input", function () {
         if (!est || est.status !== "review") return;
@@ -6085,7 +6362,7 @@
           var tagEl = row.querySelector(".src-tag");
           if (tagEl) {
             tagEl.className = "src-tag " + it.src;
-            tagEl.textContent = SRC[it.src || "claude"];
+            tagEl.textContent = srcLabel(it);
           }
           var preEl = row.querySelector(".amt .pre");
           if (preEl) preEl.textContent = "";

@@ -30,6 +30,9 @@ const SHELL = [
   "./fonts/IBMPlexMono-400-latin-ext.woff2",
   "./fonts/IBMPlexMono-500-latin-ext.woff2",
   "./fonts/IBMPlexMono-600-latin-ext.woff2",
+  // The food library: 0.3 MB as served, and the whole point of it is answering
+  // with no connection, so it is kept from install rather than first use.
+  "./vendor/usda/foods.js",
 ];
 
 self.addEventListener("install", (e) => {
