@@ -20,7 +20,9 @@ const CACHE = "iron-ledger-" + VERSION;
 // clear — otherwise every update would make every phone download them again.
 // The release is in the file name, so a new release is a new file.
 const DATA = "iron-ledger-data";
-const isData = (url) => /\/vendor\/usda\/brands-[^/]+\.js$/.test(url.pathname);
+// The barcode reader (1.3 MB, versioned in its file names) lives there too:
+// it is fetched when grocery brands are, so the first scan works offline.
+const isData = (url) => /\/vendor\/(usda\/brands-|zxing\/)[^/]+$/.test(url.pathname);
 
 const SHELL = [
   "./",
@@ -39,6 +41,8 @@ const SHELL = [
   // The food library: 0.3 MB as served, and the whole point of it is answering
   // with no connection, so it is kept from install rather than first use.
   "./vendor/usda/foods.js",
+  // The restaurant menus: 28 KB, answered offline from the first use.
+  "./vendor/menus/menus.js",
 ];
 
 self.addEventListener("install", (e) => {

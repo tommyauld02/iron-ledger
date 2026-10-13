@@ -48,13 +48,17 @@ entries = []
 for line in body.split("\n"):
     t = line.strip()
     if not t or t.startswith("//"): continue
+    # carbs and fat per 100 g (b61) sit after protein where USDA's numbers agreed
     m = re.match(r'\{ n: "([^"]+)", k: ([\d.]+), d: ([\d.]+), p: ([\d.]+), '
+                 r'(?:c: ([\d.]+), f: ([\d.]+), )?'
                  r'a: \[([^\]]*)\], u: (\{\}|\{ [^}]* \}) \},$', t)
     if not m:
         entries.append(("MALFORMED", t)); continue
     entries.append((m.group(1), float(m.group(2)), float(m.group(3)), float(m.group(4)),
-                    re.findall(r'"([^"]+)"', m.group(5)),
-                    re.findall(r'(\w+):', m.group(6))))
+                    re.findall(r'"([^"]+)"', m.group(7)),
+                    re.findall(r'(\w+):', m.group(8)),
+                    None if m.group(5) is None else float(m.group(5)),
+                    None if m.group(6) is None else float(m.group(6))))
 
 bad = [e for e in entries if e[0] == "MALFORMED"]
 check("every entry parses", not bad, "; ".join(x[1][:60] for x in bad[:3]))
@@ -78,6 +82,18 @@ check("no unparseable unit keys", not unknown, "; ".join(unknown[:5]))
 # a swapped k/p or a stray decimal shows up as impossible protein
 impossible = ["%s (%gk %gp)" % (f[0], f[1], f[3]) for f in foods if f[3] * 4 > f[1] * 1.25]
 check("protein is possible for the calories", not impossible, "; ".join(impossible[:5]))
+
+# Carbs and fat came from USDA where its kcal and protein agreed with the
+# table's. If they are there, the four should roughly add up to the calories
+# (4 per gram of protein and carbs, 9 per gram of fat); a pasted-in-the-wrong-
+# place number shows up here, not on someone's day. Alcohol is the exception.
+with_cf = [f for f in foods if f[6] is not None]
+BOOZE = re.compile(r'\b(beer|wine|spirits|vodka|whiskey|rum|tequila|cocktail|margarita|seltzer)\b', re.I)
+off = ["%s (%gk vs %g)" % (f[0], f[1], 4 * f[3] + 4 * f[6] + 9 * f[7]) for f in with_cf
+       if f[1] >= 40 and not BOOZE.search(f[0])
+       and not (0.7 * f[1] <= 4 * f[3] + 4 * f[6] + 9 * f[7] <= 1.3 * f[1])]
+check("carbs and fat add up to the calories", len(with_cf) >= 250 and not off,
+      "%d with carbs/fat; %s" % (len(with_cf), "; ".join(off[:5])))
 check("every food has a serving size", all(f[2] > 0 for f in foods))
 check("every food has at least one alias", all(f[4] for f in foods))
 

@@ -1,0 +1,45 @@
+# Five Guys (US) — fiveguys.com Nutrition & Allergen Guide, USA, 9-1-2026 — read 2026-10-13
+# Five Guys publishes parts, not whole burgers. The burgers below are their parts added up and say so:
+#   Hamburger = 2 patties + bun; Little = 1 patty + bun; cheese = 1 slice per patty (Supplier K); bacon = 2 pieces (Supplier S).
+# group|item|option~grams~kcal~protein~carbs~fat;...
+Burgers|Hamburger (2 patties, bun — from parts)|0~207~844~39~35~42
+Burgers|Cheeseburger (2 patties, bun, 2 cheese — from parts)|0~245~984~47~35~54
+Burgers|Bacon Cheeseburger (from parts)|0~259~1054~52~35~60
+Burgers|Little Hamburger (1 patty, bun — from parts)|0~142~542~23~35~25
+Burgers|Little Cheeseburger (from parts)|0~161~612~27~35~31
+Burgers|Little Bacon Cheeseburger (from parts)|0~175~682~32~35~37
+Burgers|Hot Dog (with bun — from parts)|0~161~500~17~34~33
+Parts|Hamburger Patty|0~65~302~16~0~17
+Parts|Hamburger Bun|0~77~240~7~35~8
+Parts|Cheese, 1 slice|0~19~70~4~0~6
+Parts|Bacon, 2 pieces|0~14~70~5~0~6
+Parts|Hot Dog|0~90~280~11~1~26
+Parts|Hot Dog Bun|0~71~220~6~33~7
+Fries|Five Guys Style Fries|Regular~411~953~15~131~41;Little~227~526~8~72~23;Large~567~1314~20~181~57
+Fries|Cajun Style Fries|Regular~416~967~15~134~41;Little~232~540~8~75~28;Large~572~1328~20~184~57
+Toppings|Mayonnaise|0~14~111~0~0~11
+Toppings|Ketchup|0~17~30~0~5~0
+Toppings|BBQ Sauce|0~28~49~0~15~0
+Toppings|A.1. Sauce|0~17~15~0~3~0
+Toppings|Relish|0~15~16~0~4~0
+Toppings|Grilled Onions|0~26~11~0~2~0
+Toppings|Grilled Mushrooms|0~21~6~0~1~0
+Toppings|Tomatoes|0~52~8~0~2~0
+Toppings|Lettuce|0~30~3~0~1~0
+Toppings|Pickles, mustard or hot sauce|0~0~0~0~0~0
+Toppings|Cheese Sauce|0~90~92~4~7~6
+Toppings|Five Guys Sauce|0~35~169~0~4~15
+Toppings|Fry Sauce|0~35~100~0~5~9
+Shakes|Vanilla Shake (base, whipped cream)|0~322~531~10~66~26.5
+Shakes|Mix-in: Oreo Cookie Pieces|0~12~60~0~9~2
+Shakes|Mix-in: Peanut Butter|0~25~161~4~4~14
+Shakes|Mix-in: Chocolate|0~25~66~1~15~1
+Shakes|Mix-in: Strawberry|0~40~53~0~14~0
+Shakes|Mix-in: Salted Caramel|0~25~77~0~18~0
+Shakes|Mix-in: Banana|0~60~87~0~21~0
+Shakes|Mix-in: Bacon|0~7~35~2~0~3
+Shakes|Mix-in: Coffee|0~8~13~0~3~0
+Shakes|Mix-in: Reese's Peanut Butter Cup|0~14~75~1~7~4
+Other|Peanuts, 1 oz|0~30~170~7~5~14
+Other|Low Fat Milk|0~213~90~7~10~2
+Other|Chocolate Milk|0~245~150~8~23~2.5

@@ -72,6 +72,13 @@ def fixture(theme=None, accent=None):
     if theme: s["theme"] = theme
     if accent: s["accent"] = accent
     s["build"] = "2026-10-09.58"        # last opened on an older build: What's new is drawn
+    # carbs and fat, water, and a few weigh-ins: each paints something of its own
+    s["cfOn"] = True
+    s["waterOn"] = True
+    s["days"][T]["water"] = 600
+    for i, w in enumerate([184.0, 183.2, 183.6, 182.8]):
+        k = (datetime.date.today() - datetime.timedelta(days=10 - i * 2)).isoformat()
+        s["days"].setdefault(k, {"food": [], "updated": 1, "goal": G})["bw"] = w
     return s
 
 
@@ -201,6 +208,8 @@ def walk(p, label):
             p.click("#cardioUnlock"); p.wait_for_timeout(200)
         if tab == "log" and not p.locator(".cardio-track").count():
             found.append("log: the cardio tracker is not on screen")
+        if tab == "log" and not p.locator("#bwCard svg polyline").count():
+            found.append("log: the body weight trend is not on screen")
         if tab == "gym":
             # the set to beat has three looks, and a state the fixture stops
             # painting is a state this suite stops measuring — so say so
@@ -327,6 +336,32 @@ def walk(p, label):
             except Exception: found.append("macros: the grocery brands' rows are not on screen")
             low = p.evaluate(LOW)
             if low: found.append("macros (grocery brands): %s" % low)
+            # a restaurant's menu with something ordered, and a scanned barcode:
+            # both only exist after presses
+            p.click("#openMenus"); p.wait_for_timeout(400)
+            p.click('[data-menuchain="mcdonalds"]'); p.wait_for_timeout(250)
+            p.locator("[data-menuadd]").first.click(); p.wait_for_timeout(150)
+            if not p.locator(".menu-tray").count(): found.append("macros: the menu order is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("macros (restaurant menu): %s" % low)
+            p.click("#menuClose"); p.wait_for_timeout(200)
+            p.click("#openScan"); p.wait_for_timeout(500)
+            if p.locator("#scanType").count():
+                p.fill("#scanType", "894700010038"); p.click("#scanGo"); p.wait_for_timeout(400)
+            if not p.locator(".scan-card").count(): found.append("macros: a scanned product is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("macros (barcode): %s" % low)
+            p.click("#scanClose"); p.wait_for_timeout(200)
+            # carbs and fat, and water, are in the fixture: their lines must be painted
+            if not p.locator(".cf-line").count(): found.append("macros: the carbs and fat line is not on screen")
+            if not p.locator("#waterRow").count(): found.append("macros: the water line is not on screen")
+            # the goal calculator, filled in so its answer shows
+            p.click("#openGoal"); p.wait_for_timeout(200)
+            p.click("#gcOpen"); p.wait_for_timeout(200)
+            p.click('[data-gcsex="f"]'); p.fill("#gcAge", "31"); p.fill("#gcFt", "5"); p.fill("#gcIn", "6"); p.wait_for_timeout(100)
+            low = p.evaluate(LOW)
+            if low: found.append("macros (goal calculator): %s" % low)
+            p.click("#cancelGoal"); p.wait_for_timeout(200)
             p.click("#discardEst"); p.wait_for_timeout(300)
     p.click("#setBtn"); p.wait_for_timeout(350)
     low = p.evaluate(LOW)

@@ -17,7 +17,8 @@ Three USDA sets go in, each for what it is good at:
                       portions ("1 item", "1 cup")
 
 Only what the app uses is kept: the name, calories and protein per 100 g, and
-up to four portions with their gram weights. That turns ~270 MB of JSON into a
+up to four portions with their gram weights, then carbohydrate and fat per
+100 g (null where USDA has none) for those who track all four. That turns ~270 MB of JSON into a
 1.5 MB file, about 0.3 MB as Pages serves it gzipped, which the service worker
 caches at install, so lookups work offline from the first one.
 
@@ -53,11 +54,11 @@ def fetch(name):
 
 
 def per100(food):
-    """kcal and protein per 100 g. Energy is listed in kJ as well as kcal in
+    """kcal, protein, carbohydrate and fat per 100 g. Energy is listed in kJ as well as kcal in
     the legacy set, so it is chosen by unit, never by name alone; Foundation
     foods often carry only the Atwater figures, which are kcal too."""
     kcal = {}
-    protein = None
+    protein = carb = fat = None
     for n in food.get("foodNutrients") or []:
         if not isinstance(n, dict):
             continue
@@ -69,8 +70,12 @@ def per100(food):
             kcal[num] = amt
         elif num == "203":
             protein = amt
+        elif num == "205":
+            carb = amt
+        elif num == "204":
+            fat = amt
     k = kcal.get("208", kcal.get("958", kcal.get("957")))
-    return k, protein
+    return k, protein, carb, fat
 
 
 def portions(food):
@@ -116,10 +121,11 @@ def main():
         for f in data[key]:
             if not isinstance(f, dict) or not f.get("description"):
                 continue                       # the odd empty record in USDA's files
-            k, p = per100(f)
+            k, p, c, fa = per100(f)
             if k is None or p is None:
                 continue
-            foods.append([f["description"].strip(), code, round(k, 1), round(p, 1), portions(f)])
+            foods.append([f["description"].strip(), code, round(k, 1), round(p, 1), portions(f),
+                          None if c is None else round(c, 1), None if fa is None else round(fa, 1)])
             n += 1
         counts[code] = n
         print("%s: %d foods" % (name, n))

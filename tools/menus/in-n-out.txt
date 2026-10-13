@@ -1,0 +1,20 @@
+# In-N-Out Burger — in-n-out.com nutrition facts PDF (January 2026) — read 2026-10-13. Drinks with ice.
+# group|item|option~grams~kcal~protein~carbs~fat;...
+Burgers|Double-Double|With spread~287~610~34~42~34;Mustard & ketchup~280~550~34~41~27;Protein Style~289~460~30~12~32
+Burgers|Cheeseburger|With spread~229~430~20~40~21;Mustard & ketchup~222~380~20~39~15;Protein Style~231~280~16~11~19
+Burgers|Hamburger|With spread~209~360~16~38~16;Mustard & ketchup~202~300~16~38~10;Protein Style~211~210~12~9~14
+Sides|French Fries|0~125~360~6~49~15
+Shakes|Chocolate Shake|15 oz~0~610~16~74~30
+Shakes|Vanilla Shake|15 oz~0~590~16~66~31
+Shakes|Strawberry Shake|15 oz~0~610~15~74~30
+Drinks|Coca-Cola|Medium~0~180~0~50~0;Small~0~130~0~37~0;Large~0~270~0~74~0;Extra large~0~360~0~97~0
+Drinks|Dr Pepper|Medium~0~180~0~49~0;Small~0~130~0~36~0;Large~0~260~0~72~0;Extra large~0~350~0~94~0
+Drinks|7UP|Medium~0~180~0~48~0;Small~0~130~0~35~0;Large~0~260~0~71~0;Extra large~0~350~0~93~0
+Drinks|Cherry Coke|Medium~0~190~0~52~0;Small~0~140~0~38~0;Large~0~280~0~77~0;Extra large~0~370~0~101~0
+Drinks|Barq's Root Beer|Medium~0~190~0~50~0;Small~0~140~0~37~0;Large~0~270~0~74~0;Extra large~0~360~0~97~0
+Drinks|Signature Pink Lemonade|Medium~0~200~0~48~0;Small~0~150~0~35~0;Large~0~300~0~70~0;Extra large~0~400~0~93~0
+Drinks|Lite Pink Lemonade|Medium~0~10~0~4~0;Small~0~5~0~3~0;Large~0~15~0~5~0
+Drinks|Sweet Iced Tea|Medium~0~110~0~30~0;Small~0~80~0~20~0;Large~0~180~0~46~0;Extra large~0~240~0~63~0
+Drinks|Diet Coke or Unsweetened Iced Tea|0~0~0~0~0
+Drinks|Milk|10 oz~0~160~10~16~7
+Drinks|Hot Cocoa|8 oz~0~160~2~33~3

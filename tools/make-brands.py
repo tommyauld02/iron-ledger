@@ -29,7 +29,7 @@ RELEASE = "2026-04-30"
 NAME = "FoodData_Central_branded_food_csv_%s.zip" % RELEASE
 URL = "https://fdc.nal.usda.gov/fdc-datasets/" + NAME
 OUT = os.path.join(ROOT, "vendor", "usda", "brands-%s.js" % RELEASE)
-KCAL, PROTEIN = "1008", "1003"
+KCAL, PROTEIN, CARB, FAT = "1008", "1003", "1005", "1004"
 
 csv.field_size_limit(1 << 30)
 
@@ -136,7 +136,7 @@ def main():
     num = {}
     for r in rows(z, "food_nutrient.csv"):
         f = r["fdc_id"]
-        if f in keep and r["nutrient_id"] in (KCAL, PROTEIN):
+        if f in keep and r["nutrient_id"] in (KCAL, PROTEIN, CARB, FAT):
             try:
                 num.setdefault(f, {})[r["nutrient_id"]] = float(r["amount"])
             except ValueError:
@@ -158,19 +158,22 @@ def main():
         serving = tidy_serving(words) if words else ""
         if ml and sg and "ml" not in serving.lower():
             serving = (serving or "1 serving") + " (%g ml)" % sg
-        out.append([tidy_name(tidy(names[fid])), " ".join(ascii_only(tidy(brand)).split()), round(k, 1), round(p, 1), sg, serving, upc])
+        c, fa = n.get(CARB), n.get(FAT)
+        c = None if c is None or c < 0 or c > 100 else round(c, 1)
+        fa = None if fa is None or fa < 0 or fa > 100 else round(fa, 1)
+        out.append([tidy_name(tidy(names[fid])), " ".join(ascii_only(tidy(brand)).split()), round(k, 1), round(p, 1), sg, serving, upc, c, fa])
 
     # One product in several pack sizes has one set of numbers: keep it once,
     # with every barcode it is sold under, so a scan of any of them finds it.
     merged = {}
-    for name, brand, k, p, sg, serving, upc in out:
+    for name, brand, k, p, sg, serving, upc, c, fa in out:
         key = (brand.lower(), name.lower(), k, p)
         if key in merged:
             merged[key][6].append(upc)
             if not merged[key][4] and sg:
                 merged[key][4], merged[key][5] = sg, serving
         else:
-            merged[key] = [name, brand, k, p, sg, serving, [upc]]
+            merged[key] = [name, brand, k, p, sg, serving, [upc], c, fa]
     items = sorted(merged.values(), key=lambda x: (x[1].lower(), x[0].lower()))
 
     # Columns, not records: a phone keeps one long string per column rather
@@ -189,6 +192,9 @@ def main():
         "sg": [x[4] for x in items],
         "serving": "\n".join(x[5].replace("\n", " ") for x in items),
         "upc": "\n".join(" ".join(x[6]) for x in items),
+        # carbohydrate and fat per 100 g; -1 where the label gave none
+        "c": [-1 if x[7] is None else x[7] for x in items],
+        "f": [-1 if x[8] is None else x[8] for x in items],
     }
     out = items
     os.makedirs(os.path.dirname(OUT), exist_ok=True)

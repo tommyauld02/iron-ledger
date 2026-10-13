@@ -17,6 +17,26 @@ def words(p):
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
         p.click("#estSwap"); p.wait_for_timeout(250)
+# A UPC-A barcode as an SVG, for the scanner to read from a "photo".
+_UPC_L = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"]
+def upca_svg(code, mod=3, h=120):
+    code = code.zfill(12)
+    bits = "101" + "".join(_UPC_L[int(c)] for c in code[:6]) + "01010" + \
+           "".join("".join("1" if b == "0" else "0" for b in _UPC_L[int(c)]) for c in code[6:]) + "101"
+    q = 12; w = (len(bits) + 2 * q) * mod
+    rects = "".join('<rect x="%d" y="10" width="%d" height="%d"/>' % ((q + i) * mod, mod, h)
+                    for i, b in enumerate(bits) if b == "1")
+    return ('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="%d"><rect width="100%%" height="100%%" fill="#fff"/>'
+            '<g fill="#000">%s</g></svg>' % (w, h + 20, rects))
+# every visible control in a part of the page: 44px tall, and inputs that will not zoom iOS
+SIZES = """(sel)=>[...document.querySelectorAll(sel+' button, '+sel+' input:not([type=file]), '+sel+' select, '+sel+' label.btn')]
+  .filter(x=>x.getClientRects().length && getComputedStyle(x).visibility!=='hidden')
+  .map(x=>[x.id||x.textContent.trim().slice(0,24), Math.round(x.getBoundingClientRect().height), x.tagName==='INPUT'||x.tagName==='SELECT' ? parseFloat(getComputedStyle(x).fontSize) : 99])"""
+def sizes_ok(p, sel):
+    got = p.evaluate(SIZES, sel)
+    bad = [g for g in got if g[1] < MIN_TAP or g[2] < 16]
+    return (len(got) > 0 and not bad), (str(bad[:4]) if bad else "%d controls" % len(got))
+
 def way(p, w):
     """Open one of the ways in under the checklist; they start folded."""
     if p.locator('[data-logway="%s"][aria-expanded="false"]' % w).count():
@@ -875,11 +895,13 @@ with sync_playwright() as pw:
     p.click("#setBtn"); p.wait_for_timeout(400)
     check("settings: the gear opens the sheet",
           p.evaluate("()=>!document.getElementById('setSheet').hidden"))
-    check("settings: it starts on the phone's own look and teal",
-          p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")==["Match phone","Teal","In place","Hidden"],
-          str(p.eval_on_selector_all("#setSheet [aria-pressed=true]","e=>e.map(x=>x.textContent)")))
+    # what is on screen: water's goal and unit stay folded away while water is off
+    PRESSED="e=>e.filter(x=>x.getClientRects().length).map(x=>x.textContent)"
+    check("settings: it starts on the phone's own look and teal, with carbs, water and Coach hidden",
+          p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)==["Match phone","Teal","In place","Hidden","Hidden","Hidden"],
+          str(p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)))
     small=[x for x in p.eval_on_selector_all("#setSheet button",
-           "e=>e.map(b=>[b.textContent.trim()||b.getAttribute('aria-label'),Math.round(b.getBoundingClientRect().height)])")
+           "e=>e.filter(b=>b.getClientRects().length).map(b=>[b.textContent.trim()||b.getAttribute('aria-label'),Math.round(b.getBoundingClientRect().height)])")
            if x[1]<44]
     check("settings: every control in it clears 44px", not small, str(small))
 
@@ -3023,7 +3045,10 @@ with sync_playwright() as pw:
     q.click("[data-libopen]"); q.wait_for_timeout(1500)
     hits=q.evaluate(HITS)
     check("library: it opens on the phone and finds the chain's own item, at the size typed",
-          bool(hits) and hits[0].startswith("McDONALD'S, french fries | USDA · 2018 · 2 × 1 medium serving · 234 g | 756 kcal"), str(hits[:2]))
+          any(h.startswith("McDONALD'S, french fries | USDA · 2018 · 2 × 1 medium serving · 234 g | 756 kcal") for h in hits), str(hits[:3]))
+    # the chain was named, so its own current menu comes first (b61)
+    check("library: and McDonald's own menu comes ahead of USDA's 2018 numbers",
+          bool(hits) and hits[0].startswith("McDonald's · World Famous Fries, Medium | Menu · 2026 | 320 kcal"), str(hits[:2]))
     check("library: and says nothing was sent anywhere", "nothing is sent anywhere" in q.inner_text("#libPanel"))
     pb=q.eval_on_selector_all("#libPanel button, #libPanel input","e=>e.filter(x=>x.getClientRects().length).map(x=>[x.tagName,Math.round(x.getBoundingClientRect().height),parseFloat(getComputedStyle(x).fontSize)])")
     check("library: every control in the panel clears 44px and the search field will not zoom",
@@ -3072,7 +3097,7 @@ with sync_playwright() as pw:
     q.click("[data-libopen]"); q.wait_for_timeout(1500)
     offer=q.locator("[data-brandsget]")
     check("brands: the library offers them as one download, saying how big",
-          offer.count()==1 and "8 MB" in offer.inner_text() and "work offline" in q.inner_text("#libPanel")
+          offer.count()==1 and "9 MB" in offer.inner_text() and "work offline" in q.inner_text("#libPanel")
           and offer.bounding_box()["height"]>=MIN_TAP, q.inner_text("#libPanel")[-300:])
     check("brands: nothing is downloaded until it is asked for",
           q.evaluate("()=>!document.querySelector('script[src*=\"brands-\"]')"))
@@ -3119,7 +3144,7 @@ with sync_playwright() as pw:
           "%s / %s" % (q.inner_text("#setLibHint"), sb.inner_text()))
     sb.click(); q.wait_for_timeout(300)
     check("brands: removing them says so, and offers the download again",
-          q.evaluate(LBST).get("brandsOn") is False and sb.inner_text().upper()=="DOWNLOAD GROCERY BRANDS · 8 MB"
+          q.evaluate(LBST).get("brandsOn") is False and sb.inner_text().upper()=="DOWNLOAD GROCERY BRANDS · 9 MB"
           and "removed" in q.inner_text(".undobar"), "%s / %s" % (sb.inner_text(), q.inner_text(".undobar")))
     q.click("#setDone"); q.wait_for_timeout(200)
     c.close()
@@ -3141,7 +3166,7 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==2 and titles[1]=="A food library on your phone", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==3 and titles[0].startswith("Restaurant menus") and titles[2]=="A food library on your phone", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
@@ -3160,6 +3185,223 @@ with sync_playwright() as pw:
     check("news: a tap on the dimmed page closes it too", not q.is_visible("#newsSheet"))
     opened(LBSTORE)
     check("news: a phone opening the app for the first time is not told what changed", not q.is_visible("#newsSheet"))
+    c.close()
+
+    # ---------- RESTAURANT MENUS ----------
+    # Step 4 of the one-stop shop: a meal at a chain, from the numbers the chain
+    # itself publishes, a few taps and no internet. It lands in the review as
+    # one meal, and the review is still where it is checked before it counts.
+    def fresh(store, label):
+        cx = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+        cx.add_init_script("delete window.claude;")
+        pg = cx.new_page(); pg.on("pageerror", lambda e: errs.append(label+": "+str(e)))
+        pg.goto("file://"+d+"/iron-ledger.html"); pg.wait_for_timeout(400)
+        pg.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
+        pg.reload(); pg.wait_for_timeout(900)
+        return cx, pg
+    c, q = fresh(LBSTORE, "menus")
+    way(q, "estimate")
+    q.click("#openMenus"); q.wait_for_timeout(500)
+    chains = q.eval_on_selector_all("[data-menuchain] .mc-n", "e=>e.map(x=>x.textContent)")
+    check("menus: the chains are listed, each with its own numbers",
+          set(["McDonald's","Chick-fil-A","Taco Bell","Chipotle","Popeyes","In-N-Out Burger","Five Guys"]) <= set(chains), str(chains))
+    ok_, det = sizes_ok(q, "#menuSheet")
+    check("menus: every control on the list clears 44px", ok_, det)
+    q.click('[data-menuchain="mcdonalds"]'); q.wait_for_timeout(300)
+    q.locator("#menuItems .lib-hit", has_text="Big Mac").first.click(); q.wait_for_timeout(100)
+    check("menus: a tap shows straight away in the order at the foot of the sheet",
+          "Big Mac" in q.inner_text("#menuTray") and q.locator("#menuTray .menu-tray").bounding_box()["y"] < 874,
+          q.inner_text("#menuTray")[:80])
+    q.locator(".menu-multi", has_text="World Famous Fries").locator(".mi-opt", has_text="Medium").click()
+    q.fill("#menuQ", "coca"); q.wait_for_timeout(200)
+    check("menus: finding on the menu filters as you type and keeps the cursor",
+          q.evaluate("()=>document.activeElement && document.activeElement.id")=="menuQ"
+          and q.locator("#menuItems .menu-multi, #menuItems .lib-hit").count() <= 3, str(q.locator("#menuItems .menu-multi, #menuItems .lib-hit").count()))
+    q.locator(".menu-multi", has_text="Coca-Cola").locator(".mi-opt", has_text="Medium").click(); q.wait_for_timeout(150)
+    tray = q.inner_text("#menuTray")
+    check("menus: the order adds up from McDonald's own numbers",
+          "1,170 kcal" in tray and "3 ITEMS" in tray.upper(), tray.replace("\n"," | "))
+    ok_, det = sizes_ok(q, "#menuSheet")
+    check("menus: every control on a menu clears 44px and the search will not zoom", ok_, det)
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("menus: the sheet fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.click("#menuClose"); q.wait_for_timeout(200)
+    q.click("#openMenus"); q.wait_for_timeout(300)
+    check("menus: closing keeps the order for when it opens again", "Big Mac" in q.inner_text("#menuTray"))
+    q.click("#menuDone"); q.wait_for_timeout(400)
+    rows=q.evaluate(ROWS)
+    check("menus: they go into the review, tagged as the restaurant's menu, as one meal",
+          rows==["McDonald's Big Mac","McDonald's World Famous Fries, Medium","McDonald's Coca-Cola, Medium"]
+          and q.inner_text(".rev-item .src-tag").upper()=="RESTAURANT MENU · 2026"
+          and q.get_attribute("#estMeal","aria-pressed")=="true", str(rows))
+    q.click("#commitEst"); q.wait_for_timeout(300)
+    food=q.evaluate(LBST)["days"][Ts]["food"]
+    meal=food[-1] if food else {}
+    check("menus: in the ledger it is one McDonald's meal, its numbers published rather than estimated",
+          meal.get("note")=="McDonald's" and len(meal.get("items",[]))==3 and sum(x["cal"] for x in meal["items"])==1170
+          and not any(x.get("est") for x in meal["items"]) and all("carb" in x for x in meal["items"]), json.dumps(meal)[:200])
+    # typed words find them too, the chain's own first when it is named
+    estimate("xyzzy"); q.click("[data-libopen]"); q.wait_for_timeout(600)
+    q.fill("#libQ","mcdonalds big mac"); q.press("#libQ","Enter"); q.wait_for_timeout(700)
+    hits=q.evaluate("()=>[...document.querySelectorAll('#libPanel .lib-group, #libPanel .lib-hit')].map(x=>x.innerText.split(String.fromCharCode(10)).join(' | '))")
+    check("menus: typing a chain and an item finds today's menu first",
+          len(hits)>1 and hits[0]=="RESTAURANT MENUS" and hits[1].startswith("McDonald's · Big Mac | Menu · 2026 | 580 kcal"), str(hits[:3]))
+    c.close()
+
+    # ---------- BARCODES ----------
+    # Step 3: a package's barcode, found among the grocery brands by the number
+    # under its bars. By camera, by photo, or typed. Your pantry answers first,
+    # and a product USDA lacks is found from the pantry once saved there.
+    c, q = fresh(LBSTORE, "barcodes")
+    way(q, "estimate")
+    q.click("#openScan"); q.wait_for_timeout(300)
+    check("barcodes: before grocery brands are on the phone, it offers them rather than failing",
+          q.locator("#scanBrands").count()==1 and "9 MB" in q.inner_text("#scanBrands"), q.inner_text("#scanSheet")[:120])
+    q.click("#scanBrands")
+    try: q.wait_for_selector("#scanType", timeout=40000)
+    except Exception: pass
+    q.wait_for_timeout(400)
+    check("barcodes: once they are, the camera, a photo and typing are all offered",
+          q.locator("#scanType").count()==1 and q.locator("#scanFile").count()==1 and q.evaluate(LBST).get("brandsOn") is True,
+          q.inner_text("#scanSheet")[:160])
+    ok_, det = sizes_ok(q, "#scanSheet")
+    check("barcodes: every control clears 44px and the number field will not zoom", ok_, det)
+    q.fill("#scanType", "894700010038"); q.click("#scanGo"); q.wait_for_timeout(500)
+    card=q.inner_text(".scan-card") if q.locator(".scan-card").count() else ""
+    check("barcodes: a typed number finds the product, with its label's serving",
+          "Chobani · Greek Yogurt" in card and "1 container · 150 g" in card and "120 kcal" in card, card.replace("\n"," | "))
+    q.click("#scanAgain"); q.wait_for_timeout(600)
+    pg2 = c.new_page(); pg2.set_content(upca_svg("078742351865")); png = pg2.locator("svg").screenshot(); pg2.close()
+    q.set_input_files("#scanFile", files=[{"name":"barcode.png","mimeType":"image/png","buffer":png}])
+    try: q.wait_for_selector(".scan-card", timeout=30000)
+    except Exception: pass
+    card=q.inner_text(".scan-card") if q.locator(".scan-card").count() else ""
+    check("barcodes: a photo of a barcode is read on the phone and found",
+          "Great Value · Whole Milk" in card and "149 kcal" in card, card.replace("\n"," | ") or q.inner_text("#scanSheet")[:120])
+    q.click("#scanAdd"); q.wait_for_timeout(400)
+    check("barcodes: Add puts it in the review, from the label",
+          q.evaluate(ROWS)==["Great Value Whole Milk"] and q.inner_text(".rev-item .src-tag").upper()=="BRAND LABEL · 2026", str(q.evaluate(ROWS)))
+    q.click("#discardEst"); q.wait_for_timeout(300)
+    way(q, "estimate")
+    q.click("#openScan"); q.wait_for_timeout(500)
+    q.fill("#scanType", "071717171717"); q.click("#scanGo"); q.wait_for_timeout(400)
+    check("barcodes: a number that is nowhere says so, and offers the pantry",
+          "No product with barcode 071717171717" in q.inner_text(".scan-card") and q.locator("#scanToPantry").count()==1)
+    q.click("#scanToPantry"); q.wait_for_timeout(400)
+    check("barcodes: the pantry form opens knowing the barcode",
+          q.get_attribute('.tabs button[data-tab="pantry"]',"aria-selected")=="true" and "71717171717 is saved with it" in q.inner_text("#view"))
+    q.fill("#panName","Corner store protein bar"); q.fill("#panServe","1"); q.select_option("#panUnit","bar")
+    q.fill("#panCal","210"); q.fill("#panPro","20"); q.click("#savePan"); q.wait_for_timeout(300)
+    pan=[x for x in q.evaluate(LBST)["pantry"] if x["name"]=="Corner store protein bar"]
+    check("barcodes: it is saved with the food", pan and pan[0].get("upc")=="71717171717", str(pan))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    way(q, "estimate")
+    q.click("#openScan"); q.wait_for_timeout(500)
+    q.fill("#scanType", "071717171717"); q.click("#scanGo"); q.wait_for_timeout(400)
+    check("barcodes: and the next scan finds it, from the pantry",
+          "Corner store protein bar" in q.inner_text(".scan-card") and "Your pantry" in q.inner_text(".scan-card"), q.inner_text(".scan-card")[:120])
+    q.click("#scanClose"); q.wait_for_timeout(200)
+    # scanning on the Pantry tab fills the form from the label
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    q.click("#panScan"); q.wait_for_timeout(500)
+    q.fill("#scanType", "888849000005"); q.click("#scanGo"); q.wait_for_timeout(400)
+    q.click("#scanFill"); q.wait_for_timeout(300)
+    check("barcodes: on the Pantry tab a scan fills in the form from its label",
+          q.input_value("#panName")=="Quest Cookies & Cream Protein Bar" and q.input_value("#panCal")=="190"
+          and q.input_value("#panPro")=="21" and q.input_value("#panUnit")=="bar", "%s / %s / %s / %s" % (
+          q.input_value("#panName"), q.input_value("#panCal"), q.input_value("#panPro"), q.input_value("#panUnit")))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(200)
+    check("barcodes: leaving the tab stops the camera and closes the sheet", q.locator("#scanSheet").count()==0)
+    c.close()
+
+    # ---------- CARBS & FAT ----------
+    # Off until chosen in Settings. Shown, the day adds them up wherever the
+    # food's numbers carry them, and says how many foods it could not count —
+    # never a zero standing in for a number nobody knows.
+    c, q = fresh(LBSTORE, "carbs")
+    check("carbs: off by default, nothing changes", q.locator(".cf-line").count()==0)
+    q.click("#setBtn"); q.wait_for_timeout(300)
+    q.click('[data-pick-cf="on"]'); q.wait_for_timeout(200)
+    check("carbs: switched on in Settings", q.evaluate(LBST).get("cfOn") is True)
+    q.click("#setDone"); q.wait_for_timeout(200)
+    estimate("chicken breast", "")
+    rv=q.inner_text(".rev-item .rev-cf") if q.locator(".rev-item .rev-cf").count() else ""
+    check("carbs: the review shows them for a table food", rv.endswith("g fat") and "carbs" in rv, rv)
+    q.fill('[data-ig="0"]', "340"); q.wait_for_timeout(150)
+    rv2=q.inner_text(".rev-item .rev-cf")
+    check("carbs: and changing the weight changes them with it", rv2!=rv and "g fat" in rv2, "%s -> %s" % (rv, rv2))
+    q.click("#commitEst"); q.wait_for_timeout(300)
+    way(q, "numbers")
+    check("carbs: the numbers form asks for them, optionally", q.locator("#fCarb").count()==1 and q.locator("#fFat").count()==1)
+    q.fill("#fCal","300"); q.fill("#fPro","20"); q.click("#addFood"); q.wait_for_timeout(300)
+    line=q.inner_text(".cf-line")
+    check("carbs: the day's line counts what it knows and names what it doesn't",
+          line.startswith("Carbs") and "1 food without them" in line, line)
+    ok_, det = sizes_ok(q, "#wayNumbers")
+    check("carbs: the extra fields are proper targets that will not zoom", ok_, det)
+    c.close()
+
+    # ---------- WATER ----------
+    WSTORE=dict(LBSTORE, waterOn=True)
+    c, q = fresh(WSTORE, "water")
+    q.click("#waterMore"); q.click("#waterMore"); q.wait_for_timeout(150)
+    check("water: each tap adds a glass, said on the line", q.inner_text("#waterVal")=="16 of 64 oz", q.inner_text("#waterVal"))
+    check("water: kept in the day", abs(q.evaluate(LBST)["days"][Ts]["water"] - 2*8*29.5735) < 1)
+    q.click("#waterLess"); q.wait_for_timeout(100)
+    check("water: minus takes one back", q.inner_text("#waterVal")=="8 of 64 oz", q.inner_text("#waterVal"))
+    for _ in range(7): q.click("#waterMore")
+    q.wait_for_timeout(150)
+    check("water: the goal met turns the line green", "done" in q.inner_text("#waterVal") and "is-met" in q.get_attribute("#waterVal","class"))
+    ok_, det = sizes_ok(q, "#waterRow")
+    check("water: both buttons are proper targets", ok_, det)
+    q.click("#setBtn"); q.wait_for_timeout(300)
+    q.click('[data-pick-wunit="ml"]'); q.wait_for_timeout(200)
+    q.click("#setDone"); q.wait_for_timeout(200)
+    check("water: switching to ml converts the day rather than re-reading it", q.inner_text("#waterVal").startswith("1,890 of 1,890 ml"), q.inner_text("#waterVal"))
+    c.close()
+
+    # ---------- BODY WEIGHT ----------
+    BW = {}
+    for i, w in enumerate([186.2, 185.4, 186.0, 185.1, 184.6, 184.2, 183.8, 183.5]):
+        BW[(T - datetime.timedelta(days=(8 - i) * 4)).isoformat()] = {"food": [], "updated": 1, "bw": w}
+    c, q = fresh(dict(LBSTORE, days=BW), "weight")
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    card=q.inner_text("#bwCard")
+    check("weight: the Log tab shows the latest weigh-in and the trend", "183.5" in card and "Trend" in card and q.locator("#bwCard svg circle").count()==8, card.replace("\n"," | ")[:160])
+    q.fill("#bwIn","182.9"); q.click("#bwSave"); q.wait_for_timeout(300)
+    check("weight: logging today says so, with undo", "Logged 182.9 lb for today" in q.inner_text(".undobar") and q.evaluate(LBST)["days"][Ts]["bw"]==182.9)
+    q.click(".undobar button"); q.wait_for_timeout(300)
+    check("weight: undo takes it back", "bw" not in q.evaluate(LBST)["days"].get(Ts, {}))
+    q.click('[data-bwunit="kg"]'); q.wait_for_timeout(300)
+    check("weight: kilograms convert what is there", "83.2" in q.inner_text("#bwCard"), q.inner_text(".bw-now"))
+    ok_, det = sizes_ok(q, "#bwCard")
+    check("weight: every control clears 44px and the field will not zoom", ok_, det)
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("weight: the card fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    c.close()
+
+    # ---------- THE GOAL CALCULATOR ----------
+    c, q = fresh(dict(LBSTORE, days={Ts: {"food": [], "updated": 1, "bw": 182.0}}), "calc")
+    q.click("#openGoal"); q.wait_for_timeout(200)
+    q.click("#gcOpen"); q.wait_for_timeout(200)
+    check("calc: the weight comes from the latest weigh-in", q.input_value("#gcWt")=="182.0", q.input_value("#gcWt"))
+    check("calc: with nothing filled in it says what it needs, and Use waits",
+          "Fill these in" in q.inner_text("#gcOut") and q.is_disabled("#gcUse"))
+    q.click('[data-gcsex="m"]'); q.fill("#gcAge","29"); q.fill("#gcFt","5"); q.fill("#gcIn","11"); q.wait_for_timeout(100)
+    out=q.inner_text("#gcOut")
+    # Mifflin-St Jeor: 10*82.55 + 6.25*180.34 - 5*29 + 5 = 1812; x1.55 = 2809; -500 -> 2310; 182 lb -> 180 g
+    check("calc: the working is shown, from the standard equation", "2,810 kcal a day" in out and "2,310 kcal" in out and "180 g protein" in out, out)
+    q.click("#gcUse"); q.wait_for_timeout(200)
+    check("calc: Use fills the target, and Save still decides", q.input_value("#gCal")=="2310" and q.input_value("#gPro")=="180"
+          and q.evaluate(LBST)["goal"]["cal"]["v"]==2000)
+    q.select_option("#gcAim","250"); q.wait_for_timeout(100); q.click("#gcUse"); q.wait_for_timeout(100)
+    check("calc: gaining sets calories to reach at least the number",
+          q.get_attribute('#dirCal [data-d="+"]',"aria-pressed")=="true", q.inner_text("#gcOut"))
+    ok_, det = sizes_ok(q, "#goalCalc")
+    check("calc: every control clears 44px and nothing will zoom", ok_, det)
+    q.click("#saveGoal"); q.wait_for_timeout(200)
+    check("calc: and Save target keeps it", q.evaluate(LBST)["goal"]["cal"]=={"dir":"+","v":3060}, str(q.evaluate(LBST)["goal"]))
     c.close()
 
     # A heredoc once turned \b into backspace characters inside the app's own

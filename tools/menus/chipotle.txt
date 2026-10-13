@@ -1,0 +1,34 @@
+# Chipotle (US) — chipotle.com nutrition facts PDF (US-Nutrition-Facts-Paper-Menu-3-2025.pdf, chart OCT-2024-US) — read 2026-10-13
+# Chipotle is built by the ingredient: a bowl is its parts, so pick each one (two of a meat is a double).
+# group|item|option~grams~kcal~protein~carbs~fat;...   (grams from the stated portion: 1 oz = 28 g)
+Base|Flour Tortilla|Burrito size~0~320~8~50~9;Taco size~0~80~2~13~2.5
+Base|Crispy Corn Tortilla|0~70~1~10~3
+Base|Cilantro-Lime White Rice|4 oz~113~210~4~40~4
+Base|Cilantro-Lime Brown Rice|4 oz~113~210~4~36~6
+Base|Supergreens Salad Mix|3 oz~85~15~1~3~0
+Base|Romaine Lettuce|1 oz~28~5~0~1~0
+Protein|Chicken|4 oz~113~180~32~0~7
+Protein|Steak|4 oz~113~150~21~1~6
+Protein|Barbacoa|4 oz~113~170~24~2~7
+Protein|Carnitas|4 oz~113~210~23~0~12
+Protein|Sofritas|4 oz~113~150~8~9~10
+Beans & Veg|Black Beans|4 oz~113~130~8~22~1.5
+Beans & Veg|Pinto Beans|4 oz~113~130~8~21~1.5
+Beans & Veg|Fajita Vegetables|2 oz~57~20~1~5~0
+Toppings|Fresh Tomato Salsa|4 oz~113~25~0~4~0
+Toppings|Roasted Chili-Corn Salsa|4 oz~113~80~3~16~1.5
+Toppings|Tomatillo-Green Chili Salsa|2 oz~57~15~0~4~0
+Toppings|Tomatillo-Red Chili Salsa|2 oz~57~30~0~4~0
+Toppings|Cheese|1 oz~28~110~6~1~8
+Toppings|Sour Cream|2 oz~57~110~2~2~9
+Toppings|Guacamole|4 oz~113~230~2~8~22;8 oz (large)~227~460~4~16~44
+Toppings|Queso Blanco|2 oz (on the entrée)~57~120~5~4~9;4 oz (side)~113~240~10~7~18;8 oz (large)~227~480~20~14~37
+Toppings|Chipotle-Honey Vinaigrette|2 oz~57~220~1~18~16
+Sides|Chips|Regular~113~540~7~73~25;Large~170~810~11~110~38
+Drinks|Coca-Cola|22 oz~0~260~0~70~0;32 oz~0~380~0~105~0
+Drinks|Sprite|22 oz~0~260~0~70~0;32 oz~0~380~0~105~0
+Drinks|Diet Coke or Coke Zero|0~0~0~0~0
+Drinks|Chipotle Sweet Iced Tea|22 oz~0~150~0~45~0;32 oz~0~220~0~65~0
+Drinks|Chipotle Iced Tea|22 oz~0~10~0~3~0;32 oz~0~15~0~4~0
+Drinks|Tractor Lemonade|22 oz~0~170~0~43~0;32 oz~0~250~0~62~0
+Drinks|Tractor Berry Agua Fresca|22 oz~0~200~0~50~0;32 oz~0~290~0~72~0

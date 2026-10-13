@@ -76,8 +76,9 @@ with sync_playwright() as pw:
           "%d font files" % sum(".woff2" in c for c in cached))
     check("the food library is kept from install", any(c.endswith("/vendor/usda/foods.js") for c in cached))
     check("grocery brands are not downloaded at install", not any("/vendor/usda/brands-" in c for c in cached))
+    check("the restaurant menus are kept from install", any(c.endswith("/vendor/menus/menus.js") for c in cached))
 
-    # Grocery brands are 8 MB, downloaded when asked for, and kept in a store
+    # Grocery brands are 9 MB, downloaded when asked for, and kept in a store
     # of their own: an update clears the old build's cache, and must not make
     # every phone download them again.
     DATA_KEYS = """async () => {
