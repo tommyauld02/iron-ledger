@@ -5980,8 +5980,12 @@
       return { si: si, last: s, today: t,
                status: !t ? null : gap > 1e-9 ? "beat" : gap < -1e-9 ? "short" : "matched" };
     });
-    var next = null;
-    for (var i = 0; i < rows.length; i++) if (!rows[i].today) { next = i; break; }
+    // Next follows progress: the set after the furthest one done today. A
+    // warm-up skipped today is then not offered once the working sets have
+    // begun, and the pop-up does not fill in a warm-up after a 100x15.
+    var furthest = -1;
+    rows.forEach(function (r, i) { if (r.today) furthest = i; });
+    var next = furthest + 1 < rows.length ? furthest + 1 : null;
     var pd = store.days[prev.key];
     var at = gyms().length && pd && pd.gym ? gymInfo(pd.gym) : null;
     return { prev: prev, rows: rows, next: next,

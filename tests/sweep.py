@@ -2065,6 +2065,32 @@ with sync_playwright() as pw:
           and not any(r["next"] for r in rows), str(rows))
     check("lastsets: and the extra warm-up has no row of its own", "60×8" not in "".join(r["today"] for r in rows)
           and len(rows)==3 and q.evaluate(LSSETS)[1]==["40x12:warmup","60x8:warmup","100x10","120x9"], str(q.evaluate(LSSETS)[1]))
+    # a warm-up skipped today is not offered once the working sets have begun:
+    # next follows progress, the set after the furthest one done
+    SKIP={"days":{LSA:{"food":[],"updated":1,"goal":LSG,"gym":"gA","lifts":[
+            {"id":"a","cat":"back","movement":"Leg Extension","sets":[
+                {"w":60,"r":15,"tech":"warmup"},{"w":100,"r":15},{"w":150,"r":15},{"w":200,"r":10}]}]},
+          Ts:{"food":[],"updated":1,"goal":LSG,"gym":"gA","lifts":[
+            {"id":"t","cat":"back","movement":"Leg Extension","sets":[{"w":100,"r":15,"t":1}]}]}},
+        "gyms":[{"id":"gA","name":"Apartment gym","tag":"APT"}],"gymLast":"gA","gymAsked":True,
+        "moves":{"back":["Leg Extension"]},"movesOwned":True,"goal":LSG,"region":"United States","pantry":[],"v":1}
+    c2 = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c2.add_init_script("delete window.claude;")
+    s2 = c2.new_page(); s2.on("pageerror", lambda e: errs.append("lastsets skip: "+str(e)))
+    s2.goto("file://"+d+"/iron-ledger.html"); s2.wait_for_timeout(400)
+    s2.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SKIP)
+    s2.reload(); s2.wait_for_timeout(900)
+    try: s2.click("text=Got it", timeout=1500)
+    except Exception: pass
+    s2.click('.tabs button[data-tab="gym"]'); s2.wait_for_timeout(400)
+    rows=s2.evaluate(LROWS, 0)
+    check("lastsets: a warm-up skipped today is not next once the working sets have begun",
+          [r["next"] for r in rows]==[False,False,True,False] and rows[1]["today"]=="100×15" and not rows[0]["today"], str(rows))
+    s2.click('[data-addset="0"]'); s2.wait_for_timeout(250)
+    check("lastsets: so the pop-up opens on set 3, not on the skipped warm-up",
+          s2.evaluate(FIELDS)==["150","15",""] and s2.evaluate(HINT).startswith("Last time, set 3: 150×15"),
+          str(s2.evaluate(FIELDS))+" / "+s2.evaluate(HINT))
+    c2.close()
     # two gyms: rows come only from this gym
     q.click('[data-gym="g24"]'); q.wait_for_timeout(300)
     rows=q.evaluate(LROWS, 0)

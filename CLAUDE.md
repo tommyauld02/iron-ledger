@@ -1081,7 +1081,10 @@ would shift every row below it by one — a Matched becomes a Short and the
 pop-up pre-fills the wrong set. By kind, the extra warm-up has no row and the
 working sets still meet their own. The label is `setWorth()` — the owner's
 five-pounds-a-rep rule — so more is Beat, equal is Matched, less is Short; and
-*next* is simply the first of last time's sets with no partner yet. Today's tag
+*next* follows progress: the set after the furthest one done today. It was
+first written as the first set with no partner, which offered a skipped warm-up
+again after the working sets had begun, and filled the pop-up with it. Lexi
+caught it in review. Today's tag
 is written beside its numbers only when it is not last time's, so a warm-up row
 stays on one line; a rest-pause set against a normal one says so.
 
