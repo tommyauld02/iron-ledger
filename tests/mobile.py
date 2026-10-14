@@ -106,6 +106,13 @@ with sync_playwright() as pw:
                   longest:Math.max(...[...document.querySelectorAll('.lift .lastsets')].map(e=>e.querySelectorAll('.lastset').length))})""")
                 if lrows["longest"]<6 or not (lrows["matched"] and lrows["beat"] and lrows["short"] and lrows["next"]):
                     FAILS.append("%s: last-time rows not on screen to measure %s" % (name, lrows))
+                # A narrow phone wraps a row inside itself. Today's numbers must
+                # stay on the row's own first line: dropped under it, they read
+                # as the next row's.
+                drop=p.evaluate("""()=>[...document.querySelectorAll('.lift .lastset')].filter(r=>{
+                  const t=r.querySelector('.ls-right > span'); if(!t) return false;
+                  return Math.abs(t.getBoundingClientRect().top-r.getBoundingClientRect().top)>4;}).map(r=>r.textContent.trim().slice(0,40))""")
+                if drop: FAILS.append("%s: today's numbers dropped under their row: %s" % (name, " | ".join(drop)))
             if t=="cardio" and not p.eval_on_selector_all(".cardio-card","e=>e.length"):
                 FAILS.append("%s: no cardio session on screen to measure" % name)
             if t=="pantry" and p.eval_on_selector_all("[data-pantab]","e=>e.length")<6:

@@ -2136,16 +2136,19 @@
   .lift .lastset {
     min-height: 24px;
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 0 8px;
     font-size: 15px;
     line-height: 20px;
     color: var(--ink-2);
   }
-  .lift .lastset > span { white-space: nowrap; }
-  .lift .ls-right { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin-left: auto; }
+  /* A narrow phone wraps a row inside itself: last time's tag under its
+     numbers, the status under today's. Today's numbers never drop under the
+     row, where they would read as belonging to the row below. */
+  .lift .ls-num { white-space: nowrap; }
+  .lift .ls-right { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 5px; text-align: right; }
+  .lift .ls-right > span { white-space: nowrap; }
   .lift .ls-next { font-size: 12px; }
   .lift .ls-mark {
     font-family: var(--font-num);
@@ -8513,7 +8516,9 @@
           // warm-up row stays on one line.
           (plan ? '<div class="lastsets">' + plan.rows.map(function (row) {
             var t = row.today;
-            return '<div class="lastset"><span>Set ' + (row.si + 1) + ' · ' + esc(setText(row.last)) + '</span>' +
+            var ls = row.last;
+            return '<div class="lastset"><span><span class="ls-num">Set ' + (row.si + 1) + ' · ' + ls.w + '×' + ls.r + '</span>' +
+                (ls.tech ? ' <span class="ls-num">' + esc(techShort(ls.tech)) + '</span>' : '') + '</span>' +
               '<span class="ls-right">' +
                 (t ? '<span>' + esc((t.tech || '') === (row.last.tech || '') ? t.w + '×' + t.r : setText(t)) + '</span> ' +
                      planMark(row) : '') +

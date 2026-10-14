@@ -1069,7 +1069,10 @@ is one read-only row per set of last time: `Set 2 · 100×15` on the left
 (`setText`, so a tag reads `60×15 warm-up`), and on the right today's numbers
 and a label — `= Matched` (grey), `↑ Beat` (`--hit`), `↓ Short` (grey) — or,
 on the first set still to do, a grey *next*. `lastPlan()` builds them and the
-card and the pop-up both read it.
+card and the pop-up both read it. On a 320px phone a long row wraps inside
+itself (last time's tag under its numbers, the status under today's) and
+never puts today's numbers under the row, where they read as the next row's;
+`mobile` checks it at every size.
 
 **Pairing is by kind, in order.** The i-th warm-up today pairs with the i-th
 warm-up last time, and the i-th working set (anything that is not `warmup`)
