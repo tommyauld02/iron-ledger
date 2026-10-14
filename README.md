@@ -20,7 +20,9 @@ probably blocking inbound on a Public network profile.
 ## Work on it
 
 Read `CLAUDE.md` first — it has the architecture and the rules that keep this
-thing from breaking in the specific ways it has broken before.
+thing from breaking in the specific ways it has broken before. Agents working
+here also read `TEAM.md`: who does what, the issue labels, and the rule that
+only the owner merges.
 
     pip install playwright && playwright install chromium
     ./verify.sh        # ~200 checks across 17 suites, phone-emulated
