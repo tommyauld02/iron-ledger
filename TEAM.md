@@ -61,11 +61,17 @@ GitHub Issues are the to-do list. Labels say who a task is for and where it is.
    `status:changes-requested` with specific reasons, or `status:approved`.
 8. **Tommy merges.** Merging to `main` deploys to his phone through
    `pages.yml`. Nobody else merges, ever.
-9. **Nick reports** what landed, what is waiting for Tommy, and what is stuck.
+9. **Nick confirms it actually shipped**: `pages.yml` green, and the live page
+   at https://tommyauld02.github.io/iron-ledger/ serving the new `BUILD`. A
+   merge is not done until both are true — b39 was pushed without anyone
+   watching, failed CI, and never reached the phone (see `CLAUDE.md`).
+10. **Nick reports** what landed, what is waiting for Tommy, and what is stuck.
 
 ## Rules that are not negotiable
 
-- **Only Tommy merges.** No agent merges, force-pushes, or pushes to `main`.
+- **Only Tommy merges.** No agent merges, pushes to `main`, or force-pushes
+  `main`. Force-pushing your own pull request's branch after a rebase is fine —
+  it is how the Supervisor keeps `BUILD` numbers in order (below).
 - **Nothing is approved with a failing or skipped check.** "It's only
   cosmetic" is how a colour change once broke contrast on every label.
 - **`CLAUDE.md` rules 1–7 apply to every agent and every model.** Test it as
@@ -73,6 +79,9 @@ GitHub Issues are the to-do list. Labels say who a task is for and where it is.
   inputs. Undo, not confirm. History is never reassigned.
 - **Generated files are never hand-edited**: `vendor/usda/`, `vendor/menus/`,
   `fonts/`, `icons/`, `dist/`. Change the source and re-run the generator.
+  Nor are downloaded ones: `vendor/zxing/` (the barcode reader) and
+  `vendor/tesseract/` (the label reader) are other people's code, replaced
+  whole by a newer download, never patched.
 - **Every number has a source.** Menu data comes from the chain's own
   published figures, with the source and date at the top of the file, the
   way `tools/menus/` already does it. A guessed number is the confident wrong
@@ -92,7 +101,9 @@ Free models are slower and make more mistakes, so their tasks are ones where a
 mistake is cheap and easy to catch:
 
 - Typing up a chain's published nutrition table into `tools/menus/<chain>.txt`
-  (the generator refuses lines whose calories don't add up — a built-in check)
+  (the generator refuses lines whose calories don't add up — a built-in check).
+  **On hold:** Tommy has paused new restaurants (October 2026) to put the
+  focus elsewhere. Don't file these until he lifts it.
 - Researching something and reporting back in the issue, with links
 - First drafts of copy, `NEWS` entries, or test cases that the Builder finishes
 - Reproducing a reported bug and writing down the exact steps
