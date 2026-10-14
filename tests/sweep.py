@@ -329,7 +329,9 @@ with sync_playwright() as pw:
     add_movement(p, "Barbell Row", wait=400)
     check("gym: add movement", p.eval_on_selector_all(".lift","e=>e.length")==1)
     last=p.eval_on_selector(".lift .last","e=>e.textContent")
-    check("gym: last-session lookup", "135" in last, last.strip())
+    lrows=p.eval_on_selector_all(".lift .lastset","e=>e.map(x=>x.textContent)")
+    check("gym: last-session lookup", len(lrows)==3 and "135×10" in lrows[0] and "145×8" in lrows[2], str(lrows))
+    check("gym: and the Last line is where and when, without the sets", last.startswith("Last · ") and "135" not in last, last.strip())
     log_set(p, 0, 185, 6, wait=400)
     check("gym: add set", p.eval_on_selector_all(".set","e=>e.length")==1)
     check("gym: Start forgotten, the first set starts the clock",
@@ -340,8 +342,13 @@ with sync_playwright() as pw:
           not p.evaluate("()=>document.getElementById('setEditSheet').hidden")
           and p.evaluate("()=>document.activeElement.id")=="seR"
           and p.eval_on_selector("#seSave","e=>e.textContent")=="Add set")
-    check("gym: it opens on the weight of the set before", p.input_value("#seW")=="185")
-    p.fill("#seR","5"); p.press("#seR","Enter"); p.wait_for_timeout(400)
+    # Last time had a set 2 (135×10), so that is what it opens on now; the
+    # weight of the set before is what it opens on once last time is used up
+    # (checked under LAST TIME, SET BY SET). 185 is typed so the rest of this
+    # walk keeps its numbers.
+    check("gym: it opens on last time's next set, 135×10", p.input_value("#seW")=="135" and p.input_value("#seR")=="10",
+          "%s×%s" % (p.input_value("#seW"), p.input_value("#seR")))
+    p.fill("#seW","185"); p.fill("#seR","5"); p.press("#seR","Enter"); p.wait_for_timeout(400)
     check("gym: Enter adds set", p.eval_on_selector_all(".set","e=>e.length")==2)
     # A tap on a set used to remove it outright — the same remove-and-add-again
     # the owner called out for movements. Now it opens an editor.
@@ -1300,7 +1307,8 @@ with sync_playwright() as pw:
     check("technique: a normal set carries nothing extra",
           all(":" not in x for x in q.evaluate(EL)["lifts"][0]["sets"][:-1]))
     q.click('[data-addset="0"]'); q.wait_for_timeout(250)
-    check("technique: the next set starts on normal so a tag cannot ride along", q.input_value("#seT")=="")
+    # nothing from last time to take it from, so the set before cannot lend its tag
+    check("technique: with no last time, the next set starts on normal so a tag cannot ride along", q.input_value("#seT")=="")
     q.click("#seCancel"); q.wait_for_timeout(200)
     check("technique: the chip says which set it was",
           q.eval_on_selector_all(".set","e=>e.map(x=>x.textContent)")[-1].endswith("drop"))
@@ -1318,13 +1326,15 @@ with sync_playwright() as pw:
     q.reload(); q.wait_for_timeout(900)
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(300)
     add_movement(q, "Barbell Curl")
-    check("technique: next time, Last says which set was the drop",
-          "20×10 drop" in q.eval_on_selector(".lift .last","e=>e.textContent"),
-          q.eval_on_selector(".lift .last","e=>e.textContent"))
+    check("technique: next time, the rows say which set was the drop",
+          "20×10 drop" in q.eval_on_selector(".lift .lastsets","e=>e.textContent"),
+          q.eval_on_selector(".lift .lastsets","e=>e.textContent"))
     # Most sets are just sets. Never touching the box must be the ordinary
-    # path, all the way to closing the movement out.
-    for _ in range(3):
-        log_set(q, 0, 30, 12, wait=150)
+    # path, all the way to closing the movement out. Where last time's
+    # matching set was the drop, the sheet opens on drop (the third set here),
+    # so that one is chosen back to normal; the others are never touched.
+    for i in range(3):
+        log_set(q, 0, 30, 12, tech=("" if i == 2 else None), wait=150)
     plain=q.evaluate(EL)["lifts"][0]["sets"]
     check("technique: sets with none chosen add like any other",
           plain==["30x12","30x12","30x12"], str(plain))
@@ -1867,11 +1877,13 @@ with sync_playwright() as pw:
     check("beat: a movement opens on last time's best set",
           q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
     check("beat: and never the warm-up, however heavy", "185" not in q.evaluate(BL)[0])
-    # every way past it, as the owner put it: the next tier of weight, a rep, or
-    # a set — 135x10 is worth a 145x8 by the rule, so last time had two
+    # The line that spelled out every way past it (+5 lb / +1 rep / +1 set) was
+    # taken off the card on 2026-10-14, at the owner's word: it was clutter. To
+    # beat and the Beaten lines stay, and the rows beneath carry the rest.
     WAYS="()=>[...document.querySelectorAll('.lift')].map(x=>{const w=x.querySelector('.beat-ways');return w?w.textContent:'';})"
-    check("beat: it names every way past it: heavier, a rep, or a set",
-          q.evaluate(WAYS)[0]=="+5 lb 150×8 · +1 rep 145×9 · +1 set a 3rd set of 145×8", q.evaluate(WAYS)[0])
+    check("beat: the suggestions line is gone from the card",
+          q.evaluate(WAYS)[0]=="" and q.locator(".beat-ways").count()==0 and "+1 rep" not in q.eval_on_selector(".lift","e=>e.textContent"),
+          q.evaluate(WAYS)[0])
     lift_set(0, "145", "8")
     check("beat: matching it is not beating it", q.evaluate(BL)[0]=="To beat · 145×8", q.evaluate(BL)[0])
     lift_set(0, "150", "7")
@@ -1880,7 +1892,7 @@ with sync_playwright() as pw:
     lift_set(0, "145", "9")
     check("beat: one more rep at the same weight beats it",
           q.evaluate(BL)[0]=="↑ Beaten · 145×9 over 145×8", q.evaluate(BL)[0])
-    check("beat: and the ways go once it is beaten", q.evaluate(WAYS)[0]=="", q.evaluate(WAYS)[0])
+    check("beat: and there is still no suggestions line once it is beaten", q.evaluate(WAYS)[0]=="", q.evaluate(WAYS)[0])
     check("beat: and it reads in the macro green",
           q.evaluate("""()=>{const h=getComputedStyle(document.documentElement).getPropertyValue('--hit').trim().replace('#','');
             const rgb='rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
@@ -1902,8 +1914,8 @@ with sync_playwright() as pw:
     check("beat: and 145×10 beats 150×7, the owner's own example",
           q.evaluate(BL)[4]=="↑ Beaten · 145×10 over 150×7", q.evaluate(BL)[4])
     add_move("Seated Cable Row")
-    check("beat: an extra set is offered at last time's level",
-          q.evaluate(WAYS)[5].endswith("+1 set a 3rd set of 100×10"), q.evaluate(WAYS)[5])
+    check("beat: an extra set is no longer spelled out under the target",
+          q.evaluate(WAYS)[5]=="" and q.evaluate(BL)[5]=="To beat · 100×10", q.evaluate(WAYS)[5])
     lift_set(5, "100", "10"); lift_set(5, "100", "10")
     check("beat: matching last time's two sets is still to beat", q.evaluate(BL)[5]=="To beat · 100×10", q.evaluate(BL)[5])
     lift_set(5, "95", "11")       # worth the same as 100x10 by the rule, so a set at that level
@@ -1915,6 +1927,217 @@ with sync_playwright() as pw:
     check("beat: a finished day does not nag about one it did not beat",
           "To beat" not in "".join(q.evaluate(BL)) and "Beaten" in q.evaluate(BL)[0]
           and "Beaten" in q.evaluate(BL)[4], str(q.evaluate(BL)))
+    c.close()
+
+    # ---------- LAST TIME, SET BY SET ----------
+    # Asked for by the owner (issue #5, from his own pick of a prototype): each
+    # open movement lays last time's sets out one row each, with today's against
+    # each and what is next, and the Set pop-up opens on last time's matching set
+    # instead of a blank. The suggestions line (+5 lb / +1 rep / +1 set) is gone.
+    LSG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    LSA=(datetime.date.today()-datetime.timedelta(days=7)).isoformat()
+    LSB=(datetime.date.today()-datetime.timedelta(days=5)).isoformat()
+    LSTORE={"days":{
+        LSA:{"food":[],"updated":1,"goal":LSG,"gym":"gA","gymNote":"felt strong","workoutMs":50*60000,"lifts":[
+            {"id":"a","cat":"back","movement":"Leg Extension","note":"last set was really hard","sets":[
+                {"w":60,"r":15,"tech":"warmup"},{"w":100,"r":15},{"w":150,"r":15},{"w":200,"r":10}]},
+            {"id":"b","cat":"back","movement":"Hack Squat","sets":[
+                {"w":40,"r":12,"tech":"warmup"},{"w":100,"r":10},{"w":120,"r":8}]},
+            {"id":"c","cat":"back","movement":"Dumbbell Curl","sets":[{"w":30,"r":12}]}]},
+        LSB:{"food":[],"updated":1,"goal":LSG,"gym":"g24","lifts":[
+            {"id":"d","cat":"back","movement":"Leg Extension","sets":[{"w":90,"r":12}]}]}},
+        "gyms":[{"id":"gA","name":"Apartment gym","tag":"APT"},{"id":"g24","name":"24 Hour Fitness","tag":"24"}],
+        "gymLast":"gA","gymAsked":True,
+        "moves":{"back":["Leg Extension","Hack Squat","Dumbbell Curl"]},"movesOwned":True,
+        "goal":LSG,"region":"United States","pantry":[],"v":1}
+    LSSETS="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days['"+Ts+"'].lifts.map(l=>l.sets.map(s=>s.w+'x'+s.r+(s.tech?':'+s.tech:'')))"
+    LROWS="""(i)=>[...document.querySelectorAll('.lift')[i].querySelectorAll('.lastset')].map(r=>({
+        left:r.children[0].textContent,
+        today:(r.querySelector('.ls-right > span:not(.ls-mark):not(.ls-next)')||{}).textContent||'',
+        mark:(r.querySelector('.ls-mark')||{className:''}).className.replace('ls-mark ',''),
+        word:(r.querySelector('.ls-mark')||{textContent:''}).textContent,
+        next:!!r.querySelector('.ls-next')}))"""
+    SELECTED="id=>{const e=document.getElementById(id);return e.value.length>0&&e.selectionStart===0&&e.selectionEnd===e.value.length;}"
+    FIELDS="()=>[document.getElementById('seW').value,document.getElementById('seR').value,document.getElementById('seT').value]"
+    ONFIELD="()=>['seW','seR','seT'].includes((document.activeElement||{}).id)"
+    HINT="()=>{const e=document.getElementById('seLastSet');return e.hidden?'':e.textContent;}"
+    lsdate=lambda page,k: page.evaluate("k=>new Date(k+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})", k)
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;")
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("lastsets: "+str(e)))
+    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LSTORE)
+    q.reload(); q.wait_for_timeout(900)
+    try: q.click("text=Got it", timeout=1500)
+    except Exception: pass
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    add_movement(q, "Leg Extension"); add_movement(q, "Hack Squat")
+    da=lsdate(q, LSA)
+    rows=q.evaluate(LROWS, 0)
+    check("lastsets: an open card lays last time out one row a set, in order",
+          [r["left"] for r in rows]==["Set 1 · 60×15 warm-up","Set 2 · 100×15","Set 3 · 150×15","Set 4 · 200×10"], str(rows))
+    check("lastsets: with nothing against them yet, and the first still to do marked next",
+          [r["next"] for r in rows]==[True,False,False,False] and all(not r["mark"] and not r["today"] for r in rows), str(rows))
+    lline=q.eval_on_selector(".lift .last","e=>e.textContent")
+    check("lastsets: the Last line is where, when and both notes, without the sets",
+          lline=="Last at APT · %s (felt strong) · “last set was really hard”" % da, lline)
+    check("lastsets: To beat stays, and the suggestions line is gone from the card",
+          q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 200×10"
+          and q.locator(".lift .beat-ways").count()==0)
+    check("lastsets: nothing in the rows is tappable, and nothing is teal",
+          q.evaluate("""()=>{const hex=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().replace('#','');
+            const acc='rgb('+[0,2,4].map(i=>parseInt(hex.substr(i,2),16)).join(', ')+')';
+            const els=[...document.querySelectorAll('.lift .lastsets, .lift .lastsets *')];
+            return els.length>8 && !els.some(e=>e.matches('button,a,input,select,[role=button],[tabindex]') ||
+              getComputedStyle(e).color===acc);}"""))
+    # the Set pop-up opens on last time's next set, and leaves the keyboard down
+    q.click('[data-addset="0"]'); q.wait_for_timeout(250)
+    check("lastsets: Set opens filled from last time's set 1, tag and all, and says which set it was",
+          q.evaluate(FIELDS)==["60","15","warmup"] and q.evaluate(HINT)=="Last time, set 1: 60×15 warm-up · APT · %s" % da,
+          str(q.evaluate(FIELDS))+" / "+q.evaluate(HINT))
+    check("lastsets: opened from Set with numbers in it, no field is focused, so the keyboard stays down",
+          not q.evaluate(ONFIELD))
+    check("lastsets: the pop-up has no suggestions line either", q.locator("#seWays").count()==0
+          and "+1 rep" not in q.eval_on_selector("#setEditSheet","e=>e.textContent"))
+    q.click("#seSave"); q.wait_for_timeout(300)
+    check("lastsets: Add set on a filled pop-up logs the warm-up as a warm-up", q.evaluate(LSSETS)[0]==["60x15:warmup"], str(q.evaluate(LSSETS)))
+    q.click('[data-addset="0"]'); q.wait_for_timeout(250)
+    check("lastsets: set 2 opens on 100 / 15 / normal, with its own line",
+          q.evaluate(FIELDS)==["100","15",""] and q.evaluate(HINT)=="Last time, set 2: 100×15 · APT · %s" % da, str(q.evaluate(FIELDS))+" / "+q.evaluate(HINT))
+    q.click("#seSave"); q.wait_for_timeout(300)
+    # typing replaces a number that is already there: 12 over 15 is not 1512
+    q.click('[data-r="0"]'); q.wait_for_timeout(250)
+    check("lastsets: opened from reps it is focused there, the filled number selected",
+          q.evaluate("()=>document.activeElement.id")=="seR" and q.evaluate(SELECTED, "seR"))
+    q.keyboard.type("12"); q.wait_for_timeout(100)
+    check("lastsets: typing 12 over a filled 15 gives 12, not 1512", q.input_value("#seR")=="12", q.input_value("#seR"))
+    q.focus("#seW"); q.wait_for_timeout(120)
+    check("lastsets: focusing the weight selects it too", q.evaluate(SELECTED, "seW"))
+    q.keyboard.type("155"); q.wait_for_timeout(100)
+    check("lastsets: and typing 155 over a filled 150 gives 155", q.input_value("#seW")=="155", q.input_value("#seW"))
+    q.keyboard.press("Enter"); q.wait_for_timeout(150)
+    check("lastsets: Enter from the weight moves to the reps, selected",
+          q.evaluate("()=>document.activeElement.id")=="seR" and q.evaluate(SELECTED, "seR"))
+    q.keyboard.press("Enter"); q.wait_for_timeout(300)
+    check("lastsets: Enter from the reps logs it", q.evaluate(LSSETS)[0]==["60x15:warmup","100x15","155x12"], str(q.evaluate(LSSETS)))
+    rows=q.evaluate(LROWS, 0)
+    check("lastsets: three sets in read matched, matched, short, with next on set 4",
+          [r["mark"] for r in rows]==["ls-matched","ls-matched","ls-short",""]
+          and [r["word"] for r in rows]==["= Matched","= Matched","↓ Short",""]
+          and [r["next"] for r in rows]==[False,False,False,True], str(rows))
+    check("lastsets: today's numbers sit beside them, and a tag only when it differs from last time's",
+          [r["today"] for r in rows]==["60×15","100×15","155×12",""], str([r["today"] for r in rows]))
+    q.click('[data-addset="0"]'); q.wait_for_timeout(250)
+    check("lastsets: the pop-up for set 4 opens at 200 / 10 / normal with the Last time, set 4 line",
+          q.evaluate(FIELDS)==["200","10",""] and q.evaluate(HINT)=="Last time, set 4: 200×10 · APT · %s" % da,
+          str(q.evaluate(FIELDS))+" / "+q.evaluate(HINT))
+    q.fill("#seW","205"); q.fill("#seR","11"); q.click("#seSave"); q.wait_for_timeout(300)
+    rows=q.evaluate(LROWS, 0)
+    check("lastsets: a set worth more reads Beat, and nothing is next any more",
+          rows[3]["mark"]=="ls-beat" and rows[3]["word"]=="↑ Beat" and rows[3]["today"]=="205×11"
+          and not any(r["next"] for r in rows), str(rows[3]))
+    check("lastsets: Beat is in the macro green and Matched and Short are not",
+          q.evaluate("""()=>{const h=getComputedStyle(document.documentElement).getPropertyValue('--hit').trim().replace('#','');
+            const rgb='rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
+            const c=s=>getComputedStyle(document.querySelector(s)).color;
+            return c('.ls-beat')===rgb && c('.ls-matched')!==rgb && c('.ls-short')!==rgb;}"""))
+    check("lastsets: the Beaten line stays exactly as it was",
+          q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 205×11 over 200×10", q.eval_on_selector(".lift .beat","e=>e.textContent"))
+    q.click('[data-addset="0"]'); q.wait_for_timeout(250)
+    check("lastsets: past last time's count the pop-up is as before: the weight just used, blank reps, normal, no line",
+          q.evaluate(FIELDS)==["205","",""] and q.evaluate(HINT)=="", str(q.evaluate(FIELDS)))
+    check("lastsets: and Set goes straight to the weight, ready to type",
+          q.evaluate("()=>document.activeElement.id")=="seW")
+    q.click("#seCancel"); q.wait_for_timeout(200)
+    # an extra warm-up today does not shift every row below it
+    q.click('[data-addset="1"]'); q.wait_for_timeout(250)
+    check("lastsets: Hack Squat opens on its own warm-up", q.evaluate(FIELDS)==["40","12","warmup"], str(q.evaluate(FIELDS)))
+    q.click("#seSave"); q.wait_for_timeout(300)
+    log_set(q, 1, 60, 8, tech="warmup")          # an extra warm-up, which last time had no row for
+    q.click('[data-addset="1"]'); q.wait_for_timeout(250)
+    check("lastsets: an extra warm-up leaves the next set where it was: the first working set",
+          q.evaluate(FIELDS)==["100","10",""] and q.evaluate(HINT).startswith("Last time, set 2: 100×10"), str(q.evaluate(FIELDS))+" / "+q.evaluate(HINT))
+    q.click("#seSave"); q.wait_for_timeout(300)
+    log_set(q, 1, 120, 9)
+    rows=q.evaluate(LROWS, 1)
+    check("lastsets: so the working sets still pair with the working sets",
+          [r["today"] for r in rows]==["40×12","100×10","120×9"] and [r["mark"] for r in rows]==["ls-matched","ls-matched","ls-beat"]
+          and not any(r["next"] for r in rows), str(rows))
+    check("lastsets: and the extra warm-up has no row of its own", "60×8" not in "".join(r["today"] for r in rows)
+          and len(rows)==3 and q.evaluate(LSSETS)[1]==["40x12:warmup","60x8:warmup","100x10","120x9"], str(q.evaluate(LSSETS)[1]))
+    # a warm-up skipped today is not offered once the working sets have begun:
+    # next follows progress, the set after the furthest one done
+    SKIP={"days":{LSA:{"food":[],"updated":1,"goal":LSG,"gym":"gA","lifts":[
+            {"id":"a","cat":"back","movement":"Leg Extension","sets":[
+                {"w":60,"r":15,"tech":"warmup"},{"w":100,"r":15},{"w":150,"r":15},{"w":200,"r":10}]}]},
+          Ts:{"food":[],"updated":1,"goal":LSG,"gym":"gA","lifts":[
+            {"id":"t","cat":"back","movement":"Leg Extension","sets":[{"w":100,"r":15,"t":1}]}]}},
+        "gyms":[{"id":"gA","name":"Apartment gym","tag":"APT"}],"gymLast":"gA","gymAsked":True,
+        "moves":{"back":["Leg Extension"]},"movesOwned":True,"goal":LSG,"region":"United States","pantry":[],"v":1}
+    c2 = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c2.add_init_script("delete window.claude;")
+    s2 = c2.new_page(); s2.on("pageerror", lambda e: errs.append("lastsets skip: "+str(e)))
+    s2.goto("file://"+d+"/iron-ledger.html"); s2.wait_for_timeout(400)
+    s2.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SKIP)
+    s2.reload(); s2.wait_for_timeout(900)
+    try: s2.click("text=Got it", timeout=1500)
+    except Exception: pass
+    s2.click('.tabs button[data-tab="gym"]'); s2.wait_for_timeout(400)
+    rows=s2.evaluate(LROWS, 0)
+    check("lastsets: a warm-up skipped today is not next once the working sets have begun",
+          [r["next"] for r in rows]==[False,False,True,False] and rows[1]["today"]=="100×15" and not rows[0]["today"], str(rows))
+    s2.click('[data-addset="0"]'); s2.wait_for_timeout(250)
+    check("lastsets: so the pop-up opens on set 3, not on the skipped warm-up",
+          s2.evaluate(FIELDS)==["150","15",""] and s2.evaluate(HINT).startswith("Last time, set 3: 150×15"),
+          str(s2.evaluate(FIELDS))+" / "+s2.evaluate(HINT))
+    c2.close()
+    # two gyms: rows come only from this gym
+    q.click('[data-gym="g24"]'); q.wait_for_timeout(300)
+    rows=q.evaluate(LROWS, 0)
+    check("lastsets: at the other gym, the rows come from the last time there, not here",
+          [r["left"] for r in rows]==["Set 1 · 90×12"] and q.eval_on_selector(".lift .last","e=>e.textContent").startswith("Last at 24 · "), str(rows))
+    check("lastsets: a movement never done at this gym has no rows: Hack Squat was only ever at the other one",
+          q.eval_on_selector_all(".lift","e=>e[1].querySelectorAll('.lastsets').length")==0
+          and q.eval_on_selector_all(".lift .last","e=>e.map(x=>x.textContent)")[1].endswith("not a target here"))
+    add_movement(q, "Dumbbell Curl")
+    check("lastsets: a first time at a gym shows no rows, and keeps its not-a-target line",
+          q.eval_on_selector_all(".lift","e=>e[2].querySelectorAll('.lastset').length")==0
+          and q.eval_on_selector_all(".lift .last","e=>e.map(x=>x.textContent)")[2].endswith("30×12 · not a target here"))
+    q.click('[data-addset="2"]'); q.wait_for_timeout(250)
+    check("lastsets: and its pop-up is as before, with no line", q.evaluate(FIELDS)==["","",""] and q.evaluate(HINT)=="", str(q.evaluate(FIELDS)))
+    q.click('[data-seshare="on"]'); q.wait_for_timeout(250)
+    check("lastsets: Every gym fills the untouched fields from the new last time, and names the gym it was at",
+          q.evaluate(FIELDS)==["30","12",""] and q.evaluate(HINT)=="Last time, set 1: 30×12 · APT · %s" % da,
+          str(q.evaluate(FIELDS))+" / "+q.evaluate(HINT))
+    q.fill("#seW","35")
+    q.click('[data-seshare="off"]'); q.wait_for_timeout(250)
+    check("lastsets: going back to this gym only empties what was filled, and keeps the number typed",
+          q.evaluate(FIELDS)==["35","",""] and q.evaluate(HINT)=="", str(q.evaluate(FIELDS)))
+    q.click('[data-seshare="on"]'); q.wait_for_timeout(250)
+    check("lastsets: and a number already typed is never overwritten",
+          q.evaluate(FIELDS)==["35","12",""], str(q.evaluate(FIELDS)))
+    q.click("#seCancel"); q.wait_for_timeout(200)
+    # Edit, inside the sheet: change the movement and the untouched fields follow
+    q.click('[data-addset="2"]'); q.wait_for_timeout(250)
+    check("lastsets: a movement taking its numbers from every gym opens filled", q.evaluate(FIELDS)==["30","12",""], str(q.evaluate(FIELDS)))
+    q.click("#seMoveBtn"); q.wait_for_timeout(200)
+    q.select_option("#seMove","Leg Extension"); q.click("#seMoveSave"); q.wait_for_timeout(300)
+    check("lastsets: Edit to a movement with its own last time re-fills the untouched fields from that one",
+          q.evaluate(FIELDS)==["90","12",""] and q.evaluate(HINT)=="Last time, set 1: 90×12 · 24 · %s" % lsdate(q, LSB),
+          str(q.evaluate(FIELDS))+" / "+q.evaluate(HINT))
+    q.click("#seCancel"); q.wait_for_timeout(200)
+    # folded and locked cards are as they were
+    q.click('[data-done="1"]'); q.wait_for_timeout(300)
+    check("lastsets: a folded card keeps no rows", q.eval_on_selector_all(".lift.is-closed","e=>e.map(x=>x.querySelectorAll('.lastsets').length)")==[0])
+    q.eval_on_selector("#lockDay","e=>e.scrollIntoView({block:'center'})")
+    q.click("#lockDay"); q.wait_for_timeout(700)
+    # a locked day closes every movement that has sets; the one left open is the
+    # one with none, and it is read-only, so it draws no rows and its Last line
+    # still carries last time's sets, as it always did
+    check("lastsets: a locked day draws no rows, and an untouched card's Last line still carries the sets",
+          q.locator(".lift .lastsets").count()==0
+          and q.eval_on_selector_all(".lift:not(.is-closed) .last","e=>e.map(x=>x.textContent)")[-1].endswith("— 90×12"),
+          str(q.eval_on_selector_all(".lift:not(.is-closed) .last","e=>e.map(x=>x.textContent)")))
     c.close()
 
     # ---------- NOTES ----------
@@ -1957,7 +2180,9 @@ with sync_playwright() as pw:
     add_movement(q, "Barbell Curl")
     last=q.eval_on_selector(".lift .last","e=>e.textContent")
     check("notes: last time's day note comes back beside its date", "(Hotel gym, dumbbells only)" in last, last)
-    check("notes: and last time's note on the movement beside its sets", "\u201cLast set was really hard\u201d" in last, last)
+    check("notes: and last time's note on the movement, on the same line", "\u201cLast set was really hard\u201d" in last, last)
+    check("notes: the sets are in the rows below it, not on the line", "60\u00d710" not in last
+          and q.eval_on_selector_all(".lift .lastset","e=>e.map(x=>x.textContent)")[0].startswith("Set 1 \u00b7 60\u00d710"))
     lb=q.locator("[data-liftnote]").bounding_box()
     check("notes: a movement offers a note, as a proper target", lb is not None and lb["height"]>=MIN_TAP)
     log_set(q, 0, 60, 11)
@@ -2054,7 +2279,8 @@ with sync_playwright() as pw:
     # this said "Sep" when it was written, and failed the day five days back
     # crossed into October.
     gd=datetime.date.fromisoformat(SGYM); gday="%s %d" % (gd.strftime("%b"), gd.day)
-    check("special: the movement's last time is found wherever it was", ("Last · "+gday) in last and "35×10" in last, last)
+    check("special: the movement's last time is found wherever it was",
+          ("Last · "+gday) in last and "35×10" in q.eval_on_selector(".lift .lastsets","e=>e.textContent"), last)
     log_set(q, 0, 25, 20)
     check("special: and home dumbbells can beat it, by the same rule",
           q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 25×20 over 35×10",
@@ -2099,12 +2325,10 @@ with sync_playwright() as pw:
     q.click('[data-cat="back"]'); q.wait_for_timeout(300)
     q.select_option("#mSel","Hammer Curl"); q.click("#addLift"); q.wait_for_timeout(300)
     last=q.eval_on_selector(".lift .last","e=>e.textContent")
-    check("special: back at the gym, the home session is last time", "(At home, dumbbells only)" in last and "25×20" in last, last)
+    check("special: back at the gym, the home session is last time",
+          "(At home, dumbbells only)" in last and "25×20" in q.eval_on_selector(".lift .lastsets","e=>e.textContent"), last)
     check("special: and the number to beat", q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 25×20")
-    check("special: with a way past it that does not need the heavier dumbbells",
-          "+1 rep 25×21" in q.eval_on_selector(".lift .beat-ways","e=>e.textContent")
-          and "a 2nd set of 25×20" in q.eval_on_selector(".lift .beat-ways","e=>e.textContent"),
-          q.eval_on_selector(".lift .beat-ways","e=>e.textContent"))
+    check("special: with no suggestions line under it any more", q.locator(".lift .beat-ways").count()==0)
     log_set(q, 0, 35, 11)
     q.click("#openCompare"); q.wait_for_timeout(300)
     body=q.eval_on_selector("#cmpBody","e=>e.innerText")
@@ -2231,10 +2455,11 @@ with sync_playwright() as pw:
           q.evaluate("()=>document.activeElement.id")=="seW"
           and q.eval_on_selector("#seTitle","e=>e.textContent")=="Barbell Curl · set 1")
     check("sheet: with the number to beat, since the card is behind it",
-          q.eval_on_selector("#seGoal","e=>e.textContent")=="To beat · 45×15"
-          and "+1 rep 45×16" in q.eval_on_selector("#seWays","e=>e.textContent"))
+          q.eval_on_selector("#seGoal","e=>e.textContent")=="To beat · 45×15")
+    check("sheet: and no suggestions line under it any more", q.locator("#seWays").count()==0)
     check("sheet: nothing to remove on a set not yet logged", q.locator("#seRemove").is_hidden())
-    q.fill("#seW","35"); q.click("#seSave"); q.wait_for_timeout(250)
+    # last time's set 1 fills the reps, so empty them: reps are the one field required
+    q.fill("#seW","35"); q.fill("#seR",""); q.click("#seSave"); q.wait_for_timeout(250)
     check("sheet: reps are asked for, and nothing is logged without them",
           "reps" in q.eval_on_selector("#seWarn","e=>e.textContent") and not q.evaluate(SSDAY, Ts)["lifts"][0]["sets"])
     q.fill("#seR","20"); q.press("#seR","Enter"); q.wait_for_timeout(350)
@@ -2243,8 +2468,9 @@ with sync_playwright() as pw:
           and q.evaluate("()=>document.getElementById('setEditSheet').hidden"))
     check("sheet: the card says what it did", q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 35×20 over 45×15")
     q.click('[data-addset="0"]'); q.wait_for_timeout(250)
-    check("sheet: the next set opens on the weight just used, and says it is set 2",
-          q.input_value("#seW")=="35" and q.eval_on_selector("#seTitle","e=>e.textContent")=="Barbell Curl · set 2")
+    check("sheet: the next set opens on last time's set 2, and says it is set 2",
+          q.input_value("#seW")=="45" and q.input_value("#seR")=="15"
+          and q.eval_on_selector("#seTitle","e=>e.textContent")=="Barbell Curl · set 2")
     eb=q.locator("#seMoveBtn").bounding_box()
     check("sheet: Edit sits beside the title, a proper target", eb is not None and eb["height"]>=MIN_TAP)
     q.click("#seMoveBtn"); q.wait_for_timeout(200)
@@ -2262,6 +2488,9 @@ with sync_playwright() as pw:
           and len(q.evaluate(SSDAY, Ts)["lifts"][0]["sets"])==1
           and not q.evaluate("()=>document.getElementById('setEditSheet').hidden")
           and q.eval_on_selector("#seTitle","e=>e.textContent")=="Dumbbell Curl · set 2")
+    # a movement with no last time: untouched fields go back to the weight of the set before, blank reps
+    check("sheet: and fields nobody touched follow it — no last time for Dumbbell Curl, so 35 and blank",
+          q.input_value("#seW")=="35" and q.input_value("#seR")=="" and q.locator("#seLastSet").is_hidden())
     q.click("#seMoveBtn"); q.wait_for_timeout(200)
     q.select_option("#seMove","__new"); q.wait_for_timeout(100)
     q.fill("#seMoveNew","Spider Curl"); q.click("#seMoveSave"); q.wait_for_timeout(300)
@@ -3166,7 +3395,8 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==3 and titles[0].startswith("Restaurant menus") and titles[2]=="A food library on your phone", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Last week, set by set"
+          and titles[1].startswith("Restaurant menus") and titles[3]=="A food library on your phone", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))

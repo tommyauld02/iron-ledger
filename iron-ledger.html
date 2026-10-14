@@ -2130,15 +2130,34 @@
     overflow-wrap: anywhere;
   }
   .lift .beat b { font-weight: 600; color: var(--ink); }
-  /* the ways past it, one line under the target, wrapping on a narrow phone */
-  .lift .beat-ways {
-    margin: 2px 0 0;
-    font-family: var(--font-num);
-    font-size: 11px;
-    color: var(--ink-3);
-    overflow-wrap: anywhere;
+  /* last time, set by set: read-only rows under the target. Nothing in them
+     is a control, so nothing is teal; only Beat is coloured, in --hit. */
+  .lift .lastsets { margin: 7px 0 9px; }
+  .lift .lastset {
+    min-height: 24px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0 8px;
+    font-size: 15px;
+    line-height: 20px;
+    color: var(--ink-2);
   }
-  .lift .beat-ways b { font-weight: 500; color: var(--ink-2); }
+  /* A narrow phone wraps a row inside itself: last time's tag under its
+     numbers, the status under today's. Today's numbers never drop under the
+     row, where they would read as belonging to the row below. */
+  .lift .ls-num { white-space: nowrap; }
+  .lift .ls-right { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 5px; text-align: right; }
+  .lift .ls-right > span { white-space: nowrap; }
+  .lift .ls-next { font-size: 12px; }
+  .lift .ls-mark {
+    font-family: var(--font-num);
+    font-size: 12px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .lift .ls-mark.ls-beat { color: var(--hit); }
   .lift .beat.is-beaten .beat-k,
   .lift .beat.is-beaten b { color: var(--hit); }
 
@@ -2558,10 +2577,10 @@
   }
   .se-move { display: flex; flex-direction: column; gap: 8px; }
   .se-move .text { height: 46px; padding: 0 10px; font-size: 16px; }
-  .se-goal, .se-ways { margin: 0; font-family: var(--font-num); }
+  .se-goal { margin: 0; font-family: var(--font-num); }
   .se-goal { font-size: 13px; color: var(--ink); }
   .se-goal.is-beaten { color: var(--hit); }
-  .se-ways { font-size: 11px; color: var(--ink-2); }
+  .se-last { font-weight: 600; }
   .se-gym { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .se-gym .seg { flex: 1; max-width: 250px; }
   .tech {
@@ -3170,8 +3189,8 @@
         <button class="btn ghost" id="seMoveCancel">Keep it</button>
       </div>
     </div>
+    <p id="seLastSet" class="se-goal se-last" hidden></p>
     <p id="seGoal" class="se-goal" hidden></p>
-    <p id="seWays" class="se-ways" hidden></p>
     <!-- A machine at one gym is not the machine at another; a dumbbell is
          the same everywhere. Which numbers this movement answers to. -->
     <div id="seGym" class="se-gym" hidden>
@@ -3229,7 +3248,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-13.61";
+  var BUILD = "2026-10-14.62";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3736,6 +3755,10 @@
   // build is stamped onto the data as soon as the app opens. Newest first; a
   // phone several updates behind sees each of them, up to four.
   var NEWS = [
+    { b: "2026-10-14.62", t: "Last week, set by set", items: [
+      "Each movement now shows last time\u2019s sets one under another, and beside each one what you did today: Matched, Beat or Short. The next one to do says next.",
+      "The Set pop-up opens on last time\u2019s matching set \u2014 the weight, the reps and how it was done \u2014 and tells you which set that was. Typing a number replaces it.",
+      "The +5 lb / +1 rep / +1 set line is gone, so the card is cleaner. To beat and Beaten stay." ] },
     { b: "2026-10-13.61", t: "Restaurant menus, barcodes, and more to track", items: [
       "Don’t know the numbers has two new buttons. Restaurant menu: McDonald’s, Chick-fil-A, Taco Bell, Chipotle, Popeyes, In-N-Out and Five Guys, from each chain’s own published numbers — tap what you had and it goes in as one meal. Scan a barcode: anything in a package, found by the number under its bars.",
       "On the Pantry tab, scanning a package fills in the form from its label, and a product USDA doesn’t have is found from your pantry next time.",
@@ -5934,6 +5957,52 @@
   // 150×7. A set weighs its reps plus one for every LB_PER_REP pounds.
   var LB_PER_REP = 5;
   function setWorth(s) { return (Number(s.w) || 0) / LB_PER_REP + (Number(s.r) || 0); }
+
+  // ---------- last time, set by set ----------
+  // Beside the one set to beat, last time's sets in the order they were done,
+  // each with what today did against it, and which one is next. Today's sets
+  // pair with last time's by kind, in order: the first warm-up with the first
+  // warm-up, the first working set (anything that is not a warm-up) with the
+  // first working set. An extra warm-up today therefore does not shift every
+  // row below it. Status is the owner's own exchange rate (setWorth): more is
+  // beat, the same is matched, less is short.
+  function isWarm(s) { return s.tech === "warmup"; }
+  function lastPlan(prev, l) {
+    if (!prev) return null;
+    var last = prev.lift.sets, today = l.sets;
+    var queue = { warm: [], work: [] }, taken = { warm: 0, work: 0 };
+    today.forEach(function (s, ti) { queue[isWarm(s) ? "warm" : "work"].push(ti); });
+    var rows = last.map(function (s, si) {
+      var kind = isWarm(s) ? "warm" : "work";
+      var ti = queue[kind][taken[kind]++];
+      var t = ti === undefined ? null : today[ti];
+      var gap = t ? setWorth(t) - setWorth(s) : 0;
+      return { si: si, last: s, today: t,
+               status: !t ? null : gap > 1e-9 ? "beat" : gap < -1e-9 ? "short" : "matched" };
+    });
+    // Next follows progress: the set after the furthest one done today. A
+    // warm-up skipped today is then not offered once the working sets have
+    // begun, and the pop-up does not fill in a warm-up after a 100x15.
+    var furthest = -1;
+    rows.forEach(function (r, i) { if (r.today) furthest = i; });
+    var next = furthest + 1 < rows.length ? furthest + 1 : null;
+    var pd = store.days[prev.key];
+    var at = gyms().length && pd && pd.gym ? gymInfo(pd.gym) : null;
+    return { prev: prev, rows: rows, next: next,
+             where: (at ? gymTagOf(at) + " \u00b7 " : "") + shortDate(prev.key) };
+  }
+  // The status as a small label. Grey, except Beat, which is the macro
+  // "target met" green: nothing in the rows is a button, so nothing is teal.
+  function planMark(row) {
+    if (!row || !row.status) return "";
+    var word = row.status === "beat" ? "Beat" : row.status === "matched" ? "Matched" : "Short";
+    var sym = row.status === "beat" ? "\u2191" : row.status === "matched" ? "=" : "\u2193";
+    return '<span class="ls-mark ls-' + row.status + '"><span aria-hidden="true">' + sym + "</span> <span>" + word + "</span></span>";
+  }
+  // The line over the pop-up's fields, naming where its numbers came from.
+  function planHint(plan, si) {
+    return "Last time, set " + (si + 1) + ": " + setText(plan.prev.lift.sets[si]) + " \u00b7 " + plan.where;
+  }
   // Last time's best: the set worth most, and the heavier of two worth the
   // same, because that is the one that was on the bar. A warm-up is never it
   // — nobody is trying to pass their warm-up — and any other tag rides along
@@ -5975,11 +6044,6 @@
     var goalSets = setsAtLeast(prev.lift.sets, goal);
     return { goal: goal, passed: passed, extra: !passed && setsAtLeast(l.sets, goal) > goalSets,
              goalSets: goalSets, gw: Number(goal.w) || 0, gr: Number(goal.r) || 0 };
-  }
-  function waysText(bs) {
-    return (bs.gw ? "+" + LB_PER_REP + " lb " + (bs.gw + LB_PER_REP) + "×" + bs.gr + " · " : "") +
-      "+1 rep " + bs.gw + "×" + (bs.gr + 1) + " · +1 set a " + ordinal(bs.goalSets + 1) +
-      " set of " + bs.gw + "×" + bs.gr;
   }
 
   function shortDate(key) {
@@ -8340,10 +8404,14 @@
       var prevDay = prev ? store.days[prev.key] : null;
       var prevAt = here && prevDay && prevDay.gym ? gymInfo(prevDay.gym) : null;
       var gymTag = here ? '<span class="gymtag">' + (shared ? 'every gym' : esc(gymTagOf(hereInfo))) + '</span>' : '';
+      // An open card lays last time's sets out as rows under the target, so the
+      // line keeps where, when and both notes; a locked card draws no rows, so
+      // its line still carries the sets.
+      var plan = locked ? null : lastPlan(prev, l);
       var lastLine = prev
         ? 'Last' + (prevAt ? ' at ' + esc(gymTagOf(prevAt)) : '') + ' · ' + shortDate(prev.key) +
-          (prevDay && prevDay.gymNote ? ' (' + esc(clip(prevDay.gymNote, 32)) + ')' : '') + ' — <em>' +
-          prev.lift.sets.map(setText).join(", ") + '</em>' +
+          (prevDay && prevDay.gymNote ? ' (' + esc(clip(prevDay.gymNote, 32)) + ')' : '') +
+          (plan ? '' : ' — <em>' + prev.lift.sets.map(setText).join(", ") + '</em>') +
           (prev.lift.note ? ' · \u201c' + esc(clip(prev.lift.note, 48)) + '\u201d' : '')
         : away
           ? 'First time at ' + esc(gymTagOf(hereInfo)) + '. ' +
@@ -8355,19 +8423,8 @@
       // do about it is a nag.
       var bs = beatState(prev, l);
       var goal = bs.goal, passed = bs.passed;
-      // Every way past it, spelled out, because one number was not enough: a
-      // light high-rep day at home made the gym's target 25×20, and the
-      // honest answer is not "outdo that" but "25×21, or a second set of it".
-      // The next tier of weight at the same reps, one more rep, or one more
-      // set at that level — each is progressive overload, and any one counts.
-      var goalSets = bs.goalSets, extraSet = bs.extra, gw = bs.gw, gr = bs.gr;
-      var ways = goal
-        ? '<p class="beat-ways">' +
-            (gw ? '<span class="bw-k">+' + LB_PER_REP + ' lb</span> <b>' + (gw + LB_PER_REP) + '×' + gr + '</b> · ' : '') +
-            '<span class="bw-k">+1 rep</span> <b>' + gw + '×' + (gr + 1) + '</b> · ' +
-            '<span class="bw-k">+1 set</span> <b>a ' + ordinal(goalSets + 1) + ' set of ' + gw + '×' + gr + '</b>' +
-          '</p>'
-        : '';
+      // One more set at that level also beats it, so the card needs to know.
+      var goalSets = bs.goalSets, extraSet = bs.extra;
       var beatLine = passed
         ? '<p class="beat is-beaten"><span class="beat-k">↑ Beaten ·</span> <b>' + esc(setText(passed)) +
           '</b> <span class="beat-was">over ' + esc(setText(goal)) + '</span></p>'
@@ -8375,7 +8432,7 @@
           ? '<p class="beat is-beaten"><span class="beat-k">↑ Beaten ·</span> <b>a ' + ordinal(goalSets + 1) +
             ' set</b> <span class="beat-was">of ' + esc(setText(goal)) + '</span></p>'
           : goal && !locked && !l.closed
-            ? '<p class="beat"><span class="beat-k">To beat ·</span> <b>' + esc(setText(goal)) + '</b></p>' + ways
+            ? '<p class="beat"><span class="beat-k">To beat ·</span> <b>' + esc(setText(goal)) + '</b></p>'
             : '';
 
       var sets = l.sets.map(function (s, si) {
@@ -8458,6 +8515,20 @@
                      '</em> — a day you no longer train.</p>' : '') +
           '<p class="last">' + lastLine + '</p>' +
           beatLine +
+          // Read-only: last time's sets, today's against each, and the next
+          // one to do. Today's tag only when it is not last time's, so a
+          // warm-up row stays on one line.
+          (plan ? '<div class="lastsets">' + plan.rows.map(function (row) {
+            var t = row.today;
+            var ls = row.last;
+            return '<div class="lastset"><span><span class="ls-num">Set ' + (row.si + 1) + ' · ' + ls.w + '×' + ls.r + '</span>' +
+                (ls.tech ? ' <span class="ls-num">' + esc(techShort(ls.tech)) + '</span>' : '') + '</span>' +
+              '<span class="ls-right">' +
+                (t ? '<span>' + esc((t.tech || '') === (row.last.tech || '') ? t.w + '×' + t.r : setText(t)) + '</span> ' +
+                     planMark(row) : '') +
+                (plan.next === row.si ? '<span class="ls-next">next</span>' : '') +
+              '</span></div>';
+          }).join('') + '</div>' : '') +
           (sets ? '<div class="sets">' + sets + '</div>' : '') +
           (locked ? '' :
             // The row looks as it always did, and every part of it opens the
@@ -8871,7 +8942,7 @@
       });
     }
 
-    [["data-w", "w"], ["data-r", "r"], ["data-techopen", "t"], ["data-addset", "w"]].forEach(function (pair) {
+    [["data-w", "w"], ["data-r", "r"], ["data-techopen", "t"], ["data-addset", "add"]].forEach(function (pair) {
       view.querySelectorAll("[" + pair[0] + "]").forEach(function (b) {
         b.addEventListener("click", function () {
           openSetEditor(key, Number(b.getAttribute(pair[0])), null, pair[1]);
@@ -11398,7 +11469,7 @@
     var here = gyms().length ? dayGym(setEditing.key) : null;
     var shared = sharedMove(l.movement), hereInfo = here ? gymInfo(here) : null;
     var bs = beatState(lastTime(l.movement, setEditing.key, here), l);
-    var goalEl = document.getElementById("seGoal"), waysEl = document.getElementById("seWays");
+    var goalEl = document.getElementById("seGoal"), lastEl = document.getElementById("seLastSet");
     var gymEl = document.getElementById("seGym");
     gymEl.hidden = !here;
     if (here) {
@@ -11406,15 +11477,15 @@
         '<button data-seshare="off" aria-pressed="' + !shared + '">' + esc(gymTagOf(hereInfo)) + ' only</button>' +
         '<button data-seshare="on" aria-pressed="' + shared + '">Every gym</button>';
     }
-    goalEl.hidden = !bs.goal && !(here && !shared); waysEl.hidden = true;
+    // Adding: which of last time's sets the fields were filled from.
+    var fp = adding ? lastPlan(lastTime(l.movement, setEditing.key, here), l) : null;
+    lastEl.hidden = !(fp && fp.next !== null);
+    if (!lastEl.hidden) lastEl.textContent = planHint(fp, fp.next);
+    goalEl.hidden = !bs.goal && !(here && !shared);
     goalEl.classList.toggle("is-beaten", !!(bs.passed || bs.extra));
     if (bs.passed) goalEl.textContent = "↑ Beaten · " + setText(bs.passed) + " over " + setText(bs.goal);
     else if (bs.extra) goalEl.textContent = "↑ Beaten · a " + ordinal(bs.goalSets + 1) + " set of " + setText(bs.goal);
-    else if (bs.goal) {
-      goalEl.textContent = "To beat · " + setText(bs.goal);
-      waysEl.textContent = waysText(bs);
-      waysEl.hidden = false;
-    }
+    else if (bs.goal) goalEl.textContent = "To beat · " + setText(bs.goal);
     else if (here && !shared) goalEl.textContent = "First time at " + gymTagOf(hereInfo) + " \u2014 nothing to beat here yet";
   }
 
@@ -11425,32 +11496,76 @@
     if (!b || !l) return;
     setShared(l.movement, b.dataset.seshare === "on");
     render();
+    fillSetSheet(false);
     drawSetSheet();
   });
 
-  // Adding opens on the weight of the set before, since sets so often
-  // repeat it, with the field that was tapped ready to type into.
+  // What a new set starts as. With a next set from last time — the set that
+  // pairs with this one, by kind and in order — its weight, reps and
+  // technique, and the sheet says which set that was. Without one, as it
+  // always was: the weight of the set before, since sets so often repeat it,
+  // blank reps and a normal set. The technique comes from last time's matching
+  // set, named in the line, never from the set before: a drop tag must not
+  // ride along onto every set after it.
+  function setFillFor(l, key) {
+    var plan = lastPlan(lastTime(l.movement, key, gyms().length ? dayGym(key) : null), l);
+    var src = plan && plan.next !== null ? plan.rows[plan.next].last : null;
+    var before = l.sets[l.sets.length - 1];
+    return { w: src ? src.w : (before ? before.w : ""), r: src ? src.r : "",
+             t: src && src.tech ? src.tech : "", from: !!src };
+  }
+  // Put those numbers in the fields. setEditing.put remembers what the code
+  // last wrote, so a later refill (another gym, another movement) only touches
+  // a field that still holds it — a number already typed is never overwritten.
+  function fillSetSheet(force) {
+    var l = sheetLift();
+    if (!l || !setEditing || setEditing.si !== null) return false;
+    var fill = setFillFor(l, setEditing.key), put = setEditing.put || {};
+    [["w", "seW"], ["r", "seR"], ["t", "seT"]].forEach(function (p) {
+      var el = document.getElementById(p[1]);
+      if (!force && String(el.value) !== String(put[p[0]])) return;
+      el.value = String(fill[p[0]]);
+      if (el.value !== String(fill[p[0]])) el.value = "";   // a technique this build does not list
+      put[p[0]] = el.value;
+    });
+    setEditing.put = put;
+    return fill.from;
+  }
+
+  // Typing replaces a number that is already in the box, instead of landing
+  // in the middle of it: 12 over a pre-filled 15 is not 1512. Adding only; a
+  // set being changed keeps its caret where it was tapped.
+  function selectAll(el) {
+    if (!el.select) return;
+    el.select();
+    try { el.setSelectionRange(0, el.value.length); } catch (e) { /* not a text box */ }
+  }
+
   function openSetEditor(key, li, si, focus) {
     setEditing = { key: key, li: li, si: si === undefined ? null : si };
     var l = sheetLift();
     var at = editedSet();
     if (!l || (setEditing.si !== null && !at)) { setEditing = null; return; }
     var adding = setEditing.si === null;
-    var before = l.sets[l.sets.length - 1];
-    document.getElementById("seW").value = adding ? (before ? before.w : "") : at.st.w;
-    document.getElementById("seR").value = adding ? "" : at.st.r;
     var tech = adding ? "" : (at.st.tech || "");
+    document.getElementById("seW").value = adding ? "" : at.st.w;
+    document.getElementById("seR").value = adding ? "" : at.st.r;
     document.getElementById("seT").innerHTML = TECHNIQUES.map(function (t) {
       return '<option value="' + t.id + '"' + (tech === t.id ? " selected" : "") + '>' + t.name + '</option>';
     }).join("");
+    var filled = adding && fillSetSheet(true);
     document.getElementById("seSave").textContent = adding ? "Add set" : "Save";
     document.getElementById("seRemove").hidden = adding;
     document.getElementById("seMoveRow").hidden = true;
     document.getElementById("seWarn").hidden = true;
     drawSetSheet();
     setEditSheet.hidden = false;
+    // The Set button on the card, with numbers already in the fields: leave
+    // the keyboard down, the numbers are there to check. Any other way in
+    // goes straight to the field it stands for, with its value selected.
+    if (focus === "add") focus = filled ? "" : "w";
     var target = document.getElementById(focus === "r" ? "seR" : focus === "t" ? "seT" : focus === "w" ? "seW" : "");
-    if (target) { target.focus(); if (target.select) target.select(); }
+    if (target) { target.focus(); selectAll(target); }
   }
 
   function closeSetEditor() { setEditing = null; setEditSheet.hidden = true; }
@@ -11481,12 +11596,22 @@
     if (!name) { seMoveNew.focus(); return; }
     changeMovement(setEditing.key, setEditing.li, name);
     seMoveRow.hidden = true;
+    fillSetSheet(false);
     drawSetSheet();
   });
 
   // Enter moves on from the weight, and from the reps it saves.
   document.getElementById("seW").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") document.getElementById("seR").focus();
+    if (e.key !== "Enter") return;
+    var r = document.getElementById("seR");
+    r.focus();
+    if (setEditing && setEditing.si === null) selectAll(r);
+  });
+  ["seW", "seR"].forEach(function (id) {
+    document.getElementById(id).addEventListener("focus", function (e) {
+      var el = e.target;
+      if (setEditing && setEditing.si === null) setTimeout(function () { selectAll(el); }, 0);
+    });
   });
   document.getElementById("seR").addEventListener("keydown", function (e) {
     if (e.key === "Enter") document.getElementById("seSave").click();
