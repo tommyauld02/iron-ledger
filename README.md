@@ -22,7 +22,7 @@ probably blocking inbound on a Public network profile.
 Read `CLAUDE.md` first — it has the architecture and the rules that keep this
 thing from breaking in the specific ways it has broken before. Agents working
 here also read `TEAM.md`: who does what, the issue labels, and the rule that
-only the owner merges.
+nothing merges without the owner's "push it".
 
     pip install playwright && playwright install chromium
     ./verify.sh        # every suite, phone-emulated (the count is in CLAUDE.md)
