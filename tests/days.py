@@ -74,7 +74,7 @@ with sync_playwright() as pw:
     # ---- last-session lookup must reach back across the day boundary ----
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(400)
     add_movement(p, "Barbell Row", wait=400)
-    last=p.eval_on_selector(".lift .last","e=>e.textContent")
+    last=p.eval_on_selector(".lift .lastsets","e=>e.textContent")
     ck("rollover: last-session crosses days", "135" in last and "10" in last, last.strip())
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(300)
 

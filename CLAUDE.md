@@ -710,13 +710,20 @@ the point of folding a card is that nothing on it can be hit by accident.
 rest-pause, to failure, warm-up and the rest live in `TECHNIQUES`, and a set
 carries `tech` **only when it is something other than normal** — most sets are
 just sets, and never touching the box is the ordinary path all the way to Done.
-The tag shows on the chip, on the folded card and on next time's *Last* line,
-which is where it pays off: you see which set was the drop. `techShort()`
-answers an id it does not know with the id itself, so a technique from a newer
-backup or a retired one still reads as itself rather than vanishing.
+The tag shows on the chip, on the folded card and on next time's rows (*Last
+time, set by set*, below), which is where it pays off: you see which set was
+the drop. `techShort()` answers an id it does not know with the id itself, so a
+technique from a newer backup or a retired one still reads as itself rather
+than vanishing.
 
-The box goes back to normal for every new set, so a drop tag cannot quietly
-ride along onto every set after it. It is chosen in the set sheet now, below.
+A new set's technique comes **from last time's matching set, named in the line
+over the fields, never from the set before.** It used to be "normal for every
+new set", so that a drop tag could not quietly ride along onto every set after
+it; the same worry holds, which is why the set before is still never the
+source. When last time has a next set the box opens on that set's tag — set 1
+was a warm-up, so the sheet opens on *Warm-up* and says *Last time, set 1: 60×15
+warm-up* — and with no last time, or all of it done, it opens on normal as it
+always did. It is chosen in the set sheet now, below.
 
 **A tap on a set opens it; it no longer removes it.** Tapping a chip used to
 delete the set outright — the same remove-and-add-again the owner called out for
@@ -732,10 +739,11 @@ changes a set lets you focus on the thing you are doing, with the rest of the
 card out of the way — so it is now how a set is added as well. The card's
 entry row keeps its look (lb, reps, the technique box, Set) but each part is a
 button that opens the sheet on the field it stands for, the cursor already
-there. Adding opens on the weight of the set before, because sets so often
-repeat it; Enter in the weight moves to the reps, and Enter in the reps adds
-the set. The sheet carries the number to beat and the ways past it, since the
-card is behind it, and *Edit* beside the title changes the movement without
+there. Adding opens on last time's next set where there is one (*Last time,
+set by set*, below) and otherwise on the weight of the set before, because sets
+so often repeat it; Enter in the weight moves to the reps, and Enter in the
+reps adds the set. The sheet carries the number to beat, since the card is
+behind it, and *Edit* beside the title changes the movement without
 leaving it — `changeMovement()`, shared with the card's own picker, so both
 keep the sets, both undo, and both take a typed name back off the list.
 `logSet()` is the one way a set is added, which keeps the first-set clock
@@ -962,7 +970,7 @@ its time, and the calendar calls it a session rather than "no gym".
 *at home* or *hotel gym* for the day (`d.gymNote`), and *last set was really
 hard* on a movement (`l.note`). They are the context that explains a number when
 you look back at it, so both come back on next time's *Last* line — the day's
-in brackets after its date, the movement's in quotes after its sets, clipped
+in brackets after its date, the movement's in quotes after that, clipped
 short there — and the comparison and the calendar day's title name the day's.
 The day's note is offered under the clock and stays writable after *Lock in
 the day*: "trained at the hotel" is often only worth saying afterwards, and it
@@ -994,17 +1002,26 @@ more reps for at least the same weight, and anything else was a trade it
 would not call either way. He answered that with the exchange rate, which is
 the better rule because it decides every case.
 
-**Every way past it is spelled out.** One number was not enough: a light,
-high-rep day at home made the gym's target 25×20, and "beat that" read as
-"outdo it with heavier dumbbells". The owner's answer was the three ways a
-lifter actually progresses, each of which counts: the next tier of weight at
-the same reps (`+5 lb`, `LB_PER_REP`), one more rep, or one more set at that
-level. So under *To beat* a line reads *+5 lb 150×8 · +1 rep 145×9 · +1 set a
-3rd set of 145×8* — and after the home day, *+1 rep 25×21*, which the gym's own
-dumbbells can do. The set is counted by the same rule (`setsAtLeast()`): any set
-worth at least the target is a set at that level, so 140×9 counts toward "a 3rd
-set of 145×8". An extra set beats it only when no single set already has, and
-reads *↑ Beaten · a 3rd set of 145×8*.
+**Every way past it counts — but it is no longer spelled out.** One number was
+not enough: a light, high-rep day at home made the gym's target 25×20, and
+"beat that" read as "outdo it with heavier dumbbells". The owner's answer was
+the three ways a lifter actually progresses, each of which counts: the next
+tier of weight at the same reps (`LB_PER_REP`), one more rep, or one more set
+at that level. All three are still how a movement is *Beaten* — `beats()` and
+`setsAtLeast()` are unchanged, so a light home day's 25×21 still beats 25×20.
+The set is counted by the same rule: any set worth at least the target is a set
+at that level, so 140×9 counts toward "a 3rd set of 145×8". An extra set beats
+it only when no single set already has, and reads *↑ Beaten · a 3rd set of
+145×8*.
+
+What went is the line that listed them under *To beat* (*+5 lb 150×8 · +1 rep
+145×9 · +1 set a 3rd set of 145×8*, `.beat-ways`, and the same text in the set
+sheet, `#seWays`). The owner asked on 2026-10-14 for it to go, because the card
+was too busy; *To beat · 145×8* and the *↑ Beaten* lines stay exactly as they
+were. The rows of *Last time, set by set* do that line's job a different way:
+they show the set to match, set by set, instead of three ways to pass one. The
+checks that looked for the line now assert it is gone (`sweep`, `darkcheck`),
+so it cannot drift back on unnoticed.
 
 Any tag rides along with the number, so `120×12 rest-pause` never passes for
 a straight set of twelve. A finished day shows *Beaten* where it was and
@@ -1042,6 +1059,80 @@ calendar. Renaming keeps the id, so history follows. *Compare with last time*
 looks for the last session of the split **at the same gym**. With no gyms at
 all, nothing changes from before, so a phone that never adds one never
 notices the feature.
+
+**Last time, set by set.** Asked for by the owner (issue #5): *To beat* gives
+one number, but in the gym the question is "what did I do on this set last
+week?". He was shown four ways to answer it on the card, picked one, and
+changed one thing of his own — keep *To beat*, take the suggestions line away.
+On an open card with a last time at this gym (`prev`), under *To beat*, there
+is one read-only row per set of last time: `Set 2 · 100×15` on the left
+(`setText`, so a tag reads `60×15 warm-up`), and on the right today's numbers
+and a label — `= Matched` (grey), `↑ Beat` (`--hit`), `↓ Short` (grey) — or,
+on the first set still to do, a grey *next*. `lastPlan()` builds them and the
+card and the pop-up both read it.
+
+**Pairing is by kind, in order.** The i-th warm-up today pairs with the i-th
+warm-up last time, and the i-th working set (anything that is not `warmup`)
+with the i-th working set. Paired by position instead, one extra warm-up today
+would shift every row below it by one — a Matched becomes a Short and the
+pop-up pre-fills the wrong set. By kind, the extra warm-up has no row and the
+working sets still meet their own. The label is `setWorth()` — the owner's
+five-pounds-a-rep rule — so more is Beat, equal is Matched, less is Short; and
+*next* is simply the first of last time's sets with no partner yet. Today's tag
+is written beside its numbers only when it is not last time's, so a warm-up row
+stays on one line; a rest-pause set against a normal one says so.
+
+Nothing in the rows is tappable and nothing is teal, because teal means you
+can tap it. Rows are not drawn when there is no `prev`: **a first time at this
+gym still shows only the other gym's numbers under the *not a target here*
+line, because another gym's numbers are never a target** — rows would present
+them as one. A folded card keeps no rows. A locked card draws none either; a
+locked day closes every movement that has sets, so the one left open is a
+movement with none, and its *Last* line still carries last time's sets as it
+always did. The *Last* line on an open card is now where, when and both notes
+(`Last at APT · Oct 7 (felt strong) · “last set was really hard”`), and its sets
+are the rows below.
+
+**The Set pop-up starts where last week did.** Adding a set opens on last
+time's next set: its weight, reps and technique, and a line above *To beat*
+naming it — `Last time, set 4: 200×10 · APT · Oct 7`, the gym only when gyms
+exist, the tag included (`set 1: 60×15 warm-up`). That is `setFillFor()`;
+without a next set — all of last time's sets are done, or there is no last
+time — the sheet is exactly what it was: the weight of the set before, blank
+reps, normal, no line. Opened from **Set** with numbers in it, no field takes
+focus, so the keyboard stays down: the numbers are there to check, then *Add
+set*. Opened from **lb**, **reps** or the technique box it focuses that field
+with its value selected. Without a pre-fill Set still opens on the weight.
+
+**Typing replaces a pre-filled number.** Typing 12 over a pre-filled 15 gave
+1512, because a focused field puts the caret at the end. While a set is being
+*added*, focusing weight or reps selects what is in it, and *Enter* from the
+weight moves to the reps with them selected. A set being *changed* keeps the
+old behaviour — a caret where it was tapped, to fix one digit. The selection
+is made at once and again in a timeout, as a precaution against a caret being
+placed after the focus event.
+
+**The fields follow the sheet, but only the ones nobody touched.** *Every gym*
+(a movement's *Targets from*) and *Edit* (change the movement) both change
+which last time applies while the sheet is open, so both re-fill. A refill
+must never overwrite a number someone has typed: `setEditing.put` remembers
+what the code last wrote into each field, and a refill writes only into a field
+that still holds exactly that. Typing the weight, then flipping to *Every gym*,
+fills the reps and leaves the weight alone. Flipping back to a gym with no last
+time empties what was filled and keeps what was typed. The line always follows
+the current last time. Without a next set, the fields go back to the set before
+and blank reps.
+
+`sweep` covers all of it with one four-set history, as `Leg Extension`: rows
+read matched / matched / short with *next* on set 4, a set worth more reads
+Beat in `--hit`, an extra warm-up does not shift the working sets, Set opens at
+200 / 10 / normal with the *set 4* line and at 60×15 warm-up for set 1, past
+last time's count it opens as before, typing replaces, *Every gym* and *Edit*
+re-fill untouched fields only, two gyms give rows only from the gym you are at,
+and the suggestions line is gone from the card and the sheet. `darkcheck`'s
+fixture paints matched, beat, short and next — and fails if one is missing —
+and measures the pop-up with its line; `mobile` fits a six-set history with a
+tag on both sides of a row on every phone size.
 
 **Cardio has a tab of its own.** Asked for by Nygle, a tester, and placed
 where Coach used to sit, between Gym and Log (Coach, when switched on, follows

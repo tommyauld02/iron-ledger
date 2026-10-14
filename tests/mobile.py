@@ -11,7 +11,12 @@ store={"days":{T:{"food":[
   "lifts":[{"id":"l1","cat":"back","movement":"Barbell Row","note":"Last set was really hard, grip gave out before the back did",
             "sets":[{"w":135,"r":10,"tech":"restpause"}]},
            {"id":"l2","cat":"back","movement":"Lat Pulldown","sets":[{"w":120,"r":10}],"doneAt":1,"lapMs":452000,"closed":True},
-           {"id":"l3","cat":"back","movement":"Seated Cable Row","sets":[]}],
+           {"id":"l3","cat":"back","movement":"Seated Cable Row","sets":[]},
+           # six sets last time, so the rows are at their tallest, with a tag on
+           # both sides: warm-up and matched, beat with a different tag, matched,
+           # short, and the fifth set next
+           {"id":"l4","cat":"back","movement":"Incline Dumbbell Press","sets":[
+             {"w":50,"r":15,"tech":"warmup"},{"w":80,"r":12,"tech":"restpause"},{"w":80,"r":10},{"w":70,"r":8}]}],
   "cardio":[{"id":"c1","type":"Incline walk on the treadmill","min":30,"dist":3.1,"cal":265,"t":1}],
   "gym":"gA","updated":1,"goal":G},
   # last time, so every card carries its set to beat, at its longest: a tag
@@ -19,7 +24,10 @@ store={"days":{T:{"food":[
   (datetime.date.today()-datetime.timedelta(days=3)).isoformat():{"food":[],"updated":1,"goal":G,"gym":"gA",
   "lifts":[{"id":"p1","cat":"back","movement":"Barbell Row","sets":[{"w":125,"r":10,"tech":"restpause"}]},
            {"id":"p2","cat":"back","movement":"Lat Pulldown","sets":[{"w":110,"r":10}]},
-           {"id":"p3","cat":"back","movement":"Seated Cable Row","sets":[{"w":225,"r":12,"tech":"restpause"}]}]}},
+           {"id":"p3","cat":"back","movement":"Seated Cable Row","sets":[{"w":225,"r":12,"tech":"restpause"}]},
+           {"id":"p4","cat":"back","movement":"Incline Dumbbell Press","sets":[
+             {"w":50,"r":15,"tech":"warmup"},{"w":75,"r":12},{"w":80,"r":10},{"w":85,"r":8,"tech":"myo"},
+             {"w":85,"r":8,"tech":"myo"},{"w":60,"r":15,"tech":"drop"}]}]}},
  "cardioTypes":["Incline walk on the treadmill","Bike"],
  "gyms":[{"id":"gA","name":"Apartment building gym","tag":"APTGYM24"},{"id":"g24","name":"24 Hour Fitness","tag":"24"}],"gymLast":"gA",
  "moves":None,"coachOn":True,"goal":G,"region":"United States",
@@ -89,6 +97,15 @@ with sync_playwright() as pw:
                 FAILS.append("%s: set-to-beat lines not on screen to measure" % name)
             if t=="gym" and not p.eval_on_selector_all(".day-note, .lift .lift-note","e=>e.length")>=2:
                 FAILS.append("%s: notes not on screen to measure" % name)
+            # last time set by set: a six-set history has to fit every phone, and
+            # every state a row can be in has to be on screen to be measured
+            if t=="gym":
+                lrows=p.evaluate("""()=>({rows:document.querySelectorAll('.lift .lastset').length,
+                  matched:document.querySelectorAll('.lift .ls-matched').length, beat:document.querySelectorAll('.lift .ls-beat').length,
+                  short:document.querySelectorAll('.lift .ls-short').length, next:document.querySelectorAll('.lift .ls-next').length,
+                  longest:Math.max(...[...document.querySelectorAll('.lift .lastsets')].map(e=>e.querySelectorAll('.lastset').length))})""")
+                if lrows["longest"]<6 or not (lrows["matched"] and lrows["beat"] and lrows["short"] and lrows["next"]):
+                    FAILS.append("%s: last-time rows not on screen to measure %s" % (name, lrows))
             if t=="cardio" and not p.eval_on_selector_all(".cardio-card","e=>e.length"):
                 FAILS.append("%s: no cardio session on screen to measure" % name)
             if t=="pantry" and p.eval_on_selector_all("[data-pantab]","e=>e.length")<6:
