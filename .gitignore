@@ -24,3 +24,6 @@ tools/.usda-cache/
 
 # Vendor packages downloaded to build vendor/ from (zxing-wasm) — fetched again on demand
 tools/.vendor-dl/
+
+# agents' own scratch checkouts (Claude Code worktrees)
+.claude/worktrees/
