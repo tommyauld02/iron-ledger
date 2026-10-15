@@ -47,7 +47,11 @@ DEVICES=[("iPhone SE",320,568),("iPhone 13 mini",375,812),("iPhone 15",393,852),
          ("iPhone 17 Pro",402,874),("iPhone 17 Pro Max",440,956),
          ("iPhone 15 Pro Max",430,932),("landscape 17 Pro",874,402)]
 # Macros three times: folded, then with each way in open.
-TABS=["macros","macros:numbers","macros:estimate","pantry","gym","cardio","coach","log"]
+TABS=["macros","macros:numbers","macros:estimate","macros:estimate:agent","macros:estimate:scan","pantry","gym","cardio","coach","log"]
+# What each way in shows first, so a box that failed to open is said, not passed.
+# Don't know the numbers opens on Have the measurements; its other two tabs only
+# exist after a press, so they are visited too.
+FIRST={"numbers":"#fCal","estimate":'[data-ef="0"]',"estimate:agent":"#estText","estimate:scan":"#openScan"}
 
 # iOS zooms the page whenever you focus a field smaller than 16px, and never zooms back
 ZOOM="""()=>{const bad=[];
@@ -86,8 +90,13 @@ with sync_playwright() as pw:
         for t in TABS:
             p.click('.tabs button[data-tab="%s"]'%t.split(":")[0]); p.wait_for_timeout(350)
             if ":" in t:
-                p.click('[data-logway="%s"]'%t.split(":")[1]); p.wait_for_timeout(300)
-                if not p.locator("#fCal" if t.endswith("numbers") else '[data-ef="0"]').count():
+                box=t.split(":")[1]          # not `w`: that is the phone's width
+                # already open, a press would fold it
+                if p.locator('[data-logway="%s"][aria-expanded="false"]'%box).count():
+                    p.click('[data-logway="%s"]'%box); p.wait_for_timeout(300)
+                if t.count(":")==2:
+                    p.click('[data-esttab="%s"]'%t.split(":")[2]); p.wait_for_timeout(300)
+                if not p.locator(FIRST[t.split(":",1)[1]]).count():
                     FAILS.append("%s: %s box not on screen to measure" % (name, t))
             if t=="coach" and p.locator("[data-openday]").count():
                 p.locator("[data-openday]").first.click(); p.wait_for_timeout(300)

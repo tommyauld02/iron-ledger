@@ -989,6 +989,14 @@
   /* Barcodes: a quick way in at the top of "Don't know the numbers",
      opening a sheet of its own. */
   .est-quick { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  /* Don't know the numbers, three ways in: Settings' toggles, but in the body
+     font and allowed two lines, so "Have the measurements" fits a 320px phone. */
+  .est-tabs button { min-height: 52px; padding: 4px 3px; font-family: var(--font-body, inherit);
+    font-size: 13px; line-height: 1.2; letter-spacing: 0; -webkit-hyphens: auto; hyphens: auto; overflow-wrap: anywhere; }
+  .est-scan { display: flex; flex-direction: column; gap: 10px; }
+  /* on the narrowest phones a step smaller; "measurements" still has to break
+     there, so the tabs are marked English and it hyphenates properly */
+  @media (max-width: 359px) { .est-tabs button { font-size: 12px; } }
   .est-quick .btn { display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
     gap: 2px; min-height: 56px; padding: 8px 12px; text-align: left; }
   .est-quick .q-s { font-family: var(--font-body, inherit); font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
@@ -3196,7 +3204,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-15.63";
+  var BUILD = "2026-10-15.64";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3290,13 +3298,21 @@
   var estDraft = "";
   // The entry table. A blank box asking "what did you eat?" tells a first-time
   // user nothing about what it accepts, so the default way in is labelled
-  // fields with examples in them, the way the pantry form works. The plain
-  // words box is still there behind "Or just describe it in words" — it is
-  // what makes "half a protein coffee" work, and it is faster once you know
-  // the shape. Transient like estDraft: reopening the app should show an empty
-  // form, not yesterday's half-finished thought.
+  // fields with examples in them, the way the pantry form works. Transient
+  // like estDraft: reopening the app should show an empty form, not
+  // yesterday's half-finished thought.
   var estRows = [{ qty: "", unit: "", food: "" }];
-  var estWords = false;
+  // Don't know the numbers holds three ways in, as tabs, asked for by the
+  // owner (b64): one held a barcode button, the table and the words box all
+  // at once. "measure" is the table and the default, "agent" the words box —
+  // what makes "half a protein coffee" work — and "scan" the barcode reader.
+  // Transient like the rest: the app opens on the table.
+  var EST_TABS = [
+    { id: "scan", name: "Scan a barcode" },
+    { id: "measure", name: "Have the measurements" },
+    { id: "agent", name: "Ask an agent" }
+  ];
+  var estTab = "measure";
   // Which way in is open under the checklist — "numbers", "estimate" or
   // neither. Both start folded. An estimate under way or waiting for review
   // opens its box by itself, because it is the answer to a press (a pending
@@ -3694,6 +3710,9 @@
   // build is stamped onto the data as soon as the app opens. Newest first; a
   // phone several updates behind sees each of them, up to four.
   var NEWS = [
+    { b: "2026-10-15.64", t: "Three ways in, side by side", items: [
+      "Don’t know the numbers now has three tabs across the top: Scan a barcode, Have the measurements and Ask an agent. Only the one you pick shows, so the box is shorter and it’s clear what each does.",
+      "Have the measurements is the table it always opened on. Ask an agent is the plain-words box, and what you put in the table comes with you. Scan a barcode opens the scanner." ] },
     { b: "2026-10-15.63", t: "A free AI finds the numbers", items: [
       "Don’t know the numbers now asks a free AI about anything your pantry doesn’t have — a restaurant order, a brand, a plate you cooked. It checks its own numbers add up, and asks again when they don’t.",
       "Nothing to set up: no key, no sign-in. It works the moment the app is open with a connection, and only the food you describe is sent — never your log.",
@@ -5118,12 +5137,15 @@
   function estNoteHtml() {
     var who = finder();
     return '<p class="est-note">' +
+      (estTab === "measure" ? 'Fill in each food and how much of it. ' : '') +
       (who === "relay"
-        ? 'Describe the meal in plain words. Your pantry answers first; anything it doesn\u2019t know goes to the food ' +
+        ? (estTab === "measure" ? '' : 'Describe the meal in plain words. ') +
+            'Your pantry answers first; anything it doesn\u2019t know goes to the food ' +
             'finder, a free AI that works out the numbers \u2014 only the food you describe is sent. The country above ' +
             'decides which version of a product it uses. You\u2019ll see the breakdown and can edit it before it goes in the ledger.'
         : who === "claude"
-          ? 'Describe the meal in plain words. Your pantry answers first; anything it doesn\u2019t know goes to Claude. The ' +
+          ? (estTab === "measure" ? '' : 'Describe the meal in plain words. ') +
+              'Your pantry answers first; anything it doesn\u2019t know goes to Claude. The ' +
               'country above decides which version of a product gets used. You\u2019ll see the breakdown and can edit it before ' +
               'it goes in the ledger.'
           : 'Your pantry answers first, even offline. The food finder isn\u2019t available in this copy of the app, so ' +
@@ -5806,11 +5828,29 @@
       '</div>';
     }).join("");
 
+    var tabs = '<div class="seg est-tabs" role="group" lang="en" aria-label="How to find the numbers">' +
+      EST_TABS.map(function (t) {
+        return '<button data-esttab="' + t.id + '" aria-pressed="' + (estTab === t.id ? 'true' : 'false') + '">' +
+          t.name + '</button>';
+      }).join("") +
+    '</div>';
+
+    if (estTab === "scan") {
+      return '<section class="entry est" id="wayEstimate">' + tabs +
+        '<div class="est-scan">' +
+          '<p class="est-note">Point the camera at the bars on any package \u2014 or take a photo of them, or type ' +
+            'the number. Your pantry is checked first, then grocery brands; what it finds goes in with its ' +
+            'label\u2019s numbers, for you to check before it\u2019s added.</p>' +
+          '<button class="btn" id="openScan">Scan a barcode</button>' +
+        '</div>' +
+      '</section>';
+    }
+
     return '<section class="entry est" id="wayEstimate">' +
-      estQuickHtml() +
-      (estWords
+      tabs +
+      (estTab === "agent"
         ? '<textarea id="estText" placeholder="Half a protein coffee, 6 oz sirloin and a cup of rice" ' +
-            'spellcheck="false">' + esc(estDraft) + '</textarea>'
+            'spellcheck="false" aria-label="Describe what you ate">' + esc(estDraft) + '</textarea>'
         : foodList +
           '<div class="est-table">' + etRows +
             '<button class="et-add" id="estAddRow">+ Add another</button>' +
@@ -5831,9 +5871,6 @@
       errHtml +
       (estHint ? '<p class="est-note" style="color:var(--miss)">' + esc(estHint) + '</p>' : '') +
       '<button class="btn" id="runEst">Work out the macros</button>' +
-      '<button class="et-swap" id="estSwap">' +
-        (estWords ? '◂ Back to the table' : '▸ Or just describe it in words') +
-      '</button>' +
       estNoteHtml() +
     '</section>';
   }
@@ -6693,7 +6730,7 @@
         if (top && !popsUp(w)) window.scrollBy(0, top.getBoundingClientRect().top -
           (bar ? bar.getBoundingClientRect().bottom : 0) - 8);
         var f = w === "numbers" ? document.getElementById("fCal")
-          : est ? null : view.querySelector(estWords ? "#estText" : "[data-eq]");
+          : est ? null : view.querySelector(estTab === "agent" ? "#estText" : estTab === "scan" ? "#openScan" : "[data-eq]");
         if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
       });
     });
@@ -6708,20 +6745,25 @@
       sh.addEventListener("click", function (e) { if (e.target === sh) foldWay(); });
     });
 
-    var swap = document.getElementById("estSwap");
-    if (swap) {
-      swap.addEventListener("click", function () {
-        if (!estWords) {
-          // Carry the table across rather than making someone retype it, but
-          // never over the top of words already sitting in the box.
+    // The three ways in. Each keeps what was put in it: the table its rows,
+    // the words box its draft. Going from the table to Ask an agent carries
+    // the table across as words rather than making someone retype it, but
+    // never over the top of words already in the box.
+    view.querySelectorAll("[data-esttab]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var to = b.dataset.esttab;
+        if (to === estTab) return;
+        if (estTab === "measure" && to === "agent") {
           var composed = rowsText();
           if (composed && !estDraft.trim()) estDraft = composed;
         }
-        estWords = !estWords;
+        estTab = to;
         estHint = "";
         render();
+        var tab = view.querySelector('[data-esttab="' + to + '"]');
+        if (tab) try { tab.focus({ preventScroll: true }); } catch (e) { tab.focus(); }
       });
-    }
+    });
 
     // Ticked in place rather than redrawn. The add-food fields keep no draft,
     // so a render() here would wipe whatever is half typed into them — you
@@ -6755,14 +6797,15 @@
     var runEst = document.getElementById("runEst");
     if (runEst) {
       runEst.addEventListener("click", function () {
-        var text = estWords ? (estText ? estText.value : "").trim() : rowsText();
+        var words = estTab === "agent";
+        var text = words ? (estText ? estText.value : "").trim() : rowsText();
         if (!text) {
           // Doing nothing at all here would read exactly like a dead button.
-          estHint = estWords
+          estHint = words
             ? "Nothing to work out yet — describe the meal above."
             : "Nothing to work out yet — put a food in the table above.";
           render();
-          var first = view.querySelector(estWords ? "#estText" : "[data-ef]");
+          var first = view.querySelector(words ? "#estText" : "[data-ef]");
           if (first) first.focus();
           return;
         }

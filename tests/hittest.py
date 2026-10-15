@@ -145,7 +145,7 @@ def sweep(p):
 
 # Macros is walked three times: folded, then with each way in open, because
 # a control that only exists after a press is the one nothing else measures.
-TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "log"]
+TABS = ["macros", "macros:numbers", "macros:estimate", "macros:estimate:agent", "macros:estimate:scan", "pantry", "gym", "cardio", "coach", "log"]
 covered = []          # anything a tap cannot reach — this suite gates on it
 
 with sync_playwright() as pw:
@@ -171,9 +171,16 @@ with sync_playwright() as pw:
         p.click('.tabs button[data-tab="%s"]' % tab.split(":")[0])
         p.wait_for_timeout(450)
         if ":" in tab:
-            p.click('[data-logway="%s"]' % tab.split(":")[1]); p.wait_for_timeout(350)
-            if not p.locator('[data-logway="%s"][aria-expanded="true"]' % tab.split(":")[1]).count():
+            box = tab.split(":")[1]
+            # already open, a press would fold it
+            if p.locator('[data-logway="%s"][aria-expanded="false"]' % box).count():
+                p.click('[data-logway="%s"]' % box); p.wait_for_timeout(350)
+            if not p.locator('[data-logway="%s"][aria-expanded="true"]' % box).count():
                 covered.append("%s did not open, so nothing in it was tested" % tab)
+            if tab.count(":") == 2:
+                p.click('[data-esttab="%s"]' % tab.split(":")[2]); p.wait_for_timeout(350)
+                if p.get_attribute('[data-esttab="%s"]' % tab.split(":")[2], "aria-pressed") != "true":
+                    covered.append("%s's tab did not open, so nothing in it was tested" % tab)
         # open the panels that only exist once something is expanded
         if tab == "coach" and p.locator("[data-openday]").count():
             p.locator("[data-openday]").first.click()

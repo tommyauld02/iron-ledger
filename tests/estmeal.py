@@ -10,7 +10,7 @@ def words(p):
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
-        p.click("#estSwap"); p.wait_for_timeout(250)
+        p.click('[data-esttab="agent"]'); p.wait_for_timeout(250)
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 base={"days":{},"moves":None,"goal":G,"region":"United States","pantry":[],"v":1}

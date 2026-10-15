@@ -28,7 +28,7 @@ def words(p):
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
-        p.click("#estSwap"); p.wait_for_timeout(250)
+        p.click('[data-esttab="agent"]'); p.wait_for_timeout(250)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 d = ROOT.replace("\\", "/"); d = "/" + d if d[1:2] == ":" else d
@@ -176,14 +176,19 @@ with sync_playwright() as pw:
     }"""
 
     # Macros three times: folded, then with each way in open.
-    tabs = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "log"]
+    tabs = ["macros", "macros:numbers", "macros:estimate", "macros:estimate:agent", "macros:estimate:scan", "pantry", "gym", "cardio", "coach", "log"]
+    first = {"numbers": "#fCal", "estimate": '[data-ef="0"]', "estimate:agent": "#estText", "estimate:scan": "#openScan"}
     small, blocked, seen, cal_cells = [], [], 0, 0
     for t in tabs:
         p.click('.tabs button[data-tab="%s"]' % t.split(":")[0]); p.wait_for_timeout(500)
         if ":" in t:
-            p.click('[data-logway="%s"]' % t.split(":")[1]); p.wait_for_timeout(350)
-            check("%s opens, so it is measured" % t,
-                  p.locator("#fCal" if t.endswith("numbers") else '[data-ef="0"]').count() == 1)
+            box = t.split(":")[1]
+            # already open, a press would fold it
+            if p.locator('[data-logway="%s"][aria-expanded="false"]' % box).count():
+                p.click('[data-logway="%s"]' % box); p.wait_for_timeout(350)
+            if t.count(":") == 2:
+                p.click('[data-esttab="%s"]' % t.split(":")[2]); p.wait_for_timeout(350)
+            check("%s opens, so it is measured" % t, p.locator(first[t.split(":", 1)[1]]).count() == 1)
         for el in p.evaluate(MEASURE):
             seen += 1
             # Calendar day cells are exempt by a decision this project already

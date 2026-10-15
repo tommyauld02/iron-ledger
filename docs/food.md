@@ -171,8 +171,9 @@ from b61 until the food finder replaced them in b63. Ask the finder for
 "a medium McDonald's fries": it answers with the chain's figures where it knows
 them, and tags the row *brand's figures*.
 
-**Barcodes: in the web app.** *Scan a barcode* is the one quick button at the
-top of *Don't know the numbers*, and again under a review. Camera, photo, or
+**Barcodes: in the web app.** *Scan a barcode* is a tab of its own in *Don't
+know the numbers*, whose one button opens the scanner, and a quick button again
+under a review, so a package can join a meal being checked. Camera, photo, or
 the number typed. The
 reader is zxing-cpp compiled to WebAssembly (`vendor/zxing/`, zxing-wasm 3.1.4,
 MIT/Apache-2.0), its engine shipped as base64 inside a script so it loads from
@@ -223,9 +224,23 @@ carrying the pantry's names, the one thing that answers with no connection.
 
 The plain-words box did **not** go away. It is what makes "half a protein
 coffee" and "chicken and rice" work in one line, and it is faster once you know
-the shape, so it sits behind *Or just describe it in words* and takes over the
-form when opened. Swapping to it carries the table across as text — but never
-over the top of words already in the box.
+the shape. It is the *Ask an agent* tab (below). Going to it from the table
+carries the table across as text — but never over the top of words already in
+the box — and each tab keeps what was put in it.
+
+**Three ways in, as tabs.** *Don't know the numbers* used to hold a barcode
+button, the table and the words box (behind *Or just describe it in words*)
+all at once. The owner asked for them apart (b64), named for what you have in
+hand: *Scan a barcode*, *Have the measurements* (the table) and *Ask an agent*
+(the words box), in that order, as a row of Settings-style toggles across the
+top of the box (`EST_TABS`, `estTab`). Only the chosen one shows below; the
+box opens on *Have the measurements*, the front door since the table replaced
+the blank box, and the choice is transient like the rest of the form. He was
+shown the tabs inside the box against three more buttons on Macros, and chose
+the tabs: Macros stays as short as it was. The labels are the body font and
+may take two lines; on a 320px phone "measurements" cannot fit whole, so the
+row is marked English and it hyphenates (`measure-ments`) rather than breaking
+anywhere.
 
 The table is a way to **compose** the same sentence, not a second code path:
 `rowChunk()` turns one row into `"6 oz chicken breast"` and `rowsText()` joins
@@ -276,15 +291,17 @@ which used to go in without a word: in place the rows appearing was the only
 sign, and behind a closing pop-up even that was hidden.
 
 The forms only exist after a press now, which is this project's known blind
-spot, so the walks in `mobile`, `hittest` and `handoff` visit Macros three
-times: folded, then with each box open. Each says so if its box fails to open,
-rather than passing on nothing. `darkcheck` opens both, and `handoff` measures
-both first fields for 44px and the 16px zoom rule.
+spot, so the walks in `mobile`, `hittest` and `handoff` visit Macros five
+times: folded, with each box open, and on *Don't know the numbers'* other two
+tabs, whose controls exist only once the tab is pressed. Each says so if its
+box or tab fails to open, rather than passing on nothing. `darkcheck` opens
+both boxes and the scan tab, and `handoff` measures both first fields for 44px
+and the 16px zoom rule.
 
 The suites feed the resolver through the words box, so the ones testing food
 matching rather than entry call a local `words(p)` helper first. It opens
-*Don't know the numbers* if it is folded; `way(p, "numbers")` does the same
-for the numbers box. `sweep` and
+*Don't know the numbers* if it is folded and presses *Ask an agent*;
+`way(p, "numbers")` opens the numbers box. `sweep` and
 `estmeal` drive the table itself, because that is the front door now.
 
 **Grams are the basis; the unit is only how it is shown.** The whole food
