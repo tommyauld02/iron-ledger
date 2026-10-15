@@ -41,8 +41,12 @@ Suites: `sweep` features · `days` date rollover and month/year boundaries ·
 `probe` clicks every tappable and asserts something changed · `darkcheck` WCAG
 contrast in both themes · `coach` routine
 builder and history preservation · `meals` combine/split/take out ·
-`estmeal` the estimate-as-one-meal path · `pwa` the offline shell, served the
-way Pages serves it, with the network cut · `handoff` safe-area opt-in, all
+`estmeal` the estimate-as-one-meal path · `finder` the food finder's contract
+from the app's side: no key in the app, only the food and the country sent,
+the pantry first, Claude only when the relay is out of reach · `relay` the
+relay itself, run in Node against a fake Gemini (exits 77, SKIPPED, with no
+Node) · `pwa` the offline shell, served the
+way Pages serves it, with the network cut, and what still answers offline · `handoff` safe-area opt-in, all
 three wake paths, measured touch targets on a 402x874 phone, and the
 no-Claude-and-no-network mode Pages actually runs in · `touch` real touch
 events via CDP

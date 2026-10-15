@@ -1,6 +1,7 @@
 from playwright.sync_api import sync_playwright
 import io, os, json, datetime
 import re
+import fakeai
 
 # Rule 5 is 44px, measured. This suite measures controls straight after the
 # action that drew them, while the cards' 0.18s slide-in is still running, so
@@ -88,6 +89,9 @@ def check(name, ok, detail=""):
 with sync_playwright() as pw:
     b=pw.chromium.launch()
     ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True); ctx.add_init_script(SAMPLE_STUB)
+    # The phone has a food finder key; its questions are answered by the
+    # suites' stand-in, never sent anywhere (tests/fakeai.py).
+    asked=[]; fakeai.phone(ctx, log=asked)
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(400)
@@ -121,18 +125,22 @@ with sync_playwright() as pw:
     p.click("#openGoal"); p.wait_for_timeout(250); p.click("#cancelGoal"); p.wait_for_timeout(300)
     check("macros: goal cancel", p.evaluate("()=>!document.getElementById('gCal')"))
 
-    # estimator: table + pantry + claude fallback in one
-    # "beef wellington" is deliberately absent from the table — the point of this
-    # check is the fallback path, and a query the table can answer tests coverage
-    # instead. "chipotle burrito bowl" used to be that query until the table grew.
+    # estimator: pantry first, the food finder for the rest, in one
+    # "beef wellington" is a dish the stand-in can only guess at, so its row
+    # has to say so rather than pass for a known figure.
     words(p);p.fill("#estText","200g chicken breast & 1 costco protein coffee & beef wellington")
     p.click("#runEst"); p.wait_for_timeout(1200)
     rows=p.eval_on_selector_all(".rev-item",
       "e=>e.map(x=>x.querySelector('.food').textContent+'|'+x.querySelector('.amt').textContent.trim())")
     srcs=" ".join(rows)
-    check("estimator: table match", "built-in reference" in srcs)
+    check("estimator: the finder answers what the pantry doesn't", srcs.count("AI ·") == 2, " / ".join(rows))
     check("estimator: pantry match", "your pantry" in srcs)
-    check("estimator: claude fallback", "estimated" in srcs, " / ".join(rows))
+    check("estimator: a guess is labelled a guess", "rough guess" in srcs, " / ".join(rows))
+    check("estimator: only what the pantry didn't know was asked about",
+          asked and "costco" not in asked[-1]["food"] and "beef wellington" in asked[-1]["food"],
+          asked and asked[-1]["food"])
+    check("estimator: only the food and the country go to the relay, with no key",
+          asked and sorted(asked[-1]["body"])==["food","region"] and asked[-1]["url"]==fakeai.RELAY)
     before=p.eval_on_selector_all(".t-row","e=>e.length")
     p.click("#commitEst"); p.wait_for_timeout(500)
     check("estimator: commit adds rows", p.eval_on_selector_all(".t-row","e=>e.length")==before+3)
@@ -162,8 +170,9 @@ with sync_playwright() as pw:
     check("serving: doubling the weight doubles the macros",
           abs(now["cal"]-c0*2)<=2 and abs(now["pro"]-p0*2)<=2,
           "%s/%s -> %s/%s" % (c0,p0,now["cal"],now["pro"]))
-    check("serving: it stops calling itself a typical serving",
-          now["tag"]!="typical serving", now["tag"])
+    check("serving: the portion words go once the weight is yours",
+          p.eval_on_selector(".rev-item .amt .pre", "e=>e.textContent") == "",
+          p.eval_on_selector(".rev-item .amt .pre", "e=>e.textContent"))
     rowsum=sum(r["cal"] for r in p.evaluate(SNAP))
     head=p.eval_on_selector(".review > header span","e=>e.textContent").replace(",","")
     check("serving: the running total follows", ("%d kcal"%rowsum) in head,
@@ -185,8 +194,8 @@ with sync_playwright() as pw:
     check("entry: and carry an example",
           p.get_attribute('[data-ef="0"]',"placeholder")=="chicken breast",
           p.get_attribute('[data-ef="0"]',"placeholder"))
-    check("entry: the food field offers what the app already knows",
-          p.locator("#estFoods option").count() > 250,
+    check("entry: the food field offers what your pantry knows",
+          p.locator('#estFoods option[value="costco protein coffee"]').count() == 1,
           "%d suggestions" % p.locator("#estFoods option").count())
     for sel in ('[data-eq="0"]', '[data-eu="0"]', '[data-ef="0"]', "#estAddRow", "#estSwap"):
         bb=p.locator(sel).bounding_box()
@@ -1057,7 +1066,7 @@ with sync_playwright() as pw:
 
     def lap_page():
         c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-        c.add_init_script("delete window.claude;"); c.add_init_script(LAPCLOCK)
+        c.add_init_script("delete window.claude;"); fakeai.phone(c); c.add_init_script(LAPCLOCK)
         q = c.new_page()
         q.on("pageerror", lambda e: errs.append("laps: "+str(e)))
         q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(900)
@@ -1243,7 +1252,7 @@ with sync_playwright() as pw:
           "return {lifts:s.days[k].lifts.map(l=>({m:l.movement,sets:l.sets.map(x=>x.w+'x'+x.r+(x.tech?':'+x.tech:''))})),"
           "moves:(s.moves.back||[])};}")
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("edit: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -1647,7 +1656,7 @@ with sync_playwright() as pw:
     CHOSEN=("a=>[...document.querySelectorAll('['+a+'][aria-pressed=true]')].map(b=>b.getAttribute(a))")
     SAYS=("()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent")
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("sections: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SECS)
@@ -1753,7 +1762,7 @@ with sync_playwright() as pw:
             pitem("p1","Costco protein coffee",130,30)]}
     NOTES="k=>((JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{}).food||[]).map(f=>f.note)"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("undo: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", UND)
@@ -1808,7 +1817,7 @@ with sync_playwright() as pw:
                       {"id":"e","cat":"back","movement":"Face Pull","sets":[{"w":40,"r":15}]}]}},
         "moves":None,"goal":GG,"region":"United States","pantry":[],"v":1}
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("compare: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CMP)
@@ -1860,7 +1869,7 @@ with sync_playwright() as pw:
           "moves":None,"goal":GG,"region":"United States","pantry":[],"v":1}
     BL="()=>[...document.querySelectorAll('.lift')].map(x=>{const b=x.querySelector('.beat');return b?b.textContent:'';})"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("beat: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", BEAT)
@@ -1963,7 +1972,7 @@ with sync_playwright() as pw:
     HINT="()=>{const e=document.getElementById('seLastSet');return e.hidden?'':e.textContent;}"
     lsdate=lambda page,k: page.evaluate("k=>new Date(k+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'})", k)
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("lastsets: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LSTORE)
@@ -2075,7 +2084,7 @@ with sync_playwright() as pw:
         "gyms":[{"id":"gA","name":"Apartment gym","tag":"APT"}],"gymLast":"gA","gymAsked":True,
         "moves":{"back":["Leg Extension"]},"movesOwned":True,"goal":LSG,"region":"United States","pantry":[],"v":1}
     c2 = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c2.add_init_script("delete window.claude;")
+    c2.add_init_script("delete window.claude;"); fakeai.phone(c2)
     s2 = c2.new_page(); s2.on("pageerror", lambda e: errs.append("lastsets skip: "+str(e)))
     s2.goto("file://"+d+"/iron-ledger.html"); s2.wait_for_timeout(400)
     s2.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SKIP)
@@ -2153,7 +2162,7 @@ with sync_playwright() as pw:
     NDAY="k=>(JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{})"
     NSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("notes: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", NOTESTORE)
@@ -2253,7 +2262,7 @@ with sync_playwright() as pw:
     SPMOVES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves"
     def sp_page(store):
         c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-        c.add_init_script("delete window.claude;")
+        c.add_init_script("delete window.claude;"); fakeai.phone(c)
         q = c.new_page(); q.on("pageerror", lambda e: errs.append("special: "+str(e)))
         q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
         q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
@@ -2369,7 +2378,7 @@ with sync_playwright() as pw:
     YST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
     YSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("yours: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", YOURS)
@@ -2437,7 +2446,7 @@ with sync_playwright() as pw:
                 "moves":{"back":["Barbell Curl","Dumbbell Curl"]},"movesOwned":True,"goal":SSG,"region":"United States","pantry":[],"v":1}
     SSDAY="k=>(JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k]||{})"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("sheet: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SHEETSTORE)
@@ -2534,7 +2543,7 @@ with sync_playwright() as pw:
     OWNMOVES="()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).moves"
     OSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("own: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(500)
     check("own: a new phone starts with nothing on any list",
@@ -2586,7 +2595,7 @@ with sync_playwright() as pw:
     GST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
     GSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("gyms: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", GYMSTORE)
@@ -2761,7 +2770,7 @@ with sync_playwright() as pw:
     CST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
     CSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("combine: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
@@ -2860,7 +2869,7 @@ with sync_playwright() as pw:
             "moves":{},"movesOwned":True,"goal":FG,"region":"United States","pantry":[],"v":1,"seen":True}
     WAYS="()=>[...document.querySelectorAll('[data-logway]')].map(b=>[b.dataset.logway,b.getAttribute('aria-expanded')])"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("ways: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", FSTORE)
@@ -2928,7 +2937,7 @@ with sync_playwright() as pw:
     SHEETS="()=>[...document.querySelectorAll('[data-waysheet]')].map(x=>x.dataset.waysheet)"
     INLINE="()=>[!!document.querySelector('.log-ways #wayNumbers'),!!document.querySelector('.log-ways #wayEstimate')]"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("opens: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LSTORE)
@@ -3050,7 +3059,7 @@ with sync_playwright() as pw:
         out.push(el.textContent.trim().replace(/\s+/g,' ').slice(0,30));});
       return out;}"""
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("teal: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", TSTORE)
@@ -3100,7 +3109,7 @@ with sync_playwright() as pw:
     CSAYS="()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
     CARDS="()=>[...document.querySelectorAll('.cardio-card')].map(c=>c.querySelector('h3').textContent+' | '+c.querySelector('.lift-foot span').textContent)"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("cardio: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
@@ -3236,19 +3245,22 @@ with sync_playwright() as pw:
           and after.get("cardioGoal",{}).get("kind")=="min")
     c.close()
 
-    # ---------- THE FOOD LIBRARY ----------
-    # Asked for by the owner: an answer for anything eaten, with no internet
-    # and no cost. USDA FoodData Central ships with the app (public domain),
-    # searched on the phone. And a match that covered only part of what was
-    # typed says so: "Cava harissa avocado bowl" used to log a plain avocado.
+    # ---------- THE FOOD FINDER ----------
+    # Asked for by the owner in place of the lists the app shipped: anything
+    # the pantry doesn't know goes to a free AI, with nothing to set up. The app
+    # asks the relay (relay/worker.js, which has its own suite, tests/relay.py);
+    # here tests/fakeai.py stands in for it, and `reply` lets a check make it
+    # busy, wrong or unreachable.
     LBG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
     LBSTORE={"days":{},"moves":{},"movesOwned":True,"goal":LBG,"region":"United States","pantry":[],"v":1,"seen":True}
     LBST="()=>JSON.parse(localStorage.getItem('iron-ledger-v1'))"
     ROWS="()=>[...document.querySelectorAll('.rev-item .food')].map(x=>x.textContent)"
-    HITS="()=>[...document.querySelectorAll('.lib-hit')].map(x=>x.innerText.split(String.fromCharCode(10)).join(' | '))"
+    TAGS="()=>[...document.querySelectorAll('.rev-item .src-tag')].map(x=>x.textContent)"
+    fx={"reply":None}; fasked=[]
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;")
-    q = c.new_page(); q.on("pageerror", lambda e: errs.append("library: "+str(e)))
+    fakeai.phone(c, reply=lambda qq: fx["reply"](qq) if fx["reply"] else None, log=fasked)
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("finder: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LBSTORE)
     q.reload(); q.wait_for_timeout(900)
@@ -3256,126 +3268,115 @@ with sync_playwright() as pw:
         if q.locator("#discardEst").count(): q.click("#discardEst"); q.wait_for_timeout(250)
         way(q, "estimate")
         q.fill('[data-eq="0"]', qty); q.fill('[data-ef="0"]', food); q.click("#runEst"); q.wait_for_timeout(900)
+    check("finder: nothing to set up — Settings asks for no key",
+          q.locator("#setSheet input").count()==q.locator("#setWaterGoal").count() and "key" not in q.inner_text("#setSheet").lower(),
+          q.inner_text("#setSheet")[:120])
     estimate("cava harissa avocado bowl", "1")
-    check("library: a match that covered only part of the name says so",
-          q.inner_text(".lib-flag .why")=="Matched \u201cAvocado\u201d \u2014 \u201ccava\u201d, \u201charissa\u201d, \u201cbowl\u201d weren\u2019t part of the match.",
-          q.inner_text(".lib-flag .why") if q.locator(".lib-flag .why").count() else "no flag")
-    fb=q.eval_on_selector_all(".lib-flag button","e=>e.map(x=>x.getBoundingClientRect().height)")
-    check("library: and offers the library, or keeping the match, both proper targets",
-          q.locator("[data-libopen]").count()==1 and q.locator("[data-libkeep]").count()==1 and all(h>=MIN_TAP for h in fb), str(fb))
-    q.click("[data-libkeep]"); q.wait_for_timeout(250)
-    check("library: Keep this match quiets it", q.locator(".lib-flag").count()==0)
+    check("finder: it answers the first time, with nothing set up", q.evaluate(TAGS)==["AI · rough guess"], str(q.evaluate(TAGS)))
+    check("finder: a dish only guessed at says it is a guess", "rough guess" in " ".join(q.evaluate(TAGS)))
     estimate("1 quarter pounder with cheese")
-    check("library: a food named with 'with' stays one food — no stray cheddar",
-          q.evaluate(ROWS)==["Quarter Pounder with cheese"] and q.locator(".lib-flag").count()==0, str(q.evaluate(ROWS)))
+    check("finder: a food named with 'with' stays one food — no stray cheese",
+          q.evaluate(ROWS)==["Quarter pounder with cheese"], str(q.evaluate(ROWS)))
+    check("finder: the finder was asked in the words typed",
+          fasked[-1]["food"]=="1 quarter pounder with cheese", fasked[-1]["food"])
     estimate("medium mcdonalds french fries", "2")
-    check("library: the amount reads as typed, not '2 eachs'",
-          "eachs" not in q.inner_text(".rev-item") and q.inner_text(".lib-flag .why").find("\u201cmcdonalds\u201d")>-1, q.inner_text(".rev-item"))
-    q.click("[data-libopen]"); q.wait_for_timeout(1500)
-    hits=q.evaluate(HITS)
-    check("library: it opens on the phone and finds the chain's own item, at the size typed",
-          any(h.startswith("McDONALD'S, french fries | USDA · 2018 · 2 × 1 medium serving · 234 g | 756 kcal") for h in hits), str(hits[:3]))
-    # the chain was named, so its own current menu comes first (b61)
-    check("library: and McDonald's own menu comes ahead of USDA's 2018 numbers",
-          bool(hits) and hits[0].startswith("McDonald's · World Famous Fries, Medium | Menu · 2026 | 320 kcal"), str(hits[:2]))
-    check("library: and says nothing was sent anywhere", "nothing is sent anywhere" in q.inner_text("#libPanel"))
-    pb=q.eval_on_selector_all("#libPanel button, #libPanel input","e=>e.filter(x=>x.getClientRects().length).map(x=>[x.tagName,Math.round(x.getBoundingClientRect().height),parseFloat(getComputedStyle(x).fontSize)])")
-    check("library: every control in the panel clears 44px and the search field will not zoom",
-          len(pb)>=4 and all(h>=MIN_TAP for _,h,_ in pb) and all(f>=16 for t,_,f in pb if t=="INPUT"), str(pb))
-    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
-    check("library: the panel fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
-    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
-    q.fill("#libQ","big mac"); q.press("#libQ","Enter"); q.wait_for_timeout(400)
-    hits=q.evaluate(HITS)
-    check("library: searching again finds the Big Mac, both USDA years shown",
-          any(h.startswith("Big Mac (McDonalds) | USDA · 2024") for h in hits) and any(h.startswith("McDONALD'S, BIG MAC | USDA · 2018") for h in hits), str(hits[:3]))
-    q.locator("[data-libpick]").filter(has_text="McDONALD'S, BIG MAC").first.click(); q.wait_for_timeout(400)
-    tag=q.inner_text(".rev-item .src-tag")
-    check("library: the pick takes the row's place, labelled with its source and year",
-          q.evaluate(ROWS)[0]=="McDONALD'S, BIG MAC" and tag.upper()=="USDA · 2018" and q.locator("#libPanel").count()==0, "%s / %s" % (q.evaluate(ROWS), tag))
-    check("library: two of them, from USDA's own weight",
-          q.input_value('[data-ic="0"]')=="1126" and q.input_value('[data-ig="0"]')=="438", "%s kcal %s g" % (q.input_value('[data-ic="0"]'), q.input_value('[data-ig="0"]')))
-    q.fill('[data-ig="0"]',"219"); q.wait_for_timeout(200)
-    check("library: and its weight is editable like any other food", q.input_value('[data-ic="0"]')=="563")
+    check("finder: a chain's item says it is the chain's own figure",
+          q.evaluate(TAGS)==["AI · brand’s figures"], str(q.evaluate(TAGS)))
+    check("finder: the amount reads as typed",
+          q.inner_text(".rev-item .amt .pre").startswith("2 medium"), q.inner_text(".rev-item"))
+    check("finder: the country typed goes with the question, and nothing else does",
+          fasked[-1]["region"]=="United States" and sorted(fasked[-1]["body"])==["food","region"], str(fasked[-1]["body"]))
     q.click("#commitEst"); q.wait_for_timeout(400)
-    food=[f for f in q.evaluate(LBST)["days"][Ts]["food"]]
-    check("library: it goes into the ledger under its own name", food and food[-1]["note"].startswith("McDONALD'S, BIG MAC") and food[-1]["cal"]==563,
-          str(food[-1:] if food else food))
+    food=q.evaluate(LBST)["days"][Ts]["food"]
+    check("finder: it goes into the ledger marked as an estimate, carbs and fat with it",
+          food and food[-1].get("est") is True and food[-1].get("cal")==round(323*222/100) and "carb" in food[-1],
+          json.dumps(food[-1:])[:200])
     estimate("xyzzy")
-    check("library: a food nobody knows says so", q.inner_text(".lib-flag .why")=="Not in your pantry or the built-in list.")
-    q.click("[data-libopen]"); q.wait_for_timeout(400)
-    check("library: and a search that finds nothing says what to try",
-          "Nothing in the library matches \u201cxyzzy\u201d" in q.inner_text("#libPanel") and q.locator(".lib-hit").count()==0)
-    q.click("[data-libclose]"); q.wait_for_timeout(250)
-    check("library: Close puts the panel away", q.locator("#libPanel").count()==0)
+    check("finder: something nobody could read as food says so",
+          "Couldn't read that as food" in q.inner_text(".est"), q.inner_text(".est")[:120])
+
+    # Busy: Gemini's free allowance. What the pantry knew is kept, the rest waits.
+    fx["reply"]=lambda qq: (429, {"error":"busy"})
+    estimate("chicken breast", "6 oz")
+    check("finder: busy says so, in words",
+          "busy, or at today’s free limit" in q.inner_text(".review"), q.inner_text(".review")[:200])
+    check("finder: and the food waits as a placeholder rather than vanishing",
+          q.evaluate(TAGS)==["needs numbers"] and q.locator("[data-reask]").count()==1, str(q.evaluate(TAGS)))
+    rb=q.locator("[data-reask]").bounding_box()
+    check("finder: Find it again is a proper target", rb and rb["height"]>=MIN_TAP, str(rb))
+    fx["reply"]=None
+    q.click("[data-reask]"); q.wait_for_timeout(700)
+    check("finder: Find it again answers the row in place",
+          q.evaluate(ROWS)==["Chicken breast"] and q.input_value('[data-ig="0"]')=="6" and q.input_value('[data-iu="0"]')=="oz"
+          and "busy" not in q.inner_text(".review"), "%s / %s" % (q.evaluate(ROWS), q.inner_text(".review")[:120]))
+    check("finder: and only the row was asked about", fasked[-1]["food"]=="6 oz chicken breast", fasked[-1]["food"])
+    # Two at once, the first answering as two foods: the second still lands on
+    # its own row rather than being dropped with its spinner left running.
+    CHILI={"items":[{"food":"Chili","amount":"1 bowl","grams":250,"calories":260,"protein":18,"carbs":22,"fat":11,"basis":"typical"},
+                    {"food":"Cornbread","amount":"1 piece","grams":60,"calories":190,"protein":4,"carbs":28,"fat":7,"basis":"typical"}],"note":""}
+    fx["reply"]=lambda qq: (429, {"error":"busy"})
+    if q.locator("#discardEst").count(): q.click("#discardEst"); q.wait_for_timeout(250)
+    way(q, "estimate")
+    if not q.locator("#estText").count(): q.click("#estSwap"); q.wait_for_timeout(250)
+    q.fill("#estText", "a bowl of chili & 6 oz chicken breast"); q.click("#runEst"); q.wait_for_timeout(900)
+    fx["reply"]=lambda qq: CHILI if "chili" in qq["food"] else None
+    # both taps before either answer is back: the second button is found
+    # again after the first tap redraws the review
+    q.evaluate("""()=>{document.querySelector('[data-reask="0"]').click();
+                      document.querySelector('[data-reask="1"]').click();}"""); q.wait_for_timeout(1000)
+    check("finder: two Find it agains at once each land on their own row",
+          q.evaluate(ROWS)==["Chili","Cornbread","Chicken breast"] and q.locator(".est-flag .working").count()==0,
+          "%s / spinners %d" % (q.evaluate(ROWS), q.locator(".est-flag .working").count()))
+    fx["reply"]=None
+    q.click("#discardEst"); q.wait_for_timeout(250)
+    q.click("#estSwap"); q.wait_for_timeout(250)      # back to the table estimate() fills in
+
+    # The relay re-checks numbers that don't add up; whatever still doesn't
+    # comes back as it was, and the app flags it on its row.
+    BAD={"items":[{"food":"Banana","amount":"1 medium","grams":118,"calories":905,"protein":1,"carbs":27,"fat":0,"basis":"typical"}],"note":"","rechecked":True}
+    GOOD={"items":[{"food":"Banana","amount":"1 medium","grams":118,"calories":105,"protein":1,"carbs":27,"fat":0,"basis":"typical"}],"note":"","rechecked":True}
+    fx["reply"]=lambda qq: GOOD
+    estimate("banana", "1")
+    check("finder: numbers that add up are not flagged",
+          q.input_value('[data-ic="0"]')=="105" and q.locator(".est-flag").count()==0, q.input_value('[data-ic="0"]'))
+    fx["reply"]=lambda qq: BAD
+    estimate("banana", "1")
+    check("finder: a slip that survived the relay's second look is flagged on its row",
+          q.input_value('[data-ic="0"]')=="905" and "don’t match its protein, carbs and fat" in q.inner_text(".est-flag"),
+          q.inner_text(".review")[:200])
+
+    # The ways it can fail each say what happened.
+    for name, rep, said in [("Gemini refusing the relay's key", (502, {"error":"key"}), "a problem on its side"),
+                            ("no connection", "abort", "Couldn’t reach the food finder"),
+                            ("a reply that isn't numbers", (502, {"error":"unreadable"}), "didn’t come back as numbers"),
+                            ("too many lookups from one phone", (429, {"error":"slow_down"}), "lot of lookups from this phone"),
+                            ("too many words at once", (400, {"error":"too_long"}), "two shorter goes"),
+                            ("a relay with no key yet", (503, {"error":"not_set_up"}), "isn’t available right now"),
+                            ("something that isn't the relay", (200, "<html>oops</html>"), "didn’t come back as numbers")]:
+        fx["reply"]=(lambda r: (lambda qq: r))(rep)
+        estimate("chicken breast", "6 oz")
+        check("finder: %s says so" % name, said in q.inner_text(".review"), q.inner_text(".review")[:160])
+    fx["reply"]=None
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("finder: the review fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    q.click("#discardEst"); q.wait_for_timeout(250)
     c.close()
 
-    # ---------- GROCERY BRANDS ----------
-    # Step 2 of the one-stop shop: products as sold, by brand, from USDA's
-    # Branded Foods, each with its own label. Too big to land on a phone
-    # unasked, so it is a download the owner chooses, offered in the library
-    # and in Settings — and once taken it works offline like everything else.
-    BHITS="()=>[...document.querySelectorAll('#libPanel .lib-group, #libPanel .lib-hit')].map(x=>x.innerText.split(String.fromCharCode(10)).join(' | '))"
+    # A copy of the app with no finder at all: the food waits, and says why.
+    nasked=[]
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
-    q = c.new_page(); q.on("pageerror", lambda e: errs.append("brands: "+str(e)))
+    c.add_init_script("delete window.claude;"); c.add_init_script(fakeai.NO_RELAY_SCRIPT)
+    fakeai.install(c, log=nasked)
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("no finder: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LBSTORE)
     q.reload(); q.wait_for_timeout(900)
-    estimate("great value whole milk", "1")
-    q.click("[data-libopen]"); q.wait_for_timeout(1500)
-    offer=q.locator("[data-brandsget]")
-    check("brands: the library offers them as one download, saying how big",
-          offer.count()==1 and "9 MB" in offer.inner_text() and "work offline" in q.inner_text("#libPanel")
-          and offer.bounding_box()["height"]>=MIN_TAP, q.inner_text("#libPanel")[-300:])
-    check("brands: nothing is downloaded until it is asked for",
-          q.evaluate("()=>!document.querySelector('script[src*=\"brands-\"]')"))
-    offer.click()
-    try: q.wait_for_selector("[data-brandpick]", timeout=30000)
-    except Exception: pass
-    q.wait_for_timeout(300)
-    hits=q.evaluate(BHITS)
-    check("brands: once downloaded, a brand that was typed comes first, with its label's serving",
-          len(hits)>1 and hits[0]=="GROCERY BRANDS" and hits[1].startswith("Great Value · Whole Milk | Label · 1 cup (240 ml) · 240 g | 149 kcal"), str(hits[:3]))
-    check("brands: and the download says so, and is remembered on this phone",
-          "Grocery brands downloaded" in q.inner_text(".undobar") and q.evaluate(LBST).get("brandsOn") is True,
-          q.inner_text(".undobar"))
-    check("brands: everyday foods are still offered below them", "EVERYDAY FOODS" in hits, str(hits))
-    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
-    check("brands: their rows fit a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
-    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
-    q.locator("[data-brandpick]").first.click(); q.wait_for_timeout(400)
-    tag=q.inner_text(".rev-item .src-tag")
-    check("brands: the pick takes the row's place, from the label, with the release year",
-          q.evaluate(ROWS)[0]=="Great Value Whole Milk" and tag.upper()=="BRAND LABEL · 2026" and q.input_value('[data-ic="0"]')=="149",
-          "%s / %s / %s" % (q.evaluate(ROWS), tag, q.input_value('[data-ic="0"]')))
-    estimate("xyzzy"); q.click("[data-libopen]"); q.wait_for_timeout(600)
-    q.fill("#libQ","rice cooked"); q.press("#libQ","Enter"); q.wait_for_timeout(800)
-    hits=q.evaluate(BHITS)
-    check("brands: with no brand named, plain foods come first",
-          bool(hits) and hits[0]=="EVERYDAY FOODS" and "GROCERY BRANDS" in hits, str(hits[:2]))
-    q.fill("#libQ","big mac"); q.press("#libQ","Enter"); q.wait_for_timeout(800)
-    hits=q.evaluate(BHITS)
-    check("brands: a word that happens to be part of a brand is not naming it — Big Mac, not the Big Y store",
-          len(hits)>1 and hits[0]=="EVERYDAY FOODS" and "Big Mac" in hits[1], str(hits[:2]))
-    q.reload(); q.wait_for_timeout(900)
-    estimate("chobani greek yogurt", "2")
-    q.click("[data-libopen]")
-    try: q.wait_for_selector("[data-brandpick]", timeout=30000)
-    except Exception: pass
-    hits=q.evaluate(BHITS)
-    check("brands: on the next open they are simply there, with no offer",
-          q.locator("[data-brandsget]").count()==0 and len(hits)>1 and hits[1].startswith("Chobani · Greek Yogurt | Label · 2 × "), str(hits[:2]))
-    q.click("#setBtn"); q.wait_for_timeout(300)
-    sb=q.locator("#setBrands")
-    check("brands: Settings says they are on the phone and offers to remove them",
-          "are on this phone" in q.inner_text("#setLibHint") and sb.inner_text().upper()=="REMOVE GROCERY BRANDS" and sb.bounding_box()["height"]>=MIN_TAP,
-          "%s / %s" % (q.inner_text("#setLibHint"), sb.inner_text()))
-    sb.click(); q.wait_for_timeout(300)
-    check("brands: removing them says so, and offers the download again",
-          q.evaluate(LBST).get("brandsOn") is False and sb.inner_text().upper()=="DOWNLOAD GROCERY BRANDS · 9 MB"
-          and "removed" in q.inner_text(".undobar"), "%s / %s" % (sb.inner_text(), q.inner_text(".undobar")))
-    q.click("#setDone"); q.wait_for_timeout(200)
+    estimate("chicken breast", "6 oz")
+    check("finder: with no finder the food waits, and the review says why",
+          q.evaluate(TAGS)==["needs numbers"] and "isn’t available in this copy" in q.inner_text(".review")
+          and q.locator("[data-reask]").count()==0, q.inner_text(".review")[:200])
+    check("finder: and nothing at all was sent", not nasked)
     c.close()
 
     # ---------- WHAT'S NEW ----------
@@ -3389,14 +3390,14 @@ with sync_playwright() as pw:
         q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
         q.reload(); q.wait_for_timeout(900)
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-    c.add_init_script("delete window.claude;")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("news: "+str(e)))
     q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Last week, set by set"
-          and titles[1].startswith("Restaurant menus") and titles[3]=="A food library on your phone", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A free AI finds the numbers"
+          and titles[1]=="Last week, set by set" and titles[2].startswith("Restaurant menus"), str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
@@ -3417,67 +3418,14 @@ with sync_playwright() as pw:
     check("news: a phone opening the app for the first time is not told what changed", not q.is_visible("#newsSheet"))
     c.close()
 
-    # ---------- RESTAURANT MENUS ----------
-    # Step 4 of the one-stop shop: a meal at a chain, from the numbers the chain
-    # itself publishes, a few taps and no internet. It lands in the review as
-    # one meal, and the review is still where it is checked before it counts.
     def fresh(store, label):
         cx = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
-        cx.add_init_script("delete window.claude;")
+        cx.add_init_script("delete window.claude;"); fakeai.phone(cx)
         pg = cx.new_page(); pg.on("pageerror", lambda e: errs.append(label+": "+str(e)))
         pg.goto("file://"+d+"/iron-ledger.html"); pg.wait_for_timeout(400)
         pg.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
         pg.reload(); pg.wait_for_timeout(900)
         return cx, pg
-    c, q = fresh(LBSTORE, "menus")
-    way(q, "estimate")
-    q.click("#openMenus"); q.wait_for_timeout(500)
-    chains = q.eval_on_selector_all("[data-menuchain] .mc-n", "e=>e.map(x=>x.textContent)")
-    check("menus: the chains are listed, each with its own numbers",
-          set(["McDonald's","Chick-fil-A","Taco Bell","Chipotle","Popeyes","In-N-Out Burger","Five Guys"]) <= set(chains), str(chains))
-    ok_, det = sizes_ok(q, "#menuSheet")
-    check("menus: every control on the list clears 44px", ok_, det)
-    q.click('[data-menuchain="mcdonalds"]'); q.wait_for_timeout(300)
-    q.locator("#menuItems .lib-hit", has_text="Big Mac").first.click(); q.wait_for_timeout(100)
-    check("menus: a tap shows straight away in the order at the foot of the sheet",
-          "Big Mac" in q.inner_text("#menuTray") and q.locator("#menuTray .menu-tray").bounding_box()["y"] < 874,
-          q.inner_text("#menuTray")[:80])
-    q.locator(".menu-multi", has_text="World Famous Fries").locator(".mi-opt", has_text="Medium").click()
-    q.fill("#menuQ", "coca"); q.wait_for_timeout(200)
-    check("menus: finding on the menu filters as you type and keeps the cursor",
-          q.evaluate("()=>document.activeElement && document.activeElement.id")=="menuQ"
-          and q.locator("#menuItems .menu-multi, #menuItems .lib-hit").count() <= 3, str(q.locator("#menuItems .menu-multi, #menuItems .lib-hit").count()))
-    q.locator(".menu-multi", has_text="Coca-Cola").locator(".mi-opt", has_text="Medium").click(); q.wait_for_timeout(150)
-    tray = q.inner_text("#menuTray")
-    check("menus: the order adds up from McDonald's own numbers",
-          "1,170 kcal" in tray and "3 ITEMS" in tray.upper(), tray.replace("\n"," | "))
-    ok_, det = sizes_ok(q, "#menuSheet")
-    check("menus: every control on a menu clears 44px and the search will not zoom", ok_, det)
-    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
-    check("menus: the sheet fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
-    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
-    q.click("#menuClose"); q.wait_for_timeout(200)
-    q.click("#openMenus"); q.wait_for_timeout(300)
-    check("menus: closing keeps the order for when it opens again", "Big Mac" in q.inner_text("#menuTray"))
-    q.click("#menuDone"); q.wait_for_timeout(400)
-    rows=q.evaluate(ROWS)
-    check("menus: they go into the review, tagged as the restaurant's menu, as one meal",
-          rows==["McDonald's Big Mac","McDonald's World Famous Fries, Medium","McDonald's Coca-Cola, Medium"]
-          and q.inner_text(".rev-item .src-tag").upper()=="RESTAURANT MENU · 2026"
-          and q.get_attribute("#estMeal","aria-pressed")=="true", str(rows))
-    q.click("#commitEst"); q.wait_for_timeout(300)
-    food=q.evaluate(LBST)["days"][Ts]["food"]
-    meal=food[-1] if food else {}
-    check("menus: in the ledger it is one McDonald's meal, its numbers published rather than estimated",
-          meal.get("note")=="McDonald's" and len(meal.get("items",[]))==3 and sum(x["cal"] for x in meal["items"])==1170
-          and not any(x.get("est") for x in meal["items"]) and all("carb" in x for x in meal["items"]), json.dumps(meal)[:200])
-    # typed words find them too, the chain's own first when it is named
-    estimate("xyzzy"); q.click("[data-libopen]"); q.wait_for_timeout(600)
-    q.fill("#libQ","mcdonalds big mac"); q.press("#libQ","Enter"); q.wait_for_timeout(700)
-    hits=q.evaluate("()=>[...document.querySelectorAll('#libPanel .lib-group, #libPanel .lib-hit')].map(x=>x.innerText.split(String.fromCharCode(10)).join(' | '))")
-    check("menus: typing a chain and an item finds today's menu first",
-          len(hits)>1 and hits[0]=="RESTAURANT MENUS" and hits[1].startswith("McDonald's · Big Mac | Menu · 2026 | 580 kcal"), str(hits[:3]))
-    c.close()
 
     # ---------- BARCODES ----------
     # Step 3: a package's barcode, found among the grocery brands by the number
@@ -3543,6 +3491,17 @@ with sync_playwright() as pw:
           q.input_value("#panName"), q.input_value("#panCal"), q.input_value("#panPro"), q.input_value("#panUnit")))
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(200)
     check("barcodes: leaving the tab stops the camera and closes the sheet", q.locator("#scanSheet").count()==0)
+    # Grocery brands are what a barcode is found in; Settings can take them off.
+    q.click("#setBtn"); q.wait_for_timeout(300)
+    sb=q.locator("#setBrands")
+    check("brands: Settings says they are on the phone and offers to remove them",
+          "are on this phone" in q.inner_text("#setLibHint") and sb.inner_text().upper()=="REMOVE GROCERY BRANDS" and sb.bounding_box()["height"]>=MIN_TAP,
+          "%s / %s" % (q.inner_text("#setLibHint"), sb.inner_text()))
+    sb.click(); q.wait_for_timeout(300)
+    check("brands: removing them says so, and offers the download again",
+          q.evaluate(LBST).get("brandsOn") is False and sb.inner_text().upper()=="DOWNLOAD GROCERY BRANDS · 9 MB"
+          and "removed" in q.inner_text(".undobar"), "%s / %s" % (sb.inner_text(), q.inner_text(".undobar")))
+    q.click("#setDone"); q.wait_for_timeout(200)
     c.close()
 
     # ---------- CARBS & FAT ----------

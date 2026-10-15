@@ -7,6 +7,7 @@ Then pulls the network out from under a loaded app and asserts it still works.
 A service worker that registers but caches nothing looks identical to a working
 one until you are offline, so every check here runs with offline=True.
 """
+import fakeai
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, threading, functools
@@ -44,6 +45,7 @@ BASE = "http://127.0.0.1:%d/" % PORT
 with sync_playwright() as pw:
     b = pw.chromium.launch()
     ctx = b.new_context(viewport={"width": 393, "height": 852}, has_touch=True, is_mobile=True)
+    ctx.add_init_script(fakeai.RELAY_SCRIPT)
     p = ctx.new_page(); errs = []; reqs = []
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.on("request", lambda r: reqs.append(r.url))
@@ -74,9 +76,10 @@ with sync_playwright() as pw:
     check("shell is cached", len(cached) >= 9, "%d entries" % len(cached))
     check("fonts are cached", sum(".woff2" in c for c in cached) >= 8,
           "%d font files" % sum(".woff2" in c for c in cached))
-    check("the food library is kept from install", any(c.endswith("/vendor/usda/foods.js") for c in cached))
     check("grocery brands are not downloaded at install", not any("/vendor/usda/brands-" in c for c in cached))
-    check("the restaurant menus are kept from install", any(c.endswith("/vendor/menus/menus.js") for c in cached))
+    # the food library and the menus went when the food finder replaced them (b63)
+    check("the old food lists are not cached any more",
+          not any(c.endswith("/vendor/usda/foods.js") or c.endswith("/vendor/menus/menus.js") for c in cached), str(cached))
 
     # Grocery brands are 9 MB, downloaded when asked for, and kept in a store
     # of their own: an update clears the old build's cache, and must not make
@@ -85,15 +88,26 @@ with sync_playwright() as pw:
         const c = await caches.open('iron-ledger-data');
         return (await c.keys()).map(r => new URL(r.url).pathname);
     }"""
+    # A pantry food, and the app pointed at the stand-in relay (tests/fakeai.py),
+    # so the offline pass below can show
+    # what still answers with no signal and what says it can't.
+    p.evaluate("""() => {
+        const s = JSON.parse(localStorage.getItem('iron-ledger-v1') || '{}');
+        s.pantry = [{id: 'p1', name: 'costco protein coffee', serveQty: 1, serveUnit: 'bottle', serveG: null,
+                     sCal: 130, sPro: 30, aliases: []}];
+        localStorage.setItem('iron-ledger-v1', JSON.stringify(s));
+    }""")
+    p.reload(); p.wait_for_timeout(800)
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
-    words(p); p.fill("#estText", "great value whole milk"); p.click("#runEst"); p.wait_for_timeout(800)
-    if p.locator("[data-libopen]").count():
-        p.click("[data-libopen]"); p.wait_for_timeout(1500)
-    if p.locator("[data-brandsget]").count():
-        p.click("[data-brandsget]")
-        try: p.wait_for_selector("[data-brandpick]", timeout=30000)
+    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
+        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    p.click("#openScan"); p.wait_for_timeout(400)
+    if p.locator("#scanBrands").count():
+        p.click("#scanBrands")
+        try: p.wait_for_selector("#scanType", timeout=40000)
         except Exception: pass
     p.wait_for_timeout(500)
+    if p.locator("#scanClose").count(): p.click("#scanClose"); p.wait_for_timeout(200)
     data = p.evaluate(DATA_KEYS)
     check("grocery brands are kept in a store of their own once downloaded",
           any("/vendor/usda/brands-" in x for x in data), str(data))
@@ -128,21 +142,29 @@ with sync_playwright() as pw:
     before = p.evaluate("() => (JSON.parse(localStorage.getItem('iron-ledger-v1')||'{}').days)||{}")
     words(p); p.fill("#estText", "2 eggs"); p.wait_for_timeout(150)
     check("can type a food entry offline", p.input_value("#estText") == "2 eggs")
-    # the library's whole point is answering with no connection
-    p.fill("#estText", "xyzzy"); p.click("#runEst"); p.wait_for_timeout(800)
-    if p.locator("[data-libopen]").count():
-        p.click("[data-libopen]"); p.wait_for_timeout(1500)
-        p.fill("#libQ", "big mac"); p.press("#libQ", "Enter"); p.wait_for_timeout(500)
-    check("the food library answers offline",
-          p.locator(".lib-hit").count() > 0 and "BIG MAC" in p.inner_text("#libPanel").upper(),
-          p.inner_text("#libPanel")[:120] if p.locator("#libPanel").count() else "no panel")
+    # Your pantry still answers with no connection; the food finder says it
+    # needs one, and the food waits as a placeholder instead of vanishing.
+    p.fill("#estText", "1 costco protein coffee"); p.click("#runEst"); p.wait_for_timeout(800)
+    check("your pantry answers offline",
+          p.locator(".rev-item").count() == 1 and "your pantry" in p.inner_text(".review"),
+          p.inner_text("#view")[:160])
+    p.click("#discardEst"); p.wait_for_timeout(300)
+    words(p); p.fill("#estText", "2 eggs"); p.click("#runEst"); p.wait_for_timeout(1200)
+    check("the food finder says it needs a connection, and the food waits",
+          # which of the two depends on whether the phone knows it is offline
+          ("No connection" in p.inner_text(".review") or "reach the food finder" in p.inner_text(".review"))
+          and "NEEDS NUMBERS" in p.inner_text(".review").upper(),
+          p.inner_text(".review")[-240:] if p.locator(".review").count() else p.inner_text("#view")[:200])
+    p.click("#discardEst"); p.wait_for_timeout(300)
 
-    p.fill("#libQ", "great value whole milk"); p.press("#libQ", "Enter")
-    try: p.wait_for_selector("[data-brandpick]", timeout=30000)
-    except Exception: pass
-    check("grocery brands answer offline too",
-          p.locator("[data-brandpick]").count() > 0 and "GREAT VALUE" in p.inner_text("#libPanel").upper(),
-          p.inner_text("#libPanel")[:160] if p.locator("#libPanel").count() else "no panel")
+    way = p.locator('[data-logway="estimate"][aria-expanded="false"]')
+    if way.count(): way.click(); p.wait_for_timeout(250)
+    p.click("#openScan"); p.wait_for_timeout(500)
+    if p.locator("#scanType").count():
+        p.fill("#scanType", "894700010038"); p.click("#scanGo"); p.wait_for_timeout(600)
+    check("grocery brands answer a barcode offline",
+          p.locator(".scan-card").count() > 0 and "CHOBANI" in p.inner_text(".scan-card").upper(),
+          p.inner_text("#scanSheet")[:160] if p.locator("#scanSheet").count() else "no scanner")
 
     check("no page errors", not errs, str(errs))
     ctx.close(); b.close()

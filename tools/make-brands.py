@@ -14,8 +14,8 @@ the label serving. That is written to vendor/usda/brands-<release>.js — the
 release is in the name, so a phone that has it never downloads it again until
 USDA's data actually changes, however many app builds come in between.
 
-The file is a script setting window.IRON_LEDGER_BRANDS, for the same reason
-foods.js is: a page opened from disk cannot fetch() a file beside it.
+The file is a script setting window.IRON_LEDGER_BRANDS, because a page
+opened from disk cannot fetch() a file beside it.
 
 Columns, to keep it small: [name, brand, kcal/100 g, protein/100 g,
 serving grams, serving words, barcode]. Downloads are cached in

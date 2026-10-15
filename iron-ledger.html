@@ -965,17 +965,14 @@
   }
   /* not the accent: teal means a thing you can press, and a tag is not one */
   .src-tag.pantry { color: var(--ink-2); font-weight: 600; }
-  .src-tag.usda { color: var(--ink-2); }
-  .src-tag.table { color: var(--ink-3); }
-  .src-tag.typical { color: var(--cat-b); }
+  .src-tag.ai { color: var(--ink-2); }
   .src-tag.claude { color: var(--ink-3); }
   .src-tag.unknown { color: var(--miss); }
 
-  /* ---------- the food library ---------- */
-  .lib-flag { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-top: 1px dashed var(--rule); }
-  .lib-flag p { margin: 0; font-size: 13px; line-height: 1.45; }
-  .lib-flag .why { color: var(--miss); }
-  .lib-flag .hush { font-size: 12px; color: var(--ink-2); }
+  /* ---------- a review row that needs a look ---------- */
+  .est-flag { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border-top: 1px dashed var(--rule); }
+  .est-flag p { margin: 0; font-size: 13px; line-height: 1.45; }
+  .est-flag .why { color: var(--miss); }
   .lib-search { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
   .lib-search input {
     min-width: 0;
@@ -988,63 +985,14 @@
     border-radius: 2px;
   }
   .lib-search .btn { padding: 0 14px; }
-  .lib-hit {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 2px 10px;
-    width: 100%;
-    min-height: 56px;
-    padding: 9px 12px;
-    text-align: left;
-    color: var(--ink);
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 3px;
-  }
-  .lib-hit .ln { grid-column: 1; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
-  .lib-hit .ls { grid-column: 1; font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
-  .lib-hit .lm { grid-column: 2; grid-row: 1 / span 2; font-family: var(--font-num); font-size: 12px; color: var(--ink-2); text-align: right; white-space: nowrap; }
-  .lib-hit .lm b { font-size: 15px; color: var(--ink); }
   .lib-group { font-family: var(--font-num); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
-  .lib-offer { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
-  /* Restaurant menus and barcodes: two quick ways in at the top of
-     "Don't know the numbers", each opening a sheet of its own. */
-  .est-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  /* Barcodes: a quick way in at the top of "Don't know the numbers",
+     opening a sheet of its own. */
+  .est-quick { display: grid; grid-template-columns: 1fr; gap: 8px; }
   .est-quick .btn { display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
     gap: 2px; min-height: 56px; padding: 8px 12px; text-align: left; }
   .est-quick .q-s { font-family: var(--font-body, inherit); font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
-  .menu-sheet .sheet-inner, .scan-sheet .sheet-inner { gap: 10px; }
-  .menu-chains { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .menu-chain { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
-    min-height: 56px; padding: 8px 12px; text-align: left; color: var(--ink); background: var(--surface);
-    border: 1px solid var(--rule); border-radius: 3px; }
-  .menu-chain .mc-n { font-size: 15px; font-weight: 600; }
-  .menu-chain .mc-s { font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
-  .menu-h { margin: 0; font-size: 16px; font-weight: 600; }
-  .menu-sheet p.hush { font-size: 12px; color: var(--ink-2); }
-  #menuItems { display: flex; flex-direction: column; gap: 6px; }
-  .menu-multi { display: flex; flex-direction: column; gap: 6px; padding: 9px 12px; border: 1px solid var(--rule); border-radius: 3px; background: var(--surface); }
-  .menu-multi .mi-n { font-size: 14px; font-weight: 600; }
-  .mi-opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
-  .mi-opt { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; min-height: 48px;
-    padding: 6px 8px; text-align: left; color: var(--ink); background: var(--surface-2); border: 1px solid var(--rule); border-radius: 3px; }
-  .mi-opt .o-n { font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
-  .mi-opt .o-m { font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
-  .lib-hit.is-added, .mi-opt.is-added { border-color: var(--accent); background: var(--soft); }
-  /* The order stays at the foot of the sheet however far down the menu is
-     scrolled: a tap that lands off screen reads exactly like a dead button.
-     Sticky goes on the wrapper, which is a direct child of the scroller. */
-  #menuTray { position: sticky; bottom: -18px; z-index: 1; }
-  .menu-tray { margin: 0 -16px; padding: 10px 16px 12px;
-    background: var(--surface); border-top: 2px solid var(--accent); display: flex; flex-direction: column; gap: 8px; }
-  .mt-rows { display: flex; flex-direction: column; gap: 2px; max-height: 132px; overflow-y: auto; }
-  .mt-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 44px; align-items: center; gap: 8px; font-size: 13px; }
-  .mt-row .mt-n { overflow-wrap: anywhere; }
-  .mt-row .mt-q { font-family: var(--font-num); font-size: 12px; color: var(--ink-2); }
-  .mt-less { min-height: 44px; font-size: 20px; color: var(--accent); }
-  .mt-total { margin: 0; font-family: var(--font-num); font-size: 12px; color: var(--ink-2); }
-  .mt-total b { font-size: 15px; color: var(--ink); }
+  .scan-sheet .sheet-inner { gap: 10px; }
   .scan-view { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #000; border-radius: 3px; overflow: hidden; }
   .scan-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
   .scan-aim { position: absolute; left: 10%; right: 10%; top: 32%; bottom: 32%; border: 2px solid #fff; border-radius: 4px;
@@ -3133,10 +3081,10 @@
       <div class="seg" id="setLogOpen" role="group" aria-label="Adding food opens"></div>
       <p class="set-hint" id="setLogOpenHint"></p>
     </div>
-    <!-- The food library: everyday foods ship with the app; grocery brands are
-         a one-time download, offered rather than forced. -->
+    <!-- Grocery brands: what a scanned barcode is looked up in. A one-time
+         download, offered rather than forced. -->
     <div class="set-group">
-      <span class="eyebrow">Food library</span>
+      <span class="eyebrow">Grocery brands</span>
       <p class="set-hint" id="setLibHint"></p>
       <button class="btn ghost" id="setBrands"></button>
     </div>
@@ -3248,7 +3196,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-14.62";
+  var BUILD = "2026-10-15.63";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3356,16 +3304,7 @@
   // puts that one aside in estShut, and the next one opens it again.
   var logWay = null;
   var estShut = null;
-  // The food library's panel under one review row: which row, what was
-  // searched, what came back, and "loading" / "error" while it is not ready.
-  var libFor = null, libQuery = "", libHits = null, libStatus = "";
-  var libBrandHits = null, brandsStatus = "";    // "" | "loading" | "error"
-  var libMenuHits = null;
-  // The restaurant menus sheet: open, which chain, what is being looked for on
-  // it, and the order so far ({c: chain, g: group, i: item, o: option, q}).
-  // The order is kept while the sheet is closed, so a peek at the day loses
-  // nothing; it empties when it goes into the estimate.
-  var menuOpen = false, menuChain = null, menuQuery = "", menuOrder = [], menuStatus = "", menuScroll = 0;
+  var brandsStatus = "";    // the grocery brands download: "" | "loading" | "error"
   // The barcode sheet. scanFor is where a find goes: the estimate on Macros,
   // or the add form on the Pantry tab.
   var scanOpen = false, scanFor = "estimate", scanState = "", scanCode = "", scanHit = null, scanMsg = "";
@@ -3755,6 +3694,10 @@
   // build is stamped onto the data as soon as the app opens. Newest first; a
   // phone several updates behind sees each of them, up to four.
   var NEWS = [
+    { b: "2026-10-15.63", t: "A free AI finds the numbers", items: [
+      "Don’t know the numbers now asks a free AI about anything your pantry doesn’t have — a restaurant order, a brand, a plate you cooked. It checks its own numbers add up, and asks again when they don’t.",
+      "Nothing to set up: no key, no sign-in. It works the moment the app is open with a connection, and only the food you describe is sent — never your log.",
+      "The built-in food list, the USDA food library and the restaurant menus are gone — the AI answers for them now. Your pantry still answers first, even offline, and barcodes and label photos work as before." ] },
     { b: "2026-10-14.62", t: "Last week, set by set", items: [
       "Each movement now shows last time\u2019s sets one under another, and beside each one what you did today: Matched, Beat or Short. The next one to do says next.",
       "The Set pop-up opens on last time\u2019s matching set \u2014 the weight, the reps and how it was done \u2014 and tells you which set that was. Typing a number replaces it.",
@@ -4407,348 +4350,6 @@
     return (meets(g.cal, t.cal) && meets(g.pro, t.pro)) ? "hit" : "miss";
   }
 
-  // ---------- built-in food reference ----------
-  // kcal and protein per 100 g. `u` maps a named portion to its weight in grams.
-  // Reference values for common foods — close enough to log against, not a lab result.
-  var FOODS = [
-    // grains + starches
-    { n: "White rice, cooked", k: 130, d: 158, p: 2.7, c: 28, f: 0.3, a: ["jasmine rice", "white rice", "steamed rice", "rice"], u: { cup: 158 } },
-    { n: "White rice, dry", k: 365, d: 45, p: 7.1, c: 80.9, f: 1, a: ["dry white rice", "uncooked rice", "raw rice"], u: { cup: 185 } },
-    { n: "Brown rice, cooked", k: 112, d: 195, p: 2.6, c: 25.9, f: 1.1, a: ["brown rice"], u: { cup: 195 } },
-    { n: "Pasta, cooked", k: 158, d: 140, p: 5.8, c: 30.7, f: 0.9, a: ["pasta", "spaghetti", "penne", "noodles", "macaroni"], u: { cup: 140 } },
-    { n: "Pasta, dry", k: 371, d: 56, p: 13, c: 74.7, f: 1.5, a: ["dry pasta", "uncooked pasta"], u: {} },
-    { n: "Oats, dry", k: 389, d: 40, p: 16.9, c: 62.9, f: 8, a: ["oats", "oatmeal", "rolled oats", "porridge oats"], u: { cup: 81, serving: 40 } },
-    { n: "White bread", k: 265, d: 28, p: 9, c: 49.2, f: 3.6, a: ["bread", "white bread", "toast"], u: { slice: 28, each: 28 } },
-    { n: "Whole wheat bread", k: 247, d: 28, p: 13, c: 43.1, f: 3.5, a: ["wheat bread", "whole wheat bread", "brown bread"], u: { slice: 28, each: 28 } },
-    { n: "Bagel", k: 250, d: 98, p: 10, c: 48.9, f: 1.5, a: ["bagel"], u: { each: 98 } },
-    { n: "Flour tortilla", k: 306, d: 45, p: 8, c: 49.4, f: 8, a: ["tortilla", "flour tortilla", "wrap"], u: { each: 45 } },
-    { n: "Potato, baked", k: 93, d: 173, p: 2.5, c: 21, f: 0.1, a: ["potato", "potatoes", "baked potato"], u: { each: 173, cup: 150 } },
-    { n: "Sweet potato, baked", k: 90, d: 151, p: 2, c: 20.7, f: 0.1, a: ["sweet potato", "sweet potatoes", "yam"], u: { each: 151, cup: 200 } },
-    { n: "French fries", k: 312, d: 117, p: 3.4, c: 41.4, f: 14.7, a: ["fries", "french fries", "chips"], u: { serving: 117, each: 117 } },
-    { n: "Quinoa, cooked", k: 120, d: 185, p: 4.4, c: 21.3, f: 1.9, a: ["quinoa"], u: { cup: 185 } },
-    { n: "Couscous, cooked", k: 112, d: 157, p: 3.8, c: 23.2, f: 0.2, a: ["couscous"], u: { cup: 157 } },
-    { n: "Rice cake", k: 387, d: 9, p: 8, c: 79.9, f: 3.8, a: ["rice cake", "rice cakes"], u: { each: 9 } },
-    { n: "Granola", k: 471, d: 60, p: 10, c: 66.7, f: 17.6, a: ["granola"], u: { cup: 122 } },
-    { n: "Breakfast cereal", k: 379, d: 40, p: 7, a: ["cereal"], u: { cup: 40, serving: 40 } },
-
-    { n: "Brown rice, dry", k: 370, d: 45, p: 7.9, c: 78.7, f: 2.8, a: ["brown rice dry", "dry brown rice", "uncooked brown rice"], u: { cup: 190 } },
-    { n: "Basmati rice, cooked", k: 121, d: 158, p: 3.5, c: 20.6, f: 3.1, a: ["basmati", "basmati rice"], u: { cup: 158 } },
-    { n: "Wild rice, cooked", k: 101, d: 164, p: 4, c: 21.3, f: 0.3, a: ["wild rice"], u: { cup: 164 } },
-    { n: "Fried rice", k: 163, d: 198, p: 4.6, c: 32.8, f: 3, a: ["fried rice", "egg fried rice"], u: { cup: 198 } },
-    { n: "Rice noodles, cooked", k: 109, d: 176, p: 0.9, a: ["rice noodles", "vermicelli", "pho noodles"], u: { cup: 176 } },
-    { n: "Whole wheat pasta, cooked", k: 124, d: 140, p: 5.3, a: ["whole wheat pasta", "wholemeal pasta"], u: { cup: 140 } },
-    { n: "Egg noodles, cooked", k: 138, d: 160, p: 4.5, c: 25.2, f: 2.1, a: ["egg noodles"], u: { cup: 160 } },
-    { n: "Instant ramen noodles", k: 436, d: 85, p: 9.4, c: 60.3, f: 17.7, a: ["ramen", "instant ramen", "ramen noodles", "instant noodles"], u: { each: 85, packet: 85 } },
-    { n: "Mac and cheese", k: 164, d: 200, p: 6.3, c: 18.4, f: 6.5, a: ["mac and cheese", "macaroni and cheese", "mac n cheese"], u: { cup: 200 } },
-    { n: "Gnocchi", k: 133, d: 150, p: 3.2, a: ["gnocchi"], u: {} },
-    { n: "Lasagna", k: 132, d: 250, p: 8, c: 16.2, f: 5, a: ["lasagna", "lasagne"], u: { serving: 250 } },
-    { n: "Mashed potatoes", k: 113, d: 210, p: 2, c: 16.9, f: 4.2, a: ["mashed potato", "mashed potatoes", "mash"], u: { cup: 210 } },
-    { n: "Hash browns", k: 265, d: 100, p: 3, c: 35.1, f: 12.5, a: ["hash brown", "hash browns"], u: {} },
-    { n: "Tater tots", k: 216, d: 86, p: 2.5, c: 37.3, f: 9.3, a: ["tater tots", "potato gems"], u: { serving: 86 } },
-    { n: "Potato chips", k: 536, d: 28, p: 7, c: 52.9, f: 34.6, a: ["potato chips", "crisps"], u: { serving: 28 } },
-    { n: "Roast potatoes", k: 149, d: 150, p: 2.9, c: 27, f: 3.8, a: ["roast potato", "roast potatoes", "roasted potatoes"], u: {} },
-    { n: "Boiled potato", k: 87, d: 150, p: 1.9, c: 21.5, f: 0.1, a: ["boiled potato", "boiled potatoes"], u: {} },
-    { n: "Pita bread", k: 275, d: 60, p: 9, c: 55.7, f: 1.2, a: ["pita", "pitta", "pita bread"], u: { each: 60 } },
-    { n: "Naan", k: 310, d: 90, p: 9, c: 50.4, f: 5.7, a: ["naan", "naan bread"], u: { each: 90 } },
-    { n: "English muffin", k: 235, d: 57, p: 8, c: 46, f: 1.8, a: ["english muffin"], u: { each: 57 } },
-    { n: "Croissant", k: 406, d: 57, p: 8, c: 45.8, f: 21, a: ["croissant"], u: { each: 57 } },
-    { n: "Corn tortilla", k: 218, d: 26, p: 5.7, c: 44.6, f: 2.9, a: ["corn tortilla", "corn tortillas"], u: { each: 26 } },
-    { n: "Hamburger bun", k: 279, d: 52, p: 9, c: 49.2, f: 3.6, a: ["burger bun", "hamburger bun", "brioche bun"], u: { each: 52 } },
-    { n: "Hot dog bun", k: 279, d: 43, p: 9, c: 49.2, f: 3.6, a: ["hot dog bun"], u: { each: 43 } },
-    { n: "Sourdough bread", k: 270, d: 36, p: 11, c: 51.9, f: 2.4, a: ["sourdough"], u: { slice: 36, each: 36 } },
-    { n: "Rye bread", k: 259, d: 32, p: 8.5, c: 48.3, f: 3.3, a: ["rye bread", "rye"], u: { slice: 32, each: 32 } },
-    { n: "Pancakes", k: 227, d: 77, p: 6.4, c: 28.3, f: 9.7, a: ["pancake", "pancakes", "hotcakes"], u: { each: 77 } },
-    { n: "Waffle", k: 291, d: 75, p: 7.9, c: 32.9, f: 14.1, a: ["waffle", "waffles"], u: { each: 75 } },
-    { n: "French toast", k: 229, d: 65, p: 7.7, c: 25, f: 10.8, a: ["french toast"], u: { each: 65 } },
-    { n: "Biscuit", k: 353, d: 60, p: 7, c: 44.9, f: 16, a: ["biscuit", "biscuits"], u: { each: 60 } },
-    { n: "Muffin", k: 377, d: 113, p: 5.5, c: 52, f: 16.2, a: ["muffin", "blueberry muffin"], u: { each: 113 } },
-    { n: "Crackers", k: 502, d: 30, p: 9, c: 58.8, f: 24.4, a: ["cracker", "crackers", "saltines"], u: { serving: 30 } },
-    { n: "Pretzels", k: 384, d: 30, p: 10, c: 80.4, f: 2.9, a: ["pretzel", "pretzels"], u: { serving: 30 } },
-    { n: "Popcorn", k: 387, d: 30, p: 12, c: 77.9, f: 4.2, a: ["popcorn"], u: { serving: 30 } },
-    { n: "Cornbread", k: 330, d: 65, p: 7, c: 54.5, f: 9.6, a: ["cornbread"], u: { each: 65 } },
-    { n: "Stuffing", k: 177, d: 100, p: 3, c: 21.7, f: 8.5, a: ["stuffing"], u: {} },
-    { n: "Grits, cooked", k: 71, d: 242, p: 1.7, c: 14.8, f: 0.5, a: ["grits"], u: { cup: 242 } },
-    { n: "Donut", k: 421, d: 60, p: 4.9, a: ["donut", "doughnut", "donuts"], u: { each: 60 } },
-    { n: "Pop tart", k: 400, d: 52, p: 4, c: 71.8, f: 9, a: ["pop tart", "poptart"], u: { each: 52 } },
-    // beef
-    { n: "Top sirloin steak, cooked", k: 212, d: 170, p: 31, c: 0, f: 9.7, a: ["top sirloin", "sirloin", "sirloin steak", "steak"], u: {} },
-    { n: "Ribeye steak, cooked", k: 291, d: 226, p: 24, c: 1.8, f: 17.2, a: ["ribeye", "rib eye", "ribeye steak"], u: {} },
-    { n: "New York strip, cooked", k: 220, d: 226, p: 29, a: ["new york strip", "ny strip", "strip steak"], u: {} },
-    { n: "Flank steak, cooked", k: 192, d: 170, p: 28, c: 0, f: 8.3, a: ["flank steak", "flank"], u: {} },
-    { n: "Filet mignon, cooked", k: 227, d: 170, p: 29, c: 0.4, f: 11.6, a: ["filet mignon", "tenderloin steak", "filet"], u: {} },
-    { n: "Ground beef 80/20, cooked", k: 254, d: 113, p: 26, c: 0, f: 16.2, a: ["ground beef", "80/20 beef", "hamburger meat", "beef mince"], u: { patty: 85 } },
-    { n: "Ground beef 90/10, cooked", k: 217, d: 113, p: 26, c: 0, f: 11.8, a: ["90/10 beef", "lean ground beef"], u: { patty: 85 } },
-    { n: "Ground beef 93/7, cooked", k: 172, d: 113, p: 26, c: 0.1, f: 8, a: ["93/7 beef", "extra lean ground beef"], u: { patty: 85 } },
-    { n: "Beef jerky", k: 410, d: 28, p: 33, c: 11, f: 25.6, a: ["beef jerky", "jerky"], u: { serving: 28 } },
-
-    { n: "Ground beef 85/15, cooked", k: 250, d: 113, p: 26, c: 0, f: 15.4, a: ["ground beef 85", "85/15", "mince 85"], u: {} },
-    { n: "Beef burger patty, cooked", k: 254, d: 113, p: 26, c: 0, f: 15.4, a: ["burger patty", "beef patty", "hamburger patty"], u: { each: 113 } },
-    { n: "Brisket, cooked", k: 253, d: 113, p: 27, c: 0, f: 13.8, a: ["brisket", "beef brisket"], u: {} },
-    { n: "Chuck roast, cooked", k: 250, d: 113, p: 27, c: 0, f: 15.9, a: ["chuck roast", "pot roast", "beef chuck"], u: {} },
-    { n: "Prime rib, cooked", k: 338, d: 170, p: 24, c: 0, f: 27.9, a: ["prime rib"], u: {} },
-    { n: "Roast beef, deli", k: 128, d: 56, p: 22, c: 0.6, f: 3.7, a: ["roast beef", "deli beef"], u: { slice: 28 } },
-    { n: "Corned beef", k: 251, d: 100, p: 18, c: 0.5, f: 19, a: ["corned beef"], u: {} },
-    { n: "Meatballs, cooked", k: 286, d: 85, p: 15, c: 12.8, f: 19.6, a: ["meatball", "meatballs"], u: { each: 28 } },
-    { n: "Meatloaf", k: 200, d: 150, p: 15, c: 28.7, f: 6.2, a: ["meatloaf"], u: {} },
-    // poultry
-    { n: "Chicken breast, cooked", k: 165, d: 172, p: 31, c: 0, f: 3.6, a: ["chicken breast", "chicken breasts", "grilled chicken", "chicken"], u: { each: 174, breast: 174 } },
-    { n: "Chicken breast, raw", k: 120, d: 174, p: 22.5, c: 0, f: 2.6, a: ["raw chicken breast", "uncooked chicken"], u: { each: 174 } },
-    { n: "Chicken thigh, cooked", k: 209, d: 104, p: 26, c: 0, f: 9.8, a: ["chicken thigh", "chicken thighs"], u: { each: 52 } },
-    { n: "Chicken nuggets", k: 296, d: 96, p: 15, c: 15.8, f: 20, a: ["chicken nuggets", "nuggets"], u: { each: 17 } },
-    { n: "Turkey breast, cooked", k: 135, d: 84, p: 30, c: 0, f: 2, a: ["turkey breast", "turkey"], u: { slice: 28 } },
-    { n: "Ground turkey 93/7, cooked", k: 176, d: 113, p: 27, c: 0, f: 8.4, a: ["ground turkey"], u: {} },
-
-    { n: "Chicken wing, cooked", k: 254, d: 34, p: 26, c: 0, f: 16.9, a: ["chicken wing", "chicken wings", "wings"], u: { each: 34 } },
-    { n: "Chicken drumstick, cooked", k: 172, d: 44, p: 28, c: 0, f: 6.8, a: ["drumstick", "drumsticks", "chicken leg"], u: { each: 44 } },
-    { n: "Rotisserie chicken", k: 190, d: 140, p: 25, c: 0, f: 10.7, a: ["rotisserie chicken", "roast chicken", "roasted chicken"], u: {} },
-    { n: "Fried chicken", k: 260, d: 100, p: 22, c: 8.3, f: 15.8, a: ["fried chicken"], u: {} },
-    { n: "Chicken tenders, breaded", k: 290, d: 100, p: 18, c: 16.9, f: 15.6, a: ["chicken tenders", "chicken strips", "chicken tender"], u: {} },
-    { n: "Ground chicken, cooked", k: 189, d: 112, p: 24, c: 0, f: 10.9, a: ["ground chicken", "chicken mince"], u: {} },
-    { n: "Chicken sausage", k: 172, d: 85, p: 15, a: ["chicken sausage"], u: { each: 85 } },
-    { n: "Turkey, deli sliced", k: 104, d: 56, p: 17, a: ["deli turkey", "turkey slices", "sliced turkey"], u: { slice: 28 } },
-    { n: "Ground turkey 85/15, cooked", k: 235, d: 112, p: 25, c: 0, f: 14, a: ["ground turkey 85", "turkey mince 85"], u: {} },
-    { n: "Turkey thigh, cooked", k: 170, d: 100, p: 28, c: 0, f: 6, a: ["turkey thigh", "turkey leg"], u: {} },
-    { n: "Buffalo wings", k: 290, d: 130, p: 24, c: 0, f: 18.4, a: ["buffalo wings", "hot wings"], u: {} },
-    // pork
-    { n: "Pork chop, cooked", k: 231, d: 130, p: 27, c: 0, f: 13.6, a: ["pork chop", "pork chops"], u: { each: 130 } },
-    { n: "Pork tenderloin, cooked", k: 143, d: 113, p: 26, c: 0, f: 3.5, a: ["pork tenderloin", "pork loin"], u: {} },
-    { n: "Bacon, cooked", k: 541, d: 24, p: 37, c: 1.4, f: 41.8, a: ["bacon"], u: { slice: 8, each: 8, rasher: 8 } },
-    { n: "Ham, sliced", k: 145, d: 56, p: 21, c: 0.9, f: 5.8, a: ["ham", "deli ham"], u: { slice: 28 } },
-    { n: "Sausage, cooked", k: 301, d: 68, p: 18, c: 2.1, f: 26.2, a: ["sausage", "sausages"], u: { each: 68, link: 68 } },
-
-    { n: "Pulled pork", k: 250, d: 140, p: 25, c: 0, f: 15.9, a: ["pulled pork"], u: {} },
-    { n: "Pork belly", k: 518, d: 85, p: 9.3, c: 0, f: 53, a: ["pork belly"], u: {} },
-    { n: "Pork ribs, cooked", k: 361, d: 140, p: 25, c: 0, f: 29.5, a: ["pork ribs", "ribs", "baby back ribs", "spare ribs"], u: {} },
-    { n: "Prosciutto", k: 195, d: 30, p: 26, c: 0.3, f: 8.3, a: ["prosciutto"], u: { slice: 15 } },
-    { n: "Salami", k: 336, d: 30, p: 22, c: 2.4, f: 25.9, a: ["salami"], u: { slice: 10 } },
-    { n: "Pepperoni", k: 504, d: 30, p: 20, c: 1.2, f: 46.3, a: ["pepperoni"], u: { slice: 2 } },
-    { n: "Hot dog", k: 290, d: 45, p: 11, c: 18.9, f: 19.6, a: ["hot dog", "hotdog", "frankfurter", "wiener"], u: { each: 45 } },
-    { n: "Chorizo", k: 455, d: 60, p: 24, a: ["chorizo"], u: {} },
-    // fish + seafood
-    { n: "Salmon, cooked", k: 208, d: 154, p: 22, c: 0, f: 12.4, a: ["salmon"], u: { fillet: 154 } },
-    { n: "Tilapia, cooked", k: 129, d: 87, p: 26, c: 0, f: 2.6, a: ["tilapia"], u: { fillet: 87 } },
-    { n: "Cod, cooked", k: 105, d: 180, p: 23, c: 0, f: 0.9, a: ["cod"], u: { fillet: 180 } },
-    { n: "Tuna, canned in water", k: 116, d: 142, p: 26, c: 0, f: 0.8, a: ["canned tuna", "tuna"], u: { can: 142, serving: 142 } },
-    { n: "Shrimp, cooked", k: 99, d: 113, p: 24, c: 0.2, f: 0.3, a: ["shrimp", "prawns"], u: {} },
-
-    { n: "Tuna steak, cooked", k: 184, d: 113, p: 30, c: 0, f: 6.3, a: ["tuna steak", "ahi", "yellowfin"], u: {} },
-    { n: "Tuna, canned in oil", k: 198, d: 85, p: 29, c: 0, f: 8.2, a: ["tuna in oil"], u: {} },
-    { n: "Sardines, canned", k: 208, d: 92, p: 25, c: 0, f: 11.4, a: ["sardines", "sardine"], u: { can: 92 } },
-    { n: "Mackerel, cooked", k: 262, d: 100, p: 24, c: 0, f: 17.8, a: ["mackerel"], u: {} },
-    { n: "Halibut, cooked", k: 111, d: 159, p: 23, c: 0, f: 1.6, a: ["halibut"], u: {} },
-    { n: "Catfish, cooked", k: 105, d: 143, p: 18, c: 0, f: 2.9, a: ["catfish"], u: {} },
-    { n: "Crab", k: 97, d: 85, p: 19, c: 0, f: 1.5, a: ["crab", "crab meat"], u: {} },
-    { n: "Scallops, cooked", k: 111, d: 85, p: 20, c: 5.4, f: 0.8, a: ["scallops", "scallop"], u: {} },
-    { n: "Smoked salmon", k: 117, d: 56, p: 18, c: 0, f: 4.3, a: ["smoked salmon", "lox"], u: {} },
-    { n: "Fish sticks", k: 290, d: 100, p: 14, c: 21.7, f: 16.2, a: ["fish sticks", "fish fingers"], u: { each: 28 } },
-    { n: "Mahi mahi, cooked", k: 109, d: 113, p: 24, a: ["mahi mahi", "mahi"], u: {} },
-    // eggs + dairy
-    { n: "Egg, whole", k: 143, d: 50, p: 12.6, c: 0.7, f: 9.5, a: ["egg", "eggs", "whole eggs"], u: { each: 50 } },
-    { n: "Egg white", k: 52, d: 33, p: 11, c: 0.7, f: 0.2, a: ["egg white", "egg whites"], u: { each: 33, cup: 243 } },
-    { n: "Greek yogurt, nonfat", k: 59, d: 170, p: 10, c: 3.6, f: 0.4, a: ["greek yogurt", "nonfat greek yogurt"], u: { cup: 245, container: 170 } },
-    { n: "Greek yogurt, 2%", k: 73, d: 170, p: 9.9, a: ["2% greek yogurt", "low fat greek yogurt"], u: { cup: 245, container: 170 } },
-    { n: "Yogurt, plain", k: 61, d: 170, p: 3.5, c: 4.7, f: 3.2, a: ["yogurt", "yoghurt"], u: { cup: 245, container: 170 } },
-    { n: "Cottage cheese, 2%", k: 84, d: 113, p: 11, c: 4.3, f: 2.3, a: ["cottage cheese"], u: { cup: 226 } },
-    { n: "Milk, whole", k: 61, d: 244, p: 3.2, c: 4.6, f: 3.2, a: ["whole milk", "milk"], u: { cup: 244 } },
-    { n: "Milk, 2%", k: 50, d: 244, p: 3.3, c: 4.9, f: 1.9, a: ["2% milk", "semi skimmed milk"], u: { cup: 244 } },
-    { n: "Milk, skim", k: 34, d: 245, p: 3.4, c: 4.9, f: 0.1, a: ["skim milk", "skimmed milk", "nonfat milk"], u: { cup: 245 } },
-    { n: "Almond milk, unsweetened", k: 15, d: 240, p: 0.6, c: 0.3, f: 1.2, a: ["almond milk"], u: { cup: 240 } },
-    { n: "Cheddar cheese", k: 403, d: 28, p: 25, c: 1.9, f: 32.6, a: ["cheddar", "cheddar cheese", "cheese"], u: { slice: 28 } },
-    { n: "Mozzarella", k: 300, d: 28, p: 22, c: 2.4, f: 22.1, a: ["mozzarella"], u: { slice: 28 } },
-    { n: "Parmesan", k: 431, d: 5, p: 38, c: 3.4, f: 27.3, a: ["parmesan", "parmigiano"], u: { tbsp: 5 } },
-    { n: "String cheese", k: 300, d: 28, p: 24, c: 4.4, f: 20.4, a: ["string cheese", "cheese stick"], u: { each: 28 } },
-    { n: "Cream cheese", k: 342, d: 28, p: 6, c: 4.6, f: 33.5, a: ["cream cheese"], u: { tbsp: 14 } },
-    { n: "Butter", k: 717, d: 14, p: 0.9, c: 0.1, f: 81.1, a: ["butter"], u: { tbsp: 14, tsp: 5 } },
-
-    { n: "Ricotta", k: 174, d: 124, p: 11, a: ["ricotta"], u: { cup: 246 } },
-    { n: "Feta", k: 264, d: 28, p: 14, c: 3.9, f: 21.5, a: ["feta"], u: {} },
-    { n: "Swiss cheese", k: 380, d: 28, p: 27, c: 1.4, f: 31, a: ["swiss cheese", "swiss"], u: { slice: 28 } },
-    { n: "Provolone", k: 351, d: 28, p: 26, c: 2.1, f: 26.6, a: ["provolone"], u: { slice: 28 } },
-    { n: "American cheese", k: 330, d: 21, p: 18, c: 7.2, f: 27.2, a: ["american cheese", "cheese slice"], u: { slice: 21 } },
-    { n: "Heavy cream", k: 340, d: 30, p: 2.8, c: 2.8, f: 36.1, a: ["heavy cream", "double cream", "whipping cream"], u: { tbsp: 15, cup: 238 } },
-    { n: "Half and half", k: 130, d: 30, p: 3, c: 4.3, f: 11.5, a: ["half and half"], u: { tbsp: 15, cup: 242 } },
-    { n: "Sour cream", k: 198, d: 30, p: 2.4, c: 4.6, f: 19.4, a: ["sour cream"], u: { tbsp: 15, cup: 230 } },
-    { n: "Whipped cream", k: 257, d: 15, p: 2, a: ["whipped cream"], u: {} },
-    { n: "Chocolate milk", k: 83, d: 240, p: 3.2, c: 10.3, f: 3.4, a: ["chocolate milk"], u: { cup: 240 } },
-    { n: "Kefir", k: 55, d: 240, p: 3.3, c: 7.5, f: 1, a: ["kefir"], u: { cup: 240 } },
-    // protein supplements
-    { n: "Whey protein powder", k: 375, d: 30, p: 78, c: 6.2, f: 1.6, a: ["whey protein", "protein powder", "whey", "protein shake"], u: { scoop: 30, serving: 30 } },
-    { n: "Protein bar", k: 350, d: 60, p: 27, a: ["protein bar"], u: { each: 60, bar: 60 } },
-    { n: "Casein protein powder", k: 360, d: 33, p: 75, c: 6.2, f: 1.6, a: ["casein"], u: { scoop: 33 } },
-
-    { n: "Plant protein powder", k: 380, d: 30, p: 70, c: 18, f: 5.1, a: ["plant protein", "pea protein", "vegan protein"], u: { scoop: 30 } },
-    { n: "Mass gainer", k: 380, d: 100, p: 20, a: ["mass gainer", "weight gainer"], u: { scoop: 100 } },
-    { n: "Protein shake, bottled", k: 50, d: 330, p: 9, a: ["premier protein", "fairlife", "bottled protein shake", "protein drink"], u: { each: 330, bottle: 330 } },
-    // legumes + plant protein
-    { n: "Black beans, cooked", k: 132, d: 172, p: 8.9, c: 23.7, f: 0.5, a: ["black beans"], u: { cup: 172, can: 260 } },
-    { n: "Chickpeas, cooked", k: 164, d: 164, p: 8.9, c: 27.4, f: 2.6, a: ["chickpeas", "garbanzo beans"], u: { cup: 164, can: 260 } },
-    { n: "Lentils, cooked", k: 116, d: 198, p: 9, c: 20.1, f: 0.4, a: ["lentils"], u: { cup: 198 } },
-    { n: "Kidney beans, cooked", k: 127, d: 177, p: 8.7, c: 22.8, f: 0.5, a: ["kidney beans"], u: { cup: 177 } },
-    { n: "Tofu, firm", k: 144, d: 85, p: 17, c: 2.8, f: 8.7, a: ["tofu"], u: { serving: 85 } },
-    { n: "Hummus", k: 166, d: 30, p: 8, a: ["hummus"], u: { tbsp: 15 } },
-
-    { n: "Pinto beans, cooked", k: 143, d: 171, p: 9, c: 26.2, f: 0.7, a: ["pinto beans", "pinto"], u: { cup: 171 } },
-    { n: "Refried beans", k: 90, d: 120, p: 5, c: 13.6, f: 2, a: ["refried beans"], u: {} },
-    { n: "Baked beans", k: 94, d: 130, p: 5, c: 21.1, f: 0.4, a: ["baked beans"], u: {} },
-    { n: "Edamame", k: 121, d: 155, p: 12, c: 8.9, f: 5.2, a: ["edamame"], u: { cup: 155 } },
-    { n: "Tempeh", k: 192, d: 84, p: 20, c: 7.6, f: 10.8, a: ["tempeh"], u: {} },
-    { n: "Soy milk", k: 54, d: 240, p: 3.3, c: 5.2, f: 2, a: ["soy milk", "soya milk"], u: { cup: 240 } },
-    // fats + nuts
-    { n: "Olive oil", k: 884, d: 13.5, p: 0, c: 0, f: 100, a: ["olive oil", "oil"], u: { tbsp: 13.5, tsp: 4.5 } },
-    { n: "Peanut butter", k: 588, d: 32, p: 25, c: 22.7, f: 49.4, a: ["peanut butter"], u: { tbsp: 16 } },
-    { n: "Almonds", k: 579, d: 28, p: 21, c: 21.6, f: 49.9, a: ["almonds", "almond"], u: { cup: 143, serving: 28 } },
-    { n: "Peanuts", k: 567, d: 28, p: 26, c: 16.1, f: 49.2, a: ["peanuts"], u: { serving: 28 } },
-    { n: "Walnuts", k: 654, d: 28, p: 15, c: 13.7, f: 65.2, a: ["walnuts"], u: { serving: 28 } },
-    { n: "Cashews", k: 553, d: 28, p: 18, c: 30.2, f: 43.8, a: ["cashews"], u: { serving: 28 } },
-    { n: "Avocado", k: 160, d: 150, p: 2, c: 8.5, f: 14.7, a: ["avocado"], u: { each: 150, half: 75 } },
-
-    { n: "Coconut oil", k: 862, d: 14, p: 0, c: 0.8, f: 99.1, a: ["coconut oil"], u: { tbsp: 14 } },
-    { n: "Vegetable oil", k: 884, d: 14, p: 0, c: 0, f: 100, a: ["vegetable oil", "canola oil", "sunflower oil", "cooking oil"], u: { tbsp: 14 } },
-    { n: "Almond butter", k: 614, d: 32, p: 21, c: 21.2, f: 53, a: ["almond butter"], u: { tbsp: 16 } },
-    { n: "Pistachios", k: 560, d: 28, p: 20, c: 27.2, f: 45.3, a: ["pistachio", "pistachios"], u: {} },
-    { n: "Pecans", k: 691, d: 28, p: 9, c: 13.9, f: 72, a: ["pecan", "pecans"], u: {} },
-    { n: "Sunflower seeds", k: 584, d: 28, p: 21, c: 20, f: 51.5, a: ["sunflower seeds"], u: {} },
-    { n: "Chia seeds", k: 486, d: 28, p: 17, c: 38.3, f: 32.9, a: ["chia", "chia seeds"], u: {} },
-    { n: "Flax seeds", k: 534, d: 28, p: 18, c: 34.4, f: 37.3, a: ["flax", "flaxseed", "flax seeds"], u: {} },
-    { n: "Macadamia nuts", k: 718, d: 28, p: 8, c: 13.8, f: 75.8, a: ["macadamia", "macadamias"], u: {} },
-    { n: "Trail mix", k: 462, d: 40, p: 14, c: 44.9, f: 29.4, a: ["trail mix"], u: {} },
-    { n: "Nutella", k: 539, d: 37, p: 6, a: ["nutella", "chocolate spread"], u: { tbsp: 18 } },
-    { n: "Tahini", k: 595, d: 30, p: 17, c: 21.5, f: 53, a: ["tahini"], u: { tbsp: 15 } },
-    { n: "Shredded coconut", k: 660, d: 28, p: 6.9, c: 23.6, f: 64.5, a: ["shredded coconut", "desiccated coconut"], u: {} },
-    // vegetables
-    { n: "Broccoli, cooked", k: 35, d: 156, p: 2.4, c: 7.2, f: 0.4, a: ["broccoli"], u: { cup: 156 } },
-    { n: "Spinach, raw", k: 23, d: 30, p: 2.9, c: 3.6, f: 0.4, a: ["spinach"], u: { cup: 30 } },
-    { n: "Green beans", k: 35, d: 125, p: 1.8, c: 7.9, f: 0.3, a: ["green beans"], u: { cup: 125 } },
-    { n: "Carrots", k: 41, d: 61, p: 0.9, c: 9.6, f: 0.2, a: ["carrots", "carrot"], u: { each: 61, cup: 128 } },
-    { n: "Asparagus", k: 22, d: 134, p: 2.4, c: 4.1, f: 0.2, a: ["asparagus"], u: { cup: 134 } },
-    { n: "Bell pepper", k: 31, d: 119, p: 1, c: 6.7, f: 0.2, a: ["bell pepper", "peppers", "capsicum"], u: { each: 119 } },
-    { n: "Onion", k: 40, d: 110, p: 1.1, c: 9.3, f: 0.1, a: ["onion", "onions"], u: { each: 110, cup: 160 } },
-    { n: "Tomato", k: 18, d: 123, p: 0.9, c: 3.8, f: 0.4, a: ["tomato", "tomatoes"], u: { each: 123 } },
-    { n: "Lettuce", k: 15, d: 47, p: 1.4, c: 2.9, f: 0.1, a: ["lettuce", "salad greens"], u: { cup: 47 } },
-    { n: "Cucumber", k: 15, d: 104, p: 0.7, c: 3.6, f: 0.1, a: ["cucumber"], u: { each: 301 } },
-    { n: "Mushrooms", k: 22, d: 70, p: 3.1, c: 3.3, f: 0.3, a: ["mushrooms", "mushroom"], u: { cup: 70 } },
-    { n: "Corn", k: 96, d: 164, p: 3.4, c: 21, f: 1.5, a: ["corn", "sweetcorn"], u: { cup: 164 } },
-    { n: "Peas", k: 81, d: 160, p: 5.4, c: 14.4, f: 0.4, a: ["peas"], u: { cup: 160 } },
-
-    // fruit
-    { n: "Banana", k: 89, d: 118, p: 1.1, c: 22.8, f: 0.3, a: ["banana", "bananas"], u: { each: 118 } },
-    { n: "Apple", k: 52, d: 182, p: 0.3, c: 14.1, f: 0.1, a: ["apple", "apples"], u: { each: 182 } },
-    { n: "Orange", k: 47, d: 131, p: 0.9, c: 11.8, f: 0.1, a: ["orange", "oranges"], u: { each: 131 } },
-    { n: "Strawberries", k: 32, d: 152, p: 0.7, c: 7.7, f: 0.3, a: ["strawberries", "strawberry"], u: { cup: 152 } },
-    { n: "Blueberries", k: 57, d: 148, p: 0.7, c: 14.5, f: 0.3, a: ["blueberries"], u: { cup: 148 } },
-    { n: "Grapes", k: 69, d: 151, p: 0.7, c: 18.1, f: 0.2, a: ["grapes"], u: { cup: 151 } },
-    { n: "Pineapple", k: 50, d: 165, p: 0.5, c: 13.1, f: 0.1, a: ["pineapple"], u: { cup: 165 } },
-    { n: "Mango", k: 60, d: 165, p: 0.8, c: 15, f: 0.4, a: ["mango"], u: { each: 336, cup: 165 } },
-    { n: "Watermelon", k: 30, d: 152, p: 0.6, c: 7.5, f: 0.1, a: ["watermelon"], u: { cup: 152 } },
-
-    // prepared meals
-    { n: "Burrito", k: 206, d: 400, p: 9, c: 20.3, f: 7.3, a: ["burrito"], u: { each: 400 } },
-    { n: "Burrito bowl", k: 145, d: 500, p: 9, c: 17.3, f: 3.4, a: ["burrito bowl", "chipotle bowl"], u: { each: 500 } },
-    { n: "Taco", k: 226, d: 100, p: 12, c: 17.2, f: 12.1, a: ["taco", "tacos"], u: { each: 100 } },
-    { n: "Cheeseburger", k: 250, d: 200, p: 14, c: 23.7, f: 12.3, a: ["cheeseburger", "burger", "hamburger"], u: { each: 200 } },
-    { n: "Sub sandwich", k: 220, d: 250, p: 11, c: 21.3, f: 8.2, a: ["sub", "sandwich", "hoagie", "sub sandwich"], u: { each: 250 } },
-    { n: "Chicken sandwich", k: 250, d: 200, p: 14, c: 29.8, f: 8.1, a: ["chicken sandwich"], u: { each: 200 } },
-    { n: "Quesadilla", k: 300, d: 180, p: 14, c: 27.3, f: 15.1, a: ["quesadilla"], u: { each: 180 } },
-    { n: "Nachos", k: 306, d: 200, p: 8, c: 65.2, f: 3.5, a: ["nachos"], u: {} },
-    { n: "Pad thai", k: 154, d: 350, p: 7, c: 15, f: 6.8, a: ["pad thai"], u: {} },
-    { n: "Chicken curry", k: 130, d: 300, p: 9, a: ["curry", "chicken curry", "tikka masala"], u: {} },
-    { n: "Ramen bowl", k: 110, d: 500, p: 6, c: 15.4, f: 2.9, a: ["ramen bowl", "tonkotsu"], u: { each: 500 } },
-    { n: "Lo mein", k: 150, d: 300, p: 6, a: ["lo mein", "chow mein"], u: {} },
-    { n: "Chili", k: 110, d: 250, p: 8, c: 10.8, f: 3.4, a: ["chili", "chilli con carne"], u: { cup: 250 } },
-    { n: "Chicken noodle soup", k: 36, d: 245, p: 2.5, a: ["chicken soup", "chicken noodle soup"], u: { cup: 245 } },
-    { n: "Sushi roll", k: 150, d: 200, p: 6, a: ["sushi", "sushi roll", "maki"], u: { each: 200 } },
-    { n: "Pot pie", k: 230, d: 250, p: 7, c: 22, f: 11.4, a: ["pot pie"], u: { each: 250 } },
-    { n: "Enchilada", k: 170, d: 200, p: 9, c: 14.6, f: 9, a: ["enchilada", "enchiladas"], u: { each: 200 } },
-    { n: "Shepherds pie", k: 120, d: 300, p: 7, c: 8.7, f: 6.3, a: ["shepherds pie", "cottage pie"], u: {} },
-    { n: "Egg roll", k: 222, d: 89, p: 7, c: 31.8, f: 7, a: ["egg roll", "spring roll"], u: { each: 89 } },
-    { n: "Dumplings", k: 210, d: 100, p: 8, c: 14, f: 11.1, a: ["dumpling", "dumplings", "gyoza", "potstickers"], u: { each: 25 } },
-    { n: "Gyro", k: 215, d: 300, p: 12, c: 18.8, f: 6.8, a: ["gyro", "shawarma", "doner"], u: {} },
-    // fast food — brand values are approximations and chains reformulate,
-    // so treat them as a close estimate rather than a label reading
-    { n: "Big Mac", k: 257.1, d: 219, p: 11.9, c: 20.1, f: 15, a: ["big mac", "big macs"], u: { each: 219 } },
-    { n: "Quarter Pounder with cheese", k: 257.4, d: 202, p: 14.9, c: 20, f: 14.2, a: ["quarter pounder", "quarter pounder with cheese"], u: { each: 202 } },
-    { n: "McDouble", k: 264.9, d: 151, p: 14.6, c: 18, f: 16.2, a: ["mcdouble", "mcdoubles"], u: { each: 151 } },
-    { n: "McDonalds cheeseburger", k: 263.2, d: 114, p: 13.2, c: 27.8, f: 11.8, a: ["mcdonalds cheeseburger", "mcd cheeseburger"], u: { each: 114 } },
-    { n: "McChicken", k: 279.7, d: 143, p: 9.8, c: 28, f: 13.2, a: ["mcchicken", "mcchickens"], u: { each: 143 } },
-    { n: "Chicken McNuggets", k: 259.3, d: 162, p: 14.2, a: ["mcnuggets", "chicken mcnuggets", "mcnugget"], u: { each: 16.2 } },
-    { n: "McDonalds fries, medium", k: 288.3, d: 111, p: 4.5, c: 42.6, f: 15.5, a: ["mcdonalds fries", "mcdonalds medium fries"], u: { each: 111 } },
-    { n: "McDonalds fries, large", k: 311.7, d: 154, p: 4.5, c: 42.6, f: 15.5, a: ["mcdonalds large fries"], u: { each: 154 } },
-    { n: "Egg McMuffin", k: 229.6, d: 135, p: 12.6, c: 21.7, f: 9.7, a: ["egg mcmuffin", "mcmuffin"], u: { each: 135 } },
-    { n: "Sausage McMuffin with egg", k: 294.5, d: 163, p: 12.3, c: 17.3, f: 17.8, a: ["sausage mcmuffin", "sausage mcmuffin with egg"], u: { each: 163 } },
-    { n: "McDonalds hash brown", k: 264.2, d: 53, p: 1.9, c: 28.6, f: 16.3, a: ["mcdonalds hash brown"], u: { each: 53 } },
-    { n: "McFlurry", k: 178.9, d: 285, p: 4.2, c: 26.8, f: 6.5, a: ["mcflurry"], u: { each: 285 } },
-    { n: "Whopper", k: 243.3, d: 270, p: 11.5, c: 16.7, f: 15.3, a: ["whopper", "whoppers"], u: { each: 270 } },
-    { n: "Whopper with cheese", k: 254.3, d: 291, p: 12, c: 16.7, f: 15.3, a: ["whopper with cheese", "whoppers with cheese"], u: { each: 291 } },
-    { n: "Daves Single", k: 270.6, d: 218, p: 13.3, c: 17.7, f: 15.8, a: ["daves single", "dave's single"], u: { each: 218 } },
-    { n: "Baconator", k: 319.9, d: 297, p: 19.2, a: ["baconator", "baconators"], u: { each: 297 } },
-    { n: "Wendys spicy chicken sandwich", k: 230, d: 213, p: 13.1, c: 21.6, f: 8.1, a: ["spicy chicken sandwich"], u: { each: 213 } },
-    { n: "Wendys chili", k: 105.7, d: 227, p: 7.5, c: 6.1, f: 7.1, a: ["wendys chili"], u: { each: 227 } },
-    { n: "Chick-fil-A chicken sandwich", k: 240.4, d: 183, p: 15.3, c: 20.9, f: 11.2, a: ["chick fil a sandwich", "chickfila sandwich", "chick-fil-a sandwich"], u: { each: 183 } },
-    { n: "Chick-fil-A spicy deluxe", k: 247.7, d: 222, p: 14.4, a: ["spicy deluxe"], u: { each: 222 } },
-    { n: "Chick-fil-A nuggets, 8 ct", k: 221.2, d: 113, p: 23.9, c: 9.7, f: 9.7, a: ["chick fil a nuggets", "chickfila nuggets"], u: { each: 14.1 } },
-    { n: "Waffle fries, medium", k: 336, d: 125, p: 4, c: 36, f: 19.2, a: ["waffle fries"], u: { each: 125, serving: 125 } },
-    { n: "Crunchy taco", k: 217.9, d: 78, p: 10.3, c: 19.1, f: 10.9, a: ["crunchy taco", "crunchy tacos", "taco bell taco"], u: { each: 78 } },
-    { n: "Burrito Supreme", k: 161.3, d: 248, p: 6.5, c: 23.4, f: 6.8, a: ["burrito supreme"], u: { each: 248 } },
-    { n: "Crunchwrap Supreme", k: 208.7, d: 254, p: 6.3, c: 21.4, f: 12.5, a: ["crunchwrap"], u: { each: 254 } },
-    { n: "Taco Bell chicken quesadilla", k: 277.2, d: 184, p: 14.1, a: ["taco bell quesadilla"], u: { each: 184 } },
-    { n: "Chipotle chicken burrito bowl", k: 133, d: 500, p: 9.4, a: ["chipotle chicken bowl", "chipotle burrito bowl"], u: { each: 500 } },
-    { n: "Chipotle chicken burrito", k: 152.3, d: 640, p: 8.3, a: ["chipotle burrito"], u: { each: 640 } },
-    { n: "Subway 6 inch turkey", k: 127.9, d: 219, p: 8.2, a: ["subway turkey", "6 inch turkey"], u: { each: 219 } },
-    { n: "Subway 6 inch Italian BMT", k: 176, d: 233, p: 8.2, a: ["italian bmt"], u: { each: 233 } },
-    { n: "Subway footlong steak and cheese", k: 162.8, d: 430, p: 9.8, a: ["footlong steak and cheese"], u: { each: 430 } },
-    { n: "KFC original chicken breast", k: 242.2, d: 161, p: 24.2, c: 6.3, f: 13.1, a: ["kfc breast", "original recipe breast"], u: { each: 161 } },
-    { n: "KFC chicken drumstick", k: 236.4, d: 55, p: 21.8, c: 5.4, f: 14.2, a: ["kfc drumstick"], u: { each: 55 } },
-    { n: "Pepperoni pizza slice", k: 265.5, d: 113, p: 11.5, c: 27.8, f: 13.1, a: ["pizza slice", "pepperoni pizza slice", "pepperoni slice"], u: { each: 113, slice: 113 } },
-    { n: "Orange chicken", k: 314.1, d: 156, p: 16, a: ["orange chicken", "panda express orange chicken"], u: { each: 156 } },
-    { n: "Panda Express chow mein", k: 189.6, d: 269, p: 4.8, a: ["panda chow mein", "panda express chow mein"], u: { each: 269 } },
-    { n: "Five Guys hamburger", k: 231, d: 303, p: 12.9, a: ["five guys burger", "five guys hamburger"], u: { each: 303 } },
-    { n: "In-N-Out Double-Double", k: 203, d: 330, p: 11.2, a: ["double double", "in n out double"], u: { each: 330 } },
-    { n: "Popeyes chicken sandwich", k: 291.7, d: 240, p: 11.7, c: 26.4, f: 13.9, a: ["popeyes sandwich"], u: { each: 240 } },
-    { n: "Starbucks grande latte", k: 40.4, d: 470, p: 2.8, a: ["grande latte", "starbucks latte"], u: { each: 470 } },
-    { n: "Caramel Frappuccino, grande", k: 80.3, d: 473, p: 1.1, a: ["frappuccino", "frappucino"], u: { each: 473 } },
-    { n: "Dunkin bacon egg and cheese", k: 291.9, d: 161, p: 12.4, c: 22.5, f: 16.4, a: ["bacon egg and cheese"], u: { each: 161 } },
-    { n: "Sausage egg and cheese biscuit", k: 325.2, d: 163, p: 11.7, c: 17, f: 22.1, a: ["sausage egg and cheese"], u: { each: 163 } },
-    { n: "Buffalo chicken wrap", k: 214.3, d: 280, p: 10.7, a: ["chicken wrap", "buffalo wrap"], u: { each: 280 } },
-    { n: "Philly cheesesteak", k: 220.6, d: 340, p: 11.8, a: ["cheesesteak", "philly cheesesteak"], u: { each: 340 } },
-    // condiments + sweets + drinks
-    { n: "Honey", k: 304, d: 21, p: 0.3, c: 82.4, f: 0, a: ["honey"], u: { tbsp: 21 } },
-    { n: "Sugar", k: 387, d: 12.5, p: 0, c: 100, f: 0, a: ["sugar"], u: { tbsp: 12.5, tsp: 4.2 } },
-    { n: "Ketchup", k: 101, d: 17, p: 1.3, c: 27.4, f: 0.1, a: ["ketchup"], u: { tbsp: 17 } },
-    { n: "Mayonnaise", k: 680, d: 14, p: 1, c: 0.6, f: 74.8, a: ["mayo", "mayonnaise"], u: { tbsp: 14 } },
-    { n: "Ranch dressing", k: 430, d: 30, p: 1.3, c: 5.9, f: 44.5, a: ["ranch", "ranch dressing"], u: { tbsp: 15 } },
-    { n: "Soy sauce", k: 53, d: 16, p: 8, c: 4.9, f: 0.6, a: ["soy sauce"], u: { tbsp: 16 } },
-    { n: "Salsa", k: 36, d: 32, p: 1.5, c: 6.7, f: 0.2, a: ["salsa"], u: { tbsp: 16 } },
-    { n: "Pizza", k: 266, d: 107, p: 11, c: 33, f: 10.4, a: ["pizza"], u: { slice: 107, each: 107 } },
-    { n: "Ice cream", k: 207, d: 132, p: 3.5, c: 23.6, f: 11, a: ["ice cream"], u: { cup: 132 } },
-    { n: "Chocolate", k: 546, d: 40, p: 4.9, c: 61.2, f: 31.3, a: ["chocolate"], u: { serving: 40 } },
-    { n: "Orange juice", k: 45, d: 248, p: 0.7, c: 10.2, f: 0.3, a: ["orange juice"], u: { cup: 248 } },
-    { n: "Beer", k: 43, d: 355, p: 0.5, c: 3.5, f: 0, a: ["beer"], u: { can: 355, bottle: 355, each: 355 } },
-    { n: "Soda", k: 41, d: 355, p: 0, c: 10.7, f: 0, a: ["soda", "coke", "pepsi"], u: { can: 355, each: 355 } },
-    { n: "Coffee, black", k: 1, d: 237, p: 0.1, c: 0, f: 0, a: ["coffee", "black coffee"], u: { cup: 237 } },
-  
-    { n: "Cookie", k: 480, d: 30, p: 5, c: 65.4, f: 24.7, a: ["cookie", "cookies", "biscuit sweet"], u: { each: 30 } },
-    { n: "Brownie", k: 466, d: 60, p: 6, c: 50.2, f: 29.1, a: ["brownie", "brownies"], u: { each: 60 } },
-    { n: "Cake", k: 350, d: 100, p: 4, c: 49.2, f: 16.4, a: ["cake", "birthday cake"], u: { slice: 100 } },
-    { n: "Cheesecake", k: 321, d: 125, p: 5.5, c: 25.5, f: 22.5, a: ["cheesecake"], u: { slice: 125 } },
-    { n: "Pie", k: 260, d: 125, p: 2.5, c: 37.1, f: 12.5, a: ["pie", "apple pie"], u: { slice: 125 } },
-    { n: "Candy bar", k: 490, d: 50, p: 5, c: 58.9, f: 26.6, a: ["candy bar", "snickers", "chocolate bar"], u: { each: 50 } },
-    { n: "Gummy candy", k: 350, d: 40, p: 0, c: 98.9, f: 0, a: ["gummy", "gummies", "gummy bears", "haribo"], u: {} },
-    { n: "Tortilla chips", k: 489, d: 28, p: 7, c: 67.8, f: 20.7, a: ["tortilla chips", "doritos"], u: { serving: 28 } },
-    { n: "Granola bar", k: 471, d: 40, p: 8, c: 63.6, f: 20.4, a: ["granola bar", "cereal bar"], u: { each: 40 } },
-    { n: "Maple syrup", k: 260, d: 20, p: 0, c: 67, f: 0.1, a: ["maple syrup", "syrup"], u: { tbsp: 20 } },
-    { n: "Jam", k: 278, d: 20, p: 0.4, c: 68.9, f: 0.1, a: ["jam", "jelly", "preserves"], u: { tbsp: 20 } },
-    { n: "BBQ sauce", k: 172, d: 30, p: 0.8, c: 40.8, f: 0.6, a: ["bbq sauce", "barbecue sauce"], u: { tbsp: 17 } },
-    { n: "Mustard", k: 66, d: 15, p: 4, c: 5.3, f: 3.4, a: ["mustard"], u: { tbsp: 15 } },
-    { n: "Wine", k: 83, d: 148, p: 0.1, c: 2.6, f: 0, a: ["wine", "red wine", "white wine"], u: {} },
-    { n: "Spirits", k: 231, d: 44, p: 0, a: ["vodka", "whiskey", "whisky", "gin", "rum", "tequila", "spirits"], u: {} },
-    { n: "Energy drink", k: 45, d: 250, p: 0, c: 11.3, f: 0, a: ["energy drink", "red bull", "monster"], u: { can: 250 } },
-    { n: "Sports drink", k: 25, d: 350, p: 0, c: 6.4, f: 0, a: ["gatorade", "sports drink", "powerade"], u: { bottle: 350 } },
-    { n: "Latte", k: 55, d: 350, p: 3, c: 7.5, f: 1.6, a: ["latte", "flat white"], u: { cup: 350 } },
-    { n: "Cappuccino", k: 40, d: 240, p: 2.5, a: ["cappuccino"], u: { cup: 240 } },
-    { n: "Milkshake", k: 112, d: 300, p: 3, a: ["milkshake", "shake"], u: {} },
-    { n: "Smoothie", k: 60, d: 300, p: 1.5, c: 11.6, f: 1.1, a: ["smoothie"], u: {} },
-    { n: "Apple juice", k: 46, d: 248, p: 0.1, c: 11.1, f: 0.1, a: ["apple juice"], u: { cup: 248 } },];
-
   var WEIGHT_UNITS = { g: 1, gram: 1, grams: 1, gm: 1, gs: 1, kg: 1000, kilogram: 1000, kilograms: 1000,
     oz: 28.3495, ounce: 28.3495, ounces: 28.3495, ozs: 28.3495,
     lb: 453.592, lbs: 453.592, pound: 453.592, pounds: 453.592 };
@@ -4849,8 +4450,8 @@
         }
         // or what you typed appearing inside the saved name. You save "Costco
         // protein coffee" and later just type "protein coffee"; without this it
-        // misses the pantry entirely and the built-in table answers "coffee"
-        // with 1 kcal, which is worse than saying nothing.
+        // misses the pantry entirely and the food finder is asked about plain
+        // "coffee", which is worse than saying nothing.
         //
         // Two words minimum, and only as a whole run of them: a bare "coffee"
         // should still mean coffee, not whatever coffee-ish thing you once saved.
@@ -4954,22 +4555,17 @@
 
   // A handful of real food names contain the words this splits on — "mac and
   // cheese", "half and half". Without protecting them the splitter tears them
-  // apart before any matching happens, and "mac and cheese" silently resolves
-  // to cheddar. Stitch those names back together across the split.
-  var JOINED = null;
+  // apart before the pantry ever sees them. The table that used to supply the
+  // names is gone, so your own pantry's names protect themselves; anything
+  // the pantry doesn't know goes to the food finder as typed (runEstimate).
   function joinedAliases() {
-    if (JOINED) return JOINED;
-    JOINED = [];
-    FOODS.forEach(function (f) {
-      (f.a || []).forEach(function (a) { if (/\s(?:and|with)\s/.test(a)) JOINED.push(a); });
-      // A food's own name protects itself too: "Quarter Pounder with cheese"
-      // had only "quarter pounder" as an alias, so typing its full name split
-      // on "with" and logged a second, separate serving of cheddar.
-      var own = normalize(f.n);
-      if (/\s(?:and|with)\s/.test(own) && JOINED.indexOf(own) === -1) JOINED.push(own);
+    var out = [];
+    pantryEntries().forEach(function (e) {
+      e.a.forEach(function (a) {
+        if (/\s(?:and|with)\s/.test(a) && out.indexOf(a) === -1) out.push(a);
+      });
     });
-    JOINED.sort(function (x, y) { return y.length - x.length; });   // longest first
-    return JOINED;
+    return out.sort(function (x, y) { return y.length - x.length; });   // longest first
   }
 
   function splitItems(text) {
@@ -4986,49 +4582,6 @@
       .filter(function (x) { return x.length > 1; });
   }
 
-
-  // Longest whole-word alias wins, so "top sirloin" beats "sirloin".
-  // The longest name in the table found inside what was typed — and which
-  // name it was, so the review can say when it covered only part of it.
-  function matchIn(list, q) {
-    var h = matchAlias(list, q);
-    return h ? h.f : null;
-  }
-  function matchAlias(list, q) {
-    var norm = " " + normalize(q) + " ";
-    var wantsDry = /\b(dry|uncooked|raw)\b/.test(norm);
-    var best = null, bestLen = 0;
-    list.forEach(function (f) {
-      f.a.forEach(function (alias) {
-        if (!alias || norm.indexOf(" " + alias + " ") === -1) return;
-        var len = alias.length;
-        var dryAlias = /\b(dry|uncooked|raw)\b/.test(alias);
-        if (wantsDry && dryAlias) len += 20;      // prefer the dry entry when asked
-        if (!wantsDry && dryAlias) len -= 20;     // and avoid it otherwise
-        if (len > bestLen) { bestLen = len; best = { f: f, alias: alias }; }
-      });
-    });
-    return bestLen > 0 ? best : null;
-  }
-
-  // Words typed that the match did not cover. "Cava harissa avocado bowl"
-  // matched "avocado" and logged a 240 kcal avocado for a bowl several times
-  // that, with nothing to say it had guessed: the confident wrong number this
-  // app exists to avoid. Cooking words and sizes do not count as missed —
-  // "grilled chicken breast" is still chicken breast.
-  var NEUTRAL_WORDS = " a an the of with and or my some fresh homemade home made plain cooked large small medium " +
-    "regular big little piece pieces serving servings grilled baked roasted steamed boiled sliced chopped diced whole ";
-  function missedWords(name, alias) {
-    var aw = normalize(alias).split(" ");
-    return normalize(name).split(" ").filter(function (w) {
-      if (!w || /^\d/.test(w) || NEUTRAL_WORDS.indexOf(" " + w + " ") > -1) return false;
-      return !aw.some(function (a) { return a === w || a + "s" === w || a === w + "s" || a + "es" === w; });
-    });
-  }
-
-  function matchFood(q) {
-    return matchIn(FOODS, q);
-  }
 
   function parseQty(chunk) {
     var norm = normalize(chunk);
@@ -5087,83 +4640,10 @@
     }).join("");
   }
 
-  // Your own pantry answers first; the built-in table is the fallback.
+  // Your own pantry is the one list left on the phone. Whatever it can't
+  // answer goes to the food finder.
   function resolveLocal(chunk) {
-    return resolvePantry(chunk) || resolveTable(chunk);
-  }
-
-  // Resolve one chunk against the built-in table. Null when it can't answer.
-  function resolveTable(chunk) {
-    var p = parseQty(chunk);
-    var hit = matchAlias(FOODS, p.name) || matchAlias(FOODS, p.whole);
-    var food = hit && hit.f;
-    if (!food) return null;
-    var missed = missedWords(p.name, hit.alias + " " + normalize(food.n));
-
-    var grams = null, amount = "", showGrams = true, assumed = false, typedUnit = null;
-    if (p.unit && p.unit.kind === "weight") {
-      grams = (p.qty || 1) * p.unit.grams;
-      var label = p.unit.grams === 1 ? "g" : p.unit.grams === 28.3495 ? "oz"
-                : p.unit.grams === 453.592 ? "lb" : "kg";
-      // Say it back in the unit it was said in. Someone who typed "6 oz" and
-      // is shown 170 g has to do arithmetic to check their own entry.
-      if (WEIGH[label]) typedUnit = label;
-      amount = (p.qty || 1) + " " + label;
-      showGrams = label !== "g";                   // don't print grams twice
-    } else if (p.unit && p.unit.kind === "portion") {
-      var per = food.u && food.u[p.unit.key];
-      if (!per) return null;                       // unit we can't weigh for this food
-      grams = (p.qty || 1) * per;
-      // "each" is how the table weighs one of a thing, not a word to show:
-      // "2 medium fries" read back as "2 eachs".
-      amount = p.unit.key === "each" ? String(p.qty || 1)
-        : (p.qty || 1) + " " + p.unit.key + (p.qty > 1 ? "s" : "");
-    } else if (p.qty && food.u && (food.u.each || food.u.slice)) {
-      var one = food.u.each || food.u.slice;
-      grams = p.qty * one;
-      amount = p.qty + " × " + Math.round(one) + " g";
-      showGrams = false;
-    } else if (food.d) {
-      // No amount given — fall back to a typical serving so "chicken and rice"
-      // still produces a number. Flagged as an assumption you can edit.
-      var n = p.qty || 1;
-      grams = n * food.d;
-      assumed = true;
-      if (n > 1) {
-        amount = n + " × " + Math.round(food.d) + " g";
-        showGrams = false;
-      } else {
-        amount = "";                               // the tag already says "typical serving"
-      }
-    } else if (!p.qty && food.u && food.u.serving) {
-      grams = food.u.serving;
-      amount = "1 serving";
-    } else {
-      return null;                                 // nothing we can size it by
-    }
-
-    return {
-      food: food.n,
-      assumed: assumed,
-      amount: showGrams
-        ? (amount ? amount + " · " : "") + Math.round(grams) + " g"
-        : amount,
-      // A typical serving is a guess about *your* portion, so the weight has to
-      // be correctable. Editing it re-derives the macros, which needs the basis
-      // rather than the rendered string: the grams, and the per-100 g figures.
-      grams: Math.round(grams),
-      unit: typedUnit,                  // null means "whatever you weigh in"
-      per100: { k: food.k, p: food.p, c: food.c == null ? null : food.c, f: food.f == null ? null : food.f },
-      pre: showGrams ? amount : "",     // "1 cup", "2 ×" — describes the weight
-      calories: Math.round((food.k * grams) / 100),
-      protein: Math.round((food.p * grams) / 100),
-      carbs: food.c == null ? null : Math.round((food.c * grams) / 100),
-      fat: food.f == null ? null : Math.round((food.f * grams) / 100),
-      src: assumed ? "typical" : "table",
-      // what was typed, for the library to search, and what the match missed
-      chunk: chunk,
-      partial: missed.length ? missed : null
-    };
+    return resolvePantry(chunk);
   }
 
   // ---------- macro estimator ----------
@@ -5187,8 +4667,8 @@
 
   // One table row becomes one chunk of the same sentence the words box would
   // have produced, so the table is a way to *compose* the input rather than a
-  // second code path — pantry, the built-in table and Claude all resolve it
-  // exactly as before.
+  // second code path — the pantry and the food finder resolve it exactly as
+  // the words would be.
   function rowChunk(r) {
     var food = String((r && r.food) || "").trim();
     if (!food) return "";
@@ -5202,9 +4682,81 @@
     return estRows.map(rowChunk).filter(Boolean).join(" & ");
   }
 
+  // ---------- the food finder ----------
+  // Asked for by the owner in place of the lists the app used to ship — the
+  // built-in table, USDA's library and the chains' menus: anything your pantry
+  // doesn't know goes to a free AI. And with nothing to set up: no key to
+  // paste, no sign-in. A key cannot live in this file (the site is public, so
+  // it would be copied out and its free allowance used up), so the app asks a
+  // small relay the owner runs on Cloudflare's free tier — relay/worker.js —
+  // which holds the key, asks Gemini, checks the numbers add up and asks again
+  // if they don't. Only the words that describe the food and the country are
+  // sent, never the log. Inside Claude, where a published artifact cannot
+  // reach the internet, the relay is out of reach and Claude answers instead,
+  // as it always has.
+  //
+  // A copy opened from disk has no web address, and the relay answers only
+  // the app's own (relay/worker.js, originAllowed), so it does not ask: it
+  // says the finder isn't available in it, rather than failing every time.
+  // That is also what keeps the suites, which open the app from disk, off
+  // the network. window.IRON_LEDGER_RELAY, when set, points the app at
+  // another relay: the suites' stand-in (tests/fakeai.py), or `wrangler dev`.
+  var RELAY_URL = "https://iron-ledger-finder.tommy-auld02.workers.dev/find";
+  var RELAY = typeof window.IRON_LEDGER_RELAY === "string" ? window.IRON_LEDGER_RELAY
+            : location.protocol === "file:" ? "" : RELAY_URL;
+  // The relay may ask Gemini twice; a phone in a restaurant is on whatever
+  // signal it has. Long enough for a slow answer, short enough not to look hung.
+  var RELAY_WAIT = 45000;
+  // Who answers what the pantry can't: the relay, Claude, or nobody ("").
+  function finder() { return RELAY ? "relay" : sampleFn ? "claude" : ""; }
+
+  function aiErr(code, detail) { var e = new Error(detail || code); e.code = code; return e; }
+  // One question to the relay. Every way it can fail has a code, so what the
+  // person reads says what actually happened.
+  function relayFind(text) {
+    if (!window.fetch) return Promise.reject(aiErr("unreachable"));
+    var ctl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, RELAY_WAIT);
+    return fetch(RELAY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ food: text, region: store.region || "United States" }),
+      signal: ctl ? ctl.signal : undefined
+    }).then(function (r) {
+      return r.text().then(function (body) {
+        var j = null;
+        try { j = JSON.parse(body); } catch (e) { /* read below */ }
+        if (!r.ok) throw aiErr((j && j.error) || (r.status === 429 ? "busy" : "trouble"), "relay " + r.status);
+        if (!j || !Array.isArray(j.items)) throw aiErr("unreadable");
+        return j;
+      });
+    }, function (e) {
+      throw aiErr(e && e.name === "AbortError" ? "timeout" : navigator.onLine === false ? "offline" : "unreachable", String(e));
+    }).then(function (out) { clearTimeout(timer); return out; },
+            function (e) { clearTimeout(timer); throw e; });
+  }
+  function finderMessage(e) {
+    var code = e && e.code;
+    return code === "busy" ? "The food finder is busy, or at today’s free limit. Give it a minute and try again."
+      : code === "slow_down" ? "That’s a lot of lookups from this phone in a minute. Give it a moment and try again."
+      : code === "too_long" ? "That’s a lot at once. Try it in two shorter goes."
+      : code === "not_set_up" || code === "origin" ? "The food finder isn’t available right now. Type the numbers in for now."
+      : code === "key" || code === "model" || code === "failed" || code === "trouble"
+        ? "The food finder had a problem on its side. Try again in a bit, or type the numbers in."
+      : code === "offline" ? "No connection. The food finder needs the internet — try again with signal, or type the numbers in."
+      : code === "timeout" ? "The food finder took too long. Try again, or type the numbers in."
+      : code === "unreachable" ? "Couldn’t reach the food finder. Check the connection and try again."
+      : code === "unreadable" ? "The answer didn’t come back as numbers. Try again, or describe it a little differently."
+      : code === "rate_limited" ? "Too many estimates just now. Give it a minute and try again."
+      : code === "not_granted" ? "Estimating isn’t available in this window. Open the app inside Claude and try again."
+      : "That didn’t come back. Try again, or type the numbers in.";
+  }
+
+  // Asked of Claude, inside Claude. Keep in step with estimatePrompt() in
+  // relay/worker.js, which asks Gemini the same question for the phone.
   function estimatePrompt(text) {
     var region = store.region || "United States";
-    return "You estimate calories and protein for food descriptions. Reply with JSON only.\n\n" +
+    return "You find the calories and macros of food people have eaten. Reply with JSON only.\n\n" +
       "Food eaten: \"" + text + "\"\n" +
       "Country: " + region + "\n\n" +
       "Rules:\n" +
@@ -5212,60 +4764,104 @@
         "restaurant products, and its typical cuts, preparations and serving sizes. A named store " +
         "or brand means that country's version of it, and an ambiguous unit means whatever that " +
         "country normally uses.\n" +
-      "- Split the description into individual foods, one object each.\n" +
+      "- Split the description into individual foods, one object each. A restaurant order is one object per item.\n" +
       "- Use the stated quantity. Weights of rice, pasta and grains are cooked weight unless the text says dry or uncooked.\n" +
-      "- If a brand or store is named and you know its published values, use them; otherwise use the generic equivalent.\n" +
+      "- If a brand, store or restaurant is named and you know its published nutrition, use those figures " +
+        "and set basis to \"published\". For a generic food use standard food composition data and set basis " +
+        "to \"typical\". If you are unsure what it is or how big it was, give your best estimate and set basis to \"rough\".\n" +
       "- If a quantity is missing, assume one typical serving and say so in the note.\n" +
-      "- calories: whole number of kcal. protein: whole number of grams.\n" +
+      "- If the text is not food at all, return no items.\n" +
+      "- amount: how much, in a few words, such as \"6 oz\", \"1 cup\", \"1 medium\" or \"1 burger\".\n" +
+      "- grams: what that amount weighs in grams, or 0 if you cannot say.\n" +
+      "- calories: whole kcal. protein, carbs, fat: whole grams. Calories should come close to " +
+        "4 x protein + 4 x carbs + 9 x fat, apart from alcohol.\n" +
       "- note: one short sentence naming any assumption worth knowing, or an empty string.\n\n" +
-      'Return exactly this shape: {"items":[{"food":"","amount":"","calories":0,"protein":0}],"note":""}';
+      'Return exactly this shape: {"items":[{"food":"","amount":"","grams":0,"calories":0,"protein":0,' +
+        '"carbs":0,"fat":0,"basis":"typical"}],"note":""}';
+  }
+  // The finder's own check. Calories come to about 4 a gram of protein and
+  // carbs and 9 a gram of fat, so an answer far from that has a slip in it —
+  // the check the menu generator used to refuse a copied line on.
+  function addsUp(it) {
+    if (it.carbs == null || it.fat == null || !it.calories) return true;
+    var sum = 4 * it.protein + 4 * it.carbs + 9 * it.fat;
+    return Math.abs(sum - it.calories) <= Math.max(40, it.calories * 0.2);
+  }
+  function recheckPrompt(text, out, off) {
+    return estimatePrompt(text) + "\n\nYou answered:\n" + JSON.stringify(out) + "\n\n" +
+      "These don't add up — calories should come close to 4 x protein + 4 x carbs + 9 x fat: " +
+      off.map(function (it) {
+        return it.food + " (" + it.calories + " kcal, but " + (4 * it.protein + 4 * it.carbs + 9 * it.fat) + " from its macros)";
+      }).join("; ") +
+      ". Check them and answer again in exactly the same shape. If alcohol explains a gap, keep its calories and say so in the note.";
+  }
+  var BASIS = { published: "brand’s figures", typical: "typical", rough: "rough guess" };
+  function modelItems(out, src) {
+    function n(v) { var x = Math.round(Number(v)); return isFinite(x) && x >= 0 ? x : null; }
+    return (out && Array.isArray(out.items) ? out.items : []).filter(function (it) { return it && it.food; })
+      .map(function (it) {
+        var cal = n(it.calories) || 0, pro = n(it.protein) || 0, c = n(it.carbs), f = n(it.fat), g = n(it.grams);
+        var row = { food: String(it.food), amount: it.amount ? String(it.amount) : "",
+                    calories: cal, protein: pro, carbs: c, fat: f, src: src,
+                    basis: BASIS[it.basis] ? it.basis : "" };
+        // A weight makes the portion correctable in the review, the way a
+        // pantry food weighed in grams is; the macros follow the grams.
+        if (g > 0 && cal) {
+          row.grams = g; row.pre = row.amount;
+          row.per100 = { k: cal * 100 / g, p: pro * 100 / g,
+                         c: c == null ? null : c * 100 / g, f: f == null ? null : f * 100 / g };
+          // A weight you typed comes back in the unit you typed it in.
+          var w = row.amount.match(/^\s*[\d.\/ ]+\s*(g|oz|lb)s?\.?\s*$/i);
+          if (w) { row.unit = w[1].toLowerCase(); row.pre = ""; }
+        }
+        row.off = !addsUp(row);
+        return row;
+      });
+  }
+  // A small agent rather than a single question: ask, check that the answer
+  // adds up, and ask once more about anything that doesn't — a second look
+  // fixes most slips. For the phone the relay does this (relay/worker.js);
+  // inside Claude it happens here. Whatever still doesn't add up is flagged
+  // on its row either way, because modelItems() checks every answer again.
+  function findMacros(text) {
+    if (RELAY) {
+      return relayFind(text).then(function (out) {
+        return { items: modelItems(out, "ai"), note: out && out.note ? String(out.note) : "" };
+      }, function (e) {
+        // Out of reach, as it always is inside Claude: Claude answers instead.
+        if (sampleFn && e && e.code === "unreachable") return askClaude(text);
+        throw e;
+      });
+    }
+    if (!sampleFn) return Promise.reject(aiErr("no_finder"));
+    return askClaude(text);
+  }
+  function askClaude(text) {
+    function note(o) { return o && o.note ? String(o.note) : ""; }
+    function ask(prompt) { return sampleFn.json(prompt, { modelTier: "default", cache: true }); }
+    return ask(estimatePrompt(text)).then(function (out) {
+      var items = modelItems(out, "claude");
+      var off = items.filter(function (it) { return it.off; });
+      if (!off.length) return { items: items, note: note(out) };
+      return ask(recheckPrompt(text, out, off)).then(function (out2) {
+        var again = modelItems(out2, "claude");
+        var still = again.filter(function (it) { return it.off; }).length;
+        return again.length && still < off.length ? { items: again, note: note(out2) || note(out) }
+                                                  : { items: items, note: note(out) };
+      }, function () { return { items: items, note: note(out) }; });
+    });
   }
 
   function unknownItem(chunk) {
     return { food: chunk, amount: "", calories: 0, protein: 0, src: "unknown", chunk: chunk };
   }
 
-  // ---------- the food library ----------
-  // USDA FoodData Central — public domain, shipped with the app, searched on
-  // the phone: everyday foods, every cut of meat raw and cooked, home and
-  // restaurant dishes with their typical portions, and a fast-food group
-  // (McDonald's, Wendy's...). Built by tools/make-foods.py into
-  // vendor/usda/foods.js, which the service worker keeps from install, so a
-  // lookup needs no connection and sends nothing anywhere. It is loaded with a
-  // script tag on first use, not fetch(): a page opened from disk cannot fetch
-  // a file beside it, and the suites open the app from disk.
-  var LIB = null, libWaiters = null;
-  function libWords(name) {
-    return String(name).toLowerCase().replace(/[\u2019']s\b/g, "s").replace(/[^a-z0-9]+/g, " ").trim().split(" ");
-  }
-  function loadLibrary(done) {
-    if (LIB) { done(LIB); return; }
-    if (libWaiters) { libWaiters.push(done); return; }
-    libWaiters = [done];
-    var s = document.createElement("script");
-    function finish() {
-      var d = window.IRON_LEDGER_FOODS;
-      if (d && d.foods) {
-        LIB = { sets: d.sets || {}, foods: d.foods.map(function (f) {
-          return { n: f[0], t: f[1], k: f[2], p: f[3], u: f[4] || [], c: f[5] == null ? null : f[5],
-                   fa: f[6] == null ? null : f[6], w: libWords(f[0]) };
-        }) };
-        window.IRON_LEDGER_FOODS = null;      // the index is kept; the raw copy need not be
-      }
-      var ws = libWaiters; libWaiters = null;
-      ws.forEach(function (fn) { fn(LIB); });
-      if (!LIB) s.remove();                   // so a later press can try again
-    }
-    s.onload = finish;
-    s.onerror = finish;
-    s.src = "vendor/usda/foods.js";
-    document.head.appendChild(s);
-  }
   // Grocery brands: USDA's Branded Foods, ~400,000 products as sold, with each
-  // label's serving and barcode. Built by tools/make-brands.py into a file
-  // named for USDA's release, kept by the service worker in a store of its
-  // own that app updates leave alone. It is a download the owner chooses
-  // (store.brandsOn), from the library or Settings, never a surprise one.
+  // label's serving and barcode, which is what a scanned barcode is looked up
+  // in. Built by tools/make-brands.py into a file named for USDA's release,
+  // kept by the service worker in a store of its own that app updates leave
+  // alone. It is a download the owner chooses (store.brandsOn), from the
+  // scanner or Settings, never a surprise one.
   // Held as columns, not records: one long lowercase "brand|name" line per
   // product, searched with indexOf, so half a million small objects never
   // have to exist on a phone.
@@ -5299,65 +4895,12 @@
     document.head.appendChild(s);
   }
   function brLine(i) { return BR.text.slice(BR.starts[i], BR.starts[i + 1] - 1); }
-  function brAt(pos) {                       // which product a position in the text is in
-    var lo = 0, hi = BR.n - 1;
-    while (lo < hi) { var mid = (lo + hi + 1) >> 1; if (BR.starts[mid] <= pos) lo = mid; else hi = mid - 1; }
-    return lo;
-  }
   function titled(s) { return s.replace(/(^|[\s(\/-])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
   function brandRecord(i) {
     var line = brLine(i), bar = line.indexOf("|");
     return { i: i, brand: titled(line.slice(0, bar)), name: titled(line.slice(bar + 1)),
              k: BR.k[i], p: BR.p[i], sg: BR.sg[i], serving: BR.serving[i] || "",
              c: BR.c && BR.c[i] >= 0 ? BR.c[i] : null, f: BR.f && BR.f[i] >= 0 ? BR.f[i] : null };
-  }
-  // Look first where the rarest typed word is, then rank those products the
-  // way the everyday library ranks: most typed words, then the plainest name,
-  // with a nudge for words that are the brand.
-  function searchBrands(text) {
-    if (!BR) return [];
-    var qs = libWords(text).filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
-    if (!qs.length) return [];
-    function needle(w) { return w.length > 4 && /es$/.test(w) ? w.slice(0, -2) : w.length > 3 && /s$/.test(w) ? w.slice(0, -1) : w; }
-    function starts(t, pos) { var c = pos ? t.charCodeAt(pos - 1) : 10; return c === 10 || c === 32 || c === 124 || c === 40 || c === 45; }
-    var t = BR.text, needles = [];
-    qs.forEach(function (w) {
-      var nd = needle(w), cnt = 0;
-      for (var pos = t.indexOf(nd); pos > -1 && cnt < 20000; pos = t.indexOf(nd, pos + 1)) if (starts(t, pos)) cnt++;
-      if (cnt) needles.push({ nd: nd, cnt: cnt });
-    });
-    if (!needles.length) return [];
-    // Rarest word first, then the next, until there are enough to rank: one
-    // odd word that happens to be in a single product must not hide the
-    // products that match everything else.
-    needles.sort(function (a, b) { return a.cnt - b.cnt; });
-    var seen = {}, cands = [];
-    for (var j = 0; j < needles.length && cands.length < 1500; j++) {
-      var nd = needles[j].nd;
-      for (var pos = t.indexOf(nd); pos > -1 && cands.length < 6000; pos = t.indexOf(nd, pos + 1)) {
-        if (!starts(t, pos)) continue;
-        var i = brAt(pos);
-        if (!seen[i]) { seen[i] = true; cands.push(i); }
-      }
-    }
-    var scored = cands.map(function (i) {
-      var line = brLine(i), bar = line.indexOf("|");
-      var all = libWords(line.replace("|", " ")), bw = libWords(line.slice(0, bar));
-      var hits = 0;
-      qs.forEach(function (q) { if (all.some(function (w) { return libHit(q, w); })) hits++; });
-      // Was the brand itself typed? Whole words only, so "rice" is not
-      // Riceland, and all of a brand's words or a long first one, so "big
-      // mac" is not the Big Y supermarket while "kirkland" is still Kirkland
-      // Signature.
-      var bq = bw.filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
-      var typed = function (w) { return qs.some(function (q) { return w === q || w === q + "s" || w + "s" === q; }); };
-      var named = bq.length && (bq.every(typed) || (bq[0].length >= 5 && typed(bq[0]))) ? 1 : 0;
-      return { i: i, hits: hits, named: named, score: hits * 100 - Math.max(0, all.length - hits) * 2 + named * 10 };
-    });
-    var most = scored.reduce(function (m, x) { return Math.max(m, x.hits); }, 0);
-    return scored.filter(function (x) { return x.hits && x.hits === most; })
-      .sort(function (a, b) { return b.score - a.score; })
-      .slice(0, 8).map(function (x) { var r = brandRecord(x.i); r.hits = x.hits; r.named = x.named; return r; });
   }
   // How much of a product: the weight typed, or servings as the label states
   // them — "2 yogurts" is two of its containers — or 100 g if the label gave
@@ -5387,91 +4930,13 @@
     };
   }
 
-  // ---------- restaurant menus ----------
-  // Step 4 of the one-stop shop: what was eaten at a chain, from the numbers
-  // the chain itself publishes, offline. tools/make-menus.py builds
-  // vendor/menus/menus.js from the sources kept in tools/menus/, each read on
-  // a stated date; the service worker keeps it from install, like foods.js.
-  // A chain's item is [name, options], an option [name, grams, kcal, protein,
-  // carbs, fat], and an item with one option has a blank name for it.
-  var MENUS = null, menuWaiters = null;
-  function loadMenus(done) {
-    if (MENUS) { done(MENUS); return; }
-    if (menuWaiters) { menuWaiters.push(done); return; }
-    menuWaiters = [done];
-    var s = document.createElement("script");
-    function finish() {
-      var d = window.IRON_LEDGER_MENUS;
-      if (d && d.chains) { MENUS = d; window.IRON_LEDGER_MENUS = null; }
-      var ws = menuWaiters; menuWaiters = null;
-      ws.forEach(function (fn) { fn(MENUS); });
-      if (!MENUS) s.remove();
-    }
-    s.onload = finish; s.onerror = finish;
-    s.src = "vendor/menus/menus.js";
-    document.head.appendChild(s);
-  }
-  function menuChainById(id) {
-    return MENUS ? MENUS.chains.filter(function (c) { return c.id === id; })[0] || null : null;
-  }
-  function menuPick(o) {
-    var ch = menuChainById(o.c), it = ch && ch.groups[o.g] && ch.groups[o.g][1][o.i];
-    var op = it && it[1][o.o];
-    return op ? { ch: ch, it: it, op: op } : null;
-  }
-  function menuName(m) { return m.it[0] + (m.op[0] ? ", " + m.op[0] : ""); }
-  function menuChoices(ch) {
-    var n = 0; ch.groups.forEach(function (g) { g[1].forEach(function (it) { n += it[1].length; }); }); return n;
-  }
-  // One menu choice as a review row: counted, not weighed — "a medium fries"
-  // is the chain's medium fries, whatever it weighed.
-  function menuItem(o) {
-    var m = menuPick(o);
-    if (!m) return null;
-    var q = o.q || 1;
-    return {
-      food: m.ch.name + " " + menuName(m), amount: q > 1 ? q + " servings" : "",
-      calories: Math.round(m.op[2] * q), protein: Math.round(m.op[3] * q),
-      carbs: Math.round(m.op[4] * q), fat: Math.round(m.op[5] * q),
-      src: "menu", yr: (m.ch.read || "").slice(0, 4), chunk: ""
-    };
-  }
-  // Typed words find menu items too: "mcdonalds big mac" should be today's
-  // Big Mac before USDA's 2018 one. A chain counts as named on any of its
-  // own words ("mcdonalds", "chick", "taco bell").
-  function searchMenus(text) {
-    if (!MENUS) return [];
-    var qs = libWords(text).filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
-    if (!qs.length) return [];
-    var out = [];
-    MENUS.chains.forEach(function (ch) {
-      var cw = libWords(ch.name);
-      var named = qs.filter(function (q) { return cw.some(function (w) { return libHit(q, w) || libHit(q, w + "s"); }); }).length;
-      ch.groups.forEach(function (g, gi) {
-        g[1].forEach(function (it, ii) {
-          it[1].forEach(function (op, oi) {
-            var ws = libWords(it[0] + " " + op[0]);
-            var hits = qs.filter(function (q) { return ws.some(function (w) { return libHit(q, w); }); }).length;
-            if (!hits) return;
-            // the chain that was named outranks one that only shares a word
-            out.push({ c: ch.id, g: gi, i: ii, o: oi, hits: hits + named, named: named,
-                       score: named * 1000 + hits * 100 - Math.max(0, ws.length - hits) * 2 - oi });
-          });
-        });
-      });
-    });
-    var most = out.reduce(function (m, x) { return Math.max(m, x.hits); }, 0);
-    return out.filter(function (x) { return x.hits === most && x.hits - x.named > 0; })
-      .sort(function (a, b) { return b.score - a.score; }).slice(0, 6);
-  }
-
   // ---------- barcodes ----------
   // Step 3: point the camera at a package and it is found among the grocery
   // brands by the number under its bars, which USDA's data carries. The
   // reader is zxing-cpp compiled to WebAssembly (vendor/zxing/, MIT and
   // Apache-2.0), loaded on first use and kept by the service worker in the
   // data store a new build leaves alone. The engine ships as base64 inside a
-  // script so it loads from disk the way foods.js does.
+  // script so it loads from disk the way the grocery brands do.
   var ZX_JS = "vendor/zxing/zxing-reader-3.1.4.js", ZX_WASM = "vendor/zxing/zxing-reader-wasm-3.1.4.js";
   var ZX = null, zxWaiters = null;
   function loadZX(done) {
@@ -5555,140 +5020,115 @@
     return hit;
   }
 
-  var LIB_SKIP = " a an the of with and or my some ";
-  function libHit(q, w) {
-    if (q === w) return true;
-    if (q.length > 3 && (w === q + "s" || w + "s" === q || w === q + "es" || w + "es" === q)) return true;
-    return q.length >= 4 && w.indexOf(q) === 0;       // "chick" finds chicken
-  }
-  // The closest foods to what was typed: as many of its words as possible,
-  // then the plainest name. Raw and baby food sink unless they were asked for.
-  function searchLibrary(text) {
-    if (!LIB) return [];
-    var qs = libWords(text).filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
-    if (!qs.length) return [];
-    var wantsRaw = qs.some(function (w) { return w === "raw" || w === "uncooked" || w === "dry"; });
-    var scored = [];
-    LIB.foods.forEach(function (f) {
-      var hits = 0;
-      qs.forEach(function (q) { if (f.w.some(function (w) { return libHit(q, w); })) hits++; });
-      if (!hits) return;
-      var score = hits * 100 - Math.max(0, f.w.length - hits) * 2;
-      if (!wantsRaw && f.w.some(function (w) { return w === "raw" || w === "uncooked"; })) score -= 25;
-      if (f.w.some(function (w) { return w === "babyfood" || w === "infant"; })) score -= 60;
-      if (libHit(qs[0], f.w[0])) score += 8;
-      if (f.u.length) score += 3;
-      scored.push({ f: f, hits: hits, score: score });
-    });
-    var most = scored.reduce(function (m, x) { return Math.max(m, x.hits); }, 0);
-    return scored.filter(function (x) { return x.hits === most; })
-      .sort(function (a, b) { return b.score - a.score; })
-      .slice(0, 8).map(function (x) { return x.f; });
-  }
-  // How much of a library food: the weight typed, a portion named for the unit
-  // typed ("1 cup"), or its typical one ("1 item") times how many — and 100 g
-  // when USDA gives no portion, said as such rather than dressed up.
-  function libPortion(f, chunk) {
-    var p = parseQty(chunk || ""), q = p.qty || 1;
-    if (p.unit && p.unit.kind === "weight") {
-      var lab = p.unit.grams === 1 ? "g" : p.unit.grams === 28.3495 ? "oz" : p.unit.grams === 453.592 ? "lb" : null;
-      return { g: q * p.unit.grams, label: "", unit: WEIGH[lab] ? lab : null };
-    }
-    var us = f.u || [];
-    // "medium fries" means the medium portion, when USDA lists sizes
-    var size = (String(chunk || "").toLowerCase().match(/\b(small|medium|large|kids?|regular|jumbo|snack)\b/) || [])[1];
-    if (size) {
-      var sized = us.filter(function (x) { return x[0].toLowerCase().indexOf(size) > -1; })[0];
-      if (sized) return { g: q * sized[1], label: (q === 1 ? "" : q + " × ") + sized[0] };
-    }
-    if (p.unit && p.unit.key && p.unit.key !== "each") {
-      var named = us.filter(function (x) { return new RegExp("\\b" + p.unit.key + "s?\\b", "i").test(x[0]); })[0];
-      if (named) return { g: q * named[1], label: (q === 1 ? "" : q + " \u00d7 ") + named[0] };
-    }
-    var one = us.filter(function (x) { return /^1 (item|serving|sandwich|burger|piece|order|bowl|regular|medium)\b/i.test(x[0]); })[0] ||
-              us.filter(function (x) { return /^1\b/.test(x[0]); })[0] || us[0];
-    if (one) return { g: q * one[1], label: (q === 1 ? "" : q + " \u00d7 ") + one[0] };
-    return { g: q * 100, label: q === 1 ? "" : q + " \u00d7 100 g" };      // never "100 g \u00b7 100 g"
-  }
-  function libItem(f, from) {
-    var por = libPortion(f, from.chunk);
-    var g = Math.round(por.g);
-    return {
-      food: f.n, grams: g, unit: por.unit || null, per100: { k: f.k, p: f.p, c: f.c, f: f.fa },
-      pre: por.label, amount: (por.label ? por.label + " \u00b7 " : "") + g + " g",
-      calories: Math.round(f.k * g / 100), protein: Math.round(f.p * g / 100),
-      carbs: f.c == null ? null : Math.round(f.c * g / 100), fat: f.fa == null ? null : Math.round(f.fa * g / 100),
-      src: "usda", yr: (LIB && LIB.sets[f.t]) || "", chunk: from.chunk
-    };
-  }
-
   function runEstimate(text, replacingId) {
     var rep = replacingId || null;
-    var resolved = [], leftovers = [];
+    var resolved = [], leftovers = [], seq = [];
 
     splitItems(text).forEach(function (chunk) {
       var hit = resolveLocal(chunk);
       if (hit) resolved.push(hit); else leftovers.push(chunk);
+      seq.push(hit);
     });
+    // The review reads in the order it was typed, so it can be checked against
+    // what was typed: each answer goes where its words were, whenever there is
+    // one answer for each. When the finder split or joined them, the pantry's
+    // rows come first.
+    function inOrder(answers) {
+      if (answers.length !== leftovers.length) return resolved.concat(answers);
+      var k = 0;
+      return seq.map(function (x) { return x || answers[k++]; });
+    }
 
-    // Everything the built-in table knew — instant, no round trip, works offline.
+    // All of it was in your pantry — instant, no round trip, works offline.
     if (!leftovers.length && resolved.length) {
       est = { status: "review", text: text, items: resolved, note: "", replacing: rep };
       render();
       return;
     }
-
-    if (!sampleFn) {
-      if (!resolved.length && !leftovers.length) {
-        est = { status: "error", text: text, replacing: rep,
-                message: "Couldn't read that as food. Try naming amounts, like \"6 oz sirloin, 1 cup rice\"." };
-      } else {
-        est = { status: "review", text: text, replacing: rep, note: "",
-                items: resolved.concat(leftovers.map(unknownItem)) };
-      }
+    if (!resolved.length && !leftovers.length) {
+      est = { status: "error", text: text, replacing: rep,
+              message: "Couldn't read that as food. Try naming amounts, like \"6 oz sirloin, 1 cup rice\"." };
       render();
       return;
     }
 
-    est = { status: "loading", text: text, replacing: rep, partial: resolved.length };
+    var who = finder();
+    if (!who) {
+      est = { status: "review", text: text, replacing: rep, note: "",
+              items: inOrder(leftovers.map(unknownItem)),
+              warn: "Not in your pantry, and the food finder isn\u2019t available in this copy of the app \u2014 it goes in as a placeholder you can fill in." };
+      render();
+      return;
+    }
+
+    // When the pantry knew none of it the finder gets the words as typed: the
+    // splitter can tear a dish's own name apart ("mac and cheese").
+    var ask = resolved.length ? leftovers.join(" & ") : text;
+    est = { status: "loading", text: text, replacing: rep, partial: resolved.length, who: who };
     render();
 
-    sampleFn.json(estimatePrompt(leftovers.join(" & ")), { modelTier: "default", cache: true }).then(function (out) {
-      var items = (out && out.items ? out.items : []).filter(function (it) { return it && it.food; })
-        .map(function (it) {
-          return {
-            food: String(it.food),
-            amount: it.amount ? String(it.amount) : "",
-            calories: Math.max(0, Math.round(Number(it.calories) || 0)),
-            protein: Math.max(0, Math.round(Number(it.protein) || 0)),
-            src: "claude"
-          };
-        });
-      if (!items.length && !resolved.length) {
+    findMacros(ask).then(function (got) {
+      if (!got.items.length && !resolved.length) {
         est = { status: "error", text: text, replacing: rep,
                 message: "Couldn't read that as food. Try naming the items and amounts, like \"6 oz sirloin, 1 cup rice\"." };
       } else {
-        est = { status: "review", text: text, replacing: rep,
-                items: resolved.concat(items.length ? items : leftovers.map(unknownItem)),
-                note: out && out.note ? String(out.note) : "" };
+        est = { status: "review", text: text, replacing: rep, note: got.note,
+                items: inOrder(got.items.length ? got.items : leftovers.map(unknownItem)) };
       }
       render();
     }).catch(function (e) {
-      var code = e && e.code;
-      var msg = code === "rate_limited"
-        ? "Too many estimates just now. Give it a minute and try again."
-        : code === "not_granted"
-          ? "Estimating isn't available in this window. Open the app inside Claude and try again."
-          : "That estimate didn't come back. Try again, or enter the numbers by hand.";
-      // Anything the table already resolved is still good — keep it.
-      if (resolved.length) {
-        est = { status: "review", text: text, replacing: rep, warn: msg, note: "",
-                items: resolved.concat(leftovers.map(unknownItem)) };
-      } else {
-        est = { status: "error", text: text, message: msg, replacing: rep };
-      }
+      // What the pantry knew is still good, and what it didn't can go in as a
+      // placeholder to fill once there is signal — so the review still opens.
+      est = { status: "review", text: text, replacing: rep, warn: finderMessage(e), note: "",
+              items: inOrder(leftovers.map(unknownItem)) };
       render();
     });
+  }
+
+  // "Find it again" under one row: only that row is asked about, and its
+  // answer takes the row's place, so nothing already checked is asked again.
+  function reaskRow(i) {
+    var it = est && est.status === "review" ? est.items[i] : null;
+    if (!it || it.asking) return;
+    it.asking = true;
+    render();
+    // The row is found again by itself, not by where it was: another row's
+    // answer may have arrived first as two foods and moved it down.
+    function at() { return est && est.status === "review" ? est.items.indexOf(it) : -1; }
+    findMacros(it.chunk || it.food).then(function (got) {
+      var k = at();
+      if (k < 0) return;
+      if (got.items.length) {
+        est.items.splice.apply(est.items, [k, 1].concat(got.items));
+        est.warn = "";
+        if (got.note) est.note = got.note;
+      } else {
+        it.asking = false;
+        est.warn = "The food finder didn’t recognise “" + it.food + "”. Try describing it a little differently.";
+      }
+      render();
+    }, function (e) {
+      if (at() < 0) return;
+      it.asking = false;
+      est.warn = finderMessage(e);
+      render();
+    });
+  }
+  // What the form says about where its answers come from.
+  function estNoteHtml() {
+    var who = finder();
+    return '<p class="est-note">' +
+      (who === "relay"
+        ? 'Describe the meal in plain words. Your pantry answers first; anything it doesn\u2019t know goes to the food ' +
+            'finder, a free AI that works out the numbers \u2014 only the food you describe is sent. The country above ' +
+            'decides which version of a product it uses. You\u2019ll see the breakdown and can edit it before it goes in the ledger.'
+        : who === "claude"
+          ? 'Describe the meal in plain words. Your pantry answers first; anything it doesn\u2019t know goes to Claude. The ' +
+              'country above decides which version of a product gets used. You\u2019ll see the breakdown and can edit it before ' +
+              'it goes in the ledger.'
+          : 'Your pantry answers first, even offline. The food finder isn\u2019t available in this copy of the app, so ' +
+              'anything else goes in as a placeholder you can fill in by hand.') +
+    '</p>';
   }
 
   // Your own words make the best meal name; anything long falls back to the
@@ -5834,14 +5274,14 @@
         // Nothing could price it — keep the words, resolve it later.
         return { id: uid(), cal: 0, pro: 0, note: it.food, pending: true };
       }
-      // A chain's menu or a package's label is the published number, not an
-      // estimate; only the kcal and protein of a row are marked as one.
+      // A package's label is the published number, not an estimate; only the
+      // kcal and protein of a row are marked as one.
       return cfFields(it, {
         id: uid(),
         cal: it.calories,
         pro: it.protein,
         note: it.amount ? it.food + " · " + it.amount : it.food,
-        est: ["pantry", "label", "menu"].indexOf(it.src) === -1 && !it.edited
+        est: ["pantry", "label"].indexOf(it.src) === -1 && !it.edited
       });
     });
 
@@ -6166,12 +5606,14 @@
 
   // Hoisted so the weight editor can relabel a row after it stops being an
   // assumed portion; it used to be local to the render.
-  var SRC = { pantry: "your pantry", table: "built-in reference",
-              typical: "typical serving", usda: "USDA", label: "brand label", menu: "restaurant menu",
+  var SRC = { pantry: "your pantry", label: "brand label", ai: "AI",
               claude: "estimated", unknown: "needs numbers" };
-  // USDA's fast-food numbers date from 2018 and chains change recipes, so a
-  // library answer says how old its data is.
-  function srcLabel(it) { return SRC[it.src || "claude"] + (it.yr ? " \u00b7 " + it.yr : ""); }
+  // A label says how old its data is; an answer from the finder says what it
+  // went on, so a rough guess never passes for a chain's own figure.
+  function srcLabel(it) {
+    return SRC[it.src || "claude"] + (BASIS[it.basis] ? " \u00b7 " + BASIS[it.basis] : "") +
+      (it.yr ? " \u00b7 " + it.yr : "");
+  }
 
   // Sits under the target bar and above the add form: it belongs to the day
   // you are looking at, like the food does, and it is the last thing you check
@@ -6216,11 +5658,10 @@
     });
   }
 
-  // The two quick ways in: at the top of the form, and under a review, so a
+  // The quick way in: at the top of the form, and under a review, so a
   // second thing can be added to what is already being checked.
   function estQuickHtml() {
     return '<div class="est-quick">' +
-      '<button class="btn ghost" id="openMenus"><span>Restaurant menu</span><span class="q-s">Pick from a chain’s menu</span></button>' +
       '<button class="btn ghost" id="openScan"><span>Scan a barcode</span><span class="q-s">Anything in a package</span></button>' +
     '</div>';
   }
@@ -6233,7 +5674,8 @@
     if (est && est.status === "loading") {
       return '<section class="entry est">' +
         '<span class="eyebrow">Working it out</span>' +
-        '<div class="working" id="wayEstimate"><i></i>Estimating “' + esc(est.text) + '”</div>' +
+        '<div class="working" id="wayEstimate"><i></i>' + (est.who === "relay" ? 'Finding the numbers for “' : 'Estimating “') +
+          esc(est.text) + '”</div>' +
       '</section>';
     }
 
@@ -6267,7 +5709,7 @@
           '<input inputmode="numeric" data-ip="' + i + '" value="' + it.protein + '" aria-label="Protein grams">' +
           amt +
           (cfOn() ? '<span class="rev-cf" data-icf="' + i + '">' + revCf(it) + '</span>' : '') +
-        '</div>' + libFlagHtml(it, i);
+        '</div>' + flagHtml(it, i);
       }).join("");
 
       return '<section class="review" id="wayEstimate">' +
@@ -6279,7 +5721,7 @@
           (est.warn ? '<p class="rev-assume" style="color:var(--miss)">' + esc(est.warn) + '</p>' : '') +
           '<p class="rev-assume">' +
             (est.note ? esc(est.note) + " " : "") +
-            'Anything marked <em>typical serving</em> is an assumed portion — tap the number to correct it. ' +
+            'Numbers from the AI are its best estimate \u2014 tap a weight to correct the portion. ' +
             'Anything marked <em>needs numbers</em> goes in as a placeholder you can fill later.' +
           '</p>' +
           // One description usually is one meal, so offer it here rather than
@@ -6317,104 +5759,30 @@
       '</section>';
     }
 
-    // A row that matched only part of what was typed, or nothing, says so and
-    // offers the library — never a quiet guess logged as fact.
-    function libFlagHtml(it, i) {
-      if (libFor === i) return libPanelHtml(it, i);
-      var unknown = it.src === "unknown";
-      if (!unknown && !(it.partial && !it.partialOk)) return '';
-      var why = unknown ? 'Not in your pantry or the built-in list.'
-        : 'Matched \u201c' + esc(it.food) + '\u201d \u2014 ' +
-          it.partial.map(function (w) { return '\u201c' + esc(w) + '\u201d'; }).join(", ") +
-          (it.partial.length === 1 ? ' wasn\u2019t' : ' weren\u2019t') + ' part of the match.';
-      return '<div class="lib-flag">' +
-        '<p class="why">' + why + '</p>' +
-        '<button class="btn ghost" data-libopen="' + i + '">Look it up in the food library</button>' +
-        (unknown ? '' : '<button class="lib-keep" data-libkeep="' + i + '">Keep this match</button>') +
-      '</div>';
-    }
-    function libQueryHits(f) {
-      var qs = libWords(libQuery).filter(function (w) { return w && LIB_SKIP.indexOf(" " + w + " ") === -1; });
-      return qs.filter(function (q) { return f.w.some(function (w) { return libHit(q, w); }); }).length;
-    }
-    function libPanelHtml(it, i) {
-      var body;
-      if (libStatus === "loading") body = '<div class="working"><i></i>Opening the food library\u2026</div>';
-      else if (libStatus === "error") body = '<p class="why">The food library could not be opened. It comes with the app ' +
-        'and is kept for offline use \u2014 open the app once while online, then it works anywhere.</p>';
-      else {
-        var brandRows = (libBrandHits || []).map(function (b, j) {
-          var x = brandItem(b, it);
-          return '<button class="lib-hit" data-brandpick="' + j + '">' +
-            '<span class="ln">' + esc(b.brand) + ' \u00b7 ' + esc(b.name) + '</span>' +
-            '<span class="ls">Label \u00b7 ' + esc(x.amount) + '</span>' +
-            '<span class="lm"><b>' + fmt(x.calories) + '</b> kcal<br>' + fmt(x.protein) + ' g</span>' +
-          '</button>';
-        }).join("");
-        var foodRows = (libHits || []).map(function (f, j) {
-          var x = libItem(f, it);
-          return '<button class="lib-hit" data-libpick="' + j + '">' +
-            '<span class="ln">' + esc(f.n) + '</span>' +
-            '<span class="ls">USDA \u00b7 ' + esc((LIB && LIB.sets[f.t]) || "") + ' \u00b7 ' + esc(x.amount) + '</span>' +
-            '<span class="lm"><b>' + fmt(x.calories) + '</b> kcal<br>' + fmt(x.protein) + ' g</span>' +
-          '</button>';
-        }).join("");
-        // Whichever matched more of what was typed goes first, and on a tie
-        // the brands only when a brand was named: "great value whole milk"
-        // wants the carton, "rice cooked" wants plain cooked rice.
-        var foodHits = libHits && libHits.length ? libQueryHits(libHits[0]) : 0;
-        var brandFirst = libBrandHits && libBrandHits.length &&
-          (libBrandHits[0].hits > foodHits || (libBrandHits[0].hits === foodHits && libBrandHits[0].named > 0));
-        var groups = [
-          brandRows ? '<span class="lib-group">Grocery brands</span>' + brandRows : '',
-          foodRows ? '<span class="lib-group">Everyday foods</span>' + foodRows : ''
-        ];
-        if (!brandFirst) groups.reverse();
-        // A chain's own menu goes first when the chain was named: "mcdonalds
-        // big mac" wants today's Big Mac, not USDA's 2018 one.
-        var menuRows = (libMenuHits || []).map(function (o, j) {
-          var m = menuPick(o), x = menuItem(o);
-          if (!m || !x) return "";
-          return '<button class="lib-hit" data-menupick="' + j + '">' +
-            '<span class="ln">' + esc(m.ch.name) + ' · ' + esc(menuName(m)) + '</span>' +
-            '<span class="ls">Menu · ' + esc(m.ch.read.slice(0, 4)) + '</span>' +
-            '<span class="lm"><b>' + fmt(x.calories) + '</b> kcal<br>' + fmt(x.protein) + ' g</span>' +
-          '</button>';
-        }).join("");
-        if (menuRows) {
-          var menuGroup = '<span class="lib-group">Restaurant menus</span>' + menuRows;
-          if (libMenuHits[0].named) groups.unshift(menuGroup); else groups.push(menuGroup);
-        }
-        body = (brandRows || foodRows || menuRows) ? groups.join("")
-          : '<p class="hush">Nothing in the library matches \u201c' + esc(libQuery) +
-            '\u201d. Try fewer or different words \u2014 or describe it as its parts, like \u201c4 oz chicken & 1 cup rice\u201d.</p>';
-        if (brandsStatus === "loading") body += '<div class="working"><i></i>' +
-          (store.brandsOn ? 'Opening grocery brands\u2026' : 'Downloading grocery brands (' + BRANDS_SIZE + ', once)\u2026') + '</div>';
-        else if (brandsStatus === "error") body += '<p class="why">Grocery brands could not be downloaded. ' +
-          'Check the connection and try again \u2014 everyday foods still work.</p>';
-        else if (!store.brandsOn) body += '<div class="lib-offer">' +
-          '<p class="hush">Grocery brands aren\u2019t on this phone yet: ' + BRANDS_ABOUT + ' as sold \u2014 Kirkland, ' +
-            'Great Value, Chobani \u2014 each with its label\u2019s numbers. One download, then they work offline.</p>' +
-          '<button class="btn ghost" data-brandsget>Download grocery brands \u00b7 ' + BRANDS_SIZE + '</button></div>';
-        body += '<p class="hush">From USDA FoodData Central, searched on your phone \u2014 nothing is sent anywhere.</p>';
+    // A row with no numbers, or whose numbers don't add up, says so under
+    // itself — never a quiet guess logged as fact.
+    function flagHtml(it, i) {
+      if (it.src === "unknown") {
+        var who = finder();
+        return '<div class="est-flag">' +
+          '<p class="why">' + (who ? 'No numbers for this yet.' : 'Not in your pantry.') + '</p>' +
+          (it.asking ? '<div class="working"><i></i>Finding it\u2026</div>'
+            : who ? '<button class="btn ghost" data-reask="' + i + '">Find it again</button>' : '') +
+        '</div>';
       }
-      return '<div class="lib-flag" id="libPanel">' +
-        '<div class="lib-search">' +
-          '<input id="libQ" type="search" enterkeyhint="search" value="' + esc(libQuery) + '" aria-label="Search the food library">' +
-          '<button class="btn" id="libGo">Search</button>' +
-        '</div>' + body +
-        '<button class="lib-keep" data-libclose="' + i + '">' + (it.src === "unknown" ? 'Close' : 'Keep \u201c' + esc(it.food) + '\u201d') + '</button>' +
-      '</div>';
+      if (it.off) {
+        return '<div class="est-flag"><p class="why">These calories don\u2019t match its protein, carbs and ' +
+          'fat. Check them before adding \u2014 a drink with alcohol is the one honest exception.</p></div>';
+      }
+      return '';
     }
 
     var errHtml = (est && est.status === "error")
       ? '<p class="est-note" style="color:var(--miss)">' + esc(est.message) + '</p>' : '';
 
-    // The food field offers everything the app can already answer offline, so
-    // the question "what does it know?" is answered by typing rather than by
-    // guessing and being told no.
-    var known = FOODS.map(function (f) { return f.n; })
-      .concat((store.pantry || []).map(function (x) { return x.name; }));
+    // The food field offers what your pantry already knows, the one thing
+    // that answers on the phone with no connection.
+    var known = (store.pantry || []).map(function (x) { return x.name; });
     var foodList = '<datalist id="estFoods">' +
       known.map(function (n) { return '<option value="' + esc(n) + '"></option>'; }).join("") +
       '</datalist>';
@@ -6466,15 +5834,11 @@
       '<button class="et-swap" id="estSwap">' +
         (estWords ? '◂ Back to the table' : '▸ Or just describe it in words') +
       '</button>' +
-      '<p class="est-note">' +
-        (sampleFn
-          ? 'Describe the meal in plain words. Your pantry and the built-in food table answer first; anything they don’t recognise goes to Claude. The country above decides which version of a product gets used. You’ll see the breakdown and can edit it before it goes in the ledger.'
-          : 'Your pantry and the built-in food table work offline — most everyday foods resolve straight away, and anything without an amount gets a typical serving. Whatever it doesn’t recognise is saved as a placeholder you can fill in by hand.') +
-      '</p>' +
+      estNoteHtml() +
     '</section>';
   }
 
-  // Anything found by a menu or a barcode lands in the estimate's review,
+  // Anything found by a barcode lands in the estimate's review,
   // never straight in the ledger — beside whatever is already being reviewed.
   function addToEstimate(items, text) {
     items = items.filter(Boolean);
@@ -6486,84 +5850,6 @@
     }
     estShut = null;
     logWay = "estimate";
-  }
-
-  function menuItemsHtml(ch) {
-    var qs = libWords(menuQuery).filter(Boolean);
-    var html = ch.groups.map(function (g, gi) {
-      var rows = g[1].map(function (it, ii) {
-        if (qs.length) {
-          var ws = libWords(g[0] + " " + it[0] + " " + it[1].map(function (o) { return o[0]; }).join(" "));
-          if (!qs.every(function (q) { return ws.some(function (w) { return libHit(q, w); }); })) return "";
-        }
-        var key = gi + ":" + ii + ":";
-        if (it[1].length === 1) {
-          var op = it[1][0];
-          return '<button class="lib-hit" data-menuadd="' + key + '0">' +
-            '<span class="ln">' + esc(it[0]) + '</span>' +
-            '<span class="ls">' + (op[1] ? op[1] + ' g \u00b7 ' : '') + 'tap to add</span>' +
-            '<span class="lm"><b>' + fmt(op[2]) + '</b> kcal<br>' + fmt(op[3]) + ' g</span></button>';
-        }
-        return '<div class="menu-multi"><span class="mi-n">' + esc(it[0]) + '</span><div class="mi-opts">' +
-          it[1].map(function (op, oi) {
-            return '<button class="mi-opt" data-menuadd="' + key + oi + '">' +
-              '<span class="o-n">' + esc(op[0]) + '</span>' +
-              '<span class="o-m">' + fmt(op[2]) + ' kcal \u00b7 ' + fmt(op[3]) + ' g</span></button>';
-          }).join("") + '</div></div>';
-      }).join("");
-      return rows ? '<span class="lib-group">' + esc(g[0]) + '</span>' + rows : "";
-    }).join("");
-    return html || '<p class="hush">Nothing on the ' + esc(ch.name) + ' menu matches \u201c' + esc(menuQuery) + '\u201d.</p>';
-  }
-  function menuTrayHtml() {
-    if (!menuOrder.length) return "";
-    var tc = 0, tp = 0, n = 0;
-    var rows = menuOrder.map(function (o, k) {
-      var m = menuPick(o);
-      if (!m) return "";
-      tc += m.op[2] * o.q; tp += m.op[3] * o.q; n += o.q;
-      return '<div class="mt-row"><span class="mt-n">' + esc(menuName(m)) +
-        (MENUS.chains.length && menuChain !== o.c ? ' \u00b7 ' + esc(m.ch.name) : '') + '</span>' +
-        '<span class="mt-q">\u00d7' + o.q + '</span>' +
-        '<button class="mt-less" data-menuless="' + k + '" aria-label="One fewer ' + esc(menuName(m)) + '">\u2212</button></div>';
-    }).join("");
-    return '<div class="menu-tray" id="menuTrayBox">' +
-      '<div class="mt-rows">' + rows + '</div>' +
-      '<p class="mt-total"><b>' + fmt(tc) + '</b> kcal \u00b7 ' + fmt(tp) + ' g protein</p>' +
-      '<button class="btn" id="menuDone">Add ' + n + (n === 1 ? ' item' : ' items') + ' to the estimate</button>' +
-    '</div>';
-  }
-  function menuSheetHtml() {
-    var body;
-    if (!MENUS) {
-      body = menuStatus === "error"
-        ? '<p class="why">The menus could not be opened. They come with the app \u2014 open it once while online, then they work anywhere.</p>'
-        : '<div class="working"><i></i>Opening the menus\u2026</div>';
-    } else if (!menuChainById(menuChain)) {
-      body = '<p class="hush">Each chain\u2019s own published nutrition, on your phone \u2014 no internet needed. ' +
-          'Pick the restaurant, then tap what you had.</p>' +
-        '<div class="menu-chains">' + MENUS.chains.map(function (c) {
-          return '<button class="menu-chain" data-menuchain="' + esc(c.id) + '"><span class="mc-n">' + esc(c.name) + '</span>' +
-            '<span class="mc-s">' + menuChoices(c) + ' choices</span></button>';
-        }).join("") + '</div>' +
-        '<p class="hush">Somewhere else? Close this and type it by name \u2014 USDA\u2019s list has more chains, with older numbers.</p>';
-    } else {
-      var ch = menuChainById(menuChain);
-      var read = ch.read ? parseYmd(ch.read).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : "";
-      body = '<button class="lib-keep" id="menuBack">\u2039 All restaurants</button>' +
-        '<h3 class="menu-h">' + esc(ch.name) + '</h3>' +
-        ch.notes.map(function (n) { return '<p class="hush">' + esc(n) + '</p>'; }).join("") +
-        '<div class="lib-search"><input id="menuQ" type="search" enterkeyhint="search" value="' + esc(menuQuery) +
-          '" placeholder="Find on the menu" aria-label="Find on the ' + esc(ch.name) + ' menu">' +
-          '<button class="btn" id="menuGo">Find</button></div>' +
-        '<div id="menuItems">' + menuItemsHtml(ch) + '</div>' +
-        '<p class="hush">From ' + esc(ch.src) + (read ? ', read ' + esc(read) : '') + '. Recipes change \u2014 the numbers are the chain\u2019s, as published then.</p>';
-    }
-    return '<div class="sheet menu-sheet" id="menuSheet"><div class="sheet-inner" id="menuInner">' +
-      '<h2>Restaurant menu</h2>' + body +
-      '<div id="menuTray">' + menuTrayHtml() + '</div>' +
-      '<button class="btn ghost" id="menuClose">Close</button>' +
-    '</div></div>';
   }
 
   function scanResultHtml() {
@@ -6767,73 +6053,7 @@
     [ZX_JS, ZX_WASM].forEach(function (u) { try { fetch(u).catch(function () {}); } catch (e) {} });
   }
 
-  function wireMenus() {
-    var sheet = document.getElementById("menuSheet");
-    if (!sheet) return;
-    var inner = document.getElementById("menuInner");
-    if (inner) inner.scrollTop = menuScroll;
-    function keep() { if (inner) menuScroll = inner.scrollTop; }
-    sheet.addEventListener("click", function (e) {
-      if (e.target === sheet) { menuOpen = false; render(); return; }
-      var add = e.target.closest("[data-menuadd]"), less = e.target.closest("[data-menuless]");
-      if (add) {
-        var a = add.getAttribute("data-menuadd").split(":").map(Number);
-        var o = { c: menuChain, g: a[0], i: a[1], o: a[2], q: 1 };
-        var same = menuOrder.filter(function (x) { return x.c === o.c && x.g === o.g && x.i === o.i && x.o === o.o; })[0];
-        if (same) same.q++; else menuOrder.push(o);
-        document.getElementById("menuTray").innerHTML = menuTrayHtml();
-        add.classList.add("is-added");
-        setTimeout(function () { add.classList.remove("is-added"); }, 600);
-        return;
-      }
-      if (less) {
-        var k = Number(less.getAttribute("data-menuless")), x = menuOrder[k];
-        if (x) { x.q--; if (x.q < 1) menuOrder.splice(k, 1); }
-        document.getElementById("menuTray").innerHTML = menuTrayHtml();
-        return;
-      }
-      if (e.target.closest("[data-menuchain]")) {
-        menuChain = e.target.closest("[data-menuchain]").getAttribute("data-menuchain");
-        menuQuery = ""; menuScroll = 0; render(); return;
-      }
-      if (e.target.closest("#menuBack")) { menuChain = null; menuQuery = ""; menuScroll = 0; render(); return; }
-      if (e.target.closest("#menuClose")) { keep(); menuOpen = false; render(); return; }
-      if (e.target.closest("#menuDone")) {
-        var items = menuOrder.map(menuItem).filter(Boolean);
-        var chains = [];
-        menuOrder.forEach(function (o) { var c = menuChainById(o.c); if (c && chains.indexOf(c.name) === -1) chains.push(c.name); });
-        var n = items.length;
-        addToEstimate(items, chains.join(" + "));
-        menuOrder = []; menuOpen = false; menuScroll = 0;
-        render();
-        var rv = document.getElementById("wayEstimate");
-        if (rv && rv.scrollIntoView) rv.scrollIntoView({ block: "start" });
-        notify(n + (n === 1 ? " item" : " items") + " from " + chains.join(" and ") + " in the estimate \u2014 check, then Add");
-      }
-    });
-    var q = document.getElementById("menuQ");
-    if (q) {
-      // Typing filters in place; a redraw would take the cursor away.
-      q.addEventListener("input", function () {
-        menuQuery = q.value;
-        var ch = menuChainById(menuChain), box = document.getElementById("menuItems");
-        if (ch && box) box.innerHTML = menuItemsHtml(ch);
-      });
-      q.addEventListener("keydown", function (e) { if (e.key === "Enter") q.blur(); });
-      var go = document.getElementById("menuGo");
-      if (go) go.addEventListener("click", function () { q.blur(); });
-    }
-  }
   function wireQuick() {
-    var om = document.getElementById("openMenus");
-    if (om) om.addEventListener("click", function () {
-      menuOpen = true;
-      if (!MENUS) {
-        menuStatus = "";
-        loadMenus(function (m) { menuStatus = m ? "" : "error"; if (menuOpen) render(); });
-      }
-      render();
-    });
     var os = document.getElementById("openScan");
     if (os) os.addEventListener("click", function () {
       scanOpen = true; scanFor = "estimate";
@@ -7105,7 +6325,7 @@
             (f.est ? ' <span class="est-badge">est</span>' : '') +
             (f.pending
               ? '<br><button class="pending-chip" data-est="' + f.id + '">' +
-                  (sampleFn ? 'Tap to estimate' : 'Tap to add numbers') + '</button>'
+                  (finder() ? 'Tap to estimate' : 'Tap to add numbers') + '</button>'
               : '') +
           '</span>';
 
@@ -7118,7 +6338,7 @@
                 (x.est ? ' <span class="est-badge">est</span>' : '') +
                 (x.pending
                   ? ' <button class="pending-chip" data-est="' + x.id + '">' +
-                      (sampleFn ? 'Tap to estimate' : 'Tap to add numbers') + '</button>'
+                      (finder() ? 'Tap to estimate' : 'Tap to add numbers') + '</button>'
                   : '') +
               '</span>' +
               '<span class="mi-n">' + (x.cal ? fmt(x.cal) : "—") + '</span>' +
@@ -7335,7 +6555,6 @@
       // Add and every handler wired after this draw reach it unchanged.
       (numSheet ? waySheet("numbers", "Log calories / protein", numBody, "Cancel") : '') +
       (estSheet ? waySheet("estimate", "Don\u2019t know the numbers", estimatorHtml(key, d), "Close") : '') +
-      (menuOpen ? menuSheetHtml() : '') +
       (scanOpen ? scanSheetHtml() : '');
 
     // Deleting is delegated too — see the handler near setTab.
@@ -7550,8 +6769,8 @@
         estHint = "";
         // Pick up a country typed but not yet committed by a blur.
         if (regionIn && regionIn.value.trim()) store.region = regionIn.value.trim();
-        // Always try the built-in table and your pantry first — that works
-        // offline. Only what they can't answer needs Claude, or a placeholder.
+        // Your pantry answers first, on the phone. Only what it can't answer
+        // goes to the food finder, or in as a placeholder.
         estDraft = text;
         runEstimate(text);
       });
@@ -7562,108 +6781,20 @@
         var id = b.dataset.est;
         var at = locate(d, id);
         if (!at) return;
-        // Always run the estimate — the built-in table and your pantry work
-        // offline, so most placeholders resolve without Claude. If nothing can
-        // price it, runEstimate says so and the placeholder stays put.
+        // Always run the estimate — the pantry may know it by now, and the
+        // food finder may have signal again. If nothing can price it,
+        // runEstimate says so and the placeholder stays put.
         runEstimate(at.row.note, id);
       });
     });
 
-    // Change the weight, the macros follow. Updated in place rather than by a
-    // re-render, so the field keeps focus while you are still typing into it.
-    // ---- the food library ----
-    if (!est || est.status !== "review" || (libFor !== null && !est.items[libFor])) libFor = null;
-    function runLibrary(i, text) {
-      libFor = i; libQuery = text; libHits = null; libBrandHits = null; libMenuHits = null;
-      libStatus = LIB ? "" : "loading";
-      if (LIB) libHits = searchLibrary(text);
-      if (MENUS) libMenuHits = searchMenus(text);
-      else loadMenus(function (m) {
-        if (!m || libFor !== i) return;
-        libMenuHits = searchMenus(libQuery);
-        if (libStatus !== "loading") render();
-      });
-      if (BR) libBrandHits = searchBrands(text);
-      else if (store.brandsOn) brandsStatus = "loading";
-      render();
-      if (!LIB) loadLibrary(function (lib) {
-        if (libFor !== i) return;
-        libStatus = lib ? "" : "error";
-        if (lib) libHits = searchLibrary(libQuery);
-        render();
-        var panel = document.getElementById("libPanel");
-        if (panel && panel.scrollIntoView) panel.scrollIntoView({ block: "nearest" });
-      });
-      if (!BR && store.brandsOn) openBrands(i);
-    }
-    // The brands file: from the phone's own store once downloaded, so this is
-    // a short wait offline, and the one real download is the first.
-    function openBrands(i) {
-      brandsStatus = "loading";
-      loadBrands(function (br) {
-        brandsStatus = br ? "" : "error";
-        if (br && !store.brandsOn) { store.brandsOn = true; save(); keepScanReader(); }
-        if (libFor !== i) return;
-        if (br) libBrandHits = searchBrands(libQuery);
-        render();
-        if (br) notify("Grocery brands downloaded \u00b7 they work offline");
-      });
-    }
-    view.querySelectorAll("[data-brandsget]").forEach(function (b) {
-      b.addEventListener("click", function () { openBrands(libFor); render(); });
-    });
-    view.querySelectorAll("[data-brandpick]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var r = libBrandHits && libBrandHits[Number(b.dataset.brandpick)], old = est.items[libFor];
-        if (!r || !old) return;
-        est.items[libFor] = brandItem(r, old);
-        libFor = null; libHits = null; libBrandHits = null;
-        render();
-      });
-    });
-    view.querySelectorAll("[data-menupick]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var o = libMenuHits && libMenuHits[Number(b.dataset.menupick)], old = est.items[libFor];
-        if (!o || !old) return;
-        // "2 big macs" is two of them
-        var q = parseQty(old.chunk || "").qty || 1;
-        est.items[libFor] = menuItem({ c: o.c, g: o.g, i: o.i, o: o.o, q: q });
-        libFor = null; libHits = null; libBrandHits = null; libMenuHits = null;
-        render();
-      });
-    });
-    view.querySelectorAll("[data-libopen]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var it = est.items[Number(b.dataset.libopen)];
-        if (it) runLibrary(Number(b.dataset.libopen), parseQty(it.chunk || it.food).name || it.food);
-      });
-    });
-    var libGo = document.getElementById("libGo"), libQ = document.getElementById("libQ");
-    if (libGo && libQ) {
-      libGo.addEventListener("click", function () { if (libQ.value.trim()) runLibrary(libFor, libQ.value.trim()); });
-      libQ.addEventListener("keydown", function (e) { if (e.key === "Enter") libGo.click(); });
-    }
-    view.querySelectorAll("[data-libpick]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var f = libHits && libHits[Number(b.dataset.libpick)], old = est.items[libFor];
-        if (!f || !old) return;
-        // The picked food takes the row's place, weight and all, and is as
-        // editable as anything from the built-in table. It goes into the
-        // review, never straight into the ledger.
-        est.items[libFor] = libItem(f, old);
-        libFor = null; libHits = null; libBrandHits = null;
-        render();
-      });
-    });
-    view.querySelectorAll("[data-libkeep], [data-libclose]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var i = Number(b.dataset.libkeep || b.dataset.libclose), it = est.items[i];
-        if (it && it.src !== "unknown") it.partialOk = true;
-        libFor = null; libHits = null;
-        render();
-      });
+    // ---- a row that needs a look ----
+    view.querySelectorAll("[data-reask]").forEach(function (b) {
+      b.addEventListener("click", function () { reaskRow(Number(b.dataset.reask)); });
     });
 
+    // Change the weight, the macros follow. Updated in place rather than by a
+    // re-render, so the field keeps focus while you are still typing into it.
     view.querySelectorAll("[data-ig]").forEach(function (input) {
       input.addEventListener("input", function () {
         if (!est || est.status !== "review") return;
@@ -7682,11 +6813,10 @@
           it.carbs = Math.round((it.per100.c * g) / 100);
           it.fat = Math.round((it.per100.f * g) / 100);
         }
-        // The portion is yours now, so it is no longer an assumption, and any
-        // prefix that described the old weight ("1 cup") no longer describes it.
-        // The per-100 g figures are still the reference table's, so `edited`
-        // stays untouched and the row keeps its honest "est" badge.
-        if (it.src === "typical") it.src = "table";
+        // The portion is yours now, and any prefix that described the old
+        // weight ("1 cup") no longer describes it. The per-100 g figures are
+        // still the finder's, so `edited` stays untouched and the row keeps
+        // its honest "est" badge.
         it.pre = "";
         // commitEstimate writes `amount` into the row's note, so it has to move
         // with the weight or the ledger records a portion you did not log.
@@ -7807,7 +6937,6 @@
     }
 
     wireQuick();
-    wireMenus();
     wireScan();
 
     var commit = document.getElementById("commitEst");
@@ -9633,7 +8762,7 @@
         '</div>' +
         combineBlock +
         (panSecEdit ? secEditor : tabs) +
-        (rows || '<p class="empty">Foods you save here are matched first — ahead of the built-in reference — every time you describe a meal.</p>') +
+        (rows || '<p class="empty">Foods you save here are matched first — ahead of the food finder, and with no connection — every time you describe a meal.</p>') +
       '</section>' +
 
       // The checklist lives here because this is where you set up what the
@@ -11178,8 +10307,8 @@
         '<i class="sw-' + a.id + '"></i><span>' + a.name + '</span></button>';
     }).join("");
     document.getElementById("setLibHint").textContent = store.brandsOn
-      ? "Everyday foods and grocery brands (" + BRANDS_ABOUT + ") are on this phone, and work offline."
-      : "Everyday foods are built in. Grocery brands \u2014 " + BRANDS_ABOUT + " \u2014 are one download of " + BRANDS_SIZE + ".";
+      ? "Grocery brands (" + BRANDS_ABOUT + ") are on this phone, so a scanned barcode is found offline."
+      : "A scanned barcode is looked up in grocery brands — " + BRANDS_ABOUT + ", one download of " + BRANDS_SIZE + ".";
     var sb = document.getElementById("setBrands");
     sb.disabled = brandsStatus === "loading";
     sb.textContent = brandsStatus === "loading" ? "Downloading grocery brands\u2026"
@@ -11225,7 +10354,7 @@
   // file from the phone's store; what was logged from it stays logged.
   document.getElementById("setBrands").addEventListener("click", function () {
     if (store.brandsOn) {
-      store.brandsOn = false; BR = null; libBrandHits = null;
+      store.brandsOn = false; BR = null;
       try { if (window.caches) caches.open("iron-ledger-data").then(function (c) { c.delete(BRANDS_FILE, { ignoreSearch: true }); }); } catch (e) {}
       save(); drawSettings();
       notify("Grocery brands removed from this phone");

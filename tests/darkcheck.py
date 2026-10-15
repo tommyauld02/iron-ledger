@@ -11,6 +11,7 @@ estimate review. It used to carry none of them, and "5 g" on a ticked checklist
 row shipped at 4.08:1 in b36 because nothing ever ticked one. A contrast suite
 only measures the states its fixture puts on screen.
 """
+import fakeai
 from playwright.sync_api import sync_playwright
 import os, time, datetime
 
@@ -350,32 +351,23 @@ def walk(p, label):
             if low: found.append("meal save row: %s" % low)
             p.click("#estSaveCancel"); p.wait_for_timeout(200)
             p.click("#discardEst"); p.wait_for_timeout(300)
-            # a partial match's warning, then the food library open on it
+            # the food finder's flags, each only on screen after an answer: numbers
+            # that don't add up, and a food left waiting when the finder was busy
             p.fill("#estText", "cava harissa avocado bowl"); p.click("#runEst"); p.wait_for_timeout(900)
-            if not p.locator(".lib-flag .why").count(): found.append("macros: the partial-match warning is not on screen")
+            if not p.locator(".est-flag .why").count(): found.append("macros: the doesn't-add-up flag is not on screen")
             low = p.evaluate(LOW)
-            if low: found.append("macros (partial match): %s" % low)
-            p.click("[data-libopen]"); p.wait_for_timeout(1500)
-            if not p.locator(".lib-hit").count(): found.append("macros: the food library's results are not on screen")
-            if not p.locator("[data-brandsget]").count(): found.append("macros: the grocery brands offer is not on screen")
+            if low: found.append("macros (doesn't add up): %s" % low)
+            p.click("#discardEst"); p.wait_for_timeout(300)
+            p.fill("#estText", "lasagne"); p.click("#runEst"); p.wait_for_timeout(900)
+            if not p.locator("[data-reask]").count(): found.append("macros: a food waiting for the finder is not on screen")
             low = p.evaluate(LOW)
-            if low: found.append("macros (food library): %s" % low)
-            # grocery brands: their group headings and rows only exist once downloaded
-            p.click("[data-brandsget]")
-            try: p.wait_for_selector("[data-brandpick]", timeout=30000)
-            except Exception: found.append("macros: the grocery brands' rows are not on screen")
-            low = p.evaluate(LOW)
-            if low: found.append("macros (grocery brands): %s" % low)
-            # a restaurant's menu with something ordered, and a scanned barcode:
-            # both only exist after presses
-            p.click("#openMenus"); p.wait_for_timeout(400)
-            p.click('[data-menuchain="mcdonalds"]'); p.wait_for_timeout(250)
-            p.locator("[data-menuadd]").first.click(); p.wait_for_timeout(150)
-            if not p.locator(".menu-tray").count(): found.append("macros: the menu order is not on screen")
-            low = p.evaluate(LOW)
-            if low: found.append("macros (restaurant menu): %s" % low)
-            p.click("#menuClose"); p.wait_for_timeout(200)
+            if low: found.append("macros (waiting for the finder): %s" % low)
+            # a scanned barcode only exists after presses; grocery brands first
             p.click("#openScan"); p.wait_for_timeout(500)
+            if p.locator("#scanBrands").count():
+                p.click("#scanBrands")
+                try: p.wait_for_selector("#scanType", timeout=40000)
+                except Exception: found.append("macros: grocery brands did not download for the scanner")
             if p.locator("#scanType").count():
                 p.fill("#scanType", "894700010038"); p.click("#scanGo"); p.wait_for_timeout(400)
             if not p.locator(".scan-card").count(): found.append("macros: a scanned product is not on screen")
@@ -402,6 +394,18 @@ def walk(p, label):
     return found
 
 
+# The food finder's two flags: an answer whose numbers still don't add up
+# after the relay's second look, and Gemini too busy to answer at all.
+def dark_reply(q):
+    t = q["food"]
+    if "cava" in t:
+        return {"items": [{"food": "Cava harissa avocado bowl", "amount": "1 bowl", "grams": 450, "calories": 1900,
+                           "protein": 20, "carbs": 60, "fat": 30, "basis": "rough"}], "note": "Assumed a full bowl."}
+    if "lasagne" in t:
+        return (429, {"error": "busy"})
+    return None
+
+
 with sync_playwright() as pw:
     b = pw.chromium.launch()
 
@@ -410,6 +414,7 @@ with sync_playwright() as pw:
         ctx = b.new_context(viewport={"width": 393, "height": 852}, has_touch=True,
                             is_mobile=True, color_scheme=scheme)
         ctx.add_init_script("delete window.claude;")
+        fakeai.phone(ctx, reply=dark_reply)
         p = ctx.new_page(); errs = []
         p.on("pageerror", lambda e: errs.append(str(e)))
         p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(400)
@@ -429,6 +434,7 @@ with sync_playwright() as pw:
             ctx = b.new_context(viewport={"width": 393, "height": 852}, has_touch=True, is_mobile=True,
                                 color_scheme=("dark" if theme == "light" else "light"))
             ctx.add_init_script("delete window.claude;")
+            fakeai.phone(ctx, reply=dark_reply)
             p = ctx.new_page(); errs = []
             p.on("pageerror", lambda e: errs.append(str(e)))
             p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(400)
