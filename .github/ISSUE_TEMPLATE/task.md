@@ -13,5 +13,8 @@ labels: ["status:ready"]
 **Files it should touch**
 <!-- And anything it must not touch. Generated files are never hand-edited. -->
 
+**Size**
+<!-- Tiny, Small or Big (TEAM.md, "How a task moves"). Nick proposes it; Tommy can bump it up by asking for options. -->
+
 **Who**
 <!-- Add exactly one label: for:builder · for:intern · for:clerk · for:supervisor -->
