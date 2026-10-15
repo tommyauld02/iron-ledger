@@ -8,28 +8,29 @@ rules and the index of these docs. The rules apply here too.
 - Rest days are not painted red on the calendar. Offered, declined.
 - Barcode scanning used to be the one genuine reason to go native. It is in the
   web app now (b61, zxing-wasm), so nothing found so far needs a native build.
-- The food table is hand-built reference values, 310 of them, weighted towards
-  what actually moves a calorie count: meats, grains, starches, fats, prepared
-  meals. Produce is covered but deliberately not expanded — a stick of celery
-  is not what breaks a day. Rebuilding it from the USDA FoodData Central bulk
-  CSV is the open thread; live API calls are impossible from a published
-  artifact anyway (CSP blocks all outbound fetch).
-
-  Fast food is in there — 45 chain items, because "no time to cook" is when
-  someone least knows what they ate. Those are stored the same way as anything
-  else, per 100 g, with `k` derived from the published total and the serving
-  weight so that one serving reproduces the total even if the gram figure is
-  a little off. **Brand values drift** as chains reformulate; treat them as a
-  close estimate, not a label reading. A counted item must carry `each` as
-  *one piece*, not one box — a ten-piece nugget entry with `each: 162` turned
-  "10 mcnuggets" into 4,201 calories.
-
-  `tests/foods.py` guards it, because growing it broke twice in ways nothing
-  else caught. Adding an entry after the last one killed the whole script — the
-  final entry had no trailing comma. And `splitItems()` splits on the words
-  "and" and "with" *before* matching, so "mac and cheese" resolved to cheddar;
-  aliases containing those words are now stitched back together across the
-  split, using an underscore rather than a control character, because `\band\b`
-  still matches across a non-word one. Unit keys are checked too: `medium`,
-  `large` and `small` are typed words that map to the key `each`, so a `u:` map
-  keyed by them is never read.
+- *Don't know the numbers* needs a connection for anything not in your pantry.
+  The owner chose that on 2026-10-14 when the food finder replaced the built-in
+  table, the USDA library and the menus ("99% of people have internet"); they
+  were removed, not kept as an offline fallback. Offline, a food goes in as a
+  *needs numbers* placeholder to fill once there is signal. The pantry,
+  barcodes (once grocery brands are downloaded) and the label reader still work
+  with no connection.
+- The food finder's numbers are an AI's estimate, tagged as such, and checked
+  only for adding up (4·protein + 4·carbs + 9·fat), not against a source. A
+  chain's figure is the model's memory of what the chain publishes, not a
+  reading of its page: Gemini's free tier cannot search the web (as of
+  2026-10). If exactness matters for a food eaten often, save it to the pantry
+  from its label.
+- The food finder shares one free Gemini key through the relay, and each model
+  on it has its own daily allowance (the big Flash model only 20 a day; the
+  relay asks the lightest first and works down the list). That is plenty for
+  the owner and his testers; if the app is ever used widely enough to use them
+  all up, *busy, or at today's free limit* is what people see until midnight
+  Pacific, and the fix is turning billing on for that key (a fraction of a cent
+  a lookup), which is the owner's call.
+- The relay's origin check keeps other websites out, not scripts: anyone can
+  claim the app's origin. Nothing in a public app can prove it is the app. The
+  per-address limit, the size cap and the server-built prompt limit what a
+  script can do, and on the free tier the worst is using up the day's
+  allowance. A Cloudflare Turnstile check is the next step if abuse ever shows
+  up in the relay's log.

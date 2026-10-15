@@ -18,7 +18,7 @@ use, at no added cost.
 | **Lexi** (Supervisor) | GLM 5.3 (NVIDIA, free) in Hermes | Reviews every Small and Big pull request against `CLAUDE.md`, the `docs/` file for the area it changes, and this file, before Nick's final check | Merges. Approves anything with a failing check. |
 | **Belico** (Builder) | GPT (Tommy's ChatGPT plan) in Hermes; DeepSeek V4.1 Flash (NVIDIA, free) as the backup | Code changes to the app: features, fixes, tests, one small job at a time | Picks up work not assigned to it. |
 | **Ddg** (Clerk) | Kimi K3 (NVIDIA, free) in Hermes | Small writing jobs: briefs, issue tidying, release notes, `NEWS` wording, summaries | Changes app logic. |
-| **Jennr** (Intern) | GPT in Hermes for research; any free model for drafts | Easy-to-check work: research with links, restaurant menu data in `tools/menus/`, first drafts of copy or tests | Edits generated files. Merges. Touches anything outside its issue. |
+| **Jennr** (Intern) | GPT in Hermes for research; any free model for drafts | Easy-to-check work: research with links, first drafts of copy or tests | Edits generated files. Merges. Touches anything outside its issue. |
 
 The names are Tommy's and are how everyone refers to the roles: in issues,
 pull requests and Nick's reports, say "Belico opened…", not "the Builder
@@ -132,15 +132,16 @@ confirms it shipped.
 - **`CLAUDE.md` rules 1–7 apply to every agent and every model.** Test it as
   a phone. A silent success reads like a dead button. 44px targets. 16px
   inputs. Undo, not confirm. History is never reassigned.
-- **Generated files are never hand-edited**: `vendor/usda/`, `vendor/menus/`,
+- **Generated files are never hand-edited**: `vendor/usda/`,
   `fonts/`, `icons/`, `dist/`. Change the source and re-run the generator.
   Nor are downloaded ones: `vendor/zxing/` (the barcode reader) and
   `vendor/tesseract/` (the label reader) are other people's code, replaced
   whole by a newer download, never patched.
-- **Every number has a source.** Menu data comes from the chain's own
-  published figures, with the source and date at the top of the file, the
-  way `tools/menus/` already does it. A guessed number is the confident wrong
-  one.
+- **Every number has a source.** A number the team puts in the app — a
+  default, a threshold, a published figure — says where it came from. A
+  guessed number is the confident wrong one. Food numbers are no longer typed
+  in: since b63 the food finder answers at the moment a food is logged, and
+  its rows say they are the AI's.
 - **Bump `BUILD` and add a `NEWS` entry** with any change a person would
   notice. When two approved PRs both bump `BUILD`, Nick rebases the
   later one so the numbers stay in order.
@@ -155,10 +156,6 @@ confirms it shipped.
 Free models are slower and make more mistakes, so their tasks are ones where a
 mistake is cheap and easy to catch:
 
-- Typing up a chain's published nutrition table into `tools/menus/<chain>.txt`
-  (the generator refuses lines whose calories don't add up — a built-in check).
-  **On hold:** Tommy has paused new restaurants (October 2026) to put the
-  focus elsewhere. Don't file these until he lifts it.
 - Researching something and reporting back in the issue, with links
 - First drafts of copy, `NEWS` entries, or test cases that Belico finishes
 - Reproducing a reported bug and writing down the exact steps

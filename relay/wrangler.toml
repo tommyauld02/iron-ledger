@@ -1,0 +1,24 @@
+# The food finder relay. Deploy from this folder: see README.md.
+name = "iron-ledger-finder"
+main = "worker.js"
+compatibility_date = "2025-09-01"
+
+[vars]
+# The app's own address. Anything else gets no answer (a phone on the home
+# wifi running tools/serve.py is let through by the code itself).
+ALLOWED_ORIGINS = "https://tommyauld02.github.io"
+# Asked in this order; each has its own free daily allowance. The lightest is
+# first: it is the fastest, the least often overloaded, and has the most
+# allowance (the big Flash model allows 20 a day on the free tier). Aliases,
+# so Google renaming a model does not break the finder.
+MODELS = "gemini-flash-lite-latest,gemini-flash-latest,gemini-2.5-flash-lite"
+
+# 20 lookups a minute from any one phone (by its internet address): plenty for
+# a person logging a meal, and a wall for anything trying to drain the free
+# allowance. A lookup is usually one question to Gemini, two when it re-checks.
+[[ratelimits]]
+name = "PER_PHONE"
+namespace_id = "1001"
+simple = { limit = 20, period = 60 }
+
+# The key is a secret, never in this file:  npx wrangler secret put GEMINI_KEY

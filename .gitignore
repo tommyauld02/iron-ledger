@@ -27,3 +27,7 @@ tools/.vendor-dl/
 
 # agents' own scratch checkouts (Claude Code worktrees)
 .claude/worktrees/
+
+# wrangler's own working files when the relay is deployed from relay/
+relay/.wrangler/
+relay/node_modules/

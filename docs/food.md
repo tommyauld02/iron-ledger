@@ -31,61 +31,119 @@ small `tessdata_fast` model is a third of the size and was rejected — it misse
 protein on a blurred panel, and protein is half of what this app tracks. Only
 the SIMD core is shipped, which needs iOS 16.4 or newer.
 
-**Offline answers first, Claude second.** The built-in ~115-food table and the
-user's pantry resolve most entries with no network and no account. `sample` is
-the fallback for what they can't handle. This has broken twice in the same way:
-a code path that checked "is Claude available?" *before* trying the offline
-table, so the offline capability was silently dead on the phone. If you write
-`if (sampleFn)`, ask whether the offline path should run first.
+**Your pantry first, the food finder second.** The pantry is the one list
+left on the phone, and it answers with no network and no account. Everything it
+can't answer goes to the food finder. An earlier version of this rule was
+"offline table first, Claude second", and it broke twice the same way: a code
+path that asked "is Claude available?" *before* trying the table. The same trap
+is still there for the pantry — if you write `if (finder())`, ask whether the
+pantry should have run first.
 
-**The food library: USDA's data, shipped with the app.** The owner wanted an
-answer for anything eaten, such as a McDonald's meal or a home plate of rice,
-veg and steak, with no internet and no cost. USDA FoodData Central is public
-domain, so `tools/make-foods.py` turns three of its sets into
-`vendor/usda/foods.js`: Foundation (2026), SR Legacy (2018, which has every
-cut of meat raw and cooked and a fast-food group with McDonald's, Wendy's,
-Applebee's…) and FNDDS (2024, foods as eaten, with typical portions such as
-"1 item"). It keeps the name, kcal and protein per 100 g, and up to four
-portions per food: 13.5k foods in 1.5 MB, about 0.3 MB as Pages serves it.
-**Never hand-edit it**; re-run the script. The service worker precaches it,
-so a lookup works offline from the first one and sends nothing anywhere.
+**The food finder: a free AI, with nothing to set up.** The owner's call on
+2026-10-14: rather than a list the app ships, a small agent finds the numbers
+for whatever was eaten. He accepted that this needs a connection — "99% of
+people have internet" — so the built-in table (`FOODS`), the USDA food library
+(`vendor/usda/foods.js`, `tools/make-foods.py`) and the restaurant menus
+(`vendor/menus/`, `tools/make-menus.py`, `tools/menus/`) were removed in b63
+rather than kept as a fallback. And it has to work the moment the app is
+opened: **no key to paste, no sign-in** — his words, after seeing a first
+version that asked for a key in Settings.
 
-It loads with a `<script>` tag on first use (`loadLibrary()`), not `fetch()`,
-because a page opened from disk cannot fetch a file beside it, and the suites
-open the app from disk. In the artifact copies there is no `vendor/`, and the
-panel says it could not be opened rather than spinning.
+**The key lives in a relay, never in the app.** The repo and the Pages site
+are public, so a key in `iron-ledger.html` would be copied out, its free
+allowance used up and the key shut off (and `TEAM.md` forbids keys in the repo;
+`finder` fails the build if one appears). So the app asks `relay/worker.js`, a
+Cloudflare Worker on the free plan that the owner deployed once with the Gemini
+key as its secret (`relay/README.md` has his steps). `RELAY_URL` is its
+address; `window.IRON_LEDGER_RELAY` overrides it, for the suites' stand-in or
+`wrangler dev`. A copy opened from disk doesn't ask it at all: such a page has
+no web address, which the relay refuses, so it says the finder isn't available
+in it rather than failing every time — and that keeps the suites, which open
+the app from disk, off the network. Why not straight to a model from the phone: only Gemini's and
+OpenRouter's free services answer a web page at all (NVIDIA's, which the
+team's Hermes agents use, sends no CORS headers — checked 2026-10-14), and
+either would need a key on the phone. Hermes on the owner's PC is out of reach
+from a phone. Supabase was the other host considered; its free projects pause
+after a week unused, which would stop the finder for everyone.
 
-**A partial match says so.** "Cava harissa avocado bowl" used to log a 240 kcal
-avocado, because `matchIn()` takes the longest known name found anywhere in
-what was typed. `matchAlias()` now also returns which name it was, and
-`missedWords()` lists the typed words it did not cover; cooking words and
-sizes are neutral, and the food's own name counts as covered. A review row
-with missed words, or one that matched nothing, says what happened and offers
-*Look it up in the food library* (and *Keep this match*). `searchLibrary()`
-ranks by how many typed words a name contains, then the plainest name; raw
-and baby food sink unless asked for. `libPortion()` turns the typed amount
-into grams: a typed weight, a size typed ("medium fries" means the medium
-portion), a unit named in a portion ("1 cup"), or the typical portion times
-the count, or 100 g said as such. A pick replaces the row with a `usda` item
-that has a gram basis, so its weight is editable like the built-in table's.
-Its tag carries the data's year (`srcLabel()`), because the 2018 fast-food
-numbers are older than the chains' current recipes. It lands in the review,
-never straight in the ledger.
+**Only the words describing the food are sent**, with the country chosen on
+the form: `{food, region}`, nothing from the day, a goal or a pantry name, no
+key and no cookie. The relay builds the prompt itself, so it cannot be used as
+a general-purpose AI; browsers on other websites get no answer (only the Pages
+origin and a phone on the home wifi do — though a script can claim any origin,
+so that is not a lock), 20 lookups a minute per address (`PER_PHONE`), at most
+2 KB a question and 300 characters of food, and nothing but food rows go back.
+The key is on Gemini's free tier, so abuse can at worst use up the day's
+allowance, never cost money. `tests/relay.py` runs the Worker in Node against a
+fake Gemini and checks every one of those.
 
-Two old bugs went with it. A food named with *with* — "Quarter Pounder with
-cheese" — had only "quarter pounder" as an alias, so typing its full name
-split on *with* and logged a separate cheddar. `joinedAliases()` now protects
-every food's own name too. And "2 medium fries" read back as "2 eachs".
+**A small agent, not one question.** The relay asks (`estimatePrompt()`:
+split into foods, grams, kcal, protein, carbs, fat, and a `basis` — the
+brand's published figures, typical values, or a rough guess), then checks each
+answer the way `make-menus.py` used to check a copied line: calories should come
+within 20% (or 40 kcal) of 4·protein + 4·carbs + 9·fat (`addsUp()`). Anything
+that doesn't is asked about once more, quoting the gap (`recheckPrompt()`), and
+the second answer is kept only if it adds up better. The app checks every
+answer again (`modelItems()`), so a slip that survives is flagged on its row —
+*These calories don't match its protein, carbs and fat* — never quietly
+logged. A drink with alcohol is the honest exception and the flag says so. The
+relay reads Gemini's reply leniently: free models wrap JSON in a code fence or
+a sentence, and that must not read as a failure. The models are aliases, so a
+renamed model does not break the finder, and they are a list (`MODELS`), see
+*When it can't answer* below.
 
-**Grocery brands: step 2, and a download the owner chooses.** The library
-answers "rice"; it does not answer "the Great Value milk in my fridge".
-`tools/make-brands.py` turns USDA's Branded Foods (about 3 GB of CSV) into
+Inside Claude, a published artifact cannot reach the internet, so the relay is
+out of reach and Claude (`sample`) answers instead, with the app's own copy of
+the prompt and the same check-and-ask-again loop (`askClaude()`). Keep the two
+prompts in step. Claude is only the fallback for *unreachable*: a relay that
+answers "busy" says so rather than being quietly swapped for Claude.
+
+Answers are `ai` rows tagged *AI · typical*, *AI · brand's figures* or *AI ·
+rough guess*, with a gram basis whenever the AI gave a weight, so the portion is
+correctable like a pantry food weighed in grams; a weight that was typed comes
+back in its unit. They are marked as estimates in the ledger, like Claude's.
+The review reads in the order things were typed (`inOrder()`), so it can be
+checked against what was typed. When the pantry knew none of it, the finder
+gets the words exactly as typed, because the splitter tears dish names apart
+("mac and cheese"); `joinedAliases()` now protects the pantry's own names
+instead of the table's.
+
+**When it can't answer, the food waits.** Every failure has a code from the
+relay and its own words (`finderMessage()`): busy or at today's free limit,
+too many lookups from this phone, too many words at once, a problem on the
+relay's side, no connection, too slow (45 s), a reply that wasn't numbers. The
+review still opens, with the pantry's rows answered and the rest as *needs
+numbers* placeholders, each with *Find it again*, which asks about that row
+alone (`reaskRow()`). A copy of the app with no relay and no Claude sends
+nothing anywhere and says the finder isn't available in it. Behind a code, the
+relay logs Gemini's own status and message, with the key cut out (`note()`,
+read with `npx wrangler tail`): on its first day every lookup came back
+`failed`, and the code alone could not say why. The log said Gemini 503, "This
+model is currently experiencing high demand", five times in a row — the free
+tier turning people away from its busiest model — and then "quota exceeded …
+limit: 20" a day for that model, while `gemini-flash-lite-latest` answered every
+lookup. Each model has its own free daily allowance, so the relay works down
+`MODELS`, lightest first (`gemini-flash-lite-latest`, `gemini-flash-latest`,
+`gemini-2.5-flash-lite`): a model that is overloaded, out of allowance, slower
+than 12 seconds or retired hands the question to the next, and one out of
+allowance is skipped until Google says it's back (`restFor()`). The app hears
+*busy* only when every model has said no.
+
+The suites never reach the relay or a real AI. `tests/fakeai.py` stands in for
+the relay, answering from a small fixture of foods the way the relay would
+after a careful model, recording what was asked, and letting a check make it
+busy, wrong or unreachable.
+
+**Grocery brands: what a barcode is found in, and a download the owner
+chooses.** A scanned barcode is a number; the AI cannot turn it into a product,
+and guessing would be the confident wrong answer. So barcodes stay on a list,
+the one shipped list left. `tools/make-brands.py` turns USDA's Branded Foods (about 3 GB of CSV) into
 `vendor/usda/brands-<release>.js`: US products not discontinued, the newest
 submission per barcode, with calories, protein, the label's serving and every
 barcode a product is sold under — about 390,000 products, 35 MB, under 8 MB as
 Pages serves it. That is too big to land on a phone unasked, so it is never
-precached: the library panel offers *Download grocery brands · 8 MB* under
-its results, Settings → *Food library* offers it too (and removing it), and
+precached: the scanner offers *Download grocery brands · 8 MB* the first time,
+Settings → *Grocery brands* offers it too (and removing it), and
 `store.brandsOn` remembers the choice. It is a fact about this phone, so a
 restore does not carry it.
 
@@ -93,16 +151,13 @@ It is held as **columns, not records**: one lowercase `brand|name` line per
 product in a single string, searched with `indexOf`, plus arrays of numbers
 beside it. Half a million small objects never exist. The generator folds
 everything to plain ASCII on purpose — one accented letter anywhere makes a
-browser hold the whole string at two bytes a letter. `searchBrands()` starts
-from the rarest typed word and ranks like the library does. A brand counts as
-*named* only on whole words, and all of its words or a long first one: "rice"
-is not Riceland and "big mac" is not the Big Y supermarket, while "kirkland"
-is still Kirkland Signature. The panel puts whichever group matched more of
-what was typed first, and on a tie the brands only when one was named.
+browser hold the whole string at two bytes a letter. Searching it by typed
+words (`searchBrands()`) went with the food library panel in b63; the finder
+answers typed words now.
 
-A brand pick is a `label` item (*brand label · 2026*): the typed weight if one
-was typed, otherwise servings as the label states them — "2 chobani greek
-yogurt" is two of its containers — or 100 g said as such.
+A scanned product is a `label` item (*brand label · 2026*): servings as the
+label states them, or 100 g said as such. It is the published number, so it is
+not marked as an estimate in the ledger.
 
 **The service worker keeps it across builds.** It lives in its own cache,
 `iron-ledger-data`, which `activate` does not delete with the old build's
@@ -110,34 +165,14 @@ shell; otherwise every update would make every phone download 8 MB again. The
 release is in the file name, so new USDA data is a new file. `pwa` checks it
 is not precached, survives an update, and answers offline.
 
-**Restaurant menus: step 4, from the chains themselves.** *Don't know the
-numbers* opens with two quick buttons, *Restaurant menu* and *Scan a barcode*,
-at the top of the form and again under a review. The menu sheet lists the
-chains; a chain lists its items by group, each with its options (sizes, counts,
-proteins) as buttons; a tap adds to an order pinned to the foot of the sheet
-(`#menuTray` is sticky — sticky has to sit on a direct child of the scroller,
-which the first version got wrong), and *Add to the estimate* puts the order in
-the review as one meal. The order is kept while the sheet is closed.
+**Restaurant menus** were a sheet of seven chains' own published numbers,
+from b61 until the food finder replaced them in b63. Ask the finder for
+"a medium McDonald's fries": it answers with the chain's figures where it knows
+them, and tags the row *brand's figures*.
 
-The data is `vendor/menus/menus.js`, built by `tools/make-menus.py` from one
-text file per chain in `tools/menus/`, each headed with its source and the date
-it was read: McDonald's (its product pages), Chick-fil-A (its nutrition page),
-Taco Bell (its official Nutritionix table), Chipotle, Popeyes, In-N-Out and
-Five Guys (their PDFs). **Every number is the chain's own.** Five Guys
-publishes parts, not burgers, so its burgers are added up from its parts and
-say so in their names. The generator refuses a line whose calories do not
-roughly equal 4·protein + 4·carbs + 9·fat, which catches a copying slip.
-Wendy's, Subway, Raising Cane's and Panda Express are not in yet: Wendy's site
-blocks automated reading and the others could not be fetched the night this
-was built. Fountain drinks are as each chain lists them (McDonald's without
-ice). A pick is a `menu` item: counted, not weighed, tagged *restaurant menu ·
-2026*, and not marked as an estimate in the ledger — nor is a `label` item.
-
-Typed words find menu items too (`searchMenus()`), as a *Restaurant menus*
-group in the food library panel, first when the chain was named: "mcdonalds
-big mac" is today's Big Mac before USDA's 2018 one.
-
-**Barcodes: step 3, in the web app.** Camera, photo, or the number typed. The
+**Barcodes: in the web app.** *Scan a barcode* is the one quick button at the
+top of *Don't know the numbers*, and again under a review. Camera, photo, or
+the number typed. The
 reader is zxing-cpp compiled to WebAssembly (`vendor/zxing/`, zxing-wasm 3.1.4,
 MIT/Apache-2.0), its engine shipped as base64 inside a script so it loads from
 disk like everything else; it lives in the service worker's data store with
@@ -151,10 +186,9 @@ answer only counts while it is still starting: a number typed meanwhile used
 to be wiped by a late "no camera". Leaving the tab stops the camera.
 
 **Carbs and fat: off until chosen.** Settings → *Carbs & fat*. Rows carry
-`carb`/`fat` when the food's numbers include them: the built-in table (268 of
-310 entries, matched to USDA where its kcal and protein agree with the
-table's), the library and the brands (regenerated with both), the menus, the
-pantry (optional fields) and the numbers form (optional fields). **A row
+`carb`/`fat` when the food's numbers include them: the food finder (it is
+asked for both), the brands, Claude's answers, the pantry (optional fields)
+and the numbers form (optional fields). **A row
 without them is counted as missing, never as zero**: the day's line reads
 *Carbs 210 g · Fat 64 g · 2 foods without them*. Typing over a review row's
 calories or protein lets its carbs and fat go, because they would no longer add
@@ -184,8 +218,7 @@ textarea tells someone opening the app for the first time nothing about what it
 accepts — the owner said so, and he was right. Macros now opens on labelled
 fields with examples in them, the shape the pantry form already uses: Amount /
 Unit / Food, one row per item, `+ Add another`, and a datalist on the food field
-carrying every name in `FOODS` plus the pantry, so "what does it know?" is
-answered by typing rather than by guessing and being told no.
+carrying the pantry's names, the one thing that answers with no connection.
 
 The plain-words box did **not** go away. It is what makes "half a protein
 coffee" and "chicken and rice" work in one line, and it is faster once you know
@@ -195,8 +228,8 @@ over the top of words already in the box.
 
 The table is a way to **compose** the same sentence, not a second code path:
 `rowChunk()` turns one row into `"6 oz chicken breast"` and `rowsText()` joins
-them with `&`, which is exactly what `splitItems()` already splits on. Pantry,
-the built-in table and Claude resolve it unchanged. Every unit the picker offers
+them with `&`, which is exactly what `splitItems()` already splits on. The
+pantry, the food finder and Claude resolve it unchanged. Every unit the picker offers
 is a word `parseQty()` knows, so the picker cannot produce a chunk the parser
 then shrugs at.
 

@@ -1,7 +1,10 @@
 # The Iron Ledger
 
-Gym and macro log. One HTML file, no build step, no dependencies, genuinely
-offline — it makes no network requests at all.
+Gym and macro log. One HTML file, no build step, no dependencies, and offline
+for everything but one thing: *Don't know the numbers* asks a free AI about
+any food your pantry doesn't know, through a small relay (`relay/`, a
+Cloudflare Worker that holds the key) — nothing for the person using it to set
+up. Only the food you describe is sent.
 
 ## Run it
 

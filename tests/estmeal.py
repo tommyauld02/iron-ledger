@@ -1,5 +1,6 @@
 from playwright.sync_api import sync_playwright
 import os, datetime
+import fakeai
 
 # The Macros tab now opens on the fill-in table; the plain-words box is behind
 # "Or just describe it in words". This suite is about what the resolver makes
@@ -19,6 +20,7 @@ def check(n, ok, dt=""): res.append((("PASS" if ok else "FAIL"), n, dt))
 with sync_playwright() as pw:
     b=pw.chromium.launch()
     ctx=b.new_context(viewport={"width":393,"height":900}, has_touch=True, is_mobile=True)
+    fakeai.phone(ctx)     # the food finder is set up; tests/fakeai.py answers it
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
@@ -125,7 +127,7 @@ with sync_playwright() as pw:
     p.reload(); p.wait_for_timeout(800)
     p.click(".meal-open"); p.wait_for_timeout(400)
     p.locator("[data-est]").first.click(); p.wait_for_timeout(700)
-    check("a placeholder inside a meal resolves offline, no Claude needed",
+    check("a placeholder inside a meal resolves through the food finder",
           p.locator(".review").count()==1, p.locator("#view").inner_text()[:80].replace("\n"," "))
     check("the one-meal toggle is offered there too", p.locator("#estMeal").count()==1)
     p.click("#estMeal"); p.wait_for_timeout(300)

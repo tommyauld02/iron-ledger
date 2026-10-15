@@ -11,7 +11,8 @@
  * content-addressed by filename and never change under the same name.
  *
  * Nothing here touches localStorage. The log lives there and is never cached,
- * evicted or synced by this worker.
+ * evicted or synced by this worker. Nor does it touch the food finder: its
+ * questions are POSTs to another origin, which pass straight through.
  */
 const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
 const CACHE = "iron-ledger-" + VERSION;
@@ -38,11 +39,6 @@ const SHELL = [
   "./fonts/IBMPlexMono-400-latin-ext.woff2",
   "./fonts/IBMPlexMono-500-latin-ext.woff2",
   "./fonts/IBMPlexMono-600-latin-ext.woff2",
-  // The food library: 0.3 MB as served, and the whole point of it is answering
-  // with no connection, so it is kept from install rather than first use.
-  "./vendor/usda/foods.js",
-  // The restaurant menus: 28 KB, answered offline from the first use.
-  "./vendor/menus/menus.js",
 ];
 
 self.addEventListener("install", (e) => {
