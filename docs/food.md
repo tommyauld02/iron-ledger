@@ -73,8 +73,9 @@ a general-purpose AI; browsers on other websites get no answer (only the Pages
 origin and a phone on the home wifi do — though a script can claim any origin,
 so that is not a lock), 20 lookups a minute per address (`PER_PHONE`), at most
 2 KB a question and 300 characters of food, and nothing but food rows go back.
-The key is on Gemini's free tier, so abuse can at worst use up the day's
-allowance, never cost money. `tests/relay.py` runs the Worker in Node against a
+The key is on Gemini's free tier (its Google project has no billing account,
+which the relay cannot check), so abuse can at worst use up the day's
+allowance; with billing on it would be paid for, so a budget cap comes first. `tests/relay.py` runs the Worker in Node against a
 fake Gemini and checks every one of those.
 
 **A small agent, not one question.** The relay asks (`estimatePrompt()`:

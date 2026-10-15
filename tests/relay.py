@@ -94,6 +94,13 @@ check("a body far bigger than a question is turned away before it is read", r.st
 r = await call(new Request("https://x.workers.dev/find", { method: "POST",
   headers: { Origin: PAGES, "Content-Type": "application/json" }, body: JSON.stringify({ food: "banana", pad: "x".repeat(5000) }) }));
 check("and so is one that doesn't say how big it is", r.status === 413 && calls.length === 0, r.status);
+// an endless body that never says its size: refused after MAX_BODY bytes, not read to the end
+let pulled = 0;
+const endless = new ReadableStream({ pull(c) { pulled++; c.enqueue(new TextEncoder().encode("x".repeat(512))); if (pulled > 10000) c.close(); } });
+r = await call(new Request("https://x.workers.dev/find", { method: "POST", duplex: "half",
+  headers: { Origin: PAGES, "Content-Type": "application/json" }, body: endless }));
+check("an endless body is given up on after a couple of KB, not read to the end",
+  r.status === 413 && pulled < 20 && calls.length === 0, r.status + ", " + pulled + " pieces read");
 calls = []; script = [GOOD];
 r = await call(req("POST", { food: "banana" }, "https://tommyauld02.github.io", undefined, "198.51.100.7"));
 check("a script that claims the app's origin is answered — the origin is no lock, the limits are",

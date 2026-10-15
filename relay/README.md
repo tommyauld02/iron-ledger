@@ -60,15 +60,19 @@ status and message (`Gemini 400: …`); the app only ever gets a code like
   claim any origin, and an app whose every byte is public has no secret to
   prove itself with. What limits the damage is the rest of this list.
 - `PER_PHONE`: 20 lookups a minute from any one address.
-- At most 2 KB a question, refused before it is read, and 300 characters of
-  food. The prompt is built here, so the relay can't be used as a
+- At most 2 KB a question — refused on its stated size, or as soon as 2 KB has
+  been read when it doesn't say — and 300 characters of food. The prompt is built here, so the relay can't be used as a
   general-purpose AI.
 - Only food rows go back. The key never does, and the log cuts out anything
   shaped like a key.
-- The key is on Gemini's **free tier**, so the worst abuse can do is use up the
-  day's free allowance — the app then says the finder is busy until it resets
-  at midnight Pacific — and it can never cost money. If abuse ever shows up in
-  `npx wrangler tail`, the next step is a Cloudflare Turnstile check in the app.
+- The key is on Gemini's **free tier**: its Google project has no billing
+  account. Keep it that way, because nothing in the relay can check it. Then the
+  worst abuse can do is use up the day's free allowance — the app says the
+  finder is busy until it resets at midnight Pacific. With billing turned on,
+  the same abuse would be paid for, so set a budget cap in Google Cloud before
+  ever doing that. To check: AI Studio → API keys shows the key's plan as
+  *Free*. If abuse ever shows up in `npx wrangler tail`, the next step is a
+  Cloudflare Turnstile check in the app.
 
 ## Which model answers
 

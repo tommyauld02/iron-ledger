@@ -31,6 +31,8 @@ rules and the index of these docs. The rules apply here too.
 - The relay's origin check keeps other websites out, not scripts: anyone can
   claim the app's origin. Nothing in a public app can prove it is the app. The
   per-address limit, the size cap and the server-built prompt limit what a
-  script can do, and on the free tier the worst is using up the day's
-  allowance. A Cloudflare Turnstile check is the next step if abuse ever shows
+  script can do, and while the key stays on the free tier (no billing account
+  on its Google project — nothing in the relay can check that) the worst is
+  using up the day's allowance. Turning billing on would make abuse cost money:
+  set a budget cap first. A Cloudflare Turnstile check is the next step if abuse ever shows
   up in the relay's log.

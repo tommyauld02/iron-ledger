@@ -19,9 +19,11 @@
  * is what limits the damage: each address is held to the PER_PHONE rate, a
  * question is at most MAX_BODY bytes and MAX_FOOD characters, the prompt is
  * built here so it only ever answers food questions, and the reply is cut down
- * to food rows. The key is on Gemini's free tier, so the worst abuse can do is
- * use up the day's free allowance (the app then says the finder is busy until
- * it resets); it cannot cost money.
+ * to food rows. The key is on Gemini's free tier — its Google project has no
+ * billing account, which nothing here can check, so keep it that way — and
+ * then the worst abuse can do is use up the day's free allowance (the app says
+ * the finder is busy until it resets). With billing on, the same abuse would
+ * be paid for: set a budget cap in Google Cloud first.
  *
  * Deploy and set the key: see relay/README.md. Nothing here is secret.
  */
@@ -54,12 +56,13 @@ export default {
       if (!success) return reply(429, { error: "slow_down" }, cors);
     }
 
-    // A question is a few hundred bytes. Anything far bigger is refused before
-    // it is read, so a huge body costs nothing to turn away.
+    // A question is a few hundred bytes. Anything far bigger is refused: on its
+    // stated size before a byte is read, or, when it doesn't say, as soon as
+    // the bytes read pass MAX_BODY — never by reading it all first.
     if (Number(request.headers.get("Content-Length") || 0) > MAX_BODY) return reply(413, { error: "too_long" }, cors);
     let raw = "";
-    try { raw = await request.text(); } catch (e) { /* answered below */ }
-    if (raw.length > MAX_BODY) return reply(413, { error: "too_long" }, cors);
+    try { raw = await readCapped(request, MAX_BODY); } catch (e) { /* answered below */ }
+    if (raw === null) return reply(413, { error: "too_long" }, cors);
     let body = null;
     try { body = JSON.parse(raw); } catch (e) { /* answered below */ }
     const rawFood = body && typeof body.food === "string" ? body.food : "";
@@ -76,6 +79,29 @@ export default {
     }
   }
 };
+
+// The body as text, read a piece at a time and given up on (null) the moment
+// it passes `max` bytes, so an endless body costs no more than `max` to refuse.
+export async function readCapped(request, max) {
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const pieces = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      try { await reader.cancel(); } catch (e) { /* already gone */ }
+      return null;
+    }
+    pieces.push(value);
+  }
+  const all = new Uint8Array(size);
+  let at = 0;
+  for (const p of pieces) { all.set(p, at); at += p.byteLength; }
+  return new TextDecoder().decode(all);
+}
 
 // The Pages site, anything listed in ALLOWED_ORIGINS, and a phone on the home
 // wifi running tools/serve.py (localhost or a private address), for testing.
