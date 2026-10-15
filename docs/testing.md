@@ -65,6 +65,15 @@ legible a picker is; and **a push is not done until CI is green and the live
 page serves the new `BUILD`** — b39 was pushed without anyone watching, which
 is how one failure became two.
 
+**A suite writes to a file, not to CI's log.** On PR #14 every check passed and
+the run still went red: `sweep` died printing its ~800 results with
+`BlockingIOError: [Errno 11] write could not complete without blocking`. The
+log on CI is a pipe, `verify.sh` sends each suite's stderr into it with
+`2>&1`, and the Playwright driver sharing it can leave it non-blocking, so a
+big enough print fails partway. It passed on the commit before, so it is luck
+rather than a broken test. `verify.sh` now sends each suite to a temporary file
+and prints that afterwards; a file always blocks.
+
 Two lessons paid for the hard way:
 
 - **A test that measures hidden elements passes while measuring nothing.** A

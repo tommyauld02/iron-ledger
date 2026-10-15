@@ -23,13 +23,20 @@ done
 echo "### testing $(grep -o 'BUILD = \"[^\"]*\"' iron-ledger.html | head -1)  [$PY]"
 fail=0
 skipped=""
+# Each suite writes to a file, never straight to the log. On CI the log is a
+# pipe, the Playwright driver shares it through `2>&1`, and it can leave the
+# pipe non-blocking: sweep then died printing its ~800 results with
+# "BlockingIOError: [Errno 11] write could not complete without blocking",
+# every check passed and the run went red (PR #14). A file always blocks.
+log=$(mktemp)
+trap 'rm -f "$log"' EXIT
 for s in sweep days probe darkcheck coach meals estmeal touch mobile \
          commit noclaude yourwords firstrun photo2 taborder pwa handoff finder relay label hittest share; do
   echo "=================== $s ==================="
   # `cmd && rc=0 || rc=$?` keeps set -e out of it: a bare `cmd; rc=$?` would
   # abort the whole run on the first failing suite, hiding every later one.
-  if [ -n "$1" ]; then out=$("$PY" tests/$s.py 2>&1) && rc=0 || rc=$?; echo "$out" | tail -"$1"
-  else "$PY" tests/$s.py 2>&1 && rc=0 || rc=$?; fi
+  "$PY" tests/$s.py > "$log" 2>&1 && rc=0 || rc=$?
+  if [ -n "$1" ]; then tail -n "$1" "$log"; else cat "$log"; fi
   # 77 is a suite saying it could not run at all, which is not the same as the
   # app being broken. It is still missing coverage, so it is named at the end.
   if [ "$rc" -eq 77 ]; then skipped="$skipped $s"
