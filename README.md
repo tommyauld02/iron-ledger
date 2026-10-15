@@ -19,8 +19,9 @@ probably blocking inbound on a Public network profile.
 
 ## Work on it
 
-Read `CLAUDE.md` first — it has the architecture and the rules that keep this
-thing from breaking in the specific ways it has broken before. Agents working
+Read `CLAUDE.md` first — it has the rules that keep this thing from breaking
+in the specific ways it has broken before, and an index of `docs/`, where the
+architecture is written up one area of the app at a time. Agents working
 here also read `TEAM.md`: who does what, the issue labels, and the rule that
 nothing merges without the owner's "push it".
 

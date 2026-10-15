@@ -49,7 +49,7 @@ missing = [f for f in need if not os.path.exists(os.path.join(VENDOR, f))]
 if missing:
     print("SKIPPED  the label reader needs vendor/tesseract/")
     print("         missing: %s" % ", ".join(missing))
-    print("         see CLAUDE.md — they are downloaded, not written by hand")
+    print("         see docs/food.md — they are downloaded, not written by hand")
     raise SystemExit(77)
 
 

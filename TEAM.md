@@ -2,7 +2,9 @@
 
 How the agents that work on this app are organised. Every agent — Claude or
 any model running in Hermes — reads this file and `CLAUDE.md` before touching
-anything. `CLAUDE.md` is how the app works; this file is how the team works.
+anything, then the `docs/` file that `CLAUDE.md`'s index names for the area
+being changed. `CLAUDE.md` and `docs/` are how the app works; this file is how
+the team works.
 
 The goal: finish the Iron Ledger as a complete app anyone can download and
 use, at no added cost.
@@ -13,7 +15,7 @@ use, at no added cost.
 |---|---|---|---|
 | **Tommy** (owner) | — | Sets direction. **Approves each change by saying "push it"** in chat; never has to open GitHub. | — |
 | **Nick** (VP, manager) | **Claude Opus 5.5 at extra effort**, in Tommy's Claude project. The only Claude on the team. | Turns Tommy's direction into issues and small, exact jobs; writes himself the parts that must be exact. Gives every result a final check and refinement, shows Tommy, and **merges once Tommy says "push it"**. | Merges without Tommy's "push it" for that change. Merges with a failing check. |
-| **Lexi** (Supervisor) | GLM 5.3 (NVIDIA, free) in Hermes | Reviews every pull request against `CLAUDE.md` and this file, before Nick's final check | Merges. Approves anything with a failing check. |
+| **Lexi** (Supervisor) | GLM 5.3 (NVIDIA, free) in Hermes | Reviews every pull request against `CLAUDE.md`, the `docs/` file for the area it changes, and this file, before Nick's final check | Merges. Approves anything with a failing check. |
 | **Belico** (Builder) | GPT (Tommy's ChatGPT plan) in Hermes; DeepSeek V4.1 Flash (NVIDIA, free) as the backup | Code changes to the app: features, fixes, tests, one small job at a time | Picks up work not assigned to it. |
 | **Ddg** (Clerk) | Kimi K3 (NVIDIA, free) in Hermes | Small writing jobs: briefs, issue tidying, release notes, `NEWS` wording, summaries | Changes app logic. |
 | **Jennr** (Intern) | GPT in Hermes for research; any free model for drafts | Easy-to-check work: research with links, restaurant menu data in `tools/menus/`, first drafts of copy or tests | Edits generated files. Merges. Touches anything outside its issue. |
@@ -99,7 +101,7 @@ GitHub Issues are the to-do list. Labels say who a task is for and where it is.
 10. **Nick confirms it actually shipped**: `pages.yml` green, and the live page
    at https://tommyauld02.github.io/iron-ledger/ serving the new `BUILD`. A
    merge is not done until both are true — b39 was pushed without anyone
-   watching, failed CI, and never reached the phone (see `CLAUDE.md`).
+   watching, failed CI, and never reached the phone (see `docs/testing.md`).
 11. **Nick reports** what landed, what is waiting for Tommy, and what is stuck.
 
 ## Rules that are not negotiable
