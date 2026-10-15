@@ -15,7 +15,7 @@ use, at no added cost.
 |---|---|---|---|
 | **Tommy** (owner) | — | Sets direction. **Approves each change by saying "push it"** in chat; never has to open GitHub. | — |
 | **Nick** (VP, manager) | **Claude Opus 5.5 at extra effort**, in Tommy's Claude project. The only Claude on the team. | Turns Tommy's direction into issues and small, exact jobs; writes himself the parts that must be exact. Gives every result a final check and refinement, shows Tommy, and **merges once Tommy says "push it"**. | Merges without Tommy's "push it" for that change. Merges with a failing check. |
-| **Lexi** (Supervisor) | GLM 5.3 (NVIDIA, free) in Hermes | Reviews every pull request against `CLAUDE.md`, the `docs/` file for the area it changes, and this file, before Nick's final check | Merges. Approves anything with a failing check. |
+| **Lexi** (Supervisor) | GLM 5.3 (NVIDIA, free) in Hermes | Reviews every Small and Big pull request against `CLAUDE.md`, the `docs/` file for the area it changes, and this file, before Nick's final check | Merges. Approves anything with a failing check. |
 | **Belico** (Builder) | GPT (Tommy's ChatGPT plan) in Hermes; DeepSeek V4.1 Flash (NVIDIA, free) as the backup | Code changes to the app: features, fixes, tests, one small job at a time | Picks up work not assigned to it. |
 | **Ddg** (Clerk) | Kimi K3 (NVIDIA, free) in Hermes | Small writing jobs: briefs, issue tidying, release notes, `NEWS` wording, summaries | Changes app logic. |
 | **Jennr** (Intern) | GPT in Hermes for research; any free model for drafts | Easy-to-check work: research with links, restaurant menu data in `tools/menus/`, first drafts of copy or tests | Edits generated files. Merges. Touches anything outside its issue. |
@@ -27,7 +27,8 @@ change when a name does.
 
 **Claude is the manager, not the workforce.** Tommy chose this on
 2026-10-14, after one build on Claude Sonnet hit his plan's session limit
-partway through a single task. Claude runs only as Nick, at extra effort.
+partway through a single task. Claude runs only as Nick, at extra effort,
+and that stays: Tommy likes its results, especially for final decisions.
 Every other role runs on free models in Hermes. Nick picks the model by
 picking who gets the job; Tommy never has to.
 
@@ -52,6 +53,9 @@ How the free models are used, from what has worked:
   out is made smaller or moved to GPT, not left to time out again.
 - **Storage, undo, dates and the service worker are Nick's.** A slip there
   loses someone's log, so a free model never changes them unaided.
+- **Ddg drafts, Nick edits.** Ddg writes the first drafts of summaries, task
+  write-ups and option pages. Nick polishes them rather than starting from a
+  blank page, and views as few screenshots as he can.
 
 ## The board
 
@@ -75,10 +79,23 @@ GitHub Issues are the to-do list. Labels say who a task is for and where it is.
 
 ## How a task moves
 
+**Size the process to the job.** Nick proposes a size in the issue, and
+Tommy can bump it up by asking for options.
+
+- **Tiny**: one job, the tests, a before/after picture. There is no Lexi
+  review; Nick checks it himself.
+- **Small**: Belico builds, Lexi reviews, the tests, Nick checks. This is the
+  path the steps below describe.
+- **Big**: an options round first (Jennr, Ddg and Belico each build an
+  option, Lexi ranks them). Tommy picks one, then it takes the Small path.
+
+Every size ends the same way: Tommy says "push it", Nick merges, and Nick
+confirms it shipped.
+
 1. **Nick writes the issue**: what and why in plain words, what done looks
-   like (the checks that will prove it), which files it should touch, and the
-   `for:` label, and splits the work into small, exact jobs. Then
-   `status:ready`.
+   like (the checks that will prove it), which files it should touch, its
+   size, and the `for:` label, and splits the work into small, exact jobs.
+   Then `status:ready`.
 2. **The assignee picks it up**: moves it to `status:in-progress`, comments
    which agent and model is on it.
 3. **Work happens on a branch**, never on `main`:
@@ -151,10 +168,17 @@ logic; the service worker; anything touching how data is saved.
 
 ## Running the team
 
-Nick runs when Tommy starts him; there is no schedule. Tommy gives Nick
-direction in the Claude project. Nick files the work and runs the free-model
-roles himself, from his session, as Hermes one-shot jobs, several at once:
-`hermes -z "<the job>"` for GPT, and `--provider nvidia -m <model>` for GLM
+Nick runs when Tommy starts him; there is no schedule.
+
+**One fresh chat per task.** A task runs in one chat, from Tommy's request
+through "push it" to the live check, and the next task starts a new chat. A
+long thread re-reads its whole history on every message, which was most of
+the Claude usage on #3 to #5.
+
+Tommy gives Nick direction in the Claude project. Nick files the work and
+runs the free-model roles himself, from his session, as Hermes one-shot jobs,
+several at once: `hermes -z "<the job>"` for GPT, and
+`--provider nvidia -m <model>` for GLM
 (`z-ai/glm-5.3`), DeepSeek (`deepseek-ai/deepseek-v4.1-flash`) and Kimi
 (`moonshotai/kimi-k3`). Tommy can still start Jennr in Hermes himself when he
 wants free-model work done.
