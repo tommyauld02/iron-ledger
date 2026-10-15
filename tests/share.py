@@ -1,7 +1,8 @@
 """Handing someone a routine.
 
 The Coach tab exists so somebody else can set a routine for the owner. The
-trap, written up in CLAUDE.md before any of this was built, is day ids:
+trap, written up in CLAUDE.md before any of this was built (now in
+docs/sharing-a-routine.md), is day ids:
 DEFAULT_ROUTINE uses fixed ones — back, push, legs — so two people who never
 renamed their days hold *the same ids for different days*. Importing under
 those ids relabels the recipient's own history, which is rule 7 broken with
