@@ -17,7 +17,7 @@ def words(p):
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
-        p.click("#estSwap"); p.wait_for_timeout(250)
+        p.click('[data-esttab="agent"]'); p.wait_for_timeout(250)
 # A UPC-A barcode as an SVG, for the scanner to read from a "photo".
 _UPC_L = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"]
 def upca_svg(code, mod=3, h=120):
@@ -184,9 +184,17 @@ with sync_playwright() as pw:
     # a later check reads the corrected weight back out of the ledger.
     p.click("#commitEst"); p.wait_for_timeout(600)
     way(p, "estimate")
-    if p.locator("#estText").count(): p.click("#estSwap"); p.wait_for_timeout(300)
+    # Three ways in, as tabs (b64): Scan a barcode, Have the measurements, Ask
+    # an agent, in that order, each pressed one at a time.
+    TABS3="()=>[...document.querySelectorAll('[data-esttab]')].map(x=>x.dataset.esttab+'|'+x.textContent+'|'+x.getAttribute('aria-pressed'))"
+    check("entry: Don't know the numbers holds three ways in, as tabs",
+          [t.split("|")[1] for t in p.evaluate(TABS3)]==["Scan a barcode","Have the measurements","Ask an agent"],
+          str(p.evaluate(TABS3)))
+    p.click('[data-esttab="measure"]'); p.wait_for_timeout(300)
     check("entry: you land on a table, not a blank box",
           p.locator(".et-row").count()==1 and p.locator("#estText").count()==0)
+    check("entry: only the chosen tab is pressed",
+          [t.split("|")[2] for t in p.evaluate(TABS3)]==["false","true","false"], str(p.evaluate(TABS3)))
     # the labels are set in uppercase by CSS, so compare what is on screen
     check("entry: the fields say what goes in them",
           [x.strip().upper() for x in p.locator(".et-lab").all_inner_texts()]==["AMOUNT","UNIT","FOOD"],
@@ -197,7 +205,8 @@ with sync_playwright() as pw:
     check("entry: the food field offers what your pantry knows",
           p.locator('#estFoods option[value="costco protein coffee"]').count() == 1,
           "%d suggestions" % p.locator("#estFoods option").count())
-    for sel in ('[data-eq="0"]', '[data-eu="0"]', '[data-ef="0"]', "#estAddRow", "#estSwap"):
+    for sel in ('[data-eq="0"]', '[data-eu="0"]', '[data-ef="0"]', "#estAddRow",
+                '[data-esttab="scan"]', '[data-esttab="measure"]', '[data-esttab="agent"]'):
         bb=p.locator(sel).bounding_box()
         check("entry: %s clears 44px" % sel, bb and bb["height"]>=MIN_TAP,
               bb and "%dx%d"%(bb["width"],bb["height"]))
@@ -239,13 +248,17 @@ with sync_playwright() as pw:
     check("entry: removing a row removes the right one",
           p.locator(".et-row").count()==1 and p.input_value('[data-ef="0"]')=="toast",
           p.input_value('[data-ef="0"]'))
-    p.click("#estSwap"); p.wait_for_timeout(500)
-    check("entry: the words box is still there behind it",
+    p.click('[data-esttab="agent"]'); p.wait_for_timeout(500)
+    check("entry: Ask an agent is its own tab: the words box, and no table",
           p.locator("#estText").count()==1 and p.locator(".et-row").count()==0)
     check("entry: and the table came with it rather than being retyped",
           p.input_value("#estText")=="toast", repr(p.input_value("#estText")))
-    p.click("#estSwap"); p.wait_for_timeout(500)
-    check("entry: swapping back keeps the table",
+    p.click('[data-esttab="scan"]'); p.wait_for_timeout(500)
+    check("entry: Scan a barcode is its own tab: the scan button, and nothing to type",
+          p.locator("#openScan").count()==1 and p.locator("#estText").count()==0 and p.locator(".et-row").count()==0
+          and p.locator("#runEst").count()==0)
+    p.click('[data-esttab="measure"]'); p.wait_for_timeout(500)
+    check("entry: back on Have the measurements, the table is as it was",
           p.input_value('[data-ef="0"]')=="toast")
     p.fill('[data-ef="0"]',""); p.wait_for_timeout(200)
 
@@ -3317,7 +3330,7 @@ with sync_playwright() as pw:
     fx["reply"]=lambda qq: (429, {"error":"busy"})
     if q.locator("#discardEst").count(): q.click("#discardEst"); q.wait_for_timeout(250)
     way(q, "estimate")
-    if not q.locator("#estText").count(): q.click("#estSwap"); q.wait_for_timeout(250)
+    if not q.locator("#estText").count(): q.click('[data-esttab="agent"]'); q.wait_for_timeout(250)
     q.fill("#estText", "a bowl of chili & 6 oz chicken breast"); q.click("#runEst"); q.wait_for_timeout(900)
     fx["reply"]=lambda qq: CHILI if "chili" in qq["food"] else None
     # both taps before either answer is back: the second button is found
@@ -3329,7 +3342,7 @@ with sync_playwright() as pw:
           "%s / spinners %d" % (q.evaluate(ROWS), q.locator(".est-flag .working").count()))
     fx["reply"]=None
     q.click("#discardEst"); q.wait_for_timeout(250)
-    q.click("#estSwap"); q.wait_for_timeout(250)      # back to the table estimate() fills in
+    q.click('[data-esttab="measure"]'); q.wait_for_timeout(250)      # back to the table estimate() fills in
 
     # The relay re-checks numbers that don't add up; whatever still doesn't
     # comes back as it was, and the app flags it on its row.
@@ -3396,8 +3409,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A free AI finds the numbers"
-          and titles[1]=="Last week, set by set" and titles[2].startswith("Restaurant menus"), str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Three ways in, side by side"
+          and titles[1]=="A free AI finds the numbers" and titles[2]=="Last week, set by set"
+          and titles[3].startswith("Restaurant menus"), str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
@@ -3433,6 +3447,7 @@ with sync_playwright() as pw:
     # and a product USDA lacks is found from the pantry once saved there.
     c, q = fresh(LBSTORE, "barcodes")
     way(q, "estimate")
+    q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
     q.click("#openScan"); q.wait_for_timeout(300)
     check("barcodes: before grocery brands are on the phone, it offers them rather than failing",
           q.locator("#scanBrands").count()==1 and "9 MB" in q.inner_text("#scanBrands"), q.inner_text("#scanSheet")[:120])
@@ -3462,6 +3477,7 @@ with sync_playwright() as pw:
           q.evaluate(ROWS)==["Great Value Whole Milk"] and q.inner_text(".rev-item .src-tag").upper()=="BRAND LABEL · 2026", str(q.evaluate(ROWS)))
     q.click("#discardEst"); q.wait_for_timeout(300)
     way(q, "estimate")
+    q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
     q.click("#openScan"); q.wait_for_timeout(500)
     q.fill("#scanType", "071717171717"); q.click("#scanGo"); q.wait_for_timeout(400)
     check("barcodes: a number that is nowhere says so, and offers the pantry",
@@ -3475,6 +3491,7 @@ with sync_playwright() as pw:
     check("barcodes: it is saved with the food", pan and pan[0].get("upc")=="71717171717", str(pan))
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
     way(q, "estimate")
+    q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
     q.click("#openScan"); q.wait_for_timeout(500)
     q.fill("#scanType", "071717171717"); q.click("#scanGo"); q.wait_for_timeout(400)
     check("barcodes: and the next scan finds it, from the pantry",

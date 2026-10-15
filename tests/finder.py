@@ -78,7 +78,7 @@ def words(p, text, wait=900):
     if p.locator("#discardEst").count(): p.click("#discardEst"); p.wait_for_timeout(250)
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
-    if not p.locator("#estText").count(): p.click("#estSwap"); p.wait_for_timeout(250)
+    if not p.locator("#estText").count(): p.click('[data-esttab="agent"]'); p.wait_for_timeout(250)
     p.fill("#estText", text); p.click("#runEst"); p.wait_for_timeout(wait)
 
 

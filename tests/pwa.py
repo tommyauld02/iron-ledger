@@ -20,7 +20,7 @@ def words(p):
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     if not p.locator("#estText").count():
-        p.click("#estSwap"); p.wait_for_timeout(250)
+        p.click('[data-esttab="agent"]'); p.wait_for_timeout(250)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 res = []
@@ -101,6 +101,7 @@ with sync_playwright() as pw:
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    p.click('[data-esttab="scan"]'); p.wait_for_timeout(250)
     p.click("#openScan"); p.wait_for_timeout(400)
     if p.locator("#scanBrands").count():
         p.click("#scanBrands")
@@ -159,6 +160,7 @@ with sync_playwright() as pw:
 
     way = p.locator('[data-logway="estimate"][aria-expanded="false"]')
     if way.count(): way.click(); p.wait_for_timeout(250)
+    p.click('[data-esttab="scan"]'); p.wait_for_timeout(250)
     p.click("#openScan"); p.wait_for_timeout(500)
     if p.locator("#scanType").count():
         p.fill("#scanType", "894700010038"); p.click("#scanGo"); p.wait_for_timeout(600)
