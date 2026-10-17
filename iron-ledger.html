@@ -446,6 +446,34 @@
     overflow-wrap: anywhere;
   }
   .t-food .nm.untitled { color: var(--ink-3); }
+  /* A food's name is a button: tap it to correct the row. It keeps the ink of
+     a name, and the teal Edit at its end is the marker that it can be tapped. */
+  .t-food .nm-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .nm-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    padding: 0;
+    text-align: left;
+  }
+  .nm-btn .ed {
+    flex: none;
+    font-family: var(--font-num);
+    font-size: 10px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+  /* the correction box spans the whole grid, under its own row, like a meal */
+  .row-edit { grid-column: 1 / -1; margin: 2px 0 10px; }
+  .row-edit .re-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   .t-cal, .t-pro {
     align-self: stretch;
@@ -2948,7 +2976,8 @@
   .split-head button, .day-note button, .lift-note button, .note-add,
   .lift-foot button, .ss-head button, .pan-item .rm, .pan-item .mv,
   .supp-item button, .meal-actions button, .meal-item .mi-out, .t-del, .split-rm,
-  .meal-open .mc, .rt-head .ct, .pending-chip, .grip, .lift-name .chev, .lib-keep { color: var(--accent); }
+  .meal-open .mc, .rt-head .ct, .pending-chip, .grip, .lift-name .chev, .lib-keep,
+  .nm-btn .ed { color: var(--accent); }
   .lift-name .chev { font-size: 13px; }
 
   /* Every press shows. Most buttons gave no sign a tap had landed, which is
@@ -3204,7 +3233,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-15.64";
+  var BUILD = "2026-10-17.65";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -3371,6 +3400,9 @@
   // Which meal is being renamed. Transient like the coach editors: reopening
   // the app should show your meals, not a half-finished rename.
   var mealRenaming = null;
+  // Which food row is open for correcting. Transient the same way: a
+  // half-made correction is not worth keeping.
+  var rowEditing = null;
   // The running clock's interval. The elapsed time itself is never held in a
   // variable — it is always (now - workoutStart), so a phone that suspends the
   // app mid-session comes back with the right number instead of a stopped one.
@@ -3710,6 +3742,9 @@
   // build is stamped onto the data as soon as the app opens. Newest first; a
   // phone several updates behind sees each of them, up to four.
   var NEWS = [
+    { b: "2026-10-17.65", t: "Fix a food after it’s in", items: [
+      "Tap a food’s name on Macros to edit it: fix the name, the calories or the protein, then Save. Undo takes it back.",
+      "Logged the wrong food? Change the name and tap Look up this name’s numbers — the new answer takes the old one’s place." ] },
     { b: "2026-10-15.64", t: "Three ways in, side by side", items: [
       "Don’t know the numbers now has three tabs across the top: Scan a barcode, Have the measurements and Ask an agent. Only the one you pick shows, so the box is shorter and it’s clear what each does.",
       "Have the measurements is the table it always opened on. Ask an agent is the plain-words box, and what you put in the table comes with you. Scan a barcode opens the scanner." ] },
@@ -6349,6 +6384,7 @@
       var meal = isMeal(f);
       var c = rowCal(f), pr = rowPro(f);
       var open = meal && openMeal === f.id;
+      var editing = !meal && rowEditing === f.id;
 
       var label = meal
         ? '<button class="meal-open" data-openmeal="' + esc(f.id) + '">' +
@@ -6357,16 +6393,24 @@
               (f.items.length === 1 ? ' item' : ' items') + ' · tap to ' +
               (open ? 'close' : 'open') + '</span>' +
           '</button>'
-        : '<span class="nm' + (f.note ? '' : ' untitled') + '">' +
-            (f.note ? esc(f.note) : 'Untitled entry') +
-            (f.est ? ' <span class="est-badge">est</span>' : '') +
+        // The name is the way in to correcting the row, and still where it is
+        // held to drag. A waiting row's chip sits under the name rather than
+        // inside it, because a button cannot hold a button.
+        : '<div class="nm-col">' +
+            '<button class="nm-btn" data-editrow="' + esc(f.id) + '" aria-expanded="' + editing + '">' +
+              '<span class="nm' + (f.note ? '' : ' untitled') + '">' +
+                (f.note ? esc(f.note) : 'Untitled entry') +
+                (f.est ? ' <span class="est-badge">est</span>' : '') +
+              '</span>' +
+              '<span class="ed">Edit</span>' +
+            '</button>' +
             (f.pending
-              ? '<br><button class="pending-chip" data-est="' + f.id + '">' +
+              ? '<button class="pending-chip" data-est="' + f.id + '">' +
                   (finder() ? 'Tap to estimate' : 'Tap to add numbers') + '</button>'
               : '') +
-          '</span>';
+          '</div>';
 
-      var inside = "";
+      var inside = editing ? rowEditHtml(f) : "";
       if (open) {
         inside = '<div class="meal-body">' +
           f.items.map(function (x) {
@@ -6415,7 +6459,7 @@
         '</div>';
       }
 
-      return '<div class="t-row' + (meal ? ' is-meal' : '') + (open ? ' is-open' : '') +
+      return '<div class="t-row' + (meal ? ' is-meal' : '') + (open || editing ? ' is-open' : '') +
                '" data-row="' + esc(f.id) + '">' +
         '<div class="t-food">' + label +
           '<button class="t-del" data-del="' + esc(f.id) + '" aria-label="Delete entry">✕</button>' +
@@ -9768,10 +9812,139 @@
     render();
   }
 
+  // Correcting a food after it went in: a typo in its name, or the wrong
+  // numbers. Asked for by the owner, who logged "Pure protein bar" meaning
+  // "Built Protein bar" and could only delete it and start again. The box
+  // opens under the row, the way a meal opens, with the row's own values in it.
+  function rowEditHtml(f) {
+    function v(n) { return n ? String(n) : ""; }
+    return '<div class="entry row-edit">' +
+      '<div class="field"><label for="reName">Name</label>' +
+        '<input id="reName" class="text" value="' + esc(f.note || "") + '" placeholder="What was it"></div>' +
+      '<div class="pair">' +
+        '<div class="field"><label for="reCal">Calories</label>' +
+          '<input id="reCal" inputmode="numeric" placeholder="0" value="' + v(f.cal) + '"></div>' +
+        '<div class="field"><label for="rePro">Protein · g</label>' +
+          '<input id="rePro" inputmode="numeric" placeholder="0" value="' + v(f.pro) + '"></div>' +
+      '</div>' +
+      (cfOn()
+        ? '<div class="pair">' +
+            '<div class="field"><label for="reCarb">Carbs · g</label>' +
+              '<input id="reCarb" inputmode="numeric" placeholder="optional" value="' + (hasCf(f) ? f.carb : "") + '"></div>' +
+            '<div class="field"><label for="reFat">Fat · g</label>' +
+              '<input id="reFat" inputmode="numeric" placeholder="optional" value="' + (hasCf(f) ? f.fat : "") + '"></div>' +
+          '</div>'
+        : '') +
+      '<p class="est-note re-hint" style="color:var(--miss)" hidden></p>' +
+      // A different food has different numbers, so a new name can be looked up
+      // rather than leaving the old food's numbers under it.
+      (finder() ? '<button class="et-swap" id="reFind">▸ Different food? Look up this name’s numbers</button>' : '') +
+      '<div class="re-actions">' +
+        '<button class="btn" id="reSave">Save</button>' +
+        '<button class="btn ghost" id="reCancel">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function openRowEdit(id) {
+    var at = locate(day(ymd(cursor)), id);
+    if (!at || isMeal(at.row)) return;
+    rowEditing = (rowEditing === id) ? null : id;
+    render();
+    // The cursor goes after the name, not over it: most corrections are a
+    // word, and a selected name is wiped by the first letter typed.
+    var el = document.getElementById("reName");
+    if (el) { el.focus(); try { el.setSelectionRange(el.value.length, el.value.length); } catch (e) {} }
+  }
+
+  // Said in the box itself, without a redraw, which would throw away what
+  // was just typed into it.
+  function rowEditSay(text, focusId) {
+    var hint = view.querySelector(".re-hint");
+    if (hint) { hint.textContent = text; hint.hidden = false; }
+    var el = document.getElementById(focusId);
+    if (el) el.focus();
+  }
+
+  function commitRowEdit() {
+    var id = rowEditing;
+    var nameEl = document.getElementById("reName");
+    if (!id || !nameEl) return;
+    var key = ymd(cursor);
+    var at = locate(day(key), id);
+    if (!at || isMeal(at.row)) { rowEditing = null; render(); return; }
+    var r = at.row;
+    var c = num(document.getElementById("reCal").value);
+    var p = num(document.getElementById("rePro").value);
+    // A row with neither counts for nothing, so it is refused the way the
+    // numbers form refuses it — except a waiting row, which has none yet and
+    // may only be getting its name fixed before it is looked up.
+    if (!c && !p && !r.pending) {
+      rowEditSay("Give it calories or protein — or ✕ removes it.", "reCal");
+      return;
+    }
+
+    var before = JSON.parse(JSON.stringify(r));
+    var note = nameEl.value.trim();
+    var numsChanged = c !== (r.cal || 0) || p !== (r.pro || 0);
+    r.note = note;
+    if (numsChanged) {
+      // Typed over, the numbers are yours: no longer an estimate, and no
+      // longer waiting for one.
+      r.cal = c; r.pro = p;
+      delete r.est; delete r.pending;
+    }
+    var cbEl = document.getElementById("reCarb"), ftEl = document.getElementById("reFat");
+    if (cbEl && ftEl) {
+      if (cbEl.value.trim() !== "" && ftEl.value.trim() !== "") {
+        r.carb = Math.max(0, num(cbEl.value)); r.fat = Math.max(0, num(ftEl.value));
+      } else { delete r.carb; delete r.fat; }
+    } else if (numsChanged) {
+      // Out of sight they cannot be corrected to match, and would no longer
+      // add up to the new numbers: the rule for typing over a review row.
+      delete r.carb; delete r.fat;
+    }
+
+    rowEditing = null;
+    if (JSON.stringify(r) === JSON.stringify(before)) { render(); return; }
+    touch(key); save(); render();
+    var nm = note || "Untitled entry";
+    var renamedOnly = !numsChanged && before.carb === r.carb && before.fat === r.fat;
+    offerUndo((renamedOnly ? "Renamed to " : "Updated ") + nm, function () {
+      var back = locate(day(key), id);
+      if (!back) return;
+      back.list[back.idx] = before;
+      touch(key); save(); render();
+    });
+  }
+
+  // The new name goes to the pantry and the food finder exactly as a waiting
+  // row's Tap to estimate does, and the answer takes this row's place once
+  // added. Closing the review leaves the row as it was.
+  function lookUpRowEdit() {
+    var id = rowEditing;
+    var nameEl = document.getElementById("reName");
+    if (!id || !nameEl) return;
+    var words = nameEl.value.trim();
+    if (!words) { rowEditSay("Type what it was first.", "reName"); return; }
+    // A finder row reads "Pure protein bar · 1 bar"; asked as "1 bar Pure
+    // protein bar", the amount reads the way it is typed in Ask an agent.
+    var m = words.match(/^(.+?)\s*·\s*(.+)$/);
+    if (m) words = m[2] + " " + m[1];
+    rowEditing = null;
+    runEstimate(words, id);
+  }
+
   function findAction(target) {
     var el = target;
     while (el && el !== view) {
       if (el.id === "addFood") return { kind: "add" };
+      if (el.id === "reSave") return { kind: "resave" };
+      if (el.id === "reCancel") return { kind: "recancel" };
+      if (el.id === "reFind") return { kind: "refind" };
+      if (el.getAttribute && el.getAttribute("data-editrow")) {
+        return { kind: "editrow", id: el.getAttribute("data-editrow") };
+      }
       if (el.getAttribute && el.getAttribute("data-del")) {
         return { kind: "del", id: el.getAttribute("data-del") };
       }
@@ -9804,10 +9977,10 @@
   // the press itself, and blocking the blur, makes it fire the first time.
   view.addEventListener("pointerdown", function (e) {
     var a = findAction(e.target);
-    if (!a || a.kind !== "add") return;
+    if (!a || (a.kind !== "add" && a.kind !== "resave")) return;
     e.preventDefault();
     swallowClickUntil = Date.now() + 800;
-    addFoodFromForm();
+    if (a.kind === "add") addFoodFromForm(); else commitRowEdit();
   });
 
   // Delegated once, on a container that is never replaced.
@@ -9817,7 +9990,18 @@
     if (a.kind === "add") {
       if (Date.now() < swallowClickUntil) return;   // already handled on press
       addFoodFromForm();
+    } else if (a.kind === "resave") {
+      if (Date.now() < swallowClickUntil) return;   // already handled on press
+      commitRowEdit();
+    } else if (a.kind === "recancel") {
+      rowEditing = null; render();
+    } else if (a.kind === "refind") {
+      lookUpRowEdit();
+    } else if (a.kind === "editrow") {
+      if (Date.now() < swallowTapUntil) return;   // this was the end of a drag
+      openRowEdit(a.id);
     } else if (a.kind === "del") {
+      if (rowEditing === a.id) rowEditing = null;
       deleteFoodById(a.id);
     } else if (a.kind === "openmeal") {
       if (Date.now() < swallowTapUntil) return;   // this was the end of a drag
@@ -9907,7 +10091,12 @@
 
   view.addEventListener("pointerdown", function (e) {
     if (tab !== "macros" || drag) return;
-    if (e.target.closest && e.target.closest("button")) return;  // buttons keep working
+    // Buttons keep working, except a food's name: it is the way in to editing
+    // the row and also most of the row, so it is still where a row is held.
+    // A field never is — holding one is how the cursor is moved on a phone.
+    var btn = e.target.closest && e.target.closest("button");
+    if (btn && !btn.classList.contains("nm-btn")) return;
+    if (e.target.closest && e.target.closest("input, select, textarea")) return;
     var el = rowElFrom(e.target);
     if (!el) return;
     drag = { id: el.getAttribute("data-row"), el: el, x0: e.clientX, y0: e.clientY,
@@ -9945,6 +10134,9 @@
     if (e.key !== "Enter") return;
     var id = e.target && e.target.id;
     if (id === "fCal" || id === "fPro" || id === "fNote") { e.preventDefault(); addFoodFromForm(); }
+    else if (id === "reName" || id === "reCal" || id === "rePro" || id === "reCarb" || id === "reFat") {
+      e.preventDefault(); commitRowEdit();
+    }
   });
 
   // ---------- drag a movement: move it, or superset it ----------
