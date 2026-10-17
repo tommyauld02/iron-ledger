@@ -128,6 +128,18 @@ with sync_playwright() as pw:
     check("and its answer takes the placeholder's place",
           len(food) == 2 and food[1].get("cal") == 143 and not food[1].get("pending") and food[1].get("est") is True,
           json.dumps(food)[:200])
+
+    # a row logged as the wrong food: corrected by name, and the new name looked up
+    p.locator("[data-editrow]").nth(1).click(); p.wait_for_timeout(300)
+    p.fill("#reName", "Banana · 1 medium"); p.click("#reFind"); p.wait_for_timeout(900)
+    check("edit: Look up this name asks the finder about the new name, amount first",
+          p.evaluate(ROWS) == ["Banana | AI · typical"] and asked[-1]["food"] == "1 medium Banana",
+          "%s · asked %r" % (p.evaluate(ROWS), asked[-1]["food"]))
+    p.click("#commitEst"); p.wait_for_timeout(400)
+    food = p.evaluate("t=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[t].food", T)
+    check("edit: and its answer takes the old row's place",
+          len(food) == 2 and food[1].get("note", "").startswith("Banana") and food[1].get("est") is True
+          and food[0].get("note") == SECRET_NOTE, json.dumps(food)[:200])
     allerrs += errs; ctx.close()
 
     # ---- who answers -----------------------------------------------------

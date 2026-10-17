@@ -304,6 +304,31 @@ matching rather than entry call a local `words(p)` helper first. It opens
 `way(p, "numbers")` opens the numbers box. `sweep` and
 `estmeal` drive the table itself, because that is the front door now.
 
+**A row is corrected in place, by tapping its name.** Asked for by the owner
+(b65), who logged "Pure protein bar" meaning "Built Protein bar" and could only
+delete it and start again. A plain row's name is a button (`.nm-btn`, with a
+teal *Edit* as its marker) that opens a box under the row the way a meal opens
+(`rowEditing`, `rowEditHtml()`): the name, calories and protein, carbs and fat
+when they are on. *Save* says what it did on the undo bar — *Renamed to …* or
+*Updated …* — and Undo puts the old row back whole (`commitRowEdit()`). Save
+acts on the press, like *Add to ledger*, because the keyboard is open when it
+is tapped. A rename keeps the row as it was otherwise, `est` included; numbers
+typed over are the person's own, so `est` and `pending` go, and carbs and fat
+go too unless their fields were on screen to be corrected — the rule for typing
+over a review row. A row left with neither calories nor protein is refused,
+said in the box without a redraw so what was typed stays — except a waiting
+row, whose name can be fixed before it is looked up. A different food has different numbers, so *Look up this name's
+numbers* sends the new name through `runEstimate()` with the row as
+`replacing`, exactly as *Tap to estimate* does — pantry first, the review
+opens, and the answer takes the row's place when added. A finder row's name
+reads *food · amount*; it is asked as *amount food*, the way it would be typed.
+
+The name is still where a row is held to drag it: the drag's guard lets
+`.nm-btn` through, and a release after a hold is swallowed so it doesn't also
+open the box. Fields never start a drag, since holding one is how a phone
+moves the cursor. Meals are not edited by this box; *Name this meal* and *Take
+out* are theirs. `meals` and `finder` check all of it.
+
 **Grams are the basis; the unit is only how it is shown.** The whole food
 table is keyed per 100 g and every macro is derived from `it.grams`, so that
 is what gets stored and nothing downstream has to know what unit you like.

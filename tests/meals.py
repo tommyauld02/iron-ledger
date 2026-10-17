@@ -192,6 +192,80 @@ with sync_playwright() as pw:
     check("no double count", p.text_content(".t-total .t-cal b")=="200",
           p.text_content(".t-total .t-cal b"))
 
+    # ---- correcting a row after it went in ----
+    # The owner logged "Pure protein bar" meaning "Built Protein bar", and the
+    # only way to fix it was to delete it and start again.
+    def row_of(rid):
+        return [f for f in store_of(p)["days"][T]["food"] if f["id"]==rid][0]
+    fx=fresh(); fx["days"][T]["food"][2]={"id":"r3","cal":190,"pro":21,"note":"Pure protein bar · 1 bar",
+                                          "est":True,"carb":17,"fat":7}
+    fx["days"][T]["food"].append({"id":"r4","cal":0,"pro":0,"note":"Mystery sauce","pending":True})
+    p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fx)
+    p.reload(); p.wait_for_timeout(800)
+    nb=p.locator('[data-editrow="r3"]').bounding_box()
+    check("edit: a food's name is the way in, a proper target", nb and nb["height"]>=44,
+          nb and "%dx%d"%(nb["width"],nb["height"]))
+    check("edit: and it says so, in teal", p.text_content('[data-editrow="r3"] .ed').strip().lower()=="edit")
+    p.click('[data-editrow="r3"]'); p.wait_for_timeout(400)
+    check("edit: tapping it opens the row's own values, not a dialog",
+          p.input_value("#reName")=="Pure protein bar · 1 bar" and p.input_value("#reCal")=="190"
+          and p.input_value("#rePro")=="21",
+          "%s / %s / %s"%(p.input_value("#reName"), p.input_value("#reCal"), p.input_value("#rePro")))
+    check("edit: the cursor is in the name, after it",
+          p.evaluate("()=>document.activeElement.id==='reName' && document.activeElement.selectionStart===document.activeElement.value.length"))
+    small=p.evaluate("""()=>[...document.querySelectorAll('.row-edit input, .row-edit button')]
+        .map(e=>[e.id||e.textContent.trim(), e.getBoundingClientRect().height]).filter(x=>x[1]<44)""")
+    check("edit: every field and button in the box is 44px or more", not small, str(small))
+
+    p.fill("#reName","Built Protein bar · 1 bar"); p.click("#reSave"); p.wait_for_timeout(400)
+    r=row_of("r3")
+    check("edit: a new name is saved, and the box closes",
+          r["note"]=="Built Protein bar · 1 bar" and p.locator(".row-edit").count()==0, str(r))
+    check("edit: a rename leaves the numbers, the estimate mark, carbs and fat as they were",
+          r["cal"]==190 and r["pro"]==21 and r.get("est") is True and r.get("carb")==17 and r.get("fat")==7, str(r))
+    check("edit: and says what it did, with undo",
+          p.locator("#undobar").is_visible() and "Renamed to Built Protein bar" in p.text_content("#undoLabel"),
+          p.text_content("#undoLabel"))
+    p.click("#undoBtn"); p.wait_for_timeout(400)
+    check("edit: undo puts the old name back", row_of("r3")["note"]=="Pure protein bar · 1 bar", str(row_of("r3")))
+
+    p.click('[data-editrow="r3"]'); p.wait_for_timeout(400)
+    p.fill("#reName","Built Protein bar"); p.fill("#reCal","130"); p.fill("#rePro","17")
+    p.press("#rePro","Enter"); p.wait_for_timeout(400)
+    r=row_of("r3")
+    check("edit: Enter saves new numbers, and the day total follows",
+          r["cal"]==130 and r["pro"]==17 and p.text_content(".t-total .t-cal b")=="824",
+          "%s · total %s"%(r, p.text_content(".t-total .t-cal b")))
+    check("edit: typed-over numbers are yours, not an estimate, and hidden carbs and fat go with them",
+          "est" not in r and "carb" not in r and "fat" not in r, str(r))
+    check("edit: it says it updated", "Updated Built Protein bar" in p.text_content("#undoLabel"),
+          p.text_content("#undoLabel"))
+
+    p.click('[data-editrow="r3"]'); p.wait_for_timeout(400)
+    p.fill("#reName","Nothing"); p.fill("#reCal",""); p.fill("#rePro","0"); p.click("#reSave"); p.wait_for_timeout(300)
+    check("edit: no calories and no protein is refused out loud, keeping what was typed",
+          p.locator(".re-hint").is_visible() and row_of("r3")["cal"]==130 and p.input_value("#reName")=="Nothing",
+          p.locator(".re-hint").inner_text() if p.locator(".re-hint").count() else "no hint")
+    p.click("#reCancel"); p.wait_for_timeout(300)
+    check("edit: Cancel closes it and changes nothing",
+          p.locator(".row-edit").count()==0 and row_of("r3")["note"]=="Built Protein bar")
+
+    p.click('[data-editrow="r4"]'); p.wait_for_timeout(400)
+    p.fill("#reName","Sriracha mayo"); p.click("#reSave"); p.wait_for_timeout(400)
+    r=row_of("r4")
+    check("edit: a waiting row can have its name fixed and keep waiting",
+          r["note"]=="Sriracha mayo" and r.get("pending") is True and p.locator('[data-est="r4"]').count()==1, str(r))
+
+    a=p.locator('[data-editrow="r1"]').bounding_box()
+    p.mouse.move(a["x"]+30, a["y"]+a["height"]/2); p.mouse.down(); p.wait_for_timeout(500)
+    p.mouse.up(); p.wait_for_timeout(400)
+    check("edit: holding a name to drag it doesn't open the box when let go",
+          p.locator(".row-edit").count()==0 and p.locator(".t-row").count()==4)
+    hold_drag(p, "r1", "r2")
+    check("edit: and a row is still dragged by its name",
+          p.locator(".t-row.is-meal").count()==1, str(p.locator(".t-row").count())+" rows")
+    check("edit: a meal is named its own way, not by this box", p.locator('.t-row.is-meal [data-editrow]').count()==0)
+
     print()
     for st,n,dt in res: print("%-6s %-52s %s"%(st,n,dt))
     print("\n%d passed, %d FAILED"%(sum(1 for r in res if r[0]=="PASS"),

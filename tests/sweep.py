@@ -3409,9 +3409,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Three ways in, side by side"
-          and titles[1]=="A free AI finds the numbers" and titles[2]=="Last week, set by set"
-          and titles[3].startswith("Restaurant menus"), str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Fix a food after it’s in"
+          and titles[1]=="Three ways in, side by side" and titles[2]=="A free AI finds the numbers"
+          and titles[3]=="Last week, set by set", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
