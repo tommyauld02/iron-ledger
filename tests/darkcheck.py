@@ -373,9 +373,22 @@ def walk(p, label):
                 p.click("#scanBrands")
                 try: p.wait_for_selector("#scanType", timeout=40000)
                 except Exception: found.append("macros: grocery brands did not download for the scanner")
+            # With the brands in, the sheet asks for the camera, and the answer
+            # redraws it — wiping a number typed before the answer lands. This
+            # browser has no camera, so the answer is a refusal some 400 ms
+            # later, which is about when this used to type: once in a while
+            # the number was gone by Look up, and the card never came
+            # (2026-10-17, on Windows). So type once the answer is on the sheet:
+            # a message drawn, and no camera view still waiting for its stream.
             if p.locator("#scanType").count():
-                p.fill("#scanType", "894700010038"); p.click("#scanGo"); p.wait_for_timeout(400)
-            if not p.locator(".scan-card").count(): found.append("macros: a scanned product is not on screen")
+                try: p.wait_for_function("""()=>{const m=document.getElementById('scanMsg'), v=document.getElementById('scanVideo');
+                    return !!(m && m.textContent.trim()) && (!v || !!v.srcObject);}""", timeout=10000)
+                except Exception: pass      # still waiting: type anyway, and the card says whether it worked
+                p.fill("#scanType", "894700010038"); p.click("#scanGo")
+            try: p.wait_for_selector(".scan-card", timeout=5000)
+            except Exception:
+                msg = p.locator("#scanMsg").inner_text() if p.locator("#scanMsg").count() else ""
+                found.append("macros: a scanned product is not on screen" + (" (the sheet says: %s)" % msg if msg else ""))
             low = p.evaluate(LOW)
             if low: found.append("macros (barcode): %s" % low)
             p.click("#scanClose"); p.wait_for_timeout(200)
