@@ -25,7 +25,8 @@ nothing, while the new row rendered off-screen. The user pressed it repeatedly
 and made duplicates. Every action that changes data must visibly say so.
 
 **4. iOS zooms the page on any field under 16px and never zooms back.** There
-is a `@media (pointer: coarse)` rule forcing 16px. Any new input must not
+is a rule forcing every input, select and textarea to at least 16px (a field
+may ask for more through `--field-size`, never less). Any new input must not
 escape it. `tests/mobile.py` checks this.
 
 **5. 44px minimum on anything tappable, 48px in the tab bar.** Measured, not

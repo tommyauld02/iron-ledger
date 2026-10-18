@@ -79,6 +79,7 @@ with sync_playwright() as pw:
     except Exception:
         pass
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(700)
+    p.click("#panNew"); p.wait_for_timeout(250)
     check("the reader is offered with no Claude present",
           p.evaluate("() => !!document.getElementById('shotBtn')"))
 

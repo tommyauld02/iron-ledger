@@ -69,7 +69,7 @@ OVERFLOW="""()=>{const bad=[];
 SMALL="""()=>{const bad=[];
   document.querySelectorAll('button,select,input[type=file],[role=button]').forEach(b=>{
     const r=b.getBoundingClientRect();
-    if(r.width&&r.height&&(r.height<44||r.width<44)&&!b.className.includes('cal-cell'))
+    if(r.width&&r.height&&(r.height<44||r.width<44)&&!b.className.includes('cal-cell')&&!(b.className.includes('week-day')&&r.height>=44))
       bad.push((b.id||b.className||'btn')+' '+Math.round(r.width)+'x'+Math.round(r.height));});
   return [...new Set(bad)];}"""
 

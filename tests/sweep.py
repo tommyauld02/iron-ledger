@@ -3,6 +3,31 @@ import io, os, json, datetime
 import re
 import fakeai
 
+# Ledger rows open on their name, and Remove is inside the open row.
+def del_row(pg, i=0):
+    r = pg.locator(".t-row").nth(i)
+    r.locator("[data-editrow], [data-openmeal]").first.click(); pg.wait_for_timeout(200)
+    pg.locator(".t-row .t-del").first.click()
+
+# Cardio's by-hand form is a sheet behind Log a session by hand.
+def by_hand(pg):
+    if not pg.locator("#cSel").count():
+        pg.click("#cardioByHand"); pg.wait_for_timeout(250)
+
+# Pantry's new-food form is a sheet behind + New in the bottom bar.
+def pan_new(pg):
+    if not pg.locator("#panName").count() or not pg.locator("#panName").is_visible():
+        if not pg.locator("#panNew").count():
+            pg.click('.tabs button[data-tab="pantry"]'); pg.wait_for_timeout(300)
+        pg.click("#panNew"); pg.wait_for_timeout(200)
+
+# Pantry rows open on tap; Remove is inside.
+def rm_pan(pg, i=0):
+    if pg.locator("#panNewClose").count():
+        pg.click("#panNewClose"); pg.wait_for_timeout(200)
+    pg.locator("[data-panmeals]").nth(i).click(); pg.wait_for_timeout(200)
+    pg.locator("[data-rmpan]").first.click()
+
 # Rule 5 is 44px, measured. This suite measures controls straight after the
 # action that drew them, while the cards' 0.18s slide-in is still running, so
 # a box can come back 43.99998 tall from subtracting two fractional edges — it
@@ -108,7 +133,7 @@ with sync_playwright() as pw:
     p.fill("#fCal","100"); p.fill("#fPro","5"); p.press("#fPro","Enter"); p.wait_for_timeout(400)
     check("macros: Enter submits", p.eval_on_selector_all(".t-row","e=>e.length")==2)
 
-    p.eval_on_selector_all(".t-del","e=>e[1].click()"); p.wait_for_timeout(400)
+    del_row(p, 1); p.wait_for_timeout(400)
     check("macros: delete row", p.eval_on_selector_all(".t-row","e=>e.length")==1)
     check("macros: undo bar appears", p.evaluate("()=>!document.getElementById('undobar').hidden"))
     p.click("#undoBtn"); p.wait_for_timeout(400)
@@ -615,26 +640,29 @@ with sync_playwright() as pw:
 
     # ---------- PANTRY ----------
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    pan_new(p)
     check("pantry: photo button (sample avail)", p.evaluate("()=>!!document.getElementById('shotBtn')"))
-    p.fill("#panName","Quest bar"); p.fill("#panServe","1"); p.select_option("#panUnit","bar")
+    pan_new(p); p.fill("#panName","Quest bar"); p.fill("#panServe","1"); p.select_option("#panUnit","bar")
     p.fill("#panCal","200"); p.fill("#panPro","21"); p.click("#savePan"); p.wait_for_timeout(400)
     check("pantry: add count-unit food", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==2)
-    p.fill("#panName","Bulk oats"); p.fill("#panServe","40"); p.select_option("#panUnit","g")
+    pan_new(p); p.fill("#panName","Bulk oats"); p.fill("#panServe","40"); p.select_option("#panUnit","g")
     p.fill("#panCal","150"); p.fill("#panPro","5"); p.click("#savePan"); p.wait_for_timeout(400)
     check("pantry: add weight-unit food", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==3)
-    p.fill("#panName","Bad entry"); p.fill("#panServe","1"); p.select_option("#panUnit","g")
+    pan_new(p); p.fill("#panName","Bad entry"); p.fill("#panServe","1"); p.select_option("#panUnit","g")
     p.fill("#panCal","200"); p.fill("#panPro","20"); p.click("#savePan"); p.wait_for_timeout(400)
     check("pantry: rejects impossible density",
           p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==3 and
           p.evaluate("()=>{const w=document.getElementById('panWarn');return w&&!w.hidden;}"))
     n0=p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")
-    p.eval_on_selector_all("[data-rmpan]","e=>e[0].click()"); p.wait_for_timeout(400)
+    rm_pan(p, 0); p.wait_for_timeout(400)
     check("pantry: remove", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==n0-1)
     p.click("#undoBtn"); p.wait_for_timeout(400)
     check("pantry: undo remove", p.evaluate("()=>JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry.length")==n0)
 
     # ---------- PANTRY -> MACROS, one tap ----------
+    pan_new(p)
     check("pantry: wording", p.eval_on_selector('label[for="panName"]',"e=>e.textContent.strip?e.textContent:e.textContent")=="Type and save it")
+    p.click("#panNewClose"); p.wait_for_timeout(250)
     # count across every day: earlier steps move the cursor, so pinning this to
     # today's key would silently measure a day the tap never touched
     TOTAL="""()=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days||{};
@@ -722,7 +750,7 @@ with sync_playwright() as pw:
     # Typing 4 and picking "slice" means "one serving is four slices", and
     # every line in the app then read "1 slice · 172 kcal" — a fourfold
     # overcount stated with complete confidence.
-    p.fill("#panName","test rashers"); p.fill("#panServe","4")
+    pan_new(p); p.fill("#panName","test rashers"); p.fill("#panServe","4")
     p.select_option("#panUnit","slice"); p.fill("#panCal","200"); p.fill("#panPro","12")
     p.click("#savePan"); p.wait_for_timeout(600)
     warn=p.evaluate("()=>{const w=document.getElementById('panWarn');return w&&!w.hidden?w.textContent:'';}")
@@ -736,6 +764,7 @@ with sync_playwright() as pw:
     rid=p.evaluate("()=>{const r=[...document.querySelectorAll('[data-addpan]')]"
                    ".find(b=>b.closest('.pan-item').querySelector('.nm').textContent==='test rashers');"
                    " return r?r.dataset.addpan:null;}")
+    p.click("#panNewClose"); p.wait_for_timeout(250)
     p.click('[data-addpan="%s"]'%rid); p.wait_for_timeout(500)
     p.fill("#panQty","4"); p.wait_for_timeout(300)
     check("count: four of them adds back up to what was typed",
@@ -783,7 +812,10 @@ with sync_playwright() as pw:
     p.click("#nextYear"); p.wait_for_timeout(500)
     check("log: year nav", p.text_content(".yearnav .y")!=yr0)
     p.click("#prevYear"); p.wait_for_timeout(500)
-    p.eval_on_selector_all(".cal-cell.hit, .cal-cell.miss","e=>{if(e.length)e[0].click()}"); p.wait_for_timeout(500)
+    p.eval_on_selector_all(".cal-cell.hit, .cal-cell.miss","e=>{if(e.length)e[0].click()}"); p.wait_for_timeout(400)
+    check("log: a tap on a day peeks at it first", p.locator("#peekSheet .pk-row").count()>=1,
+          str(p.locator("#peekSheet").count()))
+    p.click("#peekOpen"); p.wait_for_timeout(500)
     check("log: tap day jumps to macros", p.evaluate("()=>document.querySelector('.tabs button[data-tab=macros]').getAttribute('aria-selected')")=="true")
 
     MARKS="()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); const k=Object.keys(s.days).sort().pop(); return s.days[k].supps||{};}"
@@ -812,7 +844,7 @@ with sync_playwright() as pw:
     check("checklist: it appears on macros", p.locator(".supp").count()==2)
     check("checklist: under the target bar and above the ways to add food",
           p.evaluate("()=>{const s=document.querySelector('.supps'),"
-                     "g=document.querySelector('.goalbar'),e=document.querySelector('.log-ways');"
+                     "g=document.querySelector('.today-card'),e=document.querySelector('.log-ways');"
                      " return s.getBoundingClientRect().top>g.getBoundingClientRect().top"
                      " && s.getBoundingClientRect().top<e.getBoundingClientRect().top;}"))
     for i in range(2):
@@ -980,7 +1012,7 @@ with sync_playwright() as pw:
     check("coach tab: put away on a phone that never chose",
           p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","log"], str(p.evaluate(TABSHOWN)))
     tw=p.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.getBoundingClientRect().width)")
-    bw=p.evaluate("()=>document.querySelector('.tabs').clientWidth")
+    bw=p.evaluate("()=>{const t=document.querySelector('.tabs'),s=getComputedStyle(t);return t.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight);}")
     check("coach tab: the five left share the whole bar, evenly",
           len(tw)==5 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
     p.click("#setBtn"); p.wait_for_timeout(300)
@@ -1664,8 +1696,8 @@ with sync_playwright() as pw:
     PANS=("()=>Object.fromEntries(JSON.parse(localStorage.getItem('iron-ledger-v1')).pantry"
           ".map(x=>[x.name,(x.secs||(x.sec?[x.sec]:[])).join('+')]))")
     TABS="()=>[...document.querySelectorAll('[data-pantab]')].map(b=>b.textContent+(b.getAttribute('aria-pressed')==='true'?'*':''))"
-    SHOWN=("()=>[...document.querySelectorAll('.pan-item .nm')].map(e=>e.childNodes[0].textContent+"
-           "(e.querySelector('.tags')?' ['+e.querySelector('.tags').textContent+']':''))")
+    SHOWN=("()=>[...document.querySelectorAll('.pan-rows .pan-item')].map(r=>r.querySelector('.nm').childNodes[0].textContent+"
+           "(r.querySelector('.tags')?' ['+r.querySelector('.tags').textContent+']':''))")
     CHOSEN=("a=>[...document.querySelectorAll('['+a+'][aria-pressed=true]')].map(b=>b.getAttribute(a))")
     SAYS=("()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent")
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
@@ -1719,6 +1751,7 @@ with sync_playwright() as pw:
     q.click('[data-pantab="dinner"]'); q.wait_for_timeout(300)
     check("sections: an empty one says how to fill it",
           "Tap Meals on a food" in q.eval_on_selector_all("section .empty","e=>e.map(x=>x.textContent).join(' ')"))
+    pan_new(q)
     check("sections: standing in it, a new food starts out filed there", q.evaluate(CHOSEN, "data-pansec")==["dinner"])
     q.fill("#panName","Turkey chili"); q.fill("#panServe","1"); q.fill("#panCal","380"); q.fill("#panPro","30")
     q.click('[data-pansec="lunch"]'); q.wait_for_timeout(100)
@@ -1729,7 +1762,7 @@ with sync_playwright() as pw:
     check("sections: and says where it went", q.evaluate(SAYS)=="Saved Turkey chili under Lunch and Dinner", q.evaluate(SAYS))
     check("sections: the list keeps showing a section it went into", "Dinner 1*" in q.evaluate(TABS), str(q.evaluate(TABS)))
     q.click('[data-pantab="snacks"]'); q.wait_for_timeout(300)
-    q.fill("#panName","Rice cakes"); q.fill("#panServe","1"); q.fill("#panCal","35"); q.fill("#panPro","1")
+    pan_new(q); q.fill("#panName","Rice cakes"); q.fill("#panServe","1"); q.fill("#panCal","35"); q.fill("#panPro","1")
     q.click('[data-pansec="snacks"]'); q.wait_for_timeout(100)
     check("sections: a press on a chosen one takes it off", q.evaluate(CHOSEN, "data-pansec")==[])
     q.click("#savePan"); q.wait_for_timeout(400)
@@ -1783,7 +1816,7 @@ with sync_playwright() as pw:
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
     for _ in range(3):
-        q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
+        del_row(q, 0); q.wait_for_timeout(250)
     check("undo: three deletes in a row", q.evaluate(NOTES, Ts)==[] and q.evaluate(SAYS)=="Removed Chips",
           "%s | %s" % (q.evaluate(NOTES, Ts), q.evaluate(SAYS)))
     q.click("#undoBtn"); q.wait_for_timeout(250)
@@ -1796,11 +1829,11 @@ with sync_playwright() as pw:
     q.click("#undoBtn"); q.wait_for_timeout(250)
     check("undo: all the way back, and the bar goes with the last of it",
           q.evaluate(NOTES, Ts)==["Toast","Steak","Chips"] and q.evaluate(SAYS)=="", str(q.evaluate(NOTES, Ts)))
-    q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
+    del_row(q, 0); q.wait_for_timeout(250)
     way(q, "numbers")
     q.fill("#fCal","100"); q.fill("#fPro","10"); q.fill("#fNote","Apple"); q.click("#addFood"); q.wait_for_timeout(400)
     check("undo: a change that cannot be undone ends the run", q.evaluate(SAYS)=="", q.evaluate(SAYS))
-    q.eval_on_selector_all(".t-del","e=>e[0].click()"); q.wait_for_timeout(250)
+    del_row(q, 0); q.wait_for_timeout(250)
     gone=q.evaluate(SAYS)
     q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
     check("undo: another screen does not show it", q.evaluate(SAYS)=="", q.evaluate(SAYS))
@@ -2427,8 +2460,10 @@ with sync_playwright() as pw:
           q.evaluate(YTABS)==["All 2","Brunch 1","Lunch","Dinner","Snacks","Pre-workout"], str(q.evaluate(YTABS)))
     check("yours: the food from a section taken away is still in All",
           "Ice cream sandwich" in q.eval_on_selector_all(".pan-item .nm","e=>e.map(x=>x.childNodes[0].textContent)"))
+    q.click("#panNew"); q.wait_for_timeout(250)
     check("yours: and the form offers the new one",
           q.eval_on_selector_all("[data-pansec]","e=>e.map(x=>x.textContent)")==["Brunch","Lunch","Dinner","Snacks","Pre-workout"])
+    q.click("#panNewClose"); q.wait_for_timeout(250)
     q.click("#undoBtn"); q.wait_for_timeout(250); q.click("#undoBtn"); q.wait_for_timeout(250)
     check("yours: undo takes the new one back, then brings the old one back with its food",
           q.evaluate(YTABS)==["All 2","Brunch 1","Lunch","Dinner","Snacks","Desserts 1"], str(q.evaluate(YTABS)))
@@ -2436,8 +2471,13 @@ with sync_playwright() as pw:
     while q.locator("[data-rmsec]").count():
         q.locator("[data-rmsec]").first.click(); q.wait_for_timeout(200)
     q.click("#editPanSecs"); q.wait_for_timeout(250)
+    q.click("#panNew"); q.wait_for_timeout(250)
+    nochoice=q.locator("[data-pansec]").count()==0
+    q.click("#panNewClose"); q.wait_for_timeout(250)
+    q.locator("[data-panmeals]").first.click(); q.wait_for_timeout(250)
     check("yours: with none at all there are no tabs, no choices and no Meals",
-          q.evaluate(YTABS)==[] and q.locator("[data-pansec]").count()==0 and q.locator("[data-panmeals]").count()==0)
+          q.evaluate(YTABS)==[] and nochoice and q.locator("[data-pansecfor]").count()==0)
+    q.click("#panEditDone"); q.wait_for_timeout(250)
     check("yours: and every food is kept", len(q.evaluate(YST)["pantry"])==2)
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
     q.locator(".meal-open").first.click(); q.wait_for_timeout(300)
@@ -2888,11 +2928,11 @@ with sync_playwright() as pw:
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", FSTORE)
     q.reload(); q.wait_for_timeout(900)
     check("ways: both start folded, and neither form is on the page",
-          q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]]
+          q.evaluate(WAYS)==[["estimate","false"],["numbers","false"]]
           and q.locator("#fCal").count()==0 and q.locator("#runEst").count()==0, str(q.evaluate(WAYS)))
     check("ways: each says what it is for",
-          q.inner_text('[data-logway="numbers"]').startswith("Log calories / protein")
-          and q.inner_text('[data-logway="estimate"]').startswith("Don\u2019t know the numbers"))
+          q.get_attribute('[data-logway="numbers"]',"aria-label")=="I know the numbers"
+          and q.inner_text('[data-logway="estimate"]').startswith("What did you eat?"))
     wb=q.eval_on_selector_all("[data-logway]","e=>e.map(x=>x.getBoundingClientRect().height)")
     check("ways: both are proper targets", len(wb)==2 and all(h>=MIN_TAP for h in wb), str(wb))
     # Not "the day fits on the phone": that depends on how much is logged and
@@ -2909,28 +2949,28 @@ with sync_playwright() as pw:
           open_h-folded_h>=400, "%s folded, %s open" % (folded_h, open_h))
     q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
     check("ways: Log calories / protein opens its box, ready to type",
-          q.evaluate(WAYS)[0]==["numbers","true"] and q.evaluate("()=>document.activeElement.id")=="fCal")
-    check("ways: and its box sits right under its own button",
-          q.evaluate("()=>document.querySelector('[data-logway=numbers]').nextElementSibling.id")=="wayNumbers")
+          q.evaluate(WAYS)[1]==["numbers","true"] and q.evaluate("()=>document.activeElement.id")=="fCal")
+    check("ways: and its box opens on the page, with a Close of its own",
+          q.locator("#logWays #wayNumbers").count()==1 and q.locator('#logWays [data-wayclose="numbers"]').count()==1)
     q.fill("#fCal","300"); q.fill("#fPro","25"); q.fill("#fNote","Yogurt"); q.click("#addFood"); q.wait_for_timeout(400)
     check("ways: adding says so, and the box stays open for the next one",
           "Added Yogurt" in q.inner_text(".added-flash") and q.locator("#fCal").count()==1)
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     check("ways: one open at a time — the other folds",
-          q.evaluate(WAYS)==[["numbers","false"],["estimate","true"]] and q.locator("#fCal").count()==0
+          q.evaluate(WAYS)==[["estimate","true"],["numbers","false"]] and q.locator("#fCal").count()==0
           and q.evaluate("()=>document.activeElement.dataset.eq")=="0")
     check("ways: the confirmation still shows with the numbers box folded",
           q.locator(".added-flash").count()==1)
     q.fill('[data-ef="0"]',"toast")
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
-    check("ways: pressing the open one folds it", q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]])
+    check("ways: pressing the open one folds it", q.evaluate(WAYS)==[["estimate","false"],["numbers","false"]])
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     check("ways: and what was typed is still there when it opens again", q.input_value('[data-ef="0"]')=="toast")
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     # a row waiting on numbers: its button must not land in a folded box
     q.click('[data-est="b"]'); q.wait_for_timeout(900)
     check("ways: a waiting row's button opens its answer even with everything folded",
-          q.locator("#commitEst").count()==1 and q.evaluate(WAYS)[1]==["estimate","true"], str(q.evaluate(WAYS)))
+          q.locator("#commitEst").count()==1 and q.evaluate(WAYS)[0]==["estimate","true"], str(q.evaluate(WAYS)))
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     check("ways: folding puts the review aside", q.locator("#commitEst").count()==0)
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
@@ -3133,7 +3173,7 @@ with sync_playwright() as pw:
     check("cardio: no rest timer here", q.evaluate("()=>document.getElementById('restbar').hidden"))
     check("cardio: an empty day says what to do", "Start a session above" in q.inner_text("#view"))
     check("cardio: the goal starts at 150 minutes a week",
-          q.inner_text(".cardio-goal .cg-num")=="0 of 150 min" and q.inner_text(".cardio-goal .eyebrow")=="THIS WEEK")
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="0 of 150 min" and q.inner_text(".cardio-goal .eyebrow")=="THIS WEEK")
     q.click("#cardioStart"); q.wait_for_timeout(250)
     check("cardio: Start asks what it is, and with nothing named yet the name field is ready",
           q.locator("#cPickNew").is_visible() and q.evaluate("()=>document.activeElement.id")=="cPickNew")
@@ -3158,7 +3198,10 @@ with sync_playwright() as pw:
     check("cardio: Discard throws it away, with undo", q.locator("#cardioClock").count()==0 and q.evaluate(CSAYS)=="Discarded the running cardio clock")
     q.click("#undoBtn"); q.wait_for_timeout(300); q.click("#cardioStop"); q.wait_for_timeout(300)
 
-    # adding by hand
+    # adding by hand: a sheet, behind Log a session by hand
+    by_hand(q)
+    check("cardio: by hand, the calories line says the app never guesses",
+          "never guesses" in q.inner_text("#cardioAdd"))
     q.click("#cAdd"); q.wait_for_timeout(200)
     check("cardio: Add with no minutes says so, and adds nothing",
           q.inner_text("#cHint")=="How many minutes?" and len(q.evaluate(CARDS))==1)
@@ -3166,13 +3209,17 @@ with sync_playwright() as pw:
     check("cardio: a new type, minutes and calories go in, and it says so",
           q.evaluate(CARDS)==["Incline walk | 25 min","Bike | 20 min · 180 kcal"] and q.evaluate(CSAYS)=="Added Bike · 20 min · 180 kcal"
           and q.evaluate(CST)["cardioTypes"]==["Incline walk","Bike"], str(q.evaluate(CARDS)))
+    check("cardio: adding closes the sheet", q.locator("#cardioAdd").count()==0)
+    by_hand(q)
     check("cardio: the next add opens on the type just used", q.input_value("#cSel")=="Bike")
     q.fill("#cMin","30"); q.fill("#cDist","3.1"); q.select_option("#cSel","Incline walk"); q.click("#cAdd"); q.wait_for_timeout(300)
     check("cardio: distance rides along", q.evaluate(CARDS)[2]=="Incline walk | 30 min · 3.1 mi")
+    by_hand(q)
     fields=q.eval_on_selector_all("#cardioAdd input, #cardioAdd select, #cardioAdd button",
           "e=>e.filter(x=>x.getClientRects().length).map(x=>[x.id,Math.round(x.getBoundingClientRect().height),x.tagName=='BUTTON'?16:parseFloat(getComputedStyle(x).fontSize)])")
     check("cardio: every control in the form clears 44px and no field zooms",
           len(fields)>=6 and all(h>=MIN_TAP and f>=16 for _,h,f in fields), str(fields))
+    q.click("#cAddClose"); q.wait_for_timeout(250)
     q.click('[data-cedit]'); q.wait_for_timeout(250)
     q.fill("#ceMin","27"); q.fill("#ceDist","2.6"); q.click("#ceSave"); q.wait_for_timeout(300)
     check("cardio: Change keeps the session and changes its numbers",
@@ -3183,14 +3230,16 @@ with sync_playwright() as pw:
     check("cardio: Remove offers undo", len(q.evaluate(CARDS))==2 and q.evaluate(CSAYS).startswith("Removed Incline walk"))
     q.click("#undoBtn"); q.wait_for_timeout(300)
     check("cardio: and undo puts it back where it was", q.evaluate(CARDS)[2]=="Incline walk | 30 min · 3.1 mi")
-    q.select_option("#cSel","Bike"); q.click("#cDrop"); q.wait_for_timeout(300)
+    by_hand(q); q.select_option("#cSel","Bike"); q.click("#cDrop"); q.wait_for_timeout(300)
     check("cardio: the minus takes a type off the list, not off the sessions",
           q.evaluate(CST)["cardioTypes"]==["Incline walk"] and "Bike | 20 min · 180 kcal" in q.evaluate(CARDS))
+    check("cardio: taking a type off closes the sheet, so Undo can be reached",
+          q.locator("#cardioAdd").count()==0 and q.locator("#undoBtn").is_visible())
     q.click("#undoBtn"); q.wait_for_timeout(300)
 
     # the goal
     check("cardio: the week counts what was logged",
-          q.inner_text(".cardio-goal .cg-num")=="75 of 150 min" and "3 sessions so far" in q.inner_text(".cg-left"), q.inner_text(".cardio-goal"))
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="75 of 150 min" and "3 sessions so far" in q.inner_text(".cg-legend"), q.inner_text(".cardio-goal"))
     q.click("#cgOpen"); q.wait_for_timeout(250)
     check("cardio: the goal can count minutes, distance, calories or sessions, by the day, week or month",
           q.eval_on_selector_all("[data-cgkind]","e=>e.map(x=>x.textContent)")==["Minutes","Distance","Calories","Sessions"]
@@ -3202,13 +3251,13 @@ with sync_playwright() as pw:
     check("cardio: a goal of nothing is refused, and says why", q.inner_text("#cgHint").startswith("A goal needs"))
     q.fill("#cgVal","250"); q.click("#cgSave"); q.wait_for_timeout(300)
     check("cardio: a daily calories goal, counted",
-          q.inner_text(".cardio-goal .eyebrow")=="TODAY" and q.inner_text(".cardio-goal .cg-num")=="180 of 250 kcal"
+          q.inner_text(".cardio-goal .eyebrow")=="TODAY" and " ".join(q.inner_text(".cardio-goal .cg-num").split())=="180 of 250 kcal"
           and q.evaluate(CSAYS)=="Cardio goal: 250 kcal a day", q.inner_text(".cardio-goal"))
     q.click("#undoBtn"); q.wait_for_timeout(300)
-    check("cardio: and undo puts the old goal back", q.inner_text(".cardio-goal .cg-num")=="75 of 150 min")
+    check("cardio: and undo puts the old goal back", " ".join(q.inner_text(".cardio-goal .cg-num").split())=="75 of 150 min")
     q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgkind="dist"]'); q.click('[data-cgperiod="month"]'); q.fill("#cgVal","3"); q.click("#cgSave"); q.wait_for_timeout(300)
     check("cardio: met, it says so in green",
-          q.inner_text(".cardio-goal .cg-num")=="3.1 of 3 mi" and q.inner_text(".cg-left").startswith("✓ Goal met")
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="3.1 of 3 mi" and q.inner_text(".cg-left").startswith("✓ Goal met")
           and q.eval_on_selector(".cg-left","e=>e.classList.contains('is-met')"), q.inner_text(".cardio-goal"))
     q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgkind="min"]'); q.click('[data-cgperiod="week"]'); q.click("#cgSave"); q.wait_for_timeout(300)
 
@@ -3219,7 +3268,7 @@ with sync_playwright() as pw:
           and q.locator("#cardioAdd").count()==0 and q.locator("[data-crm]").count()==0)
     check("cardio: and it is kept", q.evaluate(CST)["days"][Ts].get("cardioDone")==True)
     q.click("#cardioUnlock"); q.wait_for_timeout(300)
-    check("cardio: Unlock opens it again", q.locator("#cardioAdd").count()==1)
+    check("cardio: Unlock opens it again", q.locator("#cardioByHand").count()==1)
 
     # a clock left running is not a session
     q.evaluate("k=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); s.days[k].cardioStart=Date.now()-7*3600000; s.days[k].cardioType='Bike'; localStorage.setItem('iron-ledger-v1',JSON.stringify(s));}", Ts)
@@ -3409,9 +3458,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Fix a food after it’s in"
-          and titles[1]=="Three ways in, side by side" and titles[2]=="A free AI finds the numbers"
-          and titles[3]=="Last week, set by set", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A new look, same app"
+          and titles[1]=="Fix a food after it’s in" and titles[2]=="Three ways in, side by side"
+          and titles[3]=="A free AI finds the numbers", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
@@ -3505,7 +3554,7 @@ with sync_playwright() as pw:
     q.click("#scanToPantry"); q.wait_for_timeout(400)
     check("barcodes: the pantry form opens knowing the barcode",
           q.get_attribute('.tabs button[data-tab="pantry"]',"aria-selected")=="true" and "71717171717 is saved with it" in q.inner_text("#view"))
-    q.fill("#panName","Corner store protein bar"); q.fill("#panServe","1"); q.select_option("#panUnit","bar")
+    pan_new(q); q.fill("#panName","Corner store protein bar"); q.fill("#panServe","1"); q.select_option("#panUnit","bar")
     q.fill("#panCal","210"); q.fill("#panPro","20"); q.click("#savePan"); q.wait_for_timeout(300)
     pan=[x for x in q.evaluate(LBST)["pantry"] if x["name"]=="Corner store protein bar"]
     check("barcodes: it is saved with the food", pan and pan[0].get("upc")=="71717171717", str(pan))
@@ -3520,13 +3569,14 @@ with sync_playwright() as pw:
     q.click("#scanClose"); q.wait_for_timeout(200)
     # scanning on the Pantry tab fills the form from the label
     q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
-    q.click("#panScan"); camera_answered(q)
+    q.click("#panBarScan"); camera_answered(q)
     q.fill("#scanType", "888849000005"); q.click("#scanGo"); scan_card(q)
     q.click("#scanFill"); q.wait_for_timeout(300)
     check("barcodes: on the Pantry tab a scan fills in the form from its label",
           q.input_value("#panName")=="Quest Cookies & Cream Protein Bar" and q.input_value("#panCal")=="190"
           and q.input_value("#panPro")=="21" and q.input_value("#panUnit")=="bar", "%s / %s / %s / %s" % (
           q.input_value("#panName"), q.input_value("#panCal"), q.input_value("#panPro"), q.input_value("#panUnit")))
+    q.click("#panNewClose"); q.wait_for_timeout(200)
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(200)
     check("barcodes: leaving the tab stops the camera and closes the sheet", q.locator("#scanSheet").count()==0)
     # Grocery brands are what a barcode is found in; Settings can take them off.
@@ -3636,6 +3686,12 @@ with sync_playwright() as pw:
     src=io.open("iron-ledger.html", encoding="utf-8").read()
     ctl=[i for i,ch in enumerate(src) if ord(ch)<32 and ch not in "\n\r\t"]
     check("source: no control characters hiding in the app (checked in the source)", not ctl, str(ctl[:5]))
+    # tools/make-fonts.py writes fonts/fonts.css and prints the same block for
+    # the top of the app. Two copies drift; this is where they would be caught.
+    ff=[l.strip() for l in io.open("fonts/fonts.css", encoding="utf-8").read().splitlines() if l.strip()]
+    inapp=[l.strip() for l in src.splitlines() if l.strip().startswith("@font-face")]
+    check("source: the app's @font-face block is fonts/fonts.css, word for word (checked in the source)",
+          ff and inapp==ff, "%d in fonts.css, %d in the app" % (len(ff), len(inapp)))
 
     print("%-6s %-42s %s" % ("","FEATURE","DETAIL"))
     for st,name,detail in results:

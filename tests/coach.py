@@ -87,7 +87,7 @@ with sync_playwright() as pw:
     check("gym: renamed day shows on gym chips", "Pull Day" in p.locator("#view").inner_text())
     # the old workout was logged under cat "back" — must still resolve
     p.click('[data-tab="log"]'); p.wait_for_timeout(500)
-    p.click('[data-go="%s"]'%Y); p.wait_for_timeout(600)
+    p.click('[data-go="%s"]'%Y); p.wait_for_timeout(400); p.click("#peekOpen"); p.wait_for_timeout(600)
     p.click('[data-tab="gym"]'); p.wait_for_timeout(400)
     gym=p.locator("#view").inner_text()
     check("history: old workout survives a rename",
@@ -124,7 +124,7 @@ with sync_playwright() as pw:
     p.locator("[data-rmday]").first.click(); p.wait_for_timeout(400)
     p.evaluate("()=>document.getElementById('undobar').hidden=true")
     p.click('[data-tab="log"]'); p.wait_for_timeout(500)
-    p.click('[data-go="%s"]'%Y); p.wait_for_timeout(600)
+    p.click('[data-go="%s"]'%Y); p.wait_for_timeout(400); p.click("#peekOpen"); p.wait_for_timeout(600)
     p.click('[data-tab="gym"]'); p.wait_for_timeout(500)
     gym=p.locator("#view").inner_text()
     live=[t.strip() for t in p.eval_on_selector_all("[data-cat]","e=>e.map(x=>x.innerText)")]
