@@ -66,7 +66,7 @@ cap and the first-open case. `darkcheck` dismisses the welcome by its own id:
 `text=Got it` matched What's new's button too and closed it before it could be
 measured.
 
-**b68's walkthrough video is a one-off.** The redesign changed every screen, so
+**b69's walkthrough video is a one-off.** The redesign changed every screen, so
 the owner recorded a walkthrough (`media/new-look-walkthrough.mp4`, phone screen
 with their face in a corner) and asked for it this once; later builds go back
 to words only. An entry carries `video`, `poster` and `vnote`. It plays inline

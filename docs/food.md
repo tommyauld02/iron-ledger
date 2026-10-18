@@ -194,7 +194,13 @@ and the numbers form (optional fields). **A row
 without them is counted as missing, never as zero**: the day's line reads
 *Carbs 210 g · Fat 64 g · 2 foods without them*. Typing over a review row's
 calories or protein lets its carbs and fat go, because they would no longer add
-up to it; changing its weight scales them.
+up to it; changing its weight scales them. The kettlebells fill toward the
+carbs and fat targets in the goal; **with neither set, a card under the bar
+still shows the day's carbs and fat** and opens the target at carbs
+(`#kbSetGoal`). Drawing nothing there read as a screen that had not caught up
+(the owner's video, b67). Settings says where both carbs & fat and water show
+up, and switching either on from another tab says so on the bar, because the
+screen behind the sheet has neither.
 
 **Water, body weight, and the goal calculator.** Water is a Settings switch
 too: a line on Macros (`d.water`, millilitres, shown in oz or ml) that patches
