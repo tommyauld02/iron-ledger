@@ -3524,6 +3524,22 @@ with sync_playwright() as pw:
     # Step 3: a package's barcode, found among the grocery brands by the number
     # under its bars. By camera, by photo, or typed. Your pantry answers first,
     # and a product USDA lacks is found from the pantry once saved there.
+    # With the brands in, the sheet asks for the camera, and the answer redraws
+    # it — wiping a number typed before the answer lands. This browser has no
+    # camera, so the answer is a refusal some 400 ms later, which the fixed
+    # sleeps here used to outlast only by luck (darkcheck lost its card to it on
+    # 2026-10-17). So each step types once the answer is on the sheet — a
+    # message drawn, and no camera view still waiting for its stream — and
+    # waits for the card rather than sleeping.
+    def camera_answered(pg):
+        try: pg.wait_for_function("""()=>{const m=document.getElementById('scanMsg'), v=document.getElementById('scanVideo');
+            return !!(m && m.textContent.trim()) && (!v || !!v.srcObject);}""", timeout=10000)
+        except Exception: pass      # still waiting: type anyway, and the card says whether it worked
+    def scan_card(pg):
+        """The card Look up brings, once it is on screen; "" if it never comes."""
+        try: pg.wait_for_selector(".scan-card", timeout=5000)
+        except Exception: return ""
+        return pg.inner_text(".scan-card")
     c, q = fresh(LBSTORE, "barcodes")
     way(q, "estimate")
     q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
@@ -3533,17 +3549,19 @@ with sync_playwright() as pw:
     q.click("#scanBrands")
     try: q.wait_for_selector("#scanType", timeout=40000)
     except Exception: pass
-    q.wait_for_timeout(400)
+    camera_answered(q)
     check("barcodes: once they are, the camera, a photo and typing are all offered",
           q.locator("#scanType").count()==1 and q.locator("#scanFile").count()==1 and q.evaluate(LBST).get("brandsOn") is True,
           q.inner_text("#scanSheet")[:160])
     ok_, det = sizes_ok(q, "#scanSheet")
     check("barcodes: every control clears 44px and the number field will not zoom", ok_, det)
-    q.fill("#scanType", "894700010038"); q.click("#scanGo"); q.wait_for_timeout(500)
-    card=q.inner_text(".scan-card") if q.locator(".scan-card").count() else ""
+    q.fill("#scanType", "894700010038"); q.click("#scanGo")
+    card=scan_card(q)
     check("barcodes: a typed number finds the product, with its label's serving",
-          "Chobani · Greek Yogurt" in card and "1 container · 150 g" in card and "120 kcal" in card, card.replace("\n"," | "))
-    q.click("#scanAgain"); q.wait_for_timeout(600)
+          "Chobani · Greek Yogurt" in card and "1 container · 150 g" in card and "120 kcal" in card,
+          card.replace("\n"," | ") or q.inner_text("#scanSheet")[:160])
+    # Scan another asks for the camera again; the last card stays until it answers.
+    q.click("#scanAgain"); camera_answered(q)
     pg2 = c.new_page(); pg2.set_content(upca_svg("078742351865")); png = pg2.locator("svg").screenshot(); pg2.close()
     q.set_input_files("#scanFile", files=[{"name":"barcode.png","mimeType":"image/png","buffer":png}])
     try: q.wait_for_selector(".scan-card", timeout=30000)
@@ -3557,10 +3575,12 @@ with sync_playwright() as pw:
     q.click("#discardEst"); q.wait_for_timeout(300)
     way(q, "estimate")
     q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
-    q.click("#openScan"); q.wait_for_timeout(500)
-    q.fill("#scanType", "071717171717"); q.click("#scanGo"); q.wait_for_timeout(400)
+    q.click("#openScan"); camera_answered(q)
+    q.fill("#scanType", "071717171717"); q.click("#scanGo")
+    card=scan_card(q)
     check("barcodes: a number that is nowhere says so, and offers the pantry",
-          "No product with barcode 071717171717" in q.inner_text(".scan-card") and q.locator("#scanToPantry").count()==1)
+          "No product with barcode 071717171717" in card and q.locator("#scanToPantry").count()==1,
+          card[:120] or q.inner_text("#scanSheet")[:160])
     q.click("#scanToPantry"); q.wait_for_timeout(400)
     check("barcodes: the pantry form opens knowing the barcode",
           q.get_attribute('.tabs button[data-tab="pantry"]',"aria-selected")=="true" and "71717171717 is saved with it" in q.inner_text("#view"))
@@ -3571,15 +3591,16 @@ with sync_playwright() as pw:
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
     way(q, "estimate")
     q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
-    q.click("#openScan"); q.wait_for_timeout(500)
-    q.fill("#scanType", "071717171717"); q.click("#scanGo"); q.wait_for_timeout(400)
+    q.click("#openScan"); camera_answered(q)
+    q.fill("#scanType", "071717171717"); q.click("#scanGo")
+    card=scan_card(q)
     check("barcodes: and the next scan finds it, from the pantry",
-          "Corner store protein bar" in q.inner_text(".scan-card") and "Your pantry" in q.inner_text(".scan-card"), q.inner_text(".scan-card")[:120])
+          "Corner store protein bar" in card and "Your pantry" in card, card[:120] or q.inner_text("#scanSheet")[:160])
     q.click("#scanClose"); q.wait_for_timeout(200)
     # scanning on the Pantry tab fills the form from the label
     q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
-    q.click("#panBarScan"); q.wait_for_timeout(500)
-    q.fill("#scanType", "888849000005"); q.click("#scanGo"); q.wait_for_timeout(400)
+    q.click("#panBarScan"); camera_answered(q)
+    q.fill("#scanType", "888849000005"); q.click("#scanGo"); scan_card(q)
     q.click("#scanFill"); q.wait_for_timeout(300)
     check("barcodes: on the Pantry tab a scan fills in the form from its label",
           q.input_value("#panName")=="Quest Cookies & Cream Protein Bar" and q.input_value("#panCal")=="190"
