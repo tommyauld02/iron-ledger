@@ -26,7 +26,11 @@ design. What holds it together:
   with undo). **The Gym keeps every action on screen** — the owner's rule,
   word for word: nothing there moves behind a tap-to-open.
 - **The Log peeks before it opens.** A day tapped on the calendar shows what
-  it holds in a sheet, with *Open this day*.
+  it holds in a sheet, with *Open this day*. Coming back to the Log from the
+  day it opened finds the Log on the month it was left on (`logOpened`); only a
+  day moved to elsewhere makes the Log open on that day's month. Following the
+  opened day swapped October, full of history, for an empty August, and the
+  owner read it as the past disappearing (video, b67).
 
 **The bottom bars are docked, not stacked.** `.savebar`, `.undobar` and
 `.tabs` were each `position: sticky; bottom: 0`, so they sat on top of one
