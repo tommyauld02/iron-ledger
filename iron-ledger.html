@@ -3247,14 +3247,14 @@
     min-height: 44px; margin: -11px -10px -11px 0; padding: 0 10px;
     font-family: var(--font-num); font-size: 12px; color: var(--accent); white-space: nowrap;
   }
-  .tc-figs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 8px; }
+  .tc-figs { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; margin-top: 8px; }
   .tc-fig { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .tc-l { display: flex; align-items: center; gap: 6px; letter-spacing: .1em; }
   .ic-bar { width: 14px; height: 3px; border-radius: 2px; background: currentColor; }
   .ic-plate { width: 6px; height: 16px; border-radius: 1.5px; background: currentColor; }
-  .tc-n { display: flex; align-items: baseline; gap: 6px; }
+  .tc-n { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 6px; min-width: 0; }
   .tc-n b {
-    font-size: 40px; font-weight: 800; font-stretch: 125%; line-height: 1.05; letter-spacing: -.02em;
+    font-size: clamp(30px, 9.6vw, 40px); font-weight: 800; font-stretch: 125%; line-height: 1.05; letter-spacing: -.02em;
     font-variant-numeric: tabular-nums;
   }
   .tc-n span { font-family: var(--font-num); font-size: 13px; color: var(--ink-2); }
@@ -3311,17 +3311,6 @@
   .kb-s.is-warn { color: var(--warn); }
   .kb-s.is-bad { color: var(--miss); }
 
-  .gap-btn {
-    width: 100%; min-height: 52px; margin-top: 12px; display: flex; align-items: center; gap: 12px; padding: 8px 12px;
-    border-radius: 14px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--ink); text-align: left;
-  }
-  .gap-plus {
-    width: 30px; height: 30px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    background: var(--accent); color: var(--on-accent); font-size: 20px; font-weight: 700; line-height: 1;
-  }
-  .gap-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  .gap-t b { font-size: 15px; font-weight: 600; }
-  .gap-t span { font-family: var(--font-num); font-size: 12px; color: var(--ink-2); }
   .hit-note {
     display: flex; align-items: center; gap: 12px; min-height: 52px; margin-top: 12px; padding: 8px 12px;
     border-radius: 14px; background: var(--hit-bg); color: var(--ink);
@@ -3821,6 +3810,10 @@
   .pk-k { font-family: var(--font-num); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding-top: 2px; }
   .pk-v { font-size: 14.5px; line-height: 1.45; color: var(--ink); overflow-wrap: anywhere; }
   .pk-none { margin: 10px 0 0; font-size: 15px; color: var(--ink-2); }
+  /* The keyboard is up: the dock steps aside, and a sheet fits what is left. */
+  html.kb-open .dock { display: none; }
+  html.kb-open .sheet { inset: auto 0 auto 0; top: var(--vv-top, 0px); height: var(--vv-h, 100%); }
+  html.kb-open .sheet-inner { max-height: calc(var(--vv-h, 100dvh) - 8px); padding-bottom: 14px; }
   .pk-open { height: 52px; }
   .log-page .bw, .log-page .cardio-track {
     padding: 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: 22px;
@@ -4065,7 +4058,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-18.66";
+  var BUILD = "2026-10-18.67";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4579,6 +4572,9 @@
   // build is stamped onto the data as soon as the app opens. Newest first; a
   // phone several updates behind sees each of them, up to four.
   var NEWS = [
+    { b: "2026-10-18.67", t: "A quieter Macros screen", items: [
+      "The protein suggestion under the barbell is gone. Add food from What did you eat? or the Pantry, as always.",
+      "While you type, the bar at the bottom and the tabs get out of the way, and pop-ups sit above the keyboard instead of behind it." ] },
     { b: "2026-10-18.66", t: "A new look, same app", items: [
       "Macros is a barbell now. The bar fills with calories and bends if you go over; the plates are your protein. Tap a food to fix it or remove it.",
       "Pantry has a search and + New in the bar at the bottom, and shows what a food would do to today\u2019s bar before you add it.",
@@ -7695,27 +7691,6 @@
           (g.fat ? kettlebellHtml("Fat", cfNow ? cfNow.fat : 0, g.fat, cfNow ? cfNow.missing : 0) : '') +
         '</div>'
       : '';
-    // One more pantry food that closes the protein gap: the most protein in a
-    // serving that still keeps the day at or under its calories. Nothing shown
-    // if none fits. It opens the how-much sheet; it never adds on its own.
-    var gapHtml = "";
-    if (!proHit && g.pro.dir === "+" && (store.pantry || []).length) {
-      var bestGap = null, room = g.cal.dir === "-" ? g.cal.v - t.cal : Infinity;
-      store.pantry.forEach(function (raw) {
-        if (raw.items && raw.items.length > 1) return;
-        var n = normPantry(raw);
-        if (n.k && (n.k > 900 || n.p > 90)) return;
-        if (!(n.sPro > 0) || n.sCal > room) return;
-        if (!bestGap || n.sPro > bestGap.n.sPro || (n.sPro === bestGap.n.sPro && n.sCal < bestGap.n.sCal)) bestGap = { raw: raw, n: n };
-      });
-      if (bestGap) {
-        var togo = g.pro.v - t.pro;
-        gapHtml = '<button class="gap-btn" data-gappan="' + esc(bestGap.raw.id) + '">' +
-          '<span class="gap-plus" aria-hidden="true">+</span>' +
-          '<span class="gap-t"><b>' + (bestGap.n.sPro >= togo ? 'One more closes the protein gap' : 'Gets your protein closer') + '</b>' +
-          '<span>' + esc(bestGap.raw.name) + ' \u00b7 +' + fmt(bestGap.n.sPro) + ' g \u00b7 ' + fmt(bestGap.n.sCal) + ' kcal</span></span></button>';
-      }
-    }
     var hitNote = proHit && g.pro.dir === "+" && bs.state === "ok" && logged && !pend
       ? '<div class="hit-note"><span class="hit-tick" aria-hidden="true"></span><span><b>Protein goal hit</b>' +
           (key === TODAY && g.cal.dir === "-"
@@ -7740,7 +7715,7 @@
         '<p class="tc-say" role="status"><i class="tc-dot' + (pend || !logged ? '' : sayCls || ' is-ok') + '" aria-hidden="true"></i>' +
           '<span class="' + sayCls.trim() + '">' + calSay + '</span></p>' +
         '<p class="tc-legend">Dashed = your ' + fmt(g.pro.v) + ' g goal \u00b7 1 g protein = 1 lb of plates</p>' +
-        kbs + gapHtml + hitNote +
+        kbs + hitNote +
       '</section>';
 
     view.innerHTML =
@@ -7808,13 +7783,6 @@
         '<button class="cmp-ic cmp-scan" data-scanway="1" aria-label="Scan a barcode">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg></button>' +
       '</div>';
-
-    var gapBtn = view.querySelector("[data-gappan]");
-    if (gapBtn) gapBtn.addEventListener("click", function () {
-      var raw = null;
-      (store.pantry || []).forEach(function (x) { if (x.id === gapBtn.getAttribute("data-gappan")) raw = x; });
-      if (raw) openPanSheet(raw);
-    });
 
     // Deleting is delegated too — see the handler near setTab.
 
@@ -11136,6 +11104,35 @@
   document.querySelectorAll(".tabs button").forEach(function (b) {
     b.addEventListener("click", function () { setTab(b.dataset.tab); });
   });
+
+  // ---------- the keyboard ----------
+  // On a phone the keyboard does not shrink the page, it covers it. The dock —
+  // the bar above the tabs and the tabs themselves — rode up on top of it and
+  // sat over the very field being typed in, and a pop-up opened behind it with
+  // its boxes out of sight (the owner's screenshots, b66). While the keyboard
+  // is up the dock steps aside, and a sheet fits the part of the screen the
+  // keyboard leaves. "Up" is read from the visual viewport: shorter than the
+  // window by more than a toolbar, with a field focused, and not zoomed in.
+  (function () {
+    var vv = window.visualViewport;
+    if (!vv) return;
+    var root = document.documentElement;
+    function typing() {
+      var a = document.activeElement;
+      return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(a.type)));
+    }
+    function fit() {
+      var open = typing() && window.innerHeight - vv.height > 120 && vv.scale < 1.05;
+      root.classList.toggle("kb-open", open);
+      root.style.setProperty("--vv-top", (open ? vv.offsetTop : 0) + "px");
+      root.style.setProperty("--vv-h", (open ? vv.height : window.innerHeight) + "px");
+    }
+    vv.addEventListener("resize", fit);
+    vv.addEventListener("scroll", fit);
+    document.addEventListener("focusin", function () { setTimeout(fit, 0); });
+    document.addEventListener("focusout", function () { setTimeout(fit, 0); });
+    fit();
+  })();
 
   // ---------- undo ----------
   // Every change that can be taken back is, one step at a time, for as long as
