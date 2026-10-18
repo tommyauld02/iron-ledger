@@ -1123,6 +1123,11 @@
   .news .nb { font-family: var(--font-num); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
   .news ul { margin: 6px 0 0; padding-left: 18px; font-size: 14px; line-height: 1.5; color: var(--ink); }
   .news li + li { margin-top: 4px; }
+  /* The walkthrough is a phone recording, so it is tall: sized by the height
+     it may take, with its own full-screen button for a closer look. */
+  .news video { display: block; width: min(100%, calc(60dvh * 720 / 1566)); aspect-ratio: 720 / 1566;
+                margin: 10px auto 0; background: #000; border-radius: 10px; }
+  .news .vnote { margin: 6px 0 0; font-size: 13px; text-align: center; color: var(--ink-2); }
   .lib-keep {
     align-self: flex-start;
     min-height: 44px;
@@ -4061,7 +4066,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-18.68";
+  var BUILD = "2026-10-18.69";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4579,7 +4584,13 @@
   // first time, who gets the welcome instead — and only once, because the
   // build is stamped onto the data as soon as the app opens. Newest first; a
   // phone several updates behind sees each of them, up to four.
+  // b69 is the one entry with a video: the owner walking through the redesign,
+  // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-18.69", t: "A walkthrough of the new look",
+      video: "media/new-look-walkthrough.mp4", poster: "media/new-look-walkthrough.jpg",
+      vnote: "4½ minutes, with sound. It needs a connection.", items: [
+      "The whole app got a new look, so here’s me walking through it: Macros, the Pantry, Gym, Cardio and Log. Everything works the way it did. It just looks different." ] },
     { b: "2026-10-18.68", t: "Nothing hiding", items: [
       "Carbs & fat on with no target yet? A card under the bar shows the day’s carbs and fat and takes you to set one, so the kettlebells have something to fill toward.",
       "Settings says where water and carbs & fat show up — both are on Macros.",
@@ -4637,14 +4648,27 @@
     if (!since || since === BUILD) return;
     var fresh = NEWS.filter(function (n) { return buildAfter(n.b, since) && !buildAfter(n.b, BUILD); }).slice(0, 4);
     if (!fresh.length) return;
+    // The video lives beside the app on Pages, not in the artifact copy (which
+    // has no manifest), and needs a connection: without either, the words alone.
+    var canPlay = !!document.querySelector('link[rel="manifest"]') && navigator.onLine !== false;
     document.getElementById("newsBody").innerHTML = fresh.map(function (n) {
-      return '<section><span class="nb">b' + n.b.split(".").pop() + '</span><h3>' + esc(n.t) + '</h3>' +
+      var video = n.video && canPlay
+        ? '<video src="' + n.video + '" poster="' + n.poster + '" controls playsinline preload="none"></video>' +
+          '<p class="vnote">' + esc(n.vnote) + '</p>'
+        : "";
+      return '<section><span class="nb">b' + n.b.split(".").pop() + '</span><h3>' + esc(n.t) + '</h3>' + video +
         '<ul>' + n.items.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join("") + '</ul></section>';
     }).join("");
     newsSheet.hidden = false;
   }
-  document.getElementById("newsDone").addEventListener("click", function () { newsSheet.hidden = true; });
-  newsSheet.addEventListener("click", function (e) { if (e.target === newsSheet) newsSheet.hidden = true; });
+  // A hidden sheet does not stop a playing video, so closing it pauses one.
+  function closeNews() {
+    newsSheet.hidden = true;
+    var v = newsSheet.querySelector("video");
+    if (v) v.pause();
+  }
+  document.getElementById("newsDone").addEventListener("click", closeNews);
+  newsSheet.addEventListener("click", function (e) { if (e.target === newsSheet) closeNews(); });
 
   // ---------- the daily checklist ----------
   // Creatine and a multivitamin have no calories worth logging, but whether

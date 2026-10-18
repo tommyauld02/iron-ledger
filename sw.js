@@ -92,6 +92,11 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
+  // Video (What's new's walkthrough): straight to the network. Safari asks for
+  // it in byte ranges, which a cached whole file cannot answer, and keeping
+  // 14 MB in every phone's cache for a clip watched once is not worth it.
+  if (url.pathname.includes("/media/")) return;
+
   // Everything else: cache first, fill the cache on a miss.
   e.respondWith(
     caches.match(req, { ignoreSearch: true }).then((hit) =>

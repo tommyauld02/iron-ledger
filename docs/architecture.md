@@ -66,6 +66,18 @@ cap and the first-open case. `darkcheck` dismisses the welcome by its own id:
 `text=Got it` matched What's new's button too and closed it before it could be
 measured.
 
+**b69's walkthrough video is a one-off.** The redesign changed every screen, so
+the owner recorded a walkthrough (`media/new-look-walkthrough.mp4`, phone screen
+with their face in a corner) and asked for it this once; later builds go back
+to words only. An entry carries `video`, `poster` and `vnote`. It plays inline
+with `preload="none"`, so nothing downloads until it is tapped, and closing the
+sheet pauses it, because a hidden sheet keeps playing. It is left out where it
+cannot play: the artifact copy (no manifest, no `media/`) and offline, which
+get the words. `sw.js` passes `/media/` straight to the network, since Safari
+asks for video in byte ranges that a cached whole file cannot answer, and
+`pages.yml` copies `media/`. Once that entry has aged out of the four shown,
+the file and the `video` branch in `showNews()` can go.
+
 **Rendering is a full redraw into `#view`, wrapped in try/catch.** Handlers are
 delegated on `#view` and the tab bar, which are never replaced — an earlier
 version wired handlers sequentially after a long render, so one throw left
