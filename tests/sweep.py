@@ -2977,6 +2977,36 @@ with sync_playwright() as pw:
     check("ways: and opening brings it back, not lost", q.locator("#commitEst").count()==1)
     c.close()
 
+    # ---------- THE KEYBOARD ----------
+    # A phone keyboard covers the page rather than shrinking it. On b66 the dock
+    # rode up on it and sat over the field being typed in, and the numbers
+    # pop-up opened behind it (the owner's screenshots). Chromium has no
+    # keyboard to raise, so the visual viewport is stood in for and shrunk the
+    # way an iPhone's is.
+    KBFAKE = """(()=>{const t=new EventTarget(); t.offsetTop=0; t.scale=1;
+      Object.defineProperty(t,'height',{get(){return innerHeight-(window.__kbH||0);}});
+      Object.defineProperty(window,'visualViewport',{configurable:true,get:()=>t});
+      window.__kb=(h)=>{window.__kbH=h; t.dispatchEvent(new Event('resize'));};})()"""
+    for mode in ("inplace", "popup"):
+        c = b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True)
+        c.add_init_script("delete window.claude;"); c.add_init_script(KBFAKE); fakeai.phone(c)
+        q = c.new_page(); q.on("pageerror", lambda e: errs.append("keyboard: "+str(e)))
+        q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+        q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", dict(FSTORE, logOpen=mode))
+        q.reload(); q.wait_for_timeout(900)
+        q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
+        q.focus("#fCal"); q.evaluate("()=>window.__kb(330)"); q.wait_for_timeout(150)
+        DOCK="()=>getComputedStyle(document.querySelector('.dock')).display"
+        check("keyboard (%s): up, the dock steps aside instead of covering the field" % mode,
+              q.evaluate(DOCK)=="none", q.evaluate(DOCK))
+        if mode == "popup":
+            low=q.evaluate("()=>Math.round(document.querySelector('[data-waysheet] .sheet-inner').getBoundingClientRect().bottom)")
+            check("keyboard (popup): the pop-up sits above the keyboard, not behind it",
+                  low <= 852-330+1, "sheet ends at %s, keyboard starts at %s" % (low, 852-330))
+        q.evaluate("()=>{document.activeElement.blur(); window.__kb(0);}"); q.wait_for_timeout(150)
+        check("keyboard (%s): down, the dock is back" % mode, q.evaluate(DOCK)!="none", q.evaluate(DOCK))
+        c.close()
+
     # ---------- HOW THE WAYS IN OPEN ----------
     # The owner could not choose from pictures between a box opening in place,
     # a pop-up like the set sheet, and a mix of the two, and asked to try
@@ -3458,9 +3488,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A new look, same app"
-          and titles[1]=="Fix a food after it’s in" and titles[2]=="Three ways in, side by side"
-          and titles[3]=="A free AI finds the numbers", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A quieter Macros screen"
+          and titles[1]=="A new look, same app" and titles[2]=="Fix a food after it’s in"
+          and titles[3]=="Three ways in, side by side", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
