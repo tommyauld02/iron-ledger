@@ -167,13 +167,17 @@ def walk(p, label):
             painted = p.evaluate("""()=>({
               tabs: document.querySelectorAll('[data-pantab]').length,
               chosen: document.querySelectorAll('[data-pantab][aria-pressed=true]').length,
-              tags: document.querySelectorAll('.pan-item .nm .tags').length,
-              meals: document.querySelectorAll('.pan-item .mv').length})""")
+              tags: document.querySelectorAll('.pan-item .tags').length,
+              meals: document.querySelectorAll('.pan-item .pan-open').length})""")
             for k, n in painted.items():
                 if not n: found.append("pantry: the %s state is not on screen" % k)
             # a chosen one in the form sits on the form's ground, and a food's
             # own choices only exist once its Meals is pressed
+            p.click("#panNew"); p.wait_for_timeout(250)
             p.click('[data-pansec="snacks"]'); p.wait_for_timeout(100)
+            low = p.evaluate(LOW)
+            if low: found.append("pantry (new food): %s" % low)
+            p.click("#panNewClose"); p.wait_for_timeout(250)
             p.locator("[data-panmeals]").first.click(); p.wait_for_timeout(250)
             if not p.locator('[data-pansecfor][aria-pressed="true"]').count():
                 found.append("pantry: a food's chosen meals are not on screen")
@@ -201,7 +205,7 @@ def walk(p, label):
             if not p.locator(".cardio-card").count():
                 found.append("cardio: no session on screen to measure")
             for step, sel, undo in [("goal editor", "#cgOpen", "#cgCancel"), ("choosing a session", "#cardioStart", "#cPickCancel"),
-                                    ("changing a session", "[data-cedit]", "#ceCancel")]:
+                                    ("changing a session", "[data-cedit]", "#ceCancel"), ("logging by hand", "#cardioByHand", "#cAddCancel")]:
                 p.locator(sel).first.click(); p.wait_for_timeout(250)
                 low = p.evaluate(LOW)
                 if low: found.append("cardio (%s): %s" % (step, low))
