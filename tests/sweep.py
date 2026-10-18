@@ -3488,16 +3488,28 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A quieter Macros screen"
-          and titles[1]=="A new look, same app" and titles[2]=="Fix a food after it’s in"
-          and titles[3]=="Three ways in, side by side", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A walkthrough of the new look"
+          and titles[1]=="A quieter Macros screen" and titles[2]=="A new look, same app"
+          and titles[3]=="Fix a food after it’s in", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
+    # b68's walkthrough: plays in the sheet rather than taking over the phone,
+    # downloads nothing until it is tapped, and the file it names is in the repo.
+    vid=q.evaluate("""()=>{const v=document.querySelector('#newsBody video'); return v&&{src:v.getAttribute('src'),
+        poster:v.getAttribute('poster'), inline:v.hasAttribute('playsinline'), pre:v.getAttribute('preload'),
+        controls:v.controls, w:v.getBoundingClientRect().width}}""")
+    check("news: the walkthrough is there, inline, and loads nothing until tapped",
+          vid and vid["inline"] and vid["pre"]=="none" and vid["controls"] and vid["w"]>150
+          and os.path.exists(vid["src"]) and os.path.exists(vid["poster"]), str(vid))
+    check("news: only the walkthrough has a video", q.evaluate("()=>document.querySelectorAll('#newsBody video').length")==1)
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
     q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
     check("news: it fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320)
     q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    # a hidden sheet keeps playing, so Got it has to stop the video itself
+    q.evaluate("()=>{const v=document.querySelector('#newsBody video'); if(v) v.pause=function(){window.__paused=true}}")
     q.click("#newsDone"); q.wait_for_timeout(200)
+    check("news: Got it stops the walkthrough playing", q.evaluate("()=>window.__paused===true"))
     check("news: Got it closes it, and the phone is marked as on this build",
           not q.is_visible("#newsSheet") and q.evaluate(LBST).get("build")==BUILDNOW, q.evaluate(LBST).get("build"))
     q.reload(); q.wait_for_timeout(900)
