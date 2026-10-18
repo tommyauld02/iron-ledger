@@ -1,5 +1,5 @@
 from playwright.sync_api import sync_playwright
-import io, os, json, datetime
+import io, os, json, datetime, calendar
 import re
 import fakeai
 
@@ -3488,9 +3488,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A quieter Macros screen"
-          and titles[1]=="A new look, same app" and titles[2]=="Fix a food after it’s in"
-          and titles[3]=="Three ways in, side by side", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Nothing hiding"
+          and titles[1]=="A quieter Macros screen" and titles[2]=="A new look, same app"
+          and titles[3]=="Fix a food after it’s in", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     nb=q.locator("#newsDone").bounding_box()
     check("news: Got it is a proper target", nb and nb["height"]>=MIN_TAP, str(nb))
@@ -3631,6 +3631,9 @@ with sync_playwright() as pw:
     q.click("#setBtn"); q.wait_for_timeout(300)
     q.click('[data-pick-cf="on"]'); q.wait_for_timeout(200)
     check("carbs: switched on in Settings", q.evaluate(LBST).get("cfOn") is True)
+    hint=q.inner_text("#setCfHint") if q.locator("#setCfHint").count() else ""
+    check("carbs: Settings says where they show, and that a target fills the kettlebells",
+          "On Macros" in hint and "target" in hint, hint)
     q.click("#setDone"); q.wait_for_timeout(200)
     estimate("chicken breast", "")
     rv=q.inner_text(".rev-item .rev-cf") if q.locator(".rev-item .rev-cf").count() else ""
@@ -3647,6 +3650,27 @@ with sync_playwright() as pw:
           line.startswith("Carbs") and "1 food without them" in line, line)
     ok_, det = sizes_ok(q, "#wayNumbers")
     check("carbs: the extra fields are proper targets that will not zoom", ok_, det)
+    # The owner's video (b67): carbs and fat typed with the setting on but no
+    # target, and no kettlebell at all, which read as a screen that had not
+    # caught up. The card shows the day's carbs and fat and goes to the target.
+    way(q, "numbers")
+    q.fill("#fCal","500"); q.fill("#fPro","50"); q.fill("#fCarb","60"); q.fill("#fFat","50")
+    q.click("#addFood"); q.wait_for_timeout(300)
+    cfb=q.eval_on_selector_all(".cf-line b","e=>e.map(x=>x.textContent)")
+    ks=q.inner_text("#kbSetGoal") if q.locator("#kbSetGoal").count() else ""
+    check("carbs: with no target, the card under the bar still shows the day's carbs and fat",
+          len(cfb)==2 and ("%s g · %s g" % (cfb[0], cfb[1])) in ks and "No target yet" in ks, "%s / %r" % (cfb, ks))
+    ok_, det = sizes_ok(q, ".kbs")
+    check("carbs: and it is a proper target", ok_, det)
+    if q.locator("#kbSetGoal").count(): q.click("#kbSetGoal")
+    else: q.click("#openGoal")
+    q.wait_for_timeout(300)
+    check("carbs: a tap on it opens the target, at carbs",
+          q.evaluate("()=>document.activeElement && document.activeElement.id")=="gCarb")
+    q.fill("#gCarb","200"); q.fill("#gFat","70"); q.click("#saveGoal"); q.wait_for_timeout(300)
+    kv=q.eval_on_selector_all(".kb .kb-v","e=>e.map(x=>x.textContent)")
+    check("carbs: with targets set, the kettlebells take its place at once",
+          q.locator("#kbSetGoal").count()==0 and len(kv)==2 and kv[0].endswith("/200 g") and kv[1].endswith("/70 g"), str(kv))
     c.close()
 
     # ---------- WATER ----------
@@ -3666,6 +3690,44 @@ with sync_playwright() as pw:
     q.click('[data-pick-wunit="ml"]'); q.wait_for_timeout(200)
     q.click("#setDone"); q.wait_for_timeout(200)
     check("water: switching to ml converts the day rather than re-reading it", q.inner_text("#waterVal").startswith("1,890 of 1,890 ml"), q.inner_text("#waterVal"))
+    c.close()
+    # The owner's video (b67): water switched on from the Pantry, and nothing
+    # turned up on the screen behind Settings. Settings and the bar say where.
+    c, q = fresh(LBSTORE, "water-where")
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    q.click("#setBtn"); q.wait_for_timeout(300)
+    q.click('[data-pick-water="on"]'); q.wait_for_timeout(200)
+    hint=q.inner_text("#setWaterHint") if q.locator("#setWaterHint").count() else ""
+    check("water: switched on away from Macros, Settings says where it is", "On Macros" in hint, hint)
+    q.click("#setDone"); q.wait_for_timeout(200)
+    check("water: and the bar says so once Settings closes",
+          q.is_visible(".undobar") and "Water is on Macros" in q.inner_text(".undobar"), q.inner_text(".undobar"))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    check("water: where it said", q.locator("#waterRow").count()==1)
+    c.close()
+
+    # ---------- LOG: OPEN THIS DAY, AND BACK ----------
+    # The owner's video (b67): a day opened from the year's small months, and
+    # back on the Log the big month was that day's empty one — the month full
+    # of history gone to a small square, back only once another day was opened.
+    other = (T.replace(day=1) - datetime.timedelta(days=1)).replace(day=1) if T.month > 1 else T.replace(month=2, day=1)
+    c, q = fresh(LBSTORE, "log-back")
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    big0 = q.inner_text(".month.is-big h4")
+    q.click('.month.is-mini [data-go="%s"]' % other.isoformat()); q.wait_for_timeout(300)
+    q.click("#peekOpen"); q.wait_for_timeout(400)
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    check("log: back from a day it opened, the Log is on the month it was left on",
+          q.inner_text(".month.is-big h4")==big0, "%s -> %s" % (big0, q.inner_text(".month.is-big h4")))
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(300)
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    check("log: and stays there by way of another tab", q.inner_text(".month.is-big h4")==big0, q.inner_text(".month.is-big h4"))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    q.click("#nextDay"); q.wait_for_timeout(300)
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    want = "%s %d" % (calendar.month_name[other.month], other.year)
+    check("log: a day moved to elsewhere is still the month it opens on",
+          q.inner_text(".month.is-big h4")==want, "%s, wanted %s" % (q.inner_text(".month.is-big h4"), want))
     c.close()
 
     # ---------- BODY WEIGHT ----------

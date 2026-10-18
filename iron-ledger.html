@@ -3310,6 +3310,8 @@
   .kb-s, .kb-m { font-family: var(--font-num); font-size: 11px; color: var(--ink-2); }
   .kb-s.is-warn { color: var(--warn); }
   .kb-s.is-bad { color: var(--miss); }
+  .kb-set { grid-column: 1 / -1; width: 100%; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+  .kb-set .kb-s { color: var(--accent); }
 
   .hit-note {
     display: flex; align-items: center; gap: 12px; min-height: 52px; margin-top: 12px; padding: 8px 12px;
@@ -3946,7 +3948,7 @@
     <div class="set-group">
       <span class="eyebrow">Carbs &amp; fat</span>
       <div class="seg two" id="setCf" role="group" aria-label="Carbs and fat"></div>
-      <p class="set-hint">Calories and protein are always counted. Shown, the day also adds up carbs and fat wherever the food's numbers include them.</p>
+      <p class="set-hint" id="setCfHint"></p>
     </div>
     <!-- Water: a line on Macros to tap a glass in at a time. -->
     <div class="set-group">
@@ -3958,6 +3960,7 @@
         <div class="field"><span class="sec-k">Measured in</span>
           <div class="seg two" id="setWaterUnit" role="group" aria-label="Water measured in"></div></div>
       </div>
+      <p class="set-hint" id="setWaterHint"></p>
     </div>
     <!-- Coach is for setting a routine for someone else. Put away until it is
          wanted; nothing in it is lost either way. -->
@@ -4058,7 +4061,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-18.67";
+  var BUILD = "2026-10-18.68";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4144,6 +4147,11 @@
   var activeCat = "back";
   var logYear = new Date().getFullYear();
   var logMonth = new Date().getMonth();   // the month drawn large on the Log tab
+  // The day Open this day went to. Coming back to the Log from it finds the
+  // Log as it was left: following that day there swapped the month full of
+  // history for the opened day's (often empty) one, and it looked lost until
+  // another day was opened (the owner's video, b67).
+  var logOpened = null;
   var logPeek = null;                     // the day being peeked at, before opening it
   var editingGoal = false;
   var db = null;
@@ -4572,6 +4580,10 @@
   // build is stamped onto the data as soon as the app opens. Newest first; a
   // phone several updates behind sees each of them, up to four.
   var NEWS = [
+    { b: "2026-10-18.68", t: "Nothing hiding", items: [
+      "Carbs & fat on with no target yet? A card under the bar shows the day’s carbs and fat and takes you to set one, so the kettlebells have something to fill toward.",
+      "Settings says where water and carbs & fat show up — both are on Macros.",
+      "Open a day from the Log and come back: the month you were looking at is still there." ] },
     { b: "2026-10-18.67", t: "A quieter Macros screen", items: [
       "The protein suggestion under the barbell is gone. Add food from What did you eat? or the Pantry, as always.",
       "While you type, the bar at the bottom and the tabs get out of the way, and pop-ups sit above the keyboard instead of behind it." ] },
@@ -7685,12 +7697,22 @@
       ? (proHit ? "Goal hit" + (t.pro > g.pro.v ? " \u00b7 +" + fmt(t.pro - g.pro.v) + " g" : "") : fmt(g.pro.v - t.pro) + " g to go")
       : (t.pro <= g.pro.v ? fmt(g.pro.v - t.pro) + " g left" : fmt(t.pro - g.pro.v) + " g over");
     var cfNow = cfOn() && d.food.length ? cfTotals(d) : null;
+    // With no target the kettlebells have nothing to fill toward. Drawing
+    // nothing read as a screen that had not caught up (the owner's video:
+    // carbs and fat typed, the setting on, no kettlebell) — so the card still
+    // shows, says what is missing, and takes you to where it is set.
     var kbs = cfOn() && (g.carb || g.fat)
       ? '<div class="kbs">' +
           (g.carb ? kettlebellHtml("Carbs", cfNow ? cfNow.carb : 0, g.carb, cfNow ? cfNow.missing : 0) : '') +
           (g.fat ? kettlebellHtml("Fat", cfNow ? cfNow.fat : 0, g.fat, cfNow ? cfNow.missing : 0) : '') +
         '</div>'
-      : '';
+      : cfOn()
+        ? '<div class="kbs"><button class="kb kb-set" id="kbSetGoal">' +
+            '<span class="kb-icon" aria-hidden="true"><i class="kb-handle"></i><i class="kb-body"></i></span>' +
+            '<span class="kb-text"><span class="kb-k">Carbs · fat</span>' +
+              '<span class="kb-v">' + fmt(cfNow ? cfNow.carb : 0) + ' g · ' + fmt(cfNow ? cfNow.fat : 0) + ' g</span>' +
+              '<span class="kb-s">No target yet · tap to set one</span></span></button></div>'
+        : '';
     var hitNote = proHit && g.pro.dir === "+" && bs.state === "ok" && logged && !pend
       ? '<div class="hit-note"><span class="hit-tick" aria-hidden="true"></span><span><b>Protein goal hit</b>' +
           (key === TODAY && g.cal.dir === "-"
@@ -7796,6 +7818,13 @@
     var openGoal = document.getElementById("openGoal");
     if (openGoal) {
       openGoal.addEventListener("click", function () { editingGoal = true; render(); });
+    }
+    var kbSet = document.getElementById("kbSetGoal");
+    if (kbSet) {
+      kbSet.addEventListener("click", function () {
+        editingGoal = true; render();
+        var f = document.getElementById("gCarb"); if (f) f.focus();
+      });
     }
 
     var pendingDir = { cal: g.cal.dir, pro: g.pro.dir };
@@ -11074,7 +11103,7 @@
     var pk = document.getElementById("peekSheet");
     if (pk) {
       document.getElementById("peekOpen").addEventListener("click", function () {
-        cursor = parseYmd(logPeek); logPeek = null;
+        logOpened = logPeek; cursor = parseYmd(logPeek); logPeek = null;
         setTab("macros");
       });
       document.getElementById("peekClose").addEventListener("click", function () { logPeek = null; render(); });
@@ -11093,7 +11122,9 @@
     tab = t;
     editingGoal = false;
     if (scanOpen) closeScan();
-    if (t === "log") { logYear = cursor.getFullYear(); logMonth = cursor.getMonth(); }
+    if (t === "log") {
+      if (logOpened !== ymd(cursor)) { logYear = cursor.getFullYear(); logMonth = cursor.getMonth(); logOpened = null; }
+    }
     logPeek = null;
     document.querySelectorAll(".tabs button").forEach(function (b) {
       b.setAttribute("aria-selected", String(b.dataset.tab === t));
@@ -12147,6 +12178,18 @@
       return '<button data-pick-water="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === waterOn() ? "true" : "false") + '">' + o[1] + '</button>';
     }).join("");
     document.getElementById("setWaterMore").style.display = waterOn() ? "" : "none";
+    // Where each one turns up, said here: switched on from the Pantry, the
+    // screen behind the sheet showed nothing and looked like it hadn't caught
+    // up (the owner's video, b67).
+    var gNow = goalFor(ymd(cursor));
+    document.getElementById("setCfHint").textContent = !cfOn()
+      ? "Calories and protein are always counted. Shown, the day also adds up carbs and fat wherever the food’s numbers include them."
+      : (gNow.carb || gNow.fat)
+        ? "On Macros, as kettlebells under the bar, filling toward your targets."
+        : "On Macros, under the bar. Set a carbs and fat target with Edit on the Today card and the kettlebells fill toward it.";
+    document.getElementById("setWaterHint").textContent = waterOn()
+      ? "On Macros, under the daily checklist — a glass at a time."
+      : "A line on Macros to tap in a glass at a time.";
     document.getElementById("setWaterUnit").innerHTML = ["oz", "ml"].map(function (u) {
       return '<button data-pick-wunit="' + u + '" aria-pressed="' + (u === waterUnit()) + '">' + u + '</button>';
     }).join("");
@@ -12201,6 +12244,11 @@
       if (wb) store.waterOn = wb.dataset.pickWater === "on";
       if (wu) store.waterUnit = wu.dataset.pickWunit;
       save(); drawSettings(); render();
+      // Turned on from another tab, the line is somewhere else: say where, so
+      // closing Settings onto a screen without it does not read as broken.
+      if (tab !== "macros" && ((wb && waterOn()) || (cfb && cfOn()))) {
+        notify(wb ? "Water is on Macros, under the daily checklist" : "Carbs & fat are on Macros, under the bar");
+      }
       return;
     }
     if (!t && !a && !c && !lo) return;
