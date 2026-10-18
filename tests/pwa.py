@@ -161,9 +161,20 @@ with sync_playwright() as pw:
     way = p.locator('[data-logway="estimate"][aria-expanded="false"]')
     if way.count(): way.click(); p.wait_for_timeout(250)
     p.click('[data-esttab="scan"]'); p.wait_for_timeout(250)
-    p.click("#openScan"); p.wait_for_timeout(500)
+    # With the brands in, the sheet asks for the camera, and the answer redraws
+    # it — wiping a number typed before the answer lands. This browser has no
+    # camera, so the answer is a refusal some 400 ms later, which a fixed sleep
+    # here used to outlast only by luck (darkcheck lost its card to it on
+    # 2026-10-17). So type once the answer is on the sheet: a message drawn,
+    # and no camera view still waiting for its stream.
+    p.click("#openScan")
     if p.locator("#scanType").count():
-        p.fill("#scanType", "894700010038"); p.click("#scanGo"); p.wait_for_timeout(600)
+        try: p.wait_for_function("""()=>{const m=document.getElementById('scanMsg'), v=document.getElementById('scanVideo');
+            return !!(m && m.textContent.trim()) && (!v || !!v.srcObject);}""", timeout=10000)
+        except Exception: pass      # still waiting: type anyway, and the card says whether it worked
+        p.fill("#scanType", "894700010038"); p.click("#scanGo")
+    try: p.wait_for_selector(".scan-card", timeout=5000)
+    except Exception: pass
     check("grocery brands answer a barcode offline",
           p.locator(".scan-card").count() > 0 and "CHOBANI" in p.inner_text(".scan-card").upper(),
           p.inner_text("#scanSheet")[:160] if p.locator("#scanSheet").count() else "no scanner")
