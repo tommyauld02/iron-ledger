@@ -34,8 +34,8 @@ with sync_playwright() as pw:
     def food(): return p.evaluate("()=>(JSON.parse(localStorage['iron-ledger-v1']).days['%s']||{}).food||[]"%T)
 
     reset()
-    check("folded until asked for, behind a button that names it",
-          "Don\u2019t know the numbers" in p.inner_text('[data-logway="estimate"]')
+    check("folded until asked for, behind the bottom bar's What did you eat?",
+          "What did you eat?" in p.inner_text('[data-logway="estimate"]')
           and p.locator(".et-row").count()==0)
     p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     check("the way in is a table you fill in, not a blank box",

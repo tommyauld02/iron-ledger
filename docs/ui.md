@@ -3,6 +3,31 @@
 Moved word for word from `CLAUDE.md` (issue #10), which keeps the seven
 rules and the index of these docs. The rules apply here too.
 
+**The redesign (b66): one theme across the five tabs.** Asked for by the owner
+because testers found the app overwhelming; the approved canvas boards are the
+design. What holds it together:
+
+- **A header that says where you are.** The wordmark, Backup and Settings as
+  icons, then the day in words (*Saturday, Oct 17*), a chip that changes with
+  the tab (*5-day streak*, *4 sessions this week*, *2 cardio days this week*),
+  and a week strip of seven day buttons. ‹ › still step one day. The strip is a
+  calendar row, so like the Log's cells it is exempt from the 44px width at
+  320px (it keeps the height).
+- **A bar above the tabs that changes with the tab** (`#ctxbar` / `#ctxMain`,
+  inside the `.dock`). Macros: *What did you eat?*, the numbers and Scan.
+  Pantry: find, scan, *New*. Cardio: *Start cardio session*, then the running
+  clock with *Discard* and *Stop & log it*. Gym: the rest timer, as before.
+  `render()` clears it, so a tab that does not fill it shows none.
+- **Pictures for goals.** Macros is a barbell: the bar is calories (it bends,
+  then shakes, past the target), the plates are protein, kettlebells are carbs
+  and fat when that setting is on. Cardio is a running track where one lap is
+  the goal. Over is never bad on either for protein or cardio.
+- **Rows open on tap on Macros and Pantry** (Remove is inside the open row,
+  with undo). **The Gym keeps every action on screen** — the owner's rule,
+  word for word: nothing there moves behind a tap-to-open.
+- **The Log peeks before it opens.** A day tapped on the calendar shows what
+  it holds in a sheet, with *Open this day*.
+
 **The bottom bars are docked, not stacked.** `.savebar`, `.undobar` and
 `.tabs` were each `position: sticky; bottom: 0`, so they sat on top of one
 another — `elementFromPoint` at the tab bar's centre returned the undo bar,

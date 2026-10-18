@@ -80,6 +80,8 @@ with sync_playwright() as pw:
     p.touchscreen.tap(box["x"]+box["width"]/2, box["y"]+box["height"]/2)
     p.wait_for_timeout(450)
     check("tap opens the meal on touch", p.locator(".meal-body").count()==1)
+    # the bottom bar is taller now; bring the button out from behind it
+    p.locator("[data-takeout]").first.evaluate("e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(150)
     ob=p.locator("[data-takeout]").first.bounding_box()
     p.touchscreen.tap(ob["x"]+ob["width"]/2, ob["y"]+ob["height"]/2); p.wait_for_timeout(450)
     check("Take out works on touch", p.locator(".t-row").count()==3,

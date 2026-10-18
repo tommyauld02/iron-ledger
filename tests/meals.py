@@ -151,6 +151,8 @@ with sync_playwright() as pw:
     p.reload(); p.wait_for_timeout(800)
     check("meal survives a reload", p.locator(".t-row.is-meal").count()==1)
     check("named meal survives", p.text_content(".meal-open .mn")=="Dinner")
+    if not p.locator(".t-row.is-meal .t-del").count():
+        p.locator(".t-row.is-meal [data-openmeal]").click(); p.wait_for_timeout(200)
     p.locator(".t-row.is-meal .t-del").click(); p.wait_for_timeout(400)
     check("deleting a meal removes the whole thing", p.locator(".t-row").count()==1)
     check("deleting a meal offers undo", p.locator("#undobar").is_visible())
@@ -205,7 +207,7 @@ with sync_playwright() as pw:
     nb=p.locator('[data-editrow="r3"]').bounding_box()
     check("edit: a food's name is the way in, a proper target", nb and nb["height"]>=44,
           nb and "%dx%d"%(nb["width"],nb["height"]))
-    check("edit: and it says so, in teal", p.text_content('[data-editrow="r3"] .ed').strip().lower()=="edit")
+    check("edit: and it says so, in teal", p.text_content('[data-editrow="r3"] .ed').strip().lower() in ("edit","▾"))
     p.click('[data-editrow="r3"]'); p.wait_for_timeout(400)
     check("edit: tapping it opens the row's own values, not a dialog",
           p.input_value("#reName")=="Pure protein bar · 1 bar" and p.input_value("#reCal")=="190"

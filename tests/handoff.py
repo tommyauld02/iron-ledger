@@ -20,6 +20,26 @@ from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools
 
+# Ledger rows open on their name, and Remove is inside the open row.
+def del_row(pg, i=0):
+    r = pg.locator(".t-row").nth(i)
+    r.locator("[data-editrow], [data-openmeal]").first.click(); pg.wait_for_timeout(200)
+    pg.locator(".t-row .t-del").first.click()
+
+# Pantry's new-food form is a sheet behind + New in the bottom bar.
+def pan_new(pg):
+    if not pg.locator("#panName").count() or not pg.locator("#panName").is_visible():
+        if not pg.locator("#panNew").count():
+            pg.click('.tabs button[data-tab="pantry"]'); pg.wait_for_timeout(300)
+        pg.click("#panNew"); pg.wait_for_timeout(200)
+
+# Pantry rows open on tap; Remove is inside.
+def rm_pan(pg, i=0):
+    if pg.locator("#panNewClose").count():
+        pg.click("#panNewClose"); pg.wait_for_timeout(200)
+    pg.locator("[data-panmeals]").nth(i).click(); pg.wait_for_timeout(200)
+    pg.locator("[data-rmpan]").first.click()
+
 # The Macros tab now opens on the fill-in table; the plain-words box is behind
 # "Or just describe it in words". This suite is about what the resolver makes
 # of a phrase, not about how it was entered, so it opens the box and types.
@@ -627,7 +647,7 @@ with sync_playwright() as pw:
         p.click("text=Got it", timeout=2500)
     except Exception:
         pass
-    p.eval_on_selector_all(".t-del", "e => e[0].click()"); p.wait_for_timeout(500)
+    del_row(p, 0); p.wait_for_timeout(500)
     check("undo bar is showing for this check",
           not p.evaluate("() => document.getElementById('undobar').hidden"))
     check("the undo bar does not cover the tab bar either", p.evaluate(TABS_REACHABLE))
@@ -677,7 +697,7 @@ with sync_playwright() as pw:
         ("where you train", ['.tabs button[data-tab="gym"]', "#addGymFirst"], "#newGymName"),
         ("a cardio session, by name", ['.tabs button[data-tab="cardio"]', "#cardioStart"], "#cPickNew"),
         ("the cardio goal",  ['.tabs button[data-tab="cardio"]', "#cgOpen"], "#cgVal"),
-        ("cardio minutes",   ['.tabs button[data-tab="cardio"]'], "#cMin"),
+        ("cardio minutes",   ['.tabs button[data-tab="cardio"]', "#cardioByHand"], "#cMin"),
         ("a gym's tag",    ['.tabs button[data-tab="gym"]', "#addGymFirst"], "#newGymTag"),
         # Sheets rather than inline editors, but the same blind spot: neither
         # exists until something is pressed, so nothing that walks the tabs as
