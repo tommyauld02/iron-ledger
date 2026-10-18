@@ -93,10 +93,13 @@ register.
 
 **Fonts are self-hosted.** Google Fonts was the only outbound reference in the
 whole file and there are no `fetch` calls anywhere, so removing it made the app
-genuinely offline. Archivo is a variable font — one file per subset spans
-400–700, and Google serves the same bytes for every weight you ask for, so do
-not re-add per-weight Archivo files. IBM Plex Mono is static, one per weight.
-Latin and latin-ext only.
+genuinely offline. Archivo is a variable font on two axes — one file per
+subset spans weight 400–800 and width 100–125% — because the redesign's big
+numbers are set at 800 and 125%, and a browser can fake a weight but never a
+width. Do not re-add per-weight Archivo files. IBM Plex Mono is static, one
+per weight. Latin and latin-ext only. `tools/make-fonts.py` regenerates
+`fonts/` and prints the `@font-face` block that sits at the top of
+`iron-ledger.html`; never hand-edit either.
 
 **Dates re-check on wake.** iOS suspends a home-screen app rather than closing
 it, so `TODAY` computed once at load meant food logged after midnight landed on

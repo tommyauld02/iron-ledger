@@ -33,6 +33,7 @@ with sync_playwright() as pw:
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", STORE)
         p.reload(); p.wait_for_timeout(800)
         p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+        p.click("#panNew"); p.wait_for_timeout(250)
         p.set_input_files("#shotFile","tests/label.png"); p.wait_for_timeout(900)
         print("\n=== %s ===" % label)
         print("  form:", p.evaluate("()=>[panName.value,panServe.value,panUnit.value,panCal.value,panPro.value]"))

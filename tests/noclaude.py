@@ -46,6 +46,7 @@ with sync_playwright() as pw:
     print("  day total:", p.text_content(".t-total .t-cal b"), "kcal /", p.text_content(".t-total .t-pro b"), "g")
     # pantry photo button correctly absent
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    p.click("#panNew"); p.wait_for_timeout(250)
     print("  photo button hidden:", not p.evaluate("()=>!!document.getElementById('shotBtn')"))
     print("  pantry still usable:", p.evaluate("()=>!!document.getElementById('savePan')"))
     print("\n  errors:", errs if errs else "none")
