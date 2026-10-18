@@ -105,6 +105,15 @@ Two lessons paid for the hard way:
   control character in the source. `sed -i` with a Windows path in the
   replacement does the same damage: `\U`, `\f` and `\a` become case changes
   and control characters.
+- **A redraw wipes what a test typed.** The app redraws `#view` whole, so a
+  number filled in just before a redraw is gone when its button is pressed.
+  `darkcheck` typed a barcode the moment the scanner's field appeared, but
+  the sheet asks for the camera then, and in a browser with none the refusal
+  redraws it some 400 ms later. Once in a while it fell in the 30 ms
+  between typing and Look up, and "a scanned product is not on screen"
+  failed with nothing wrong in the app (2026-10-17, Windows). Wait for
+  whatever redraws to be done — there, the camera's answer on the sheet —
+  before typing, then wait for the result rather than sleeping.
 - **Tests ran for a while against a stale generated copy** and passed
   everything against an old build. The suites now read `iron-ledger.html`
   directly, so there is nothing to go stale.
