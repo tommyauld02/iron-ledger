@@ -236,6 +236,30 @@ listed a longer session with the heavier weights, so time is coloured the same
 way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
 
+**The week's plan: which split goes on which day.** Asked for by the owner:
+Mondays back, Tuesdays legs, and everyone's week is different, so every day
+can be changed or cleared. *Plan week*, beside *Today's split*, swaps the
+chips for seven native pickers, Sunday first like the calendar, each offering
+*Nothing planned*, every split and *Rest day*. A picker commits as it changes,
+says what it did and offers Undo (rules 3 and 6); *Clear the week* does the
+same for all seven. `store.week` is the seven entries — a split's id,
+`PLAN_REST`, or null — and it rides along in a backup and a restore.
+
+**A plan is not history.** Nothing logged ever reads `store.week`, so rule 7
+has nothing to guard here: a split that is removed, or replaced by loading
+someone's routine, simply reads as unplanned (`plannedFor()` resolves ids
+against `cats()` every time), and undoing the removal brings the plan back
+with it. The special day is never planned, the same as it is never scheduled.
+
+**Opening a day picks its planned split — once.** A day with nothing logged
+opens on its planned split; `planPickedFor` remembers the day so a chip tapped
+after that sticks through every redraw. A day with lifts on it is left alone.
+The week strip across the top marks a planned day *ahead* with a ring in its
+split's colour; days gone by are not marked as missed, because the plan is
+for organising the week, not keeping score. A rest day with nothing logged
+says so where the movements would be, and the chips stay there for training
+anyway.
+
 **A special day is outside the routine on purpose.** Asked for from home:
 two pairs of dumbbells and no machines, so no Back / Bi / Tri day — biceps and
 shoulders instead — and the same for yoga, or a friend's workout. `SPECIAL` is

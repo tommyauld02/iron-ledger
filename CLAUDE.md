@@ -11,7 +11,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 22 suites, ~1,140 checks, 15
+**1. Nothing ships without `./verify.sh` passing.** 23 suites, ~1,170 checks, 16
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -61,7 +61,7 @@ manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              21 Playwright suites, and relay.py, which runs the relay in Node
+tests/              22 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -119,7 +119,8 @@ Everything else:
   meals, sections → `docs/pantry.md`
 - **Daily checklist** (supplements) → `docs/pantry.md`
 - **Gym tab** — the workout clock, Done and laps, sets and the set sheet,
-  techniques, supersets, the drag, the rest timer, movement lists →
+  techniques, supersets, the drag, the rest timer, movement lists, the
+  week's plan →
   `docs/gym.md`
 - **Targets** — compare with last time, special day, notes, the set to beat,
   five pounds a rep, gyms, last time set by set → `docs/gym.md`
@@ -173,7 +174,7 @@ injecting a deliberate failure into `sweep` and watching CI stay green. That
 is fixed, and it is worth keeping straight:
 
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
-  `days`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
+  `days`, `week`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
   `handoff`, `finder`, `relay`, `label`, `hittest`, `share`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.

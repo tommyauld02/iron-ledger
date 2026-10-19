@@ -30,7 +30,7 @@ skipped=""
 # every check passed and the run went red (PR #14). A file always blocks.
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
-for s in sweep days probe darkcheck coach meals estmeal touch mobile \
+for s in sweep days week probe darkcheck coach meals estmeal touch mobile \
          commit noclaude yourwords firstrun photo2 taborder pwa handoff finder relay label hittest share; do
   echo "=================== $s ==================="
   # `cmd && rc=0 || rc=$?` keeps set -e out of it: a bare `cmd; rc=$?` would

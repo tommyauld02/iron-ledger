@@ -37,7 +37,8 @@ rule and gate on it, and `hittest` checks the tap reaches the control. Two
 lessons worth keeping: a helper outside the repo is a suite that only works on
 one machine, and a suite whose exit code is discarded is not a test.
 
-Suites: `sweep` features · `days` date rollover and month/year boundaries ·
+Suites: `sweep` features · `days` date rollover and month/year boundaries · `week` the
+week's plan: set, undo, clear, rest days, a removed split, the pick on opening ·
 `probe` clicks every tappable and asserts something changed · `darkcheck` WCAG
 contrast in both themes · `coach` routine
 builder and history preservation · `meals` combine/split/take out ·
