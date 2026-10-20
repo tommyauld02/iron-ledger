@@ -108,7 +108,7 @@ Everything else:
 - **Look and touch** — the dock, long press, sheets, Settings, theme and
   accent, teal means you can tap it, contrast, `darkcheck`'s fixture →
   `docs/ui.md`
-- **Logging food** — the entry table, the words box, folded boxes and
+- **Logging food** — the three ways in, the words box, folded boxes and
   pop-ups, grams and units, meals → `docs/food.md`
 - **The food finder** — the free AI that answers what the pantry doesn't know,
   the relay that holds its key, the self-check → `docs/food.md`; deploying the
@@ -130,7 +130,7 @@ Everything else:
 - **Sharing a routine** — the Coach tab, `ILROUTINE1:` codes, the day-id trap,
   never through `mergeInto` → `docs/sharing-a-routine.md`
 - **Known and deliberate** — what is left as it is on purpose, including
-  *Don't know the numbers* needing a connection → `docs/known-and-deliberate.md`
+  *Ask an agent* needing a connection → `docs/known-and-deliberate.md`
 
 ## Publishing
 

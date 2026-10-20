@@ -37,12 +37,10 @@ def rm_pan(pg, i=0):
 MIN_TAP = 43.5
 
 def words(p):
-    """Open the plain-words box; it lives behind the fill-in table now."""
-    # the estimate sits folded behind "Don't know the numbers" until asked for
+    """Open the plain-words box, Ask an agent."""
+    # the words box sits folded behind Ask an agent until asked for
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
-    if not p.locator("#estText").count():
-        p.click('[data-esttab="agent"]'); p.wait_for_timeout(250)
 # A UPC-A barcode as an SVG, for the scanner to read from a "photo".
 _UPC_L = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"]
 def upca_svg(code, mod=3, h=120):
@@ -202,36 +200,23 @@ with sync_playwright() as pw:
     head=p.eval_on_selector(".review > header span","e=>e.textContent").replace(",","")
     check("serving: the running total follows", ("%d kcal"%rowsum) in head,
           "rows=%d head=%r" % (rowsum, head))
-    # ---------- THE WAY IN IS A TABLE, NOT A BLANK BOX ----------
-    # "What did you eat?" over an empty textarea tells a first-time user
-    # nothing about what it accepts. Labelled fields with examples do.
+    # ---------- ASK AN AGENT IS ONE WORDS BOX ----------
+    # b71: the tabs went. Have the measurements built the same sentence the
+    # words box does and sent it to the same place, and Scan a barcode has its
+    # own button in the bottom bar, so Ask an agent opens straight on the box.
     # Committing here also closes the review the section above left open, and
     # a later check reads the corrected weight back out of the ledger.
     p.click("#commitEst"); p.wait_for_timeout(600)
     way(p, "estimate")
-    # Three ways in, as tabs (b64): Scan a barcode, Have the measurements, Ask
-    # an agent, in that order, each pressed one at a time.
-    TABS3="()=>[...document.querySelectorAll('[data-esttab]')].map(x=>x.dataset.esttab+'|'+x.textContent+'|'+x.getAttribute('aria-pressed'))"
-    check("entry: Don't know the numbers holds three ways in, as tabs",
-          [t.split("|")[1] for t in p.evaluate(TABS3)]==["Scan a barcode","Have the measurements","Ask an agent"],
-          str(p.evaluate(TABS3)))
-    p.click('[data-esttab="measure"]'); p.wait_for_timeout(300)
-    check("entry: you land on a table, not a blank box",
-          p.locator(".et-row").count()==1 and p.locator("#estText").count()==0)
-    check("entry: only the chosen tab is pressed",
-          [t.split("|")[2] for t in p.evaluate(TABS3)]==["false","true","false"], str(p.evaluate(TABS3)))
-    # the labels are set in uppercase by CSS, so compare what is on screen
-    check("entry: the fields say what goes in them",
-          [x.strip().upper() for x in p.locator(".et-lab").all_inner_texts()]==["AMOUNT","UNIT","FOOD"],
-          str(p.locator(".et-lab").all_inner_texts()))
-    check("entry: and carry an example",
-          p.get_attribute('[data-ef="0"]',"placeholder")=="chicken breast",
-          p.get_attribute('[data-ef="0"]',"placeholder"))
-    check("entry: the food field offers what your pantry knows",
-          p.locator('#estFoods option[value="costco protein coffee"]').count() == 1,
-          "%d suggestions" % p.locator("#estFoods option").count())
-    for sel in ('[data-eq="0"]', '[data-eu="0"]', '[data-ef="0"]', "#estAddRow",
-                '[data-esttab="scan"]', '[data-esttab="measure"]', '[data-esttab="agent"]'):
+    check("entry: Ask an agent opens on the words box, with no tabs and no table",
+          p.locator("#estText").count()==1 and p.locator("[data-esttab], [data-ef], [data-eq]").count()==0)
+    check("entry: the box says what it is for",
+          p.inner_text('label[for="estText"]').strip().upper()=="WHAT DID YOU EAT?",
+          p.inner_text('label[for="estText"]') if p.locator('label[for="estText"]').count() else "no label")
+    check("entry: and carries an example of the shorthand",
+          "6 oz sirloin" in (p.get_attribute("#estText","placeholder") or ""),
+          p.get_attribute("#estText","placeholder"))
+    for sel in ("#estText", "#runEst"):
         bb=p.locator(sel).bounding_box()
         check("entry: %s clears 44px" % sel, bb and bb["height"]>=MIN_TAP,
               bb and "%dx%d"%(bb["width"],bb["height"]))
@@ -243,49 +228,17 @@ with sync_playwright() as pw:
           " / ".join(x.strip() for x in p.locator(".est .est-note").all_inner_texts())[:80])
     check("entry: and no review opened", p.locator(".review").count()==0)
 
-    p.fill('[data-eq="0"]',"6"); p.select_option('[data-eu="0"]',"oz")
-    p.fill('[data-ef="0"]',"chicken breast"); p.wait_for_timeout(200)
-    p.click("#estAddRow"); p.wait_for_timeout(500)
-    check("entry: adding a row adds a row", p.locator(".et-row").count()==2)
-    check("entry: and puts you in it",
-          p.evaluate("()=>document.activeElement.dataset.ef")=="1")
-    check("entry: the first row survived it",
-          p.input_value('[data-ef="0"]')=="chicken breast")
-    p.fill('[data-eq="1"]',"1"); p.select_option('[data-eu="1"]',"cup"); p.fill('[data-ef="1"]',"white rice")
+    p.fill("#estText","6 oz chicken breast & 1 cup white rice")
     p.click("#runEst"); p.wait_for_timeout(1400)
     foods=p.eval_on_selector_all(".rev-item .food","e=>e.map(x=>x.textContent)")
-    check("entry: both rows resolve", len(foods)==2, " | ".join(foods))
-    check("entry: the unit you picked is the unit it used",
+    check("entry: both foods resolve", len(foods)==2, " | ".join(foods))
+    check("entry: the unit you typed is the unit it used",
           p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value)")[0]=="oz",
           str(p.eval_on_selector_all("[data-iu]","e=>e.map(x=>x.value)")))
     p.click("#commitEst"); p.wait_for_timeout(800)
-    check("entry: the table empties after it is logged",
-          p.locator(".et-row").count()==1 and p.input_value('[data-ef="0"]')=="",
-          "rows=%d first=%r" % (p.locator(".et-row").count(), p.input_value('[data-ef="0"]')))
-
-    # removing a row, and the words box behind it
-    p.fill('[data-ef="0"]',"eggs"); p.click("#estAddRow"); p.wait_for_timeout(500)
-    p.fill('[data-ef="1"]',"toast"); p.wait_for_timeout(200)
-    rb=p.locator("[data-erm]").first.bounding_box()
-    check("entry: remove is a proper target", rb and rb["height"]>=MIN_TAP,
-          rb and "%dx%d"%(rb["width"],rb["height"]))
-    p.click('[data-erm="0"]'); p.wait_for_timeout(500)
-    check("entry: removing a row removes the right one",
-          p.locator(".et-row").count()==1 and p.input_value('[data-ef="0"]')=="toast",
-          p.input_value('[data-ef="0"]'))
-    p.click('[data-esttab="agent"]'); p.wait_for_timeout(500)
-    check("entry: Ask an agent is its own tab: the words box, and no table",
-          p.locator("#estText").count()==1 and p.locator(".et-row").count()==0)
-    check("entry: and the table came with it rather than being retyped",
-          p.input_value("#estText")=="toast", repr(p.input_value("#estText")))
-    p.click('[data-esttab="scan"]'); p.wait_for_timeout(500)
-    check("entry: Scan a barcode is its own tab: the scan button, and nothing to type",
-          p.locator("#openScan").count()==1 and p.locator("#estText").count()==0 and p.locator(".et-row").count()==0
-          and p.locator("#runEst").count()==0)
-    p.click('[data-esttab="measure"]'); p.wait_for_timeout(500)
-    check("entry: back on Have the measurements, the table is as it was",
-          p.input_value('[data-ef="0"]')=="toast")
-    p.fill('[data-ef="0"]',""); p.wait_for_timeout(200)
+    check("entry: the box empties after it is logged",
+          p.locator("#estText").count()==1 and p.input_value("#estText")=="",
+          repr(p.input_value("#estText")) if p.locator("#estText").count() else "no box")
 
     # ---------- WEIGH IT HOWEVER YOU WEIGH IT ----------
     # Grams are the basis the food table is keyed on, but a US kitchen scale
@@ -2913,7 +2866,9 @@ with sync_playwright() as pw:
     # ---------- THE WAYS IN ARE FOLDED ----------
     # Asked for from real use: two whole forms under the checklist made the
     # Macros screen twice the height of a phone. They are buttons now, named
-    # for what they are for, and each opens its box right under it.
+    # for what they are for, and each opens its box right under it. Since b71
+    # the bottom bar is three of them, each with its name under its picture:
+    # Log numbers (pencil), Ask an agent (#) and Scan.
     FG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
     FSTORE={"days":{Ts:{"food":[{"id":"a","cal":520,"pro":46,"note":"Eggs"},
                                  {"id":"b","cal":0,"pro":0,"note":"chicken breast","pending":True}],
@@ -2928,18 +2883,21 @@ with sync_playwright() as pw:
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", FSTORE)
     q.reload(); q.wait_for_timeout(900)
     check("ways: both start folded, and neither form is on the page",
-          q.evaluate(WAYS)==[["estimate","false"],["numbers","false"]]
+          q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]]
           and q.locator("#fCal").count()==0 and q.locator("#runEst").count()==0, str(q.evaluate(WAYS)))
-    check("ways: each says what it is for",
-          q.get_attribute('[data-logway="numbers"]',"aria-label")=="I know the numbers"
-          and q.inner_text('[data-logway="estimate"]').startswith("What did you eat?"))
-    wb=q.eval_on_selector_all("[data-logway]","e=>e.map(x=>x.getBoundingClientRect().height)")
-    check("ways: both are proper targets", len(wb)==2 and all(h>=MIN_TAP for h in wb), str(wb))
+    W3="()=>[...document.querySelectorAll('#ctxMain .w3')].map(x=>x.innerText.trim())"
+    check("ways: three buttons, each saying what it is for, in the order pencil, #, barcode",
+          q.evaluate(W3)==["Log numbers","Ask an agent","Scan"]
+          and q.get_attribute("[data-scanway]","aria-label")=="Scan a barcode", str(q.evaluate(W3)))
+    check("ways: Ask an agent, the one most used, is the filled one",
+          q.locator('.w3-main[data-logway="estimate"]').count()==1 and q.locator(".w3-main").count()==1)
+    wb=q.eval_on_selector_all("#ctxMain .w3","e=>e.map(x=>x.getBoundingClientRect().height)")
+    check("ways: all three are proper targets", len(wb)==3 and all(h>=MIN_TAP for h in wb), str(wb))
     # Not "the day fits on the phone": that depends on how much is logged and
     # on the platform's fonts — Linux CI drew this fixture 21px taller than
     # Windows. What folding owns is how little it leaves, and what it saves.
-    WAYSPAN="()=>{const b=[...document.querySelectorAll('[data-logway]')].map(x=>x.getBoundingClientRect());return Math.round(b[1].bottom-b[0].top);}"
-    check("ways: folded, the forms are down to two buttons",
+    WAYSPAN="()=>{const b=[...document.querySelectorAll('#ctxMain .w3')].map(x=>x.getBoundingClientRect());return Math.round(Math.max(...b.map(r=>r.bottom))-Math.min(...b.map(r=>r.top)));}"
+    check("ways: folded, the forms are down to one row of buttons",
           q.evaluate(WAYSPAN)<=170, "%spx" % q.evaluate(WAYSPAN))
     folded_h=q.evaluate("()=>document.documentElement.scrollHeight")
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
@@ -2948,8 +2906,8 @@ with sync_playwright() as pw:
     check("ways: and folding takes most of a screen off the page",
           open_h-folded_h>=400, "%s folded, %s open" % (folded_h, open_h))
     q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
-    check("ways: Log calories / protein opens its box, ready to type",
-          q.evaluate(WAYS)[1]==["numbers","true"] and q.evaluate("()=>document.activeElement.id")=="fCal")
+    check("ways: Log numbers opens its box, ready to type",
+          q.evaluate(WAYS)[0]==["numbers","true"] and q.evaluate("()=>document.activeElement.id")=="fCal")
     check("ways: and its box opens on the page, with a Close of its own",
           q.locator("#logWays #wayNumbers").count()==1 and q.locator('#logWays [data-wayclose="numbers"]').count()==1)
     q.fill("#fCal","300"); q.fill("#fPro","25"); q.fill("#fNote","Yogurt"); q.click("#addFood"); q.wait_for_timeout(400)
@@ -2957,20 +2915,20 @@ with sync_playwright() as pw:
           "Added Yogurt" in q.inner_text(".added-flash") and q.locator("#fCal").count()==1)
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     check("ways: one open at a time — the other folds",
-          q.evaluate(WAYS)==[["estimate","true"],["numbers","false"]] and q.locator("#fCal").count()==0
-          and q.evaluate("()=>document.activeElement.dataset.eq")=="0")
+          q.evaluate(WAYS)==[["numbers","false"],["estimate","true"]] and q.locator("#fCal").count()==0
+          and q.evaluate("()=>document.activeElement.id")=="estText")
     check("ways: the confirmation still shows with the numbers box folded",
           q.locator(".added-flash").count()==1)
-    q.fill('[data-ef="0"]',"toast")
+    q.fill("#estText","toast")
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
-    check("ways: pressing the open one folds it", q.evaluate(WAYS)==[["estimate","false"],["numbers","false"]])
+    check("ways: pressing the open one folds it", q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]])
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
-    check("ways: and what was typed is still there when it opens again", q.input_value('[data-ef="0"]')=="toast")
+    check("ways: and what was typed is still there when it opens again", q.input_value("#estText")=="toast")
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     # a row waiting on numbers: its button must not land in a folded box
     q.click('[data-est="b"]'); q.wait_for_timeout(900)
     check("ways: a waiting row's button opens its answer even with everything folded",
-          q.locator("#commitEst").count()==1 and q.evaluate(WAYS)[0]==["estimate","true"], str(q.evaluate(WAYS)))
+          q.locator("#commitEst").count()==1 and q.evaluate(WAYS)[1]==["estimate","true"], str(q.evaluate(WAYS)))
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
     check("ways: folding puts the review aside", q.locator("#commitEst").count()==0)
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
@@ -3043,7 +3001,7 @@ with sync_playwright() as pw:
 
     # pop-up
     q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
-    check("opens: pop-up — Log calories / protein slides up, ready to type",
+    check("opens: pop-up — Log numbers slides up, ready to type",
           q.evaluate(SHEETS)==["numbers"] and q.evaluate(INLINE)==[False,False]
           and q.evaluate("()=>document.activeElement.id")=="fCal")
     sb=q.eval_on_selector_all('[data-waysheet] input, [data-waysheet] button',
@@ -3061,9 +3019,9 @@ with sync_playwright() as pw:
           q.evaluate(SHEETS)==[] and "Added Yogurt" in q.inner_text(".added-flash")
           and any(f.get("note")=="Yogurt" for f in q.evaluate(LST)["days"][Ts]["food"]))
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
-    check("opens: pop-up — Don't know the numbers slides up too",
-          q.evaluate(SHEETS)==["estimate"] and q.evaluate("()=>document.activeElement.dataset.eq")=="0")
-    q.fill('[data-ef="0"]',"white rice"); q.click("#runEst"); q.wait_for_timeout(1000)
+    check("opens: pop-up — Ask an agent slides up too",
+          q.evaluate(SHEETS)==["estimate"] and q.evaluate("()=>document.activeElement.id")=="estText")
+    q.fill("#estText","white rice"); q.click("#runEst"); q.wait_for_timeout(1000)
     check("opens: its review stays in the pop-up", q.locator('[data-waysheet] #commitEst').count()==1)
     q.click('[data-wayclose="estimate"]'); q.wait_for_timeout(250)
     q.click('[data-logway="estimate"]'); q.wait_for_timeout(250)
@@ -3359,7 +3317,7 @@ with sync_playwright() as pw:
     def estimate(food, qty=""):
         if q.locator("#discardEst").count(): q.click("#discardEst"); q.wait_for_timeout(250)
         way(q, "estimate")
-        q.fill('[data-eq="0"]', qty); q.fill('[data-ef="0"]', food); q.click("#runEst"); q.wait_for_timeout(900)
+        q.fill("#estText", (qty + " " + food).strip()); q.click("#runEst"); q.wait_for_timeout(900)
     check("finder: nothing to set up — Settings asks for no key",
           q.locator("#setSheet input").count()==q.locator("#setWaterGoal").count() and "key" not in q.inner_text("#setSheet").lower(),
           q.inner_text("#setSheet")[:120])
@@ -3409,7 +3367,6 @@ with sync_playwright() as pw:
     fx["reply"]=lambda qq: (429, {"error":"busy"})
     if q.locator("#discardEst").count(): q.click("#discardEst"); q.wait_for_timeout(250)
     way(q, "estimate")
-    if not q.locator("#estText").count(): q.click('[data-esttab="agent"]'); q.wait_for_timeout(250)
     q.fill("#estText", "a bowl of chili & 6 oz chicken breast"); q.click("#runEst"); q.wait_for_timeout(900)
     fx["reply"]=lambda qq: CHILI if "chili" in qq["food"] else None
     # both taps before either answer is back: the second button is found
@@ -3421,7 +3378,6 @@ with sync_playwright() as pw:
           "%s / spinners %d" % (q.evaluate(ROWS), q.locator(".est-flag .working").count()))
     fx["reply"]=None
     q.click("#discardEst"); q.wait_for_timeout(250)
-    q.click('[data-esttab="measure"]'); q.wait_for_timeout(250)      # back to the table estimate() fills in
 
     # The relay re-checks numbers that don't add up; whatever still doesn't
     # comes back as it was, and the app flags it on its row.
@@ -3488,9 +3444,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Plan your week"
-          and titles[1]=="A walkthrough of the new look" and titles[2]=="Nothing hiding"
-          and titles[3]=="A quieter Macros screen", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Three ways to add food"
+          and titles[1]=="Plan your week" and titles[2]=="A walkthrough of the new look"
+          and titles[3]=="Nothing hiding", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough: plays in the sheet rather than taking over the phone,
     # downloads nothing until it is tapped, and the file it names is in the repo.
@@ -3553,9 +3509,11 @@ with sync_playwright() as pw:
         except Exception: return ""
         return pg.inner_text(".scan-card")
     c, q = fresh(LBSTORE, "barcodes")
-    way(q, "estimate")
-    q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
-    q.click("#openScan"); q.wait_for_timeout(300)
+    # Scan in the bottom bar opens the reader in one press (b71); it used to
+    # open a Scan tab whose one button opened it.
+    q.click("[data-scanway]"); q.wait_for_timeout(300)
+    check("barcodes: Scan in the bottom bar opens the reader itself",
+          q.locator("#scanSheet").count()==1 and q.locator("#wayEstimate").count()==0)
     check("barcodes: before grocery brands are on the phone, it offers them rather than failing",
           q.locator("#scanBrands").count()==1 and "9 MB" in q.inner_text("#scanBrands"), q.inner_text("#scanSheet")[:120])
     q.click("#scanBrands")
@@ -3585,9 +3543,7 @@ with sync_playwright() as pw:
     check("barcodes: Add puts it in the review, from the label",
           q.evaluate(ROWS)==["Great Value Whole Milk"] and q.inner_text(".rev-item .src-tag").upper()=="BRAND LABEL · 2026", str(q.evaluate(ROWS)))
     q.click("#discardEst"); q.wait_for_timeout(300)
-    way(q, "estimate")
-    q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
-    q.click("#openScan"); camera_answered(q)
+    q.click("[data-scanway]"); camera_answered(q)
     q.fill("#scanType", "071717171717"); q.click("#scanGo")
     card=scan_card(q)
     check("barcodes: a number that is nowhere says so, and offers the pantry",
@@ -3601,9 +3557,7 @@ with sync_playwright() as pw:
     pan=[x for x in q.evaluate(LBST)["pantry"] if x["name"]=="Corner store protein bar"]
     check("barcodes: it is saved with the food", pan and pan[0].get("upc")=="71717171717", str(pan))
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
-    way(q, "estimate")
-    q.click('[data-esttab="scan"]'); q.wait_for_timeout(250)
-    q.click("#openScan"); camera_answered(q)
+    q.click("[data-scanway]"); camera_answered(q)
     q.fill("#scanType", "071717171717"); q.click("#scanGo")
     card=scan_card(q)
     check("barcodes: and the next scan finds it, from the pantry",

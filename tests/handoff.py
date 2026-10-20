@@ -44,11 +44,9 @@ def rm_pan(pg, i=0):
 # "Or just describe it in words". This suite is about what the resolver makes
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
-    # the estimate sits folded behind "Don't know the numbers" until asked for
+    # the words box sits folded behind Ask an agent until asked for
     if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
         p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
-    if not p.locator("#estText").count():
-        p.click('[data-esttab="agent"]'); p.wait_for_timeout(250)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 d = ROOT.replace("\\", "/"); d = "/" + d if d[1:2] == ":" else d
@@ -196,8 +194,8 @@ with sync_playwright() as pw:
     }"""
 
     # Macros three times: folded, then with each way in open.
-    tabs = ["macros", "macros:numbers", "macros:estimate", "macros:estimate:agent", "macros:estimate:scan", "pantry", "gym", "cardio", "coach", "log"]
-    first = {"numbers": "#fCal", "estimate": '[data-ef="0"]', "estimate:agent": "#estText", "estimate:scan": "#openScan"}
+    tabs = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "log"]
+    first = {"numbers": "#fCal", "estimate": "#estText"}
     small, blocked, seen, cal_cells = [], [], 0, 0
     for t in tabs:
         p.click('.tabs button[data-tab="%s"]' % t.split(":")[0]); p.wait_for_timeout(500)
@@ -206,8 +204,6 @@ with sync_playwright() as pw:
             # already open, a press would fold it
             if p.locator('[data-logway="%s"][aria-expanded="false"]' % box).count():
                 p.click('[data-logway="%s"]' % box); p.wait_for_timeout(350)
-            if t.count(":") == 2:
-                p.click('[data-esttab="%s"]' % t.split(":")[2]); p.wait_for_timeout(350)
             check("%s opens, so it is measured" % t, p.locator(first[t.split(":", 1)[1]]).count() == 1)
         for el in p.evaluate(MEASURE):
             seen += 1
@@ -688,8 +684,8 @@ with sync_playwright() as pw:
 
     EDITORS = [
         ("meal name",      ['.tabs button[data-tab="macros"]', "[data-openmeal]", "[data-renamemeal]"], "#mealName"),
-        ("log calories / protein", ['.tabs button[data-tab="macros"]', '[data-logway="numbers"]'], "#fCal"),
-        ("don't know the numbers", ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], '[data-ef="0"]'),
+        ("log numbers",    ['.tabs button[data-tab="macros"]', '[data-logway="numbers"]'], "#fCal"),
+        ("ask an agent",   ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], "#estText"),
         ("rename a day",   ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-renameday]"], "#rtRename"),
         ("add a movement", ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-newmove]"], "#rtNewMove"),
         ("add a day",      ['.tabs button[data-tab="coach"]', "#addDay"], "#rtNewDay"),
@@ -721,11 +717,11 @@ with sync_playwright() as pw:
         ("a new set",      ['.tabs button[data-tab="gym"]', "#addLift", "[data-r]"], "#seR"),
         # Last, because the choice is saved and every later editor would
         # open in it: the same two fields, as pop-ups.
-        ("log calories / protein, as a pop-up",
+        ("log numbers, as a pop-up",
                            ["#setBtn", '[data-pick-logopen="popup"]', "#setDone",
                             '.tabs button[data-tab="macros"]', '[data-logway="numbers"]'], "#fCal"),
-        ("don't know the numbers, as a pop-up",
-                           ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], '[data-ef="0"]'),
+        ("ask an agent, as a pop-up",
+                           ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], "#estText"),
         ("the movement, from the set sheet",
                            ['.tabs button[data-tab="gym"]', "#addLift", "[data-addset]", "#seMoveBtn"], "#seMove"),
     ]

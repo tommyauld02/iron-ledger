@@ -8,7 +8,7 @@ rules and the index of these docs. The rules apply here too.
 - Rest days are not painted red on the calendar. Offered, declined.
 - Barcode scanning used to be the one genuine reason to go native. It is in the
   web app now (b61, zxing-wasm), so nothing found so far needs a native build.
-- *Don't know the numbers* needs a connection for anything not in your pantry.
+- *Ask an agent* needs a connection for anything not in your pantry.
   The owner chose that on 2026-10-14 when the food finder replaced the built-in
   table, the USDA library and the menus ("99% of people have internet"); they
   were removed, not kept as an offline fallback. Offline, a food goes in as a

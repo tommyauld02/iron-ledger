@@ -319,11 +319,11 @@ def walk(p, label):
             p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
             if not p.locator("#fCal").count(): found.append("macros: the numbers box is not on screen")
             low = p.evaluate(LOW)
-            if low: found.append("macros (log calories / protein): %s" % low)
+            if low: found.append("macros (log numbers): %s" % low)
             p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
-            if not p.locator('[data-ef="0"]').count(): found.append("macros: the estimate table is not on screen")
+            if not p.locator("#estText").count(): found.append("macros: the Ask an agent box is not on screen")
             low = p.evaluate(LOW)
-            if low: found.append("macros (don't know the numbers): %s" % low)
+            if low: found.append("macros (ask an agent): %s" % low)
             # and as pop-ups, chosen in Settings, then back to in place; the
             # open box is folded first, or it would come back as a pop-up over
             # the very button the next step presses
@@ -342,14 +342,7 @@ def walk(p, label):
             p.click('[data-pick-logopen="inplace"]'); p.wait_for_timeout(200)
             p.click("#setDone"); p.wait_for_timeout(250)
             p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
-            # the Scan a barcode tab only exists after a press
-            p.click('[data-esttab="scan"]'); p.wait_for_timeout(200)
-            if not p.locator("#openScan").count(): found.append("macros: the Scan a barcode tab is not on screen")
-            low = p.evaluate(LOW)
-            if low: found.append("macros (Scan a barcode tab): %s" % low)
             # the review header sits on the soft tint too
-            if not p.locator("#estText").count():
-                p.click('[data-esttab="agent"]'); p.wait_for_timeout(200)
             p.fill("#estText", "chicken and rice"); p.click("#runEst"); p.wait_for_timeout(900)
             low = p.evaluate(LOW)
             if low: found.append("estimate review: %s" % low)
