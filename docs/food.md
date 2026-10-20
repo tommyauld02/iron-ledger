@@ -125,10 +125,14 @@ tier turning people away from its busiest model — and then "quota exceeded …
 limit: 20" a day for that model, while `gemini-flash-lite-latest` answered every
 lookup. Each model has its own free daily allowance, so the relay works down
 `MODELS`, lightest first (`gemini-flash-lite-latest`, `gemini-flash-latest`,
-`gemini-2.5-flash-lite`): a model that is overloaded, out of allowance, slower
+`gemini-3.5-flash-lite`): a model that is overloaded, out of allowance, slower
 than 12 seconds or retired hands the question to the next, and one out of
 allowance is skipped until Google says it's back (`restFor()`). The app hears
-*busy* only when every model has said no.
+*busy* only when every model has said no. The last one is a pinned model, not
+an alias, and pinned models retire: on 2026-10-19 `gemini-2.5-flash-lite`
+answered 404 "no longer available to new users" while both aliases were
+overloaded, so four lookups in six (100 g brown rice) came back *busy*. When
+the log shows a 404, replace that model in `relay/wrangler.toml` and redeploy.
 
 The suites never reach the relay or a real AI. `tests/fakeai.py` stands in for
 the relay, answering from a small fixture of foods the way the relay would
