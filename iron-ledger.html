@@ -788,52 +788,7 @@
   }
   .est textarea::placeholder { color: var(--ink-3); }
 
-  /* Labelled fields with examples in them, the shape the pantry form uses.
-     Amount and Unit share a line because they are one thought; the food gets
-     the full width because a name is the longest thing here. Labels are on the
-     first row only — every row after it lines up under them. */
-  .est-table { display: flex; flex-direction: column; gap: 10px; }
-  .et-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 44px;
-    gap: 4px 8px;
-    align-items: center;
-  }
-  .et-row + .et-row { padding-top: 10px; border-top: 1px solid var(--rule); }
-  .et-lab {
-    font-family: var(--font-num);
-    font-size: 10px;
-    letter-spacing: .14em;
-    text-transform: uppercase;
-    color: var(--ink-3);
-  }
-  .et-wide, .et-f { grid-column: 1 / -1; }
-  .et-row input, .et-row select {
-    /* A grid item is min-content wide by default, and a select's min-content
-       is its longest option — "Pre-made — no weighing" pushed the Unit column
-       clean off the right edge of the phone. */
-    min-width: 0;
-    height: 46px;
-    padding: 0 10px;
-    background: var(--surface);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    font-family: var(--font-num);
-    font-variant-numeric: tabular-nums;
-    font-size: 15px;
-  }
-  .et-row .et-f { font-family: var(--font-ui); }
-  .et-row .et-u { padding: 0 4px; }
-  .et-rm {
-    height: 44px;
-    width: 44px;
-    color: var(--ink-3);
-    background: none;
-    border: 1px solid transparent;
-    border-radius: 2px;
-  }
-  .et-rm:hover { color: var(--miss); border-color: var(--rule); }
-  .et-add, .et-swap {
+  .et-swap {
     min-height: 44px;
     padding: 0 12px;
     font-family: var(--font-num);
@@ -845,7 +800,6 @@
     border-radius: 2px;
   }
   .et-swap { border-style: none; text-align: left; padding: 0; }
-  .et-add:hover, .et-swap:hover { border-color: var(--accent); }
 
   .est-note {
     margin: 0;
@@ -1059,17 +1013,8 @@
   }
   .lib-search .btn { padding: 0 14px; }
   .lib-group { font-family: var(--font-num); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
-  /* Barcodes: a quick way in at the top of "Don't know the numbers",
-     opening a sheet of its own. */
+  /* Barcodes: a quick way in under a review, opening a sheet of its own. */
   .est-quick { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  /* Don't know the numbers, three ways in: Settings' toggles, but in the body
-     font and allowed two lines, so "Have the measurements" fits a 320px phone. */
-  .est-tabs button { min-height: 52px; padding: 4px 3px; font-family: var(--font-body, inherit);
-    font-size: 13px; line-height: 1.2; letter-spacing: 0; -webkit-hyphens: auto; hyphens: auto; overflow-wrap: anywhere; }
-  .est-scan { display: flex; flex-direction: column; gap: 10px; }
-  /* on the narrowest phones a step smaller; "measurements" still has to break
-     there, so the tabs are marked English and it hyphenates properly */
-  @media (max-width: 359px) { .est-tabs button { font-size: 12px; } }
   .est-quick .btn { display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
     gap: 2px; min-height: 56px; padding: 8px 12px; text-align: left; }
   .est-quick .q-s { font-family: var(--font-body, inherit); font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--ink-2); }
@@ -3394,6 +3339,20 @@
   }
   .cmp-scan { background: var(--accent-soft); }
   .cmp-main[aria-expanded="true"], .cmp-ic[aria-expanded="true"] { background: var(--accent-soft); color: var(--ink); border-radius: 22px; }
+  /* Macros' three ways in, a word under each picture. The middle one is wider
+     and filled: it is the one most used, and its label is the longest. */
+  .ways3 { display: grid; grid-template-columns: 1fr 1.25fr 1fr; gap: 8px; }
+  .w3 {
+    min-height: 56px; padding: 5px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; border-radius: 18px; background: var(--surface); border: 1px solid var(--rule);
+    color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1.15; text-align: center;
+  }
+  .w3 svg { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--accent); stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; }
+  .w3[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .w3-main, .w3-main[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .w3-main svg { stroke: var(--on-accent); }
+  .w3-main[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--accent-soft); }
   .way-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
   .way-head b { font-size: 17px; font-weight: 800; font-stretch: 112%; }
   .way-head button { min-height: 44px; padding: 0 8px; font-family: var(--font-num); font-size: 12.5px; color: var(--accent); }
@@ -4107,7 +4066,7 @@
   "use strict";
 
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-19.70";
+  var BUILD = "2026-10-20.71";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4206,25 +4165,8 @@
   // { status: 'loading' | 'review' | 'error', text, items, note, message, replacing }
   var est = null;
   var estDraft = "";
-  // The entry table. A blank box asking "what did you eat?" tells a first-time
-  // user nothing about what it accepts, so the default way in is labelled
-  // fields with examples in them, the way the pantry form works. Transient
-  // like estDraft: reopening the app should show an empty form, not
-  // yesterday's half-finished thought.
-  var estRows = [{ qty: "", unit: "", food: "" }];
-  // Don't know the numbers holds three ways in, as tabs, asked for by the
-  // owner (b64): one held a barcode button, the table and the words box all
-  // at once. "measure" is the table and the default, "agent" the words box —
-  // what makes "half a protein coffee" work — and "scan" the barcode reader.
-  // Transient like the rest: the app opens on the table.
-  var EST_TABS = [
-    { id: "scan", name: "Scan a barcode" },
-    { id: "measure", name: "Have the measurements" },
-    { id: "agent", name: "Ask an agent" }
-  ];
-  var estTab = "measure";
-  // Which way in is open under the checklist — "numbers", "estimate" or
-  // neither. Both start folded. An estimate under way or waiting for review
+  // Which way in is open under the checklist — "numbers" (Log numbers),
+  // "estimate" (Ask an agent) or neither. Both start folded. An estimate under way or waiting for review
   // opens its box by itself, because it is the answer to a press (a pending
   // row's "Tap to estimate" among them); folding it away while one is showing
   // puts that one aside in estShut, and the next one opens it again.
@@ -4243,7 +4185,7 @@
   var LOG_OPENS = [
     { id: "inplace", name: "In place", hint: "Each box opens right under its button on the Macros screen." },
     { id: "popup", name: "Pop-up", hint: "Each box slides up from the bottom, like the set pop-up." },
-    { id: "mix", name: "Mix", hint: "Log calories / protein slides up; Don\u2019t know the numbers opens in place." }
+    { id: "mix", name: "Mix", hint: "Log numbers slides up; Ask an agent opens in place." }
   ];
   function logOpen() {
     var m = store.logOpen;
@@ -4684,6 +4626,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-20.71", t: "Three ways to add food", items: [
+      "The bar at the bottom of Macros has three buttons, each with its name under it: Log numbers (the pencil) when you know the calories and protein, Ask an agent (the #) when you don\u2019t, and Scan for a barcode.",
+      "Ask an agent opens straight on the words box \u2014 “half a protein coffee and a cup of rice” works. Have the measurements is gone: it sent the same question to the same agent, just in boxes.",
+      "Scan opens the barcode reader in one tap." ] },
     { b: "2026-10-19.70", t: "Plan your week", items: [
       "Gym has a Planned week split between Training at and Today\u2019s split: this week, a tile a day. Tap a day to give every week\u2019s Monday, Tuesday\u2026 a split, a rest day, or leave it Open.",
       "Don\u2019t plan? Leave it Open and train from Today\u2019s split as always. Once you lock in the day, it takes its place on the week.",
@@ -5724,40 +5670,6 @@
   }
 
   // ---------- macro estimator ----------
-  // Every unit here is a word parseQty already understands, so nothing the
-  // picker offers can produce a chunk the parser then shrugs at.
-  function entryUnitOptions(sel) {
-    function opts(list) {
-      return list.map(function (u) {
-        return '<option value="' + u + '"' + (u === sel ? ' selected' : '') + '>' + u + '</option>';
-      }).join("");
-    }
-    return '<option value=""' + (sel ? '' : ' selected') + '>—</option>' +
-      '<optgroup label="By weight">' + opts(["g", "oz", "lb"]) + '</optgroup>' +
-      '<optgroup label="By volume">' + opts(["ml", "fl oz"]) + '</optgroup>' +
-      '<optgroup label="By spoon or cup">' + opts(["tsp", "tbsp", "cup"]) + '</optgroup>' +
-      '<optgroup label="Pre-made — no weighing">' +
-        opts(["bottle", "can", "bar", "packet", "pouch", "container", "tub",
-              "carton", "box", "bag", "stick", "slice", "piece", "scoop", "serving"]) +
-      '</optgroup>';
-  }
-
-  // One table row becomes one chunk of the same sentence the words box would
-  // have produced, so the table is a way to *compose* the input rather than a
-  // second code path — the pantry and the food finder resolve it exactly as
-  // the words would be.
-  function rowChunk(r) {
-    var food = String((r && r.food) || "").trim();
-    if (!food) return "";
-    var qty = String((r && r.qty) || "").trim();
-    var unit = String((r && r.unit) || "").trim();
-    if (!qty && !unit) return food;
-    if (!qty) qty = "1";
-    return unit ? qty + " " + unit + " " + food : qty + " " + food;
-  }
-  function rowsText() {
-    return estRows.map(rowChunk).filter(Boolean).join(" & ");
-  }
 
   // ---------- the food finder ----------
   // Asked for by the owner in place of the lists the app used to ship — the
@@ -6195,18 +6107,15 @@
   function estNoteHtml() {
     var who = finder();
     return '<p class="est-note">' +
-      (estTab === "measure" ? 'Fill in each food and how much of it. ' : '') +
       (who === "relay"
-        ? (estTab === "measure" ? '' : 'Describe the meal in plain words. ') +
-            'Your pantry answers first; anything it doesn\u2019t know goes to the food ' +
-            'finder, a free AI that works out the numbers \u2014 only the food you describe is sent. The country above ' +
-            'decides which version of a product it uses. You\u2019ll see the breakdown and can edit it before it goes in the ledger.'
+        ? 'Describe the meal in plain words. Your pantry answers first; anything it doesn’t know goes to the food ' +
+            'finder, a free AI that works out the numbers — only the food you describe is sent. The country above ' +
+            'decides which version of a product it uses. You’ll see the breakdown and can edit it before it goes in the ledger.'
         : who === "claude"
-          ? (estTab === "measure" ? '' : 'Describe the meal in plain words. ') +
-              'Your pantry answers first; anything it doesn\u2019t know goes to Claude. The ' +
-              'country above decides which version of a product gets used. You\u2019ll see the breakdown and can edit it before ' +
+          ? 'Describe the meal in plain words. Your pantry answers first; anything it doesn’t know goes to Claude. The ' +
+              'country above decides which version of a product gets used. You’ll see the breakdown and can edit it before ' +
               'it goes in the ledger.'
-          : 'Your pantry answers first, even offline. The food finder isn\u2019t available in this copy of the app, so ' +
+          : 'Your pantry answers first, even offline. The food finder isn’t available in this copy of the app, so ' +
               'anything else goes in as a placeholder you can fill in by hand.') +
     '</p>';
   }
@@ -6384,10 +6293,9 @@
     stampGoal(key);
     est = null;
     estSaving = false;
+    // The words empty on commit. Leaving them in the box is how someone logs
+    // the same meal twice without noticing.
     estDraft = "";
-    // The table has to empty with the draft. Leaving the rows filled in is how
-    // someone logs the same meal twice without noticing.
-    estRows = [{ qty: "", unit: "", food: "" }];
     estHint = "";
     estAsMeal = false;
     touch(key);
@@ -6948,59 +6856,14 @@
     var errHtml = (est && est.status === "error")
       ? '<p class="est-note" style="color:var(--miss)">' + esc(est.message) + '</p>' : '';
 
-    // The food field offers what your pantry already knows, the one thing
-    // that answers on the phone with no connection.
-    var known = (store.pantry || []).map(function (x) { return x.name; });
-    var foodList = '<datalist id="estFoods">' +
-      known.map(function (n) { return '<option value="' + esc(n) + '"></option>'; }).join("") +
-      '</datalist>';
-
-    var etRows = estRows.map(function (r, i) {
-      var head = i === 0;
-      var n = String(i + 1);
-      return '<div class="et-row">' +
-        (head ? '<span class="et-lab">Amount</span><span class="et-lab">Unit</span><span></span>' : '') +
-        '<input inputmode="decimal" class="et-q" data-eq="' + i + '" value="' + esc(r.qty) +
-          '" placeholder="6" aria-label="Amount for item ' + n + '">' +
-        '<select class="et-u" data-eu="' + i + '" aria-label="Unit for item ' + n + '">' +
-          entryUnitOptions(r.unit) +
-        '</select>' +
-        (estRows.length > 1
-          ? '<button class="et-rm" data-erm="' + i + '" aria-label="Remove item ' + n + '">✕</button>'
-          : '<span class="et-rm-gap" aria-hidden="true"></span>') +
-        (head ? '<span class="et-lab et-wide">Food</span>' : '') +
-        '<input class="text et-f" data-ef="' + i + '" list="estFoods" value="' + esc(r.food) +
-          '" placeholder="chicken breast" aria-label="Food for item ' + n + '">' +
-      '</div>';
-    }).join("");
-
-    var tabs = '<div class="seg est-tabs" role="group" lang="en" aria-label="How to find the numbers">' +
-      EST_TABS.map(function (t) {
-        return '<button data-esttab="' + t.id + '" aria-pressed="' + (estTab === t.id ? 'true' : 'false') + '">' +
-          t.name + '</button>';
-      }).join("") +
-    '</div>';
-
-    if (estTab === "scan") {
-      return '<section class="entry est" id="wayEstimate">' + tabs +
-        '<div class="est-scan">' +
-          '<p class="est-note">Point the camera at the bars on any package \u2014 or take a photo of them, or type ' +
-            'the number. Your pantry is checked first, then grocery brands; what it finds goes in with its ' +
-            'label\u2019s numbers, for you to check before it\u2019s added.</p>' +
-          '<button class="btn" id="openScan">Scan a barcode</button>' +
-        '</div>' +
-      '</section>';
-    }
-
+    // Asked in plain words: "half a protein coffee" and "chicken and rice"
+    // both work in one line. The table that used to sit beside this (Have the
+    // measurements) built the same sentence and sent it to the same place, so
+    // it went in b71; the example in the box shows the shape instead.
     return '<section class="entry est" id="wayEstimate">' +
-      tabs +
-      (estTab === "agent"
-        ? '<textarea id="estText" placeholder="Half a protein coffee, 6 oz sirloin and a cup of rice" ' +
-            'spellcheck="false" aria-label="Describe what you ate">' + esc(estDraft) + '</textarea>'
-        : foodList +
-          '<div class="est-table">' + etRows +
-            '<button class="et-add" id="estAddRow">+ Add another</button>' +
-          '</div>') +
+      '<div class="field"><label for="estText">What did you eat?</label>' +
+        '<textarea id="estText" placeholder="Half a protein coffee, 6 oz sirloin and a cup of rice" ' +
+          'spellcheck="false">' + esc(estDraft) + '</textarea></div>' +
       '<div class="field"><label for="regionIn">Estimate for food sold in</label>' +
         '<input id="regionIn" class="text" list="regionList" autocomplete="country-name" ' +
           'value="' + esc(store.region || "") + '" placeholder="United States">' +
@@ -7796,7 +7659,7 @@
             'nobody else sees what you log, including whoever shared this with you.</p>' +
           '<dl>' +
             '<dt>Macros</dt><dd>Calories left, protein right, totals at the bottom. Under them, log the numbers ' +
-              'if you know them — or tap Don\u2019t know the numbers and name the food: “chicken and rice” works, and you can correct it before it goes in.</dd>' +
+              'with Log numbers if you know them — or tap Ask an agent and name the food: “chicken and rice” works, and you can correct it before it goes in. Scan reads a barcode.</dd>' +
             '<dt>Pantry</dt><dd>Save things you eat often, once. Pre-made items are counted in bottles ' +
               'and bars, not weighed.</dd>' +
             '<dt>Gym</dt><dd>Pick a split, add movements, log weight and reps. It shows what you lifted last time.</dd>' +
@@ -7962,24 +7825,32 @@
             ' waiting on an estimate. Today stays uncoloured on the calendar until ' +
             (pendingCount(d) === 1 ? 'it is' : 'they are') + ' filled in.</p>'
           : '') +
-        (numOpen && !numSheet ? wayHead("numbers", "Log calories / protein") + numBody : '') +
-        (estOpen && !estSheet ? wayHead("estimate", "Don\u2019t know the numbers") + estimatorHtml(key, d) : '') +
+        (numOpen && !numSheet ? wayHead("numbers", "Log numbers") + numBody : '') +
+        (estOpen && !estSheet ? wayHead("estimate", "Ask an agent") + estimatorHtml(key, d) : '') +
       '</section>' +
       // A pop-up is drawn inside #view like everything else, so the delegated
       // Add and every handler wired after this draw reach it unchanged.
-      (numSheet ? waySheet("numbers", "Log calories / protein", numBody, "Cancel") : '') +
-      (estSheet ? waySheet("estimate", "Don\u2019t know the numbers", estimatorHtml(key, d), "Close") : '') +
+      (numSheet ? waySheet("numbers", "Log numbers", numBody, "Cancel") : '') +
+      (estSheet ? waySheet("estimate", "Ask an agent", estimatorHtml(key, d), "Close") : '') +
       (scanOpen ? scanSheetHtml() : '');
 
+    // Three ways to add food, each named under its picture, asked for by the
+    // owner (b71): a pencil and a # with no words said nothing about which
+    // was which, and the pencil opened the box for numbers you don't know.
+    // The pencil writes down numbers you have, the # asks the agent for ones
+    // you don't, and Scan reads a barcode. Ask an agent is the one most used,
+    // so it is the filled one in the middle.
     document.getElementById("ctxMain").innerHTML =
-      '<div class="composer">' +
-        '<button class="cmp-main" data-logway="estimate" aria-expanded="' + estOpen + '">' +
+      '<div class="ways3" role="group" aria-label="Add food">' +
+        '<button class="w3" data-logway="numbers" aria-expanded="' + numOpen + '">' +
           '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>' +
-          '<span>What did you eat?</span></button>' +
-        '<button class="cmp-ic" data-logway="numbers" aria-expanded="' + numOpen + '" aria-label="I know the numbers">' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg></button>' +
-        '<button class="cmp-ic cmp-scan" data-scanway="1" aria-label="Scan a barcode">' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg></button>' +
+          '<span>Log numbers</span></button>' +
+        '<button class="w3 w3-main" data-logway="estimate" aria-expanded="' + estOpen + '">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg>' +
+          '<span>Ask an agent</span></button>' +
+        '<button class="w3" data-scanway="1" aria-label="Scan a barcode">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg>' +
+          '<span>Scan</span></button>' +
       '</div>';
 
     // Deleting is delegated too — see the handler near setTab.
@@ -8074,45 +7945,6 @@
       });
     }
 
-    // ---- the entry table ----
-    // Every field writes straight into estRows so a redraw never loses what is
-    // half typed, and so the run button reads state rather than the DOM.
-    view.querySelectorAll("[data-eq], [data-eu], [data-ef]").forEach(function (el) {
-      var key = el.dataset.eq !== undefined ? "qty"
-              : el.dataset.eu !== undefined ? "unit" : "food";
-      var i = Number(el.dataset.eq !== undefined ? el.dataset.eq
-                   : el.dataset.eu !== undefined ? el.dataset.eu : el.dataset.ef);
-      el.addEventListener("input", function () {
-        if (!estRows[i]) return;
-        estRows[i][key] = el.value;
-        estHint = "";
-      });
-    });
-
-    var addRow = document.getElementById("estAddRow");
-    if (addRow) {
-      addRow.addEventListener("click", function () {
-        estRows.push({ qty: "", unit: "", food: "" });
-        estHint = "";
-        render();
-        // Land on the new row rather than making someone hunt for it — the
-        // press has to visibly go somewhere.
-        var fields = view.querySelectorAll("[data-ef]");
-        if (fields.length) fields[fields.length - 1].focus();
-      });
-    }
-
-    view.querySelectorAll("[data-erm]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var i = Number(b.dataset.erm);
-        // A blank row you are still filling in is not saved data, so this is
-        // not the kind of delete rule 6 is about — there is nothing to undo to.
-        estRows.splice(i, 1);
-        if (!estRows.length) estRows = [{ qty: "", unit: "", food: "" }];
-        render();
-      });
-    });
-
     // One open at a time. Opening puts the cursor in the first field, ready,
     // the way the set sheet does; pressing the open one again folds it.
     document.querySelectorAll("#view [data-logway], #ctxMain [data-logway]").forEach(function (b) {
@@ -8130,19 +7962,19 @@
         if (top && !popsUp(w)) window.scrollBy(0, top.getBoundingClientRect().top -
           (bar ? bar.getBoundingClientRect().bottom : 0) - 8);
         var f = w === "numbers" ? document.getElementById("fCal")
-          : est ? null : view.querySelector(estTab === "agent" ? "#estText" : estTab === "scan" ? "#openScan" : "[data-eq]");
+          : est ? null : document.getElementById("estText");
         if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
       });
     });
 
-    // The barcode in the bottom bar opens the estimate on its Scan tab.
+    // Scan in the bottom bar opens the barcode reader itself. It used to open
+    // a Scan tab whose one button opened the reader: two presses for one job.
+    // What it finds lands in Ask an agent's review, as it always has.
     var scanWay = document.querySelector("#ctxMain [data-scanway]");
     if (scanWay) scanWay.addEventListener("click", function () {
-      if (est) estShut = est;
-      logWay = "estimate"; estShut = null; estTab = "scan";
+      scanOpen = true; scanFor = "estimate";
       render();
-      var top = document.getElementById("logWays"), bar = document.querySelector(".topbar");
-      if (top && !popsUp("estimate")) window.scrollBy(0, top.getBoundingClientRect().top - (bar ? bar.getBoundingClientRect().bottom : 0) - 8);
+      if (store.brandsOn || BR) startScanCamera();
     });
 
     // Closing a pop-up is folding its box: an estimate showing in it is put
@@ -8153,26 +7985,6 @@
     });
     view.querySelectorAll("[data-waysheet]").forEach(function (sh) {
       sh.addEventListener("click", function (e) { if (e.target === sh) foldWay(); });
-    });
-
-    // The three ways in. Each keeps what was put in it: the table its rows,
-    // the words box its draft. Going from the table to Ask an agent carries
-    // the table across as words rather than making someone retype it, but
-    // never over the top of words already in the box.
-    view.querySelectorAll("[data-esttab]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        var to = b.dataset.esttab;
-        if (to === estTab) return;
-        if (estTab === "measure" && to === "agent") {
-          var composed = rowsText();
-          if (composed && !estDraft.trim()) estDraft = composed;
-        }
-        estTab = to;
-        estHint = "";
-        render();
-        var tab = view.querySelector('[data-esttab="' + to + '"]');
-        if (tab) try { tab.focus({ preventScroll: true }); } catch (e) { tab.focus(); }
-      });
     });
 
     // Ticked in place rather than redrawn. The add-food fields keep no draft,
@@ -8207,15 +8019,12 @@
     var runEst = document.getElementById("runEst");
     if (runEst) {
       runEst.addEventListener("click", function () {
-        var words = estTab === "agent";
-        var text = words ? (estText ? estText.value : "").trim() : rowsText();
+        var text = (estText ? estText.value : "").trim();
         if (!text) {
           // Doing nothing at all here would read exactly like a dead button.
-          estHint = words
-            ? "Nothing to work out yet — describe the meal above."
-            : "Nothing to work out yet — put a food in the table above.";
+          estHint = "Nothing to work out yet — describe the meal above.";
           render();
-          var first = view.querySelector(words ? "#estText" : "[data-ef]");
+          var first = document.getElementById("estText");
           if (first) first.focus();
           return;
         }

@@ -14,7 +14,8 @@ design. What holds it together:
   calendar row, so like the Log's cells it is exempt from the 44px width at
   320px (it keeps the height).
 - **A bar above the tabs that changes with the tab** (`#ctxbar` / `#ctxMain`,
-  inside the `.dock`). Macros: *What did you eat?*, the numbers and Scan.
+  inside the `.dock`). Macros: *Log numbers*, *Ask an agent* and *Scan*, a
+  name under each picture (`docs/food.md`).
   Pantry: find, scan, *New*. Cardio: *Start cardio session*, then the running
   clock with *Discard* and *Stop & log it*. Gym: the rest timer, as before.
   `render()` clears it, so a tab that does not fill it shows none.
