@@ -3690,45 +3690,45 @@
   }
   .cat-add .tag { background: none; color: var(--accent); }
 
-  /* The week's plan: what the day on screen has planned, over the chips, and
-     a picker a day behind Plan week. The day on screen is marked in the list
-     so "which one is today" is never counted on fingers. */
-  .plan-line { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -4px 0 0; }
-  .plan-say {
-    display: flex; align-items: center; gap: 6px; min-width: 0;
-    font-size: 13px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  /* The week board: the week on screen, a tile a day, between where you train
+     and today's split. A trained day's tag is filled, a planned one is a ring,
+     so what happened and what is meant to are never confused. */
+  .week-card {
+    display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 22px;
   }
-  .plan-say::before {
-    content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%;
-    background: var(--catcolor, transparent); border: 1.5px solid var(--catcolor, var(--rule)); box-sizing: border-box;
+  .week-card .split-head { margin: 0; min-height: 44px; }
+  .wb-hint { font-size: 12px; color: var(--ink-2); }
+  .week-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .wb-tile {
+    display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px;
+    min-height: 74px; min-width: 0; padding: 8px 2px; border-radius: 14px;
+    background: var(--surface-2); border: 1.5px solid transparent; color: var(--ink);
   }
-  .plan-say b {
-    font-family: var(--font-num); font-size: 10px; font-weight: 500; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--ink-3);
+  .wb-tile .wb-d { font-family: var(--font-num); font-size: 10px; letter-spacing: .06em; color: var(--ink-2); white-space: nowrap; }
+  .wb-tile .wb-tag {
+    display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 4px;
+    box-sizing: border-box; border-radius: 10px; font-family: var(--font-num); font-size: 11px; font-weight: 600;
+    background: var(--surface); color: var(--ink); border: 1.5px solid var(--catcolor);
   }
-  .plan-say.is-none { color: var(--ink-3); }
-  .plan-line button {
-    flex: none; min-height: 44px; padding: 0 10px; margin-right: -10px;
-    font-family: var(--font-ui); font-size: 14px; font-weight: 600; color: var(--accent);
-    border: 1px solid transparent; border-radius: 2px;
+  .wb-tile.is-rest { --catcolor: var(--ink-2); }
+  .wb-tile.is-done .wb-tag, .wb-tile.is-rest .wb-tag { background: var(--catcolor); border-color: var(--catcolor); color: var(--ground); }
+  .wb-tile.is-open .wb-tag { border-style: dashed; color: var(--ink-2); }
+  .wb-tile .wb-n {
+    max-width: 100%; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center;
+    padding: 0 2px; overflow-wrap: anywhere;
   }
-  .plan-list { display: flex; flex-direction: column; gap: 8px; }
-  .plan-row {
-    display: grid; grid-template-columns: 88px 1fr; align-items: center; gap: 8px;
-    padding-left: 10px; border-left: 3px solid var(--catcolor);
+  .wb-tile.is-open .wb-n, .wb-tile.is-rest .wb-n { color: var(--ink-2); }
+  .wb-tile.is-day .wb-d { color: var(--ink); font-weight: 700; }
+  .wb-tile.is-day { border-color: var(--rule); }
+  .wb-tile.is-pick { border-color: var(--accent); background: var(--accent-soft); }
+  .wb-clear {
+    justify-content: center; background: none; border: 1.5px dashed var(--rule);
+    font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--accent);
   }
-  .plan-row label { font-size: 14px; font-weight: 600; color: var(--ink-2); }
-  .plan-row.is-shown label { color: var(--ink); }
-  .plan-now {
-    display: block; font-family: var(--font-num); font-size: 10px; font-weight: 500;
-    letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
-  }
-  .plan-row select {
-    min-width: 0; width: 100%; height: 46px; padding: 0 10px;
-    font-family: var(--font-ui); font-size: 15px; color: var(--ink);
-    background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
-  }
-  .plan-hint { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink-3); }
+  .wb-pick { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--rule); }
+  .wb-q { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .wb-pick .btn { width: 100%; }
   .week-day .wm.m-plan { border-width: 2px; background: none; }
 
   .liftgroup { gap: 10px; }
@@ -4273,7 +4273,7 @@
   // Gym split editing. Transient view state, never saved: reopening the app
   // should show you your splits, not the half-finished act of renaming one.
   var splitEdit = false;
-  var weekEdit = false;     // the week's plan is open, one picker a day
+  var weekPick = null;      // the day on the week board being planned, by its key
   // The day whose planned split has already been picked for you. Once per
   // day, so tapping another chip sticks instead of being put back on redraw.
   var planPickedFor = null;
@@ -4491,6 +4491,29 @@
     var c = cats().filter(function (x) { return x.id === v; })[0];
     return c ? { c: c } : null;
   }
+  // What a day was actually trained as: its first movement's split, the way
+  // the week strip colours it. Today only counts once it is locked in — until
+  // then it is still going — and a day gone by counts as soon as anything is
+  // on it, locked or not, because a forgotten Lock in is not a rest day.
+  function trainedAs(k) {
+    var dd = store.days[k];
+    if (!dd || !((dd.lifts && dd.lifts.length) || dd.workoutMs)) return null;
+    if (k >= TODAY && !dd.gymLocked) return null;
+    if (dd.lifts && dd.lifts.length) return cat(dd.lifts[0].cat);
+    return { id: null, tag: "✓", name: "A session", short: "Session", color: "var(--ink-2)" };
+  }
+  // One tile of the week board. A day trained says what it was; a day gone
+  // by with nothing on it was a rest day, whatever was planned; today and
+  // the days ahead show the plan, or Open with none.
+  function weekTile(k) {
+    var t = trainedAs(k);
+    if (t) return { kind: "done", c: t };
+    if (k < TODAY) return { kind: "rest" };
+    var pl = plannedFor(k);
+    if (pl && pl.c) return { kind: "plan", c: pl.c };
+    if (pl) return { kind: "planrest" };
+    return { kind: "open" };
+  }
   function anyPlanned() {
     for (var i = 0; i < 7; i++) if (plannedFor(i)) return true;
     return false;
@@ -4662,9 +4685,9 @@
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
     { b: "2026-10-19.70", t: "Plan your week", items: [
-      "Gym has Plan week, beside Today’s split: give each day of the week a split, a rest day, or nothing. Mondays back, Tuesdays legs — however you train.",
-      "Open a day and its planned split is already picked. Tap another split if today is different; your plan stays as it was.",
-      "The week across the top shows what’s planned ahead as a ring in that split’s colour. Change or clear any day whenever you like, and Undo takes it back." ] },
+      "Gym has a Planned week split between Training at and Today\u2019s split: this week, a tile a day. Tap a day to give every week\u2019s Monday, Tuesday\u2026 a split, a rest day, or leave it Open.",
+      "Don\u2019t plan? Leave it Open and train from Today\u2019s split as always. Once you lock in the day, it takes its place on the week.",
+      "A day that goes by with nothing logged shows Rest. Forgot to log it? Tap that day and Log it \u2014 it takes you there to fill it in." ] },
     { b: "2026-10-18.69", t: "A walkthrough of the new look",
       video: "media/new-look-walkthrough.mp4", poster: "media/new-look-walkthrough.jpg",
       vnote: "4½ minutes, with sound. It needs a connection.", items: [
@@ -5085,7 +5108,7 @@
     ["addGymFirst", "addGymChip"].forEach(function (id) {
       var b = document.getElementById(id);
       if (b) b.addEventListener("click", function () {
-        gymEdit = true; splitEdit = false; splitAdding = false; weekEdit = false;
+        gymEdit = true; splitEdit = false; splitAdding = false; weekPick = null;
         render();
         var f = document.getElementById("newGymName");
         if (f) f.focus();
@@ -5094,7 +5117,7 @@
     var eg = document.getElementById("editGyms");
     if (eg) eg.addEventListener("click", function () {
       gymEdit = !gymEdit;
-      if (gymEdit) { splitEdit = false; splitAdding = false; weekEdit = false; }
+      if (gymEdit) { splitEdit = false; splitAdding = false; weekPick = null; }
       render();
     });
     view.querySelectorAll("[data-gym]").forEach(function (b) {
@@ -5159,7 +5182,7 @@
   function planSay(dow, v) {
     var n = WEEK_DAYS[dow] + "s";
     if (v === PLAN_REST) return n + " are a rest day";
-    if (!v) return n + " have nothing planned";
+    if (!v) return n + " are open";
     return n + " are " + cat(v).name;
   }
   // Planning the day on screen, with nothing logged on it yet, moves the chips
@@ -9086,37 +9109,68 @@
       '</div>';
     }).join("");
 
-    // The week's plan, one native picker a day. A picker already holds every
-    // split, Rest and Nothing at 16px and 46px, so nothing new to get wrong.
-    var planRows = weekEdit ? WEEK_DAYS.map(function (wd, i) {
-      var p = plannedFor(i);
-      var now = p && p.c ? p.c.id : p ? PLAN_REST : "";
-      function po(val, label) {
-        return '<option value="' + esc(val) + '"' + (val === now ? ' selected' : '') + '>' + esc(label) + '</option>';
-      }
-      return '<div class="plan-row' + (i === dow ? ' is-shown' : '') + '" style="--catcolor:' +
-          (p && p.c ? p.c.color : 'var(--rule)') + '">' +
-        '<label for="plan' + i + '">' + wd +
-          (i === dow ? '<span class="plan-now">' + (key === TODAY ? 'Today' : 'This day') + '</span>' : '') +
-        '</label>' +
-        '<select id="plan' + i + '" data-plan="' + i + '">' +
-          po("", "Nothing planned") +
-          live.map(function (x) { return po(x.id, x.tag + " · " + x.short); }).join("") +
-          po(PLAN_REST, "Rest day") +
-        '</select>' +
+    // The week board, between where you train and today's split: the week on
+    // screen, one tile a day. Tap one to plan that day of the week; a day
+    // already gone can be opened from there and logged after the fact.
+    var SHORT_DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+    var wkStart = parseYmd(weekStart(key));
+    var wkEnd = ymd(new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + 6));
+    if (weekPick && (weekPick < ymd(wkStart) || weekPick > wkEnd)) weekPick = null;
+    var tiles = "";
+    for (var wi = 0; wi < 7; wi++) {
+      var wdt = new Date(wkStart.getFullYear(), wkStart.getMonth(), wkStart.getDate() + wi);
+      var wk = ymd(wdt), tl = weekTile(wk);
+      var tag = tl.c ? tl.c.tag : tl.kind === "open" ? "–" : "R";
+      var nm = tl.c ? tl.c.short : tl.kind === "open" ? "Open" : "Rest";
+      var say = tl.kind === "done" ? tl.c.name + ", trained"
+        : tl.kind === "rest" ? "rest, nothing logged"
+        : tl.kind === "plan" ? tl.c.name + ", planned"
+        : tl.kind === "planrest" ? "rest day, planned" : "open";
+      tiles += '<button class="wb-tile is-' + tl.kind + (wk === key ? ' is-day' : '') + (wk === weekPick ? ' is-pick' : '') +
+          '" data-planday="' + wk + '" aria-pressed="' + (wk === weekPick) + '" style="--catcolor:' + (tl.c ? tl.c.color : 'var(--ink-3)') + '" ' +
+          'aria-label="' + WEEK_DAYS[wi] + ' ' + wdt.getDate() + (wk === TODAY ? ', today' : '') + ': ' + esc(say) + '">' +
+        '<span class="wb-d">' + (tl.kind === "done" ? '✓ ' : '') + SHORT_DAYS[wi] + ' ' + wdt.getDate() + '</span>' +
+        '<span class="wb-tag">' + esc(tag) + '</span>' +
+        '<span class="wb-n">' + esc(nm) + '</span>' +
+      '</button>';
+    }
+    if (anyPlanned()) {
+      tiles += '<button class="wb-tile wb-clear" id="wbClear" aria-label="Clear the week’s plan">Clear plan</button>';
+    }
+    var pickHtml = "";
+    if (weekPick) {
+      var pdow = parseYmd(weekPick).getDay(), ppl = plannedFor(pdow);
+      var pnow = ppl && ppl.c ? ppl.c.id : ppl ? PLAN_REST : "";
+      var pday = store.days[weekPick];
+      var pdone = !!(pday && ((pday.lifts && pday.lifts.length) || pday.workoutMs));
+      pickHtml = '<div class="wb-pick">' +
+        '<span class="wb-q">Every ' + WEEK_DAYS[pdow] + '</span>' +
+        '<div class="cats">' +
+          live.map(function (x) {
+            return '<button class="cat" data-setplan="' + x.id + '" aria-pressed="' + (pnow === x.id) + '" style="--catcolor:' + x.color + '">' +
+              '<span class="tag">' + x.tag + '</span>' + esc(x.short) + '</button>';
+          }).join("") +
+          '<button class="cat" data-setplan="' + PLAN_REST + '" aria-pressed="' + (pnow === PLAN_REST) + '" style="--catcolor:var(--ink-2)">' +
+            '<span class="tag">R</span>Rest day</button>' +
+          '<button class="cat" data-setplan="" aria-pressed="' + (pnow === "") + '" style="--catcolor:var(--ink-3)">' +
+            '<span class="tag">–</span>Open</button>' +
+        '</div>' +
+        // Forgot to log it? The day itself is one tap away, to log it the
+        // usual way under Today's split and lock it in.
+        (weekPick <= TODAY && weekPick !== key
+          ? '<button class="btn ghost" id="wbGo">' + (pdone ? 'Open ' : 'Log ') +
+              (weekPick === TODAY ? 'today' : esc(parseYmd(weekPick).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }))) +
+            '</button>'
+          : '') +
       '</div>';
-    }).join("") : "";
-    // What the day on screen has planned, over the chips, with the way in to
-    // planning the week beside it.
-    var planLine = '<div class="plan-line">' +
-      (planned && planned.c
-        ? '<span class="plan-say" style="--catcolor:' + planned.c.color + '"><b>Planned</b> ' + esc(planned.c.name) + '</span>'
-        : planned
-          ? '<span class="plan-say"><b>Planned</b> Rest day</span>'
-          : '<span class="plan-say is-none">' +
-              (anyPlanned() ? 'Nothing planned for ' + WEEK_DAYS[dow] + 's' : 'Give each day of the week its split') +
-            '</span>') +
-      '<button id="planWeek">Plan week</button>' +
+    }
+    var boardHtml = '<div class="week-card">' +
+      '<div class="split-head">' +
+        '<span class="eyebrow">Planned week split</span>' +
+        (weekPick ? '<button id="wbDone">Done</button>' : '<span class="wb-hint">Tap a day to plan it</span>') +
+      '</div>' +
+      '<div class="week-board">' + tiles + '</div>' +
+      pickHtml +
     '</div>';
 
     function opt(m) { return '<option value="' + esc(m) + '">' + esc(m) + '</option>'; }
@@ -9389,21 +9443,16 @@
           dayNoteHtml(d) +
           moved +
         '</div>' +
+        boardHtml +
         '<div class="split-card">' +
         '<div class="split-head">' +
-          '<span class="eyebrow">' + (weekEdit ? 'Your week' : 'Today’s split') + '</span>' +
-          (weekEdit
-            ? '<button id="planDone">Done</button>'
-            : '<button id="editSplits">' + (splitEdit ? "Done" : "Edit splits") + '</button>') +
+          '<span class="eyebrow">Today’s split</span>' +
+          '<button id="editSplits">' + (splitEdit ? "Done" : "Edit splits") + '</button>' +
         '</div>' +
-        (weekEdit
-          ? '<div class="plan-list">' + planRows + '</div>' +
-            '<p class="plan-hint">Opening a day picks its planned split for you. Your splits and what you have logged stay as they are.</p>' +
-            (anyPlanned() ? '<button class="btn ghost" id="clearPlan">Clear the week</button>' : '')
-          : splitEdit
-            ? '<div class="split-list">' + editRows + '</div>'
-            : planLine + '<div class="cats">' + chips + '</div>') +
-        (splitAdding && !weekEdit
+        (splitEdit
+          ? '<div class="split-list">' + editRows + '</div>'
+          : '<div class="cats">' + chips + '</div>') +
+        (splitAdding
           ? '<div class="split-new">' +
               '<input id="newSplitName" class="text" placeholder="Push, Legs, Walk, Yoga…" ' +
                 'aria-label="Name your new split">' +
@@ -9483,37 +9532,42 @@
         splitEdit = !splitEdit;
         splitAdding = false;      // one thing at a time
         gymEdit = false;
-        weekEdit = false;
+        weekPick = null;
         render();
       });
     }
 
-    var planWeekBtn = document.getElementById("planWeek");
-    if (planWeekBtn) {
-      planWeekBtn.addEventListener("click", function () {
-        weekEdit = true;
-        splitEdit = false;        // one thing at a time
-        splitAdding = false;
-        gymEdit = false;
+    // The week board. A tile opens its day's choices; tapping it again, or
+    // Done, folds them. A choice commits at once and setPlan says so.
+    view.querySelectorAll("[data-planday]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        weekPick = weekPick === b.dataset.planday ? null : b.dataset.planday;
         render();
       });
-    }
-    var planDoneBtn = document.getElementById("planDone");
-    if (planDoneBtn) planDoneBtn.addEventListener("click", function () { weekEdit = false; render(); });
-    // Each picker commits as it changes, the way a split's name does, so there
-    // is no Save to forget; setPlan says what changed and offers Undo.
-    view.querySelectorAll("[data-plan]").forEach(function (el) {
-      el.addEventListener("change", function () { setPlan(Number(el.dataset.plan), el.value); });
     });
-    var clearPlanBtn = document.getElementById("clearPlan");
-    if (clearPlanBtn) clearPlanBtn.addEventListener("click", clearPlan);
+    view.querySelectorAll("[data-setplan]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var dw = parseYmd(weekPick).getDay();
+        weekPick = null;
+        if (!setPlan(dw, b.dataset.setplan)) render();   // the same choice: just fold
+      });
+    });
+    var wbDone = document.getElementById("wbDone");
+    if (wbDone) wbDone.addEventListener("click", function () { weekPick = null; render(); });
+    var wbClear = document.getElementById("wbClear");
+    if (wbClear) wbClear.addEventListener("click", function () { weekPick = null; clearPlan(); });
+    var wbGo = document.getElementById("wbGo");
+    if (wbGo) wbGo.addEventListener("click", function () {
+      cursor = parseYmd(weekPick); weekPick = null; render();
+      window.scrollTo(0, 0);
+    });
 
     var addChip = document.getElementById("addSplitChip");
     if (addChip) {
       addChip.addEventListener("click", function () {
         splitAdding = true;
         gymEdit = false;
-        weekEdit = false;
+        weekPick = null;
         render();
         var f = document.getElementById("newSplitName");
         if (f) f.focus();

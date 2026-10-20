@@ -11,7 +11,7 @@ sends someone chasing a phantom.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 23 suites, ~1,170 checks, 16
+**1. Nothing ships without `./verify.sh` passing.** 23 suites, ~1,180 checks, 16
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
