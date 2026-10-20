@@ -236,6 +236,47 @@ listed a longer session with the heavier weights, so time is coloured the same
 way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
 
+**The planned week split: a board of this week, between where you train and
+today's split.** Asked for by the owner, for two kinds of people. Someone who
+plans gives each day of the week a split — Mondays back, Tuesdays legs —
+by tapping that day's tile and choosing a split, *Rest day* or *Open*; the
+choice is for every week (`store.week`, seven entries, Sunday first like the
+calendar: a split's id, `PLAN_REST`, or null for Open), says what it did and
+offers Undo (rules 3 and 6), and *Clear plan* does the same for all seven.
+Someone who doesn't plan leaves every day Open and trains from *Today's
+split* as always. *Today's split* stays exactly as it was for both.
+
+**A tile says what happened before what was meant to.** `weekTile()` decides:
+a day trained shows its first movement's split, the way the week strip
+colours it, with a ✓ and a filled tag — today only once it is locked in,
+because until then it is still going, and a day gone by as soon as anything
+is on it, locked or not, because a forgotten Lock in is not a rest day. A day
+gone by with nothing on it is *Rest*, whatever was planned. Today and the days
+ahead show the plan as a ringed tag, or *Open*. None of this is stored: Open
+turns into Rest at midnight because the day is over, and a Rest turns into
+what was trained the moment it is logged.
+
+**A day forgotten is logged after the fact.** Tapping a day gone by (or today,
+seen from another day) offers *Log Sunday, Oct 18* — or *Open* when something
+is already on it — which goes to that day so it is logged the usual way under
+Today's split and locked in. Planning a day gone by changes every week from
+now on, never what that day was.
+
+**A plan is not history.** Nothing logged ever reads `store.week`, so rule 7
+has nothing to guard here: a split that is removed, or replaced by loading
+someone's routine, simply reads as Open (`plannedFor()` resolves ids against
+`cats()` every time), and undoing the removal brings the plan back with it.
+`store.week` rides along in a backup and a restore. The special day is never
+planned, the same as it is never scheduled.
+
+**Opening a day picks its planned split — once.** A day with nothing logged
+opens on its planned split; `planPickedFor` remembers the day so a split
+tapped after that sticks through every redraw, and the plan is left alone. A
+day with lifts on it is left alone too. The week strip across the top marks a
+planned day ahead with a ring in its split's colour. A planned rest day with
+nothing logged says so where the movements would be, and the chips stay there
+for training anyway.
+
 **A special day is outside the routine on purpose.** Asked for from home:
 two pairs of dumbbells and no machines, so no Back / Bi / Tri day — biceps and
 shoulders instead — and the same for yoga, or a friend's workout. `SPECIAL` is
