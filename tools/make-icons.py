@@ -1,12 +1,17 @@
 """Render the app icons from the app's own design tokens.
 
 Icons are generated, never hand-drawn, so they cannot drift from the palette
-in iron-ledger.html. Re-run after changing --ink / --ground / --accent:
+in iron-ledger.html. Re-run after changing --ink / --ground:
 
     python tools/make-icons.py
 
 Uses the Playwright Chromium that the test suites already need, so this adds
 no dependency. Writes icons/ from the repo root.
+
+The mark is Tommy's sketch (2026-10-20): a Roman II with the top-right corner
+gone, so it reads as an I and an L sharing one base. The left stem keeps the
+top bar's overhang (the I); the base runs on past the right stem (the L's
+foot). Even strokes, square ends, no accent colour.
 """
 import os, io, re
 from playwright.sync_api import sync_playwright
@@ -22,35 +27,30 @@ def token(css, name, fallback):
 src = io.open(os.path.join(ROOT, "iron-ledger.html"), encoding="utf-8").read()
 INK = token(src, "ink", "#141A19")
 GROUND = token(src, "ground", "#E9EBE8")
-ACCENT = token(src, "accent", "#0B6E63")
-print("tokens: ink=%s ground=%s accent=%s" % (INK, GROUND, ACCENT))
+print("tokens: ink=%s ground=%s" % (INK, GROUND))
+
+# The mark on a 58 x 40 grid, strokes 8 thick: top bar, the two stems, the base.
+MARK = """<svg viewBox="0 0 58 40" width="{w}" height="{h}" fill="{ground}">
+<rect x="0" y="0" width="42.5" height="8"/>
+<rect x="15" y="0" width="8" height="40"/>
+<rect x="34.5" y="0" width="8" height="40"/>
+<rect x="0" y="32" width="58" height="8"/></svg>"""
+
+PAGE = """<!doctype html><meta charset="utf-8"><style>
+html,body{{margin:0}}
+.icon{{width:{s}px;height:{s}px;background:{ink};display:flex;
+  align-items:center;justify-content:center}}
+svg{{display:block}}
+</style><div class="icon">{mark}</div>"""
+
 
 # pad = share of the canvas left empty around the mark. Maskable icons get the
 # 20% safe zone Android crops to; normal icons sit tighter.
-PAGE = """<!doctype html><meta charset="utf-8"><style>
-@font-face{{font-family:'Archivo';font-weight:400 700;
-  src:url('{root}/fonts/Archivo-latin.woff2') format('woff2')}}
-html,body{{margin:0}}
-.icon{{width:{s}px;height:{s}px;background:{ink};display:flex;
-  flex-direction:column;align-items:center;justify-content:center;
-  gap:{gap}px;font-family:'Archivo',sans-serif}}
-/* letter-spacing also lands after the L, which would shove the glyphs left
-   of centre; the negative margin takes that trailing space back off. */
-.mono{{font-weight:700;font-size:{fs}px;letter-spacing:.10em;color:{ground};
-  margin-right:-.10em;line-height:1}}
-.rule{{width:{rw}px;height:{rh}px;background:{accent}}}
-</style><div class="icon"><div class="mono">IL</div><div class="rule"></div></div>"""
-
-
 def render(page, size, out, pad):
-    inner = size * (1 - pad)
+    w = size * (1 - pad) * 0.69
     page.set_viewport_size({"width": size, "height": size})
-    page.set_content(PAGE.format(
-        root="file:///" + ROOT.replace("\\", "/").lstrip("/"),
-        s=size, ink=INK, ground=GROUND, accent=ACCENT,
-        fs=round(inner * 0.54), gap=round(inner * 0.055),
-        rw=round(inner * 0.50), rh=max(2, round(inner * 0.030))))
-    page.wait_for_timeout(250)
+    page.set_content(PAGE.format(s=size, ink=INK, mark=MARK.format(
+        w=round(w, 2), h=round(w * 40 / 58, 2), ground=GROUND)))
     page.locator(".icon").screenshot(path=os.path.join(ROOT, "icons", out))
     print("  icons/%-28s %dx%d" % (out, size, size))
 
