@@ -3444,9 +3444,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Three ways to add food"
-          and titles[1]=="Plan your week" and titles[2]=="A walkthrough of the new look"
-          and titles[3]=="Nothing hiding", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A new icon"
+          and titles[1]=="Three ways to add food" and titles[2]=="Plan your week"
+          and titles[3]=="A walkthrough of the new look", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough: plays in the sheet rather than taking over the phone,
     # downloads nothing until it is tapped, and the file it names is in the repo.
