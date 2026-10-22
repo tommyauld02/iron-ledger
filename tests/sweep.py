@@ -2955,7 +2955,7 @@ with sync_playwright() as pw:
         q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
         HIGH="()=>document.documentElement.scrollHeight"
         high=q.evaluate(HIGH)
-        q.focus("#fCal"); q.evaluate("()=>window.__kb(330)"); q.wait_for_timeout(150)
+        q.focus("#fCal"); q.evaluate("()=>window.__kb(330)"); q.wait_for_timeout(400)
         DOCK="()=>getComputedStyle(document.querySelector('.dock')).visibility"
         check("keyboard (%s): up, the dock steps aside instead of covering the field" % mode,
               q.evaluate(DOCK)=="hidden", q.evaluate(DOCK))
@@ -2973,7 +2973,7 @@ with sync_playwright() as pw:
                   fid=="fCal" and ft>=0 and fb<=852-330, "%s %s-%s, keyboard at %s" % (fid, ft, fb, 852-330))
             q.evaluate("()=>window.scrollTo(0,0)"); q.wait_for_timeout(100)
             q.fill("#fCal","200"); q.fill("#fNote","Protein bar"); q.wait_for_timeout(150)
-            q.dispatch_event("#addFood","pointerdown"); q.wait_for_timeout(300)
+            q.dispatch_event("#addFood","pointerdown"); q.wait_for_timeout(500)
             fid,ft,fb=q.evaluate(BAND)
             check("keyboard (inplace): after Add to ledger, Calories is ready and in sight",
                   fid=="fCal" and ft>=0 and fb<=852-330, "%s %s-%s, keyboard at %s" % (fid, ft, fb, 852-330))
@@ -2983,6 +2983,38 @@ with sync_playwright() as pw:
                   low <= 852-330+1, "sheet ends at %s, keyboard starts at %s" % (low, 852-330))
         q.evaluate("()=>{document.activeElement.blur(); window.__kb(0);}"); q.wait_for_timeout(150)
         check("keyboard (%s): down, the dock is back" % mode, q.evaluate(DOCK)=="visible", q.evaluate(DOCK))
+        if mode == "inplace":
+            # b74, the owner's video: Ask an agent flickered between the field and
+            # the ledger ten times a second. keep() moved the page on every resize
+            # the phone reported, the phone moved it back, and round they went.
+            # Here the phone's half is played by hand: once the field is lifted,
+            # the page is put somewhere else and the phone keeps reporting the same
+            # keyboard. The app must move it once, then leave it alone.
+            q.evaluate("()=>window.scrollTo(0,0)")
+            q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+            # where the video had it: the box low on the screen, where the keyboard will be
+            q.evaluate("()=>window.scrollBy(0,-250)")
+            q.evaluate("()=>{window.__moves=0; const sb=window.scrollBy.bind(window); window.scrollBy=(x,y)=>{window.__moves++; sb(x,y);};}")
+            q.evaluate("()=>window.__kb(330)"); q.wait_for_timeout(60)
+            q.evaluate("()=>window.__kb(331)"); q.wait_for_timeout(60)
+            q.evaluate("()=>window.__kb(336)"); q.wait_for_timeout(400)
+            fid,ft,fb=q.evaluate(BAND)
+            check("keyboard (agent): Ask an agent's box sits above the keyboard",
+                  fid=="estText" and ft>=0 and fb<=852-336, "%s %s-%s, keyboard at %s" % (fid, ft, fb, 852-336))
+            check("keyboard (agent): lifted once, after the keyboard settled, not once per step of it",
+                  q.evaluate("()=>window.__moves")==1, "moved %s times" % q.evaluate("()=>window.__moves"))
+            HIGHER=q.evaluate(HIGH)
+            q.evaluate("()=>window.__kb(334)"); q.wait_for_timeout(50)
+            check("keyboard (agent): a keyboard a pixel or two shorter never makes the page shorter",
+                  q.evaluate(HIGH)>=HIGHER, "%s then %s" % (HIGHER, q.evaluate(HIGH)))
+            y=q.evaluate("()=>{window.scrollBy(0,-300); return Math.round(scrollY);}")
+            q.evaluate("()=>window.__moves=0")
+            for i in range(8):
+                q.evaluate("()=>window.__kb(window.__kbH)"); q.wait_for_timeout(120)
+            check("keyboard (agent): the phone moving the page is not fought, so nothing flickers",
+                  q.evaluate("()=>window.__moves")==0 and q.evaluate("()=>Math.round(scrollY)")==y,
+                  "moved %s times, scrollY %s then %s" % (q.evaluate("()=>window.__moves"), y, q.evaluate("()=>Math.round(scrollY)")))
+            q.evaluate("()=>{document.activeElement.blur(); window.__kb(0);}"); q.wait_for_timeout(150)
         c.close()
 
     # ---------- HOW THE WAYS IN OPEN ----------
@@ -3464,9 +3496,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A new name: MNTL D&T"
-          and titles[1]=="Typing stays in sight" and titles[2]=="A new icon"
-          and titles[3]=="Three ways to add food", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Ask an agent holds still"
+          and titles[1]=="A new name: MNTL D&T" and titles[2]=="Typing stays in sight"
+          and titles[3]=="A new icon", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
