@@ -159,7 +159,7 @@ with sync_playwright() as pw:
     p.on("console", lambda m: errs.append("console: " + m.text[:100])
          if m.type == "error" else None)
 
-    p.goto("file://" + d + "/iron-ledger.html")
+    p.goto("file://" + d + "/mntl-dt.html")
     p.wait_for_timeout(400)
     p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", store)
     p.reload()

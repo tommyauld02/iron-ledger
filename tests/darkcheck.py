@@ -432,7 +432,7 @@ with sync_playwright() as pw:
         fakeai.phone(ctx, reply=dark_reply)
         p = ctx.new_page(); errs = []
         p.on("pageerror", lambda e: errs.append(str(e)))
-        p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(400)
+        p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(400)
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fixture())
         p.reload(); p.wait_for_timeout(800)
         try: p.click("#dismissWelcome", timeout=1500)     # the welcome only; What's new is measured first
@@ -452,7 +452,7 @@ with sync_playwright() as pw:
             fakeai.phone(ctx, reply=dark_reply)
             p = ctx.new_page(); errs = []
             p.on("pageerror", lambda e: errs.append(str(e)))
-            p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(400)
+            p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(400)
             p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fixture(theme, accent))
             p.reload(); p.wait_for_timeout(800)
             try: p.click("#dismissWelcome", timeout=1500)     # the welcome only; What's new is measured first

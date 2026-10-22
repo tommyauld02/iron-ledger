@@ -47,7 +47,7 @@ with sync_playwright() as pw:
         touch("touchEnd")
         p.wait_for_timeout(350)
 
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(250)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(250)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fresh())
     p.reload(); p.wait_for_timeout(800)
 
@@ -191,8 +191,8 @@ with sync_playwright() as pw:
     # ---- home-screen metadata ----
     check("declares itself a home-screen app",
           p.evaluate("""()=>!!document.querySelector('meta[name="apple-mobile-web-app-capable"]')"""))
-    check("names the icon Iron Ledger",
-          p.get_attribute('meta[name="apple-mobile-web-app-title"]',"content")=="Iron Ledger")
+    check("names the icon MNTL D&T",
+          p.get_attribute('meta[name="apple-mobile-web-app-title"]',"content")=="MNTL D&T")
     check("paints the status bar to match",
           p.evaluate("""()=>{const m=document.querySelector('meta[name=theme-color]');
             return m && /^#[0-9A-F]{6}$/i.test(m.content);}"""))

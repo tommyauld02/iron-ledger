@@ -1,7 +1,7 @@
 """Render the app icons from the app's own design tokens.
 
 Icons are generated, never hand-drawn, so they cannot drift from the palette
-in iron-ledger.html. Re-run after changing --ink / --ground:
+in mntl-dt.html. Re-run after changing --ink / --ground:
 
     python tools/make-icons.py
 
@@ -24,7 +24,7 @@ def token(css, name, fallback):
     return m.group(1) if m else fallback
 
 
-src = io.open(os.path.join(ROOT, "iron-ledger.html"), encoding="utf-8").read()
+src = io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()
 INK = token(src, "ink", "#141A19")
 GROUND = token(src, "ground", "#E9EBE8")
 print("tokens: ink=%s ground=%s" % (INK, GROUND))

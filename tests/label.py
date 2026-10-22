@@ -27,7 +27,7 @@ class H(SimpleHTTPRequestHandler):
     def translate_path(self, p0):
         p = p0.split("?", 1)[0].split("#", 1)[0]
         if p in ("/", "/index.html"):
-            return os.path.join(ROOT, "iron-ledger.html")
+            return os.path.join(ROOT, "mntl-dt.html")
         return super().translate_path(p0)
     def log_message(self, *a): pass
 
@@ -125,7 +125,7 @@ with sync_playwright() as pw:
     ctx.close()
 
     # ---- the artifact copy has no vendor/, so it must not offer the button --
-    dist = os.path.join(ROOT, "dist", "iron-ledger.artifact.html")
+    dist = os.path.join(ROOT, "dist", "mntl-dt.artifact.html")
     if os.path.exists(dist):
         import io as _io
         src = _io.open(dist, encoding="utf-8").read()

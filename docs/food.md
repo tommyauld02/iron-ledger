@@ -50,7 +50,7 @@ opened: **no key to paste, no sign-in** — his words, after seeing a first
 version that asked for a key in Settings.
 
 **The key lives in a relay, never in the app.** The repo and the Pages site
-are public, so a key in `iron-ledger.html` would be copied out, its free
+are public, so a key in `mntl-dt.html` would be copied out, its free
 allowance used up and the key shut off (and `TEAM.md` forbids keys in the repo;
 `finder` fails the build if one appears). So the app asks `relay/worker.js`, a
 Cloudflare Worker on the free plan that the owner deployed once with the Gemini

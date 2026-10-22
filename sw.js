@@ -1,6 +1,6 @@
-/* Offline shell for The Iron Ledger.
+/* Offline shell for MNTL D&T.
  *
- * The version is not written in this file. iron-ledger.html registers it as
+ * The version is not written in this file. mntl-dt.html registers it as
  * sw.js?v=<BUILD>, and the worker reads that back below, so BUILD in the app
  * stays the single source of truth and this file cannot go stale against it.
  *
@@ -15,6 +15,9 @@
  * questions are POSTs to another origin, which pass straight through.
  */
 const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
+// The cache names keep the app's old name (The Iron Ledger) on purpose: a
+// new prefix would leave every phone's old caches behind and re-download the
+// grocery brands.
 const CACHE = "iron-ledger-" + VERSION;
 // Big data files that change on USDA's schedule, not the app's: the grocery
 // brands (8 MB). They live in a store of their own that a new build does not

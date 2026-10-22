@@ -1,7 +1,7 @@
 {
-  "name": "The Iron Ledger",
-  "short_name": "Iron Ledger",
-  "description": "Gym and macro log. Works offline, keeps everything on the phone.",
+  "name": "MNTL D&T",
+  "short_name": "MNTL D&T",
+  "description": "MNTL diet and training: gym and macro log. Works offline, keeps everything on the phone.",
   "id": "./",
   "start_url": "./",
   "scope": "./",

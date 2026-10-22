@@ -39,7 +39,7 @@ window.claude={use:function(n){
   return Promise.resolve(f);}
  return Promise.resolve(null);}};
 """
-SRC = io.open(os.path.join(ROOT, "iron-ledger.html"), encoding="utf-8").read()
+SRC = io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()
 res = []
 def check(n, ok, det=""): res.append(("PASS" if ok else "FAIL", n, det))
 
@@ -67,7 +67,7 @@ def page(b, relay=True, claude=False, reply=None, log=None, size=(402, 874)):
         if not r.url.startswith("file:") and not r.url.startswith("data:"):
             offsite.append(r.url); heads.append(r.headers)
     p.on("request", seen)
-    p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", STORE)
     p.reload(); p.wait_for_timeout(800)
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(250)

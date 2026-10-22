@@ -1,4 +1,4 @@
-/* The Iron Ledger's food finder relay — a Cloudflare Worker.
+/* MNTL D&T's food finder relay — a Cloudflare Worker.
  *
  * The owner wanted "Don't know the numbers" to work the moment the app is
  * opened: no key to paste, no sign-in. A key cannot live in the app — the
@@ -136,7 +136,7 @@ function note(env, msg) {
   console.error(text.slice(0, 600));
 }
 
-// Keep in step with estimatePrompt() in iron-ledger.html, which asks Claude
+// Keep in step with estimatePrompt() in mntl-dt.html, which asks Claude
 // the same question when the app is opened inside Claude.
 export function estimatePrompt(food, region) {
   return "You find the calories and macros of food people have eaten. Reply with JSON only.\n\n" +

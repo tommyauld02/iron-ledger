@@ -117,7 +117,7 @@ with sync_playwright() as pw:
     asked=[]; fakeai.phone(ctx, log=asked)
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(400)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(400)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
     p.reload(); p.wait_for_timeout(1200)
 
@@ -1067,7 +1067,7 @@ with sync_playwright() as pw:
         c.add_init_script("delete window.claude;"); fakeai.phone(c); c.add_init_script(LAPCLOCK)
         q = c.new_page()
         q.on("pageerror", lambda e: errs.append("laps: "+str(e)))
-        q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(900)
+        q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(900)
         try: q.click("text=Got it", timeout=1500)
         except Exception: pass
         q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
@@ -1252,7 +1252,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("edit: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(900)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
@@ -1656,7 +1656,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("sections: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SECS)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -1763,7 +1763,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("undo: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", UND)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -1818,7 +1818,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("compare: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CMP)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -1870,7 +1870,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("beat: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", BEAT)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -1973,7 +1973,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("lastsets: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LSTORE)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -2085,7 +2085,7 @@ with sync_playwright() as pw:
     c2 = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c2.add_init_script("delete window.claude;"); fakeai.phone(c2)
     s2 = c2.new_page(); s2.on("pageerror", lambda e: errs.append("lastsets skip: "+str(e)))
-    s2.goto("file://"+d+"/iron-ledger.html"); s2.wait_for_timeout(400)
+    s2.goto("file://"+d+"/mntl-dt.html"); s2.wait_for_timeout(400)
     s2.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SKIP)
     s2.reload(); s2.wait_for_timeout(900)
     try: s2.click("text=Got it", timeout=1500)
@@ -2163,7 +2163,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("notes: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", NOTESTORE)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -2263,7 +2263,7 @@ with sync_playwright() as pw:
         c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
         c.add_init_script("delete window.claude;"); fakeai.phone(c)
         q = c.new_page(); q.on("pageerror", lambda e: errs.append("special: "+str(e)))
-        q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+        q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
         q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
         q.reload(); q.wait_for_timeout(900)
         try: q.click("text=Got it", timeout=1500)
@@ -2379,7 +2379,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("yours: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", YOURS)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -2454,7 +2454,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("sheet: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", SHEETSTORE)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -2551,7 +2551,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("own: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(500)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(500)
     check("own: a new phone starts with nothing on any list",
           all(not v for v in q.evaluate(OWNMOVES).values()) if q.evaluate("()=>!!localStorage.getItem('iron-ledger-v1')") else True)
     try: q.click("text=Got it", timeout=1500)
@@ -2603,7 +2603,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("gyms: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", GYMSTORE)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -2778,7 +2778,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("combine: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
@@ -2879,7 +2879,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("ways: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", FSTORE)
     q.reload(); q.wait_for_timeout(900)
     check("ways: both start folded, and neither form is on the page",
@@ -2949,7 +2949,7 @@ with sync_playwright() as pw:
         c = b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True)
         c.add_init_script("delete window.claude;"); c.add_init_script(KBFAKE); fakeai.phone(c)
         q = c.new_page(); q.on("pageerror", lambda e: errs.append("keyboard: "+str(e)))
-        q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+        q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
         q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", dict(FSTORE, logOpen=mode))
         q.reload(); q.wait_for_timeout(900)
         q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
@@ -3000,7 +3000,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("opens: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LSTORE)
     q.reload(); q.wait_for_timeout(900)
     def pick(mode):
@@ -3122,7 +3122,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("teal: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", TSTORE)
     q.reload(); q.wait_for_timeout(900)
     acc=q.evaluate(TEALJS)
@@ -3155,7 +3155,7 @@ with sync_playwright() as pw:
     check("teal: a button shows it is being pressed", pressed<1, str(pressed))
     # Chromium applies :active with or without it, so only the source can say
     check("teal: and the touch hook iOS needs for that is there (checked in the source)",
-          'document.addEventListener("touchstart"' in io.open("iron-ledger.html", encoding="utf-8").read())
+          'document.addEventListener("touchstart"' in io.open("mntl-dt.html", encoding="utf-8").read())
     c.close()
 
     # ---------- CARDIO ----------
@@ -3172,7 +3172,7 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("cardio: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
     q.reload(); q.wait_for_timeout(900)
     tabs=q.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)")
@@ -3331,7 +3331,7 @@ with sync_playwright() as pw:
     c.add_init_script("delete window.claude;")
     fakeai.phone(c, reply=lambda qq: fx["reply"](qq) if fx["reply"] else None, log=fasked)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("finder: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LBSTORE)
     q.reload(); q.wait_for_timeout(900)
     def estimate(food, qty=""):
@@ -3437,7 +3437,7 @@ with sync_playwright() as pw:
     c.add_init_script("delete window.claude;"); c.add_init_script(fakeai.NO_RELAY_SCRIPT)
     fakeai.install(c, log=nasked)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("no finder: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", LBSTORE)
     q.reload(); q.wait_for_timeout(900)
     estimate("chicken breast", "6 oz")
@@ -3452,7 +3452,7 @@ with sync_playwright() as pw:
     # changed. Keyed on the build that last saved the phone's data, so it shows
     # what is new since that phone last opened the app — once — and never to
     # someone opening it for the first time.
-    BUILDNOW=re.search(r'var BUILD = "([^"]+)"', io.open("iron-ledger.html", encoding="utf-8").read()).group(1)
+    BUILDNOW=re.search(r'var BUILD = "([^"]+)"', io.open("mntl-dt.html", encoding="utf-8").read()).group(1)
     NEWS="()=>[...document.querySelectorAll('#newsBody h3')].map(x=>x.textContent)"
     def opened(store):
         q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
@@ -3460,13 +3460,13 @@ with sync_playwright() as pw:
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("news: "+str(e)))
-    q.goto("file://"+d+"/iron-ledger.html"); q.wait_for_timeout(400)
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Typing stays in sight"
-          and titles[1]=="A new icon" and titles[2]=="Three ways to add food"
-          and titles[3]=="Plan your week", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A new name: MNTL D&T"
+          and titles[1]=="Typing stays in sight" and titles[2]=="A new icon"
+          and titles[3]=="Three ways to add food", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
@@ -3497,7 +3497,7 @@ with sync_playwright() as pw:
         cx = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
         cx.add_init_script("delete window.claude;"); fakeai.phone(cx)
         pg = cx.new_page(); pg.on("pageerror", lambda e: errs.append(label+": "+str(e)))
-        pg.goto("file://"+d+"/iron-ledger.html"); pg.wait_for_timeout(400)
+        pg.goto("file://"+d+"/mntl-dt.html"); pg.wait_for_timeout(400)
         pg.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
         pg.reload(); pg.wait_for_timeout(900)
         return cx, pg
@@ -3755,7 +3755,7 @@ with sync_playwright() as pw:
 
     # A heredoc once turned \b into backspace characters inside the app's own
     # source — invisible, harmless that time, and found only by accident.
-    src=io.open("iron-ledger.html", encoding="utf-8").read()
+    src=io.open("mntl-dt.html", encoding="utf-8").read()
     ctl=[i for i,ch in enumerate(src) if ord(ch)<32 and ch not in "\n\r\t"]
     check("source: no control characters hiding in the app (checked in the source)", not ctl, str(ctl[:5]))
     # tools/make-fonts.py writes fonts/fonts.css and prints the same block for

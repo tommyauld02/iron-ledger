@@ -28,7 +28,7 @@ with sync_playwright() as pw:
         dlg.dismiss()
     p.on("dialog", on_dialog)
 
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
     p.reload(); p.wait_for_timeout(900)
 

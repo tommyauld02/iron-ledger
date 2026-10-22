@@ -40,7 +40,7 @@ its own and should still be asked for one.
 is three steps on a phone — copy, leave the app, find somewhere to paste — and
 the backup is the only net under a week of logging. Where `navigator.share`
 exists the sheet offers *Send a copy*, which hands over a real
-`iron-ledger-<date>.json` file (Files, Notes, AirDrop to a laptop) rather than
+`mntl-dt-<date>.json` file (`iron-ledger-<date>.json` before b74) (Files, Notes, AirDrop to a laptop) rather than
 a wall of text. Copy stays, drops to `.ghost`, and is the only path where
 sharing is not available; `saveWord()` keeps the instructions naming the button
 that is actually on screen.
@@ -111,7 +111,7 @@ numbers are set at 800 and 125%, and a browser can fake a weight but never a
 width. Do not re-add per-weight Archivo files. IBM Plex Mono is static, one
 per weight. Latin and latin-ext only. `tools/make-fonts.py` regenerates
 `fonts/` and prints the `@font-face` block that sits at the top of
-`iron-ledger.html`; never hand-edit either.
+`mntl-dt.html`; never hand-edit either.
 
 **Dates re-check on wake.** iOS suspends a home-screen app rather than closing
 it, so `TODAY` computed once at load meant food logged after midnight landed on

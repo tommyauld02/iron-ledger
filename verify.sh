@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run every suite against iron-ledger.html. Nothing ships without this passing.
+# Run every suite against mntl-dt.html. Nothing ships without this passing.
 #   ./verify.sh          full output
 #   ./verify.sh 6        last 6 lines of each suite
 set -e
@@ -20,7 +20,7 @@ done
 "$PY" -c "import playwright" 2>/dev/null || {
   echo "Playwright missing. Run:  $PY -m pip install playwright && $PY -m playwright install chromium"; exit 1; }
 
-echo "### testing $(grep -o 'BUILD = \"[^\"]*\"' iron-ledger.html | head -1)  [$PY]"
+echo "### testing $(grep -o 'BUILD = \"[^\"]*\"' mntl-dt.html | head -1)  [$PY]"
 fail=0
 skipped=""
 # Each suite writes to a file, never straight to the log. On CI the log is a

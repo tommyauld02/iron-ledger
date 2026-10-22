@@ -15,7 +15,7 @@ Gemini's free tier. Tested by `tests/relay.py` with no network and no key.
 Agents never create accounts or handle keys, so these steps are yours.
 
 1. **A Gemini key.** Open https://aistudio.google.com/apikey and sign in.
-   Make a key just for this — *Create API key*, named "Iron Ledger relay" —
+   Make a key just for this — *Create API key*, named "MNTL D&T relay" —
    so turning one key off never breaks Hermes or anything else. Copy it.
    Never paste it into a chat, an issue or a file.
 2. **A Cloudflare account.** Free, at https://dash.cloudflare.com/sign-up.
@@ -37,7 +37,7 @@ Agents never create accounts or handle keys, so these steps are yours.
    `npx.cmd` wherever these steps say `npx`. It is the same program without
    the script PowerShell refuses; no setting needs changing.
 4. **Tell Nick the address** (not the key). It goes into `RELAY_URL` in
-   `iron-ledger.html`, with `/find` on the end.
+   `mntl-dt.html`, with `/find` on the end.
 
 ## Changing it later
 

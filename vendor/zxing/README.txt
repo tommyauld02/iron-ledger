@@ -10,5 +10,5 @@ The engine inside is zxing-cpp (https://github.com/zxing-cpp/zxing-cpp), Apache-
 
 To update: download the new zxing-wasm package from npm into tools/.vendor-dl/ (ignored by
 git), copy the iife reader build, base64 the reader .wasm the same way, and change ZX_JS and
-ZX_WASM in iron-ledger.html. The version is in the file names, so the service worker's data
+ZX_WASM in mntl-dt.html. The version is in the file names, so the service worker's data
 store fetches the new files rather than serving the old ones.

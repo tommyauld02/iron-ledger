@@ -116,5 +116,5 @@ Two lessons paid for the hard way:
   whatever redraws to be done — there, the camera's answer on the sheet —
   before typing, then wait for the result rather than sleeping.
 - **Tests ran for a while against a stale generated copy** and passed
-  everything against an old build. The suites now read `iron-ledger.html`
+  everything against an old build. The suites now read `mntl-dt.html`
   directly, so there is nothing to go stale.

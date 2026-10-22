@@ -1,6 +1,6 @@
 name: Deploy to Pages
 
-# iron-ledger.html stays the one source of truth. Pages needs the app at
+# mntl-dt.html stays the one source of truth. Pages needs the app at
 # index.html, so that copy is made here at deploy time and never committed —
 # a second copy in the repo is how this project previously ended up testing
 # against a stale build.
@@ -45,10 +45,10 @@ jobs:
       - name: Assemble the site
         run: |
           mkdir -p _site
-          cp iron-ledger.html _site/index.html
+          cp mntl-dt.html _site/index.html
           cp manifest.webmanifest sw.js _site/
           cp -r fonts icons vendor media _site/
-          echo "built from $(grep -o 'BUILD = \"[^\"]*\"' iron-ledger.html | head -1)"
+          echo "built from $(grep -o 'BUILD = \"[^\"]*\"' mntl-dt.html | head -1)"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

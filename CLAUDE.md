@@ -1,13 +1,33 @@
-# The Iron Ledger
+# MNTL D&T
 
-A gym and macro log that runs as a web app on a phone home screen. One HTML
+MNTL D&T — **D&T** is diet and training, **MNTL** is Tommy's personal
+brand. A gym and macro log that runs as a web app on a phone home screen. One HTML
 file, no build step, no dependencies. The one server is the food finder's
 relay (`relay/`), which holds the AI key so the app needs none.
 
 Started in cowork; it arrived in this repo at build `2026-09-05.19`. The
-current build is whatever `BUILD` says in `iron-ledger.html` — do not restate
+current build is whatever `BUILD` says in `mntl-dt.html` — do not restate
 it here, because a stale number in the first file anyone reads is exactly what
 sends someone chasing a phantom.
+
+## The name
+
+The app was **The Iron Ledger** until build `2026-10-21.74`; it was renamed
+because the name was taken elsewhere. Use MNTL D&T in everything new — the app,
+docs, issues, PRs, branch names, chat. The old name stays in exactly these
+places, on purpose, because changing them would cost something real:
+
+- storage keys `iron-ledger-v1` and `iron-ledger-look` — renaming strands
+  every log already on a phone
+- service worker caches `iron-ledger-<build>` and `iron-ledger-data` — a new
+  prefix orphans old caches and re-downloads the 8 MB of grocery brands
+- `window.IRON_LEDGER_*` globals, which the generated `vendor/` files set
+- the relay's worker name and URL (`iron-ledger-finder`) — needs a redeploy
+- the GitHub repo, the Pages URL and the local folder (`iron-ledger`) — the
+  Pages URL is what installed home-screen icons open
+
+Nobody using the app sees any of these. Do not "finish the rename" on them
+without a migration and Tommy's say-so.
 
 ## The rules, in order of how much damage breaking them does
 
@@ -49,7 +69,7 @@ no longer train"* rather than being relabelled as a day the user still trains.
 ## Layout
 
 ```
-iron-ledger.html    the whole app — source of truth, open it in any browser
+mntl-dt.html    the whole app — source of truth, open it in any browser
 vendor/tesseract/   the on-device label reader (see Reading a label below)
 vendor/usda/        grocery brands for barcodes (tools/make-brands.py),
                     generated — never hand-edit
@@ -66,7 +86,7 @@ tests/              22 Playwright suites, and relay.py, which runs the relay in 
 ```
 
 **Nothing in `fonts/`, `icons/` or `dist/` is hand-written.** Neither is the
-deployed `index.html` — the Pages workflow copies `iron-ledger.html` to that
+deployed `index.html` — the Pages workflow copies `mntl-dt.html` to that
 name at deploy time and does not commit it, because a second copy of the app in
 the repo is precisely how this project once spent a while testing green against
 a stale build.
@@ -136,9 +156,9 @@ Everything else:
 
 `./build.sh` writes two files. They differ only in title and build tag.
 
-- `dist/iron-ledger.artifact.html` — the personal copy. Publish with
+- `dist/mntl-dt.artifact.html` — the personal copy. Publish with
   capabilities `{db, sample}`.
-- `dist/iron-ledger-test.artifact.html` — the copy shared with testers. Publish
+- `dist/mntl-dt-test.artifact.html` — the copy shared with testers. Publish
   with `{sample}` **only**. Declaring `db` makes an artifact
   organisation-internal and unshareable, *and* its store is shared across
   viewers, so testers would overwrite each other's data.
