@@ -40,6 +40,21 @@ meaning undo had always been covering navigation. They now live inside one
 sticky `.dock` and stack. `handoff` asserts the tab bar is reachable with each
 bar showing.
 
+**With the keyboard up, nothing may make the page shorter.** A phone keyboard
+covers the page rather than shrinking it, so while it is up (`html.kb-open`,
+read from the visual viewport) the dock steps aside. It used to step aside with
+`display: none`: the page lost the dock's height at once, the phone snapped the
+scroll to the new end, and the field being typed in slid under the keyboard,
+again after every *Add to ledger* (the owner's video, b72). Now the dock is
+`visibility: hidden` and keeps its room, the header stops sticking so the date
+and week strip don't fill what the keyboard leaves, the page grows by the
+keyboard's height (`--kb-h`) so a field at the very end can still be lifted
+above it, and `keep()` scrolls the focused field into that band when the
+keyboard comes up, changes height or focus moves. Never on a scroll, or
+looking up the page mid-entry would be pulled back. Fields in a sheet are left
+alone; the sheet already fits. `sweep` stands in a fake visual viewport for
+this, since Chromium has no keyboard.
+
 **A long press on a button pops the iOS copy menu.** `.t-row` already guarded
 the selection magnifier; `button, [role="tab"]` now guard the same bubble
 appearing over a control held a beat too long with a wet thumb. Inputs are

@@ -2953,16 +2953,36 @@ with sync_playwright() as pw:
         q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", dict(FSTORE, logOpen=mode))
         q.reload(); q.wait_for_timeout(900)
         q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
+        HIGH="()=>document.documentElement.scrollHeight"
+        high=q.evaluate(HIGH)
         q.focus("#fCal"); q.evaluate("()=>window.__kb(330)"); q.wait_for_timeout(150)
-        DOCK="()=>getComputedStyle(document.querySelector('.dock')).display"
+        DOCK="()=>getComputedStyle(document.querySelector('.dock')).visibility"
         check("keyboard (%s): up, the dock steps aside instead of covering the field" % mode,
-              q.evaluate(DOCK)=="none", q.evaluate(DOCK))
+              q.evaluate(DOCK)=="hidden", q.evaluate(DOCK))
+        # b72, the owner's video: the dock was taken out of the page, the page
+        # got shorter, the scroll snapped and the field went under the keyboard
+        check("keyboard (%s): and the page never gets shorter, so nothing jumps" % mode,
+              q.evaluate(HIGH)>=high, "%s then %s" % (high, q.evaluate(HIGH)))
+        if mode == "inplace":
+            TOP="()=>getComputedStyle(document.querySelector('.topbar')).position"
+            check("keyboard (inplace): the header stops sticking, leaving the room to the form",
+                  q.evaluate(TOP)=="relative", q.evaluate(TOP))
+            BAND="()=>{const r=document.activeElement.getBoundingClientRect(); return [document.activeElement.id, Math.round(r.top), Math.round(r.bottom)]}"
+            fid,ft,fb=q.evaluate(BAND)
+            check("keyboard (inplace): the field typed in sits above the keyboard",
+                  fid=="fCal" and ft>=0 and fb<=852-330, "%s %s-%s, keyboard at %s" % (fid, ft, fb, 852-330))
+            q.evaluate("()=>window.scrollTo(0,0)"); q.wait_for_timeout(100)
+            q.fill("#fCal","200"); q.fill("#fNote","Protein bar"); q.wait_for_timeout(150)
+            q.dispatch_event("#addFood","pointerdown"); q.wait_for_timeout(300)
+            fid,ft,fb=q.evaluate(BAND)
+            check("keyboard (inplace): after Add to ledger, Calories is ready and in sight",
+                  fid=="fCal" and ft>=0 and fb<=852-330, "%s %s-%s, keyboard at %s" % (fid, ft, fb, 852-330))
         if mode == "popup":
             low=q.evaluate("()=>Math.round(document.querySelector('[data-waysheet] .sheet-inner').getBoundingClientRect().bottom)")
             check("keyboard (popup): the pop-up sits above the keyboard, not behind it",
                   low <= 852-330+1, "sheet ends at %s, keyboard starts at %s" % (low, 852-330))
         q.evaluate("()=>{document.activeElement.blur(); window.__kb(0);}"); q.wait_for_timeout(150)
-        check("keyboard (%s): down, the dock is back" % mode, q.evaluate(DOCK)!="none", q.evaluate(DOCK))
+        check("keyboard (%s): down, the dock is back" % mode, q.evaluate(DOCK)=="visible", q.evaluate(DOCK))
         c.close()
 
     # ---------- HOW THE WAYS IN OPEN ----------
@@ -3445,10 +3465,10 @@ with sync_playwright() as pw:
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
           q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A new name: MNTL D&T"
-          and titles[1]=="A new icon" and titles[2]=="Three ways to add food"
-          and titles[3]=="Plan your week", str(titles))
+          and titles[1]=="Typing stays in sight" and titles[2]=="A new icon"
+          and titles[3]=="Three ways to add food", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
-    # b69's walkthrough aged out of the newest four at b74, like every entry
+    # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
     # b69 to b72; with no video on the sheet they would pass by measuring
     # nothing, so they are gone rather than left standing.

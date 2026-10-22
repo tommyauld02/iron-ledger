@@ -3817,8 +3817,16 @@
   .pk-k { font-family: var(--font-num); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding-top: 2px; }
   .pk-v { font-size: 14.5px; line-height: 1.45; color: var(--ink); overflow-wrap: anywhere; }
   .pk-none { margin: 10px 0 0; font-size: 15px; color: var(--ink-2); }
-  /* The keyboard is up: the dock steps aside, and a sheet fits what is left. */
-  html.kb-open .dock { display: none; }
+  /* The keyboard is up: the dock steps aside, and a sheet fits what is left.
+     The dock is hidden, not taken out: taking it out made the page shorter by
+     its height, the phone snapped the scroll to the new end, and the field
+     being typed in slid under the keyboard (the owner's video, b72). The header
+     stops sticking, or the date and week strip fill what the keyboard leaves. */
+  html.kb-open .dock { visibility: hidden; }
+  html.kb-open .topbar { position: relative; }
+  /* Room under the page as tall as the keyboard, so a field at the very end
+     (Log numbers is) can still be scrolled up above it. Growing never jumps. */
+  html.kb-open .app { padding-bottom: var(--kb-h, 0px); }
   html.kb-open .sheet { inset: auto 0 auto 0; top: var(--vv-top, 0px); height: var(--vv-h, 100%); }
   html.kb-open .sheet-inner { max-height: calc(var(--vv-h, 100dvh) - 8px); padding-bottom: 14px; }
   .pk-open { height: 52px; }
@@ -4632,6 +4640,9 @@
     { b: "2026-10-21.74", t: "A new name: MNTL D&T", items: [
       "The app is now MNTL D&T — diet and training. Same app, same log: everything you’ve saved is still here.",
       "On the home screen it reads MNTL D&T, and a backup you send yourself is named mntl-dt and the date." ] },
+    { b: "2026-10-21.73", t: "Typing stays in sight", items: [
+      "With the keyboard up, the box you’re typing in stays above it. The page used to jump as the keyboard came up and leave the box underneath.",
+      "After Add to ledger, Calories is ready for the next one and still in view." ] },
     { b: "2026-10-20.72", t: "A new icon", items: [
       "A new home-screen icon: a Roman II with its top-right corner left off, so it reads as an I and an L sharing one base." ] },
     { b: "2026-10-20.71", t: "Three ways to add food", items: [
@@ -11254,10 +11265,24 @@
       root.classList.toggle("kb-open", open);
       root.style.setProperty("--vv-top", (open ? vv.offsetTop : 0) + "px");
       root.style.setProperty("--vv-h", (open ? vv.height : window.innerHeight) + "px");
+      root.style.setProperty("--kb-h", (open ? Math.round(window.innerHeight - vv.height) : 0) + "px");
+      return open;
     }
-    vv.addEventListener("resize", fit);
+    // The field being typed in stays in the part of the screen the keyboard
+    // leaves. Only when the keyboard comes up, changes height or focus moves —
+    // never on a scroll, or looking up the page while typing would be pulled
+    // back. A field in a sheet is left alone: the sheet already fits.
+    function keep() {
+      if (!fit()) return;
+      var a = document.activeElement;
+      if (!a || (a.closest && a.closest(".sheet"))) return;
+      var r = a.getBoundingClientRect(), top = vv.offsetTop, bottom = top + vv.height;
+      if (r.top >= top + 8 && r.bottom <= bottom - 8) return;
+      window.scrollBy(0, Math.round(r.top - top - Math.max(8, (vv.height - r.height) / 2)));
+    }
+    vv.addEventListener("resize", keep);
     vv.addEventListener("scroll", fit);
-    document.addEventListener("focusin", function () { setTimeout(fit, 0); });
+    document.addEventListener("focusin", function () { setTimeout(keep, 0); });
     document.addEventListener("focusout", function () { setTimeout(fit, 0); });
     fit();
   })();
