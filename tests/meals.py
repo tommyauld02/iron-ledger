@@ -40,7 +40,7 @@ with sync_playwright() as pw:
     # one is a regression, so record it and assert none fired.
     dialogs=[]
     p.on("dialog", lambda dl: (dialogs.append(dl.type), dl.dismiss()))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
 
     def reset():
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fresh())

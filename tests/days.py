@@ -44,7 +44,7 @@ with sync_playwright() as pw:
     ctx.add_init_script(CLOCK % (-3*86400000))
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(900)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(900)
     day0=p.text_content("#dateFull")
 
     # log food + a workout on day 0
@@ -106,7 +106,7 @@ with sync_playwright() as pw:
     ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True)
     ctx.add_init_script("delete window.claude;"); ctx.add_init_script(CLOCK % 0)
     p=ctx.new_page(); p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(800)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(800)
     p.click("#prevDay"); p.click("#prevDay"); p.wait_for_timeout(400)
     viewing=p.text_content("#dateFull")
     p.evaluate("()=>window.__setOffsetDays(1)"); resume(p)
@@ -125,7 +125,7 @@ with sync_playwright() as pw:
           class FD extends REAL{constructor(...a){if(!a.length)super(base+off);else super(...a);}static now(){return base+off;}}
           window.Date=FD;""" % iso)
         p=ctx.new_page(); p.on("pageerror", lambda e: errs.append(str(e)))
-        p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(800)
+        p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(800)
         before=p.text_content("#dateFull")
         way(p, "numbers"); p.fill("#fCal","500"); p.fill("#fPro","40"); p.fill("#fNote","Before midnight")
         p.click("#addFood"); p.wait_for_timeout(400)
@@ -164,7 +164,7 @@ with sync_playwright() as pw:
         ctx.add_init_script(NEARMIDNIGHT)
         p=ctx.new_page()
         p.on("pageerror", lambda e: errs.append(str(e)))
-        p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(900)
+        p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(900)
         p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(450)
         add_movement(p, "Barbell Row")
         # Start first: a set logged first now starts the clock by itself, and

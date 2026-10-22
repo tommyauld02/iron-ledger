@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style></head><body><title>The Iron Ledger</title>
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{color-scheme:light}body{margin:0}[hidden]{display:none!important}</style></head><body><title>MNTL D&amp;T</title>
 <script>
 /* Colours are applied before the first paint, or someone who chose dark sees a
    white flash every time the app opens. They are read from a small key of
@@ -3030,11 +3030,11 @@
     font-size: 15px; font-weight: 800; font-stretch: 125%;
     letter-spacing: .14em; text-transform: uppercase; color: var(--ink);
   }
-  .brand h1 .wm-iron, .brand h1 .wm-ledger {
+  .brand h1 .wm-mark, .brand h1 .wm-sub {
     font-family: var(--font-ui); font-size: 15px; font-weight: 800; letter-spacing: .14em;
     text-transform: uppercase; color: var(--ink);
   }
-  .brand h1 .wm-ledger { font-weight: 400; color: var(--ink-2); }
+  .brand h1 .wm-sub { font-weight: 400; color: var(--ink-2); }
   .brand h1 #buildTag { font-stretch: 100%; letter-spacing: .04em; }
   .brand-actions { gap: 2px; margin: 0 -8px 0 0; }
   .icon-btn, .brand .backup-btn, .gear-btn {
@@ -3837,7 +3837,7 @@
 <div class="app">
   <header class="topbar">
     <div class="brand">
-      <h1><span class="wm-iron">Iron</span> <span class="wm-ledger">Ledger</span> <span id="buildTag"></span></h1>
+      <h1><span class="wm-mark">MNTL</span> <span class="wm-sub">D&amp;T</span> <span id="buildTag"></span></h1>
       <div class="brand-actions">
         <button class="backup-btn icon-btn" id="backupBtn" aria-label="Backup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v4H4z"/><path d="M6 11v8h12v-8"/><path d="M10 15h4"/></svg><span class="dot" id="backupDot" hidden></span></button>
         <button class="gear-btn icon-btn" id="setBtn" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
@@ -4065,8 +4065,11 @@
 (function () {
   "use strict";
 
+  // The app was The Iron Ledger until b74. The storage keys keep the old
+  // name on purpose: renaming one strands every log already on a phone.
+  // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-20.72";
+  var BUILD = "2026-10-21.74";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4626,8 +4629,11 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-21.74", t: "A new name: MNTL D&T", items: [
+      "The app is now MNTL D&T — diet and training. Same app, same log: everything you’ve saved is still here.",
+      "On the home screen it reads MNTL D&T, and a backup you send yourself is named mntl-dt and the date." ] },
     { b: "2026-10-20.72", t: "A new icon", items: [
-      "Iron Ledger has a new home-screen icon: a Roman II with its top-right corner left off, so it reads as an I and an L sharing one base." ] },
+      "A new home-screen icon: a Roman II with its top-right corner left off, so it reads as an I and an L sharing one base." ] },
     { b: "2026-10-20.71", t: "Three ways to add food", items: [
       "The bar at the bottom of Macros has three buttons, each with its name under it: Log numbers (the pencil) when you know the calories and protein, Ask an agent (the #) when you don\u2019t, and Scan for a barcode.",
       "Ask an agent opens straight on the words box \u2014 “half a protein coffee and a cup of rice” works. Have the measurements is gone: it sent the same question to the same agent, just in boxes.",
@@ -5692,6 +5698,7 @@
   // That is also what keeps the suites, which open the app from disk, off
   // the network. window.IRON_LEDGER_RELAY, when set, points the app at
   // another relay: the suites' stand-in (tests/fakeai.py), or `wrangler dev`.
+  // Still the pre-rename worker name: renaming it means redeploying the relay.
   var RELAY_URL = "https://iron-ledger-finder.tommy-auld02.workers.dev/find";
   var RELAY = typeof window.IRON_LEDGER_RELAY === "string" ? window.IRON_LEDGER_RELAY
             : location.protocol === "file:" ? "" : RELAY_URL;
@@ -12187,7 +12194,7 @@
     { id: "light", name: "Light" },
     { id: "dark", name: "Dark" }
   ];
-  var LOOK_KEY = "iron-ledger-look";
+  var LOOK_KEY = "iron-ledger-look";   // old name on purpose, as KEY
   var darkMq = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
   var themeMeta = null;   // created with the other home-screen tags at startup
 
@@ -13027,7 +13034,7 @@
     if (cb) cb.classList.add("ghost");
     shareBtn.addEventListener("click", function () {
       var btn = this;
-      var name = "iron-ledger-" + TODAY + ".json";
+      var name = "mntl-dt-" + TODAY + ".json";
       var text = backupText.value;
       var reset = function (msg) {
         btn.textContent = msg;
@@ -13049,7 +13056,7 @@
         reset("Couldn't send — use Copy");
       };
 
-      var payload = { title: "Iron Ledger backup" };
+      var payload = { title: "MNTL D&T backup" };
       try {
         var file = new File([text], name, { type: "application/json" });
         if (navigator.canShare && navigator.canShare({ files: [file] })) payload.files = [file];
@@ -13318,7 +13325,7 @@
     }
     meta("apple-mobile-web-app-capable", "yes");
     meta("mobile-web-app-capable", "yes");
-    meta("apple-mobile-web-app-title", "Iron Ledger");
+    meta("apple-mobile-web-app-title", "MNTL D&T");
     meta("apple-mobile-web-app-status-bar-style", "default");
     meta("format-detection", "telephone=no");   // stops iOS linkifying rep counts
 

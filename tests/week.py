@@ -55,7 +55,7 @@ with sync_playwright() as pw:
     ctx.add_init_script(CLOCK)
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", STORE)
     p.reload(); p.wait_for_timeout(900)
     if p.locator("#newsSheet").is_visible():
@@ -186,7 +186,7 @@ with sync_playwright() as pw:
     ctx.add_init_script("delete window.claude;")
     ctx.add_init_script(CLOCK.replace("const off = %d" % (SHIFT*86400000), "const off = %d" % ((SHIFT+1)*86400000)))
     p=ctx.new_page(); p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", STORE)
     p.reload(); p.wait_for_timeout(900)
     if p.locator("#newsSheet").is_visible():

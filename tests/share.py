@@ -49,7 +49,7 @@ with sync_playwright() as pw:
     # ---- they share ------------------------------------------------------
     ctx = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
     p = ctx.new_page()
-    p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(500)
+    p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(500)
     p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", THEIRS)
     p.reload(); p.wait_for_timeout(1000)
     try:
@@ -85,7 +85,7 @@ with sync_playwright() as pw:
     ctx = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
     p = ctx.new_page(); errs = []
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://" + d + "/iron-ledger.html"); p.wait_for_timeout(500)
+    p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(500)
     p.evaluate("s => localStorage.setItem('iron-ledger-v1', JSON.stringify(s))", MINE)
     p.reload(); p.wait_for_timeout(1000)
     try:

@@ -21,7 +21,7 @@ with sync_playwright() as pw:
     fakeai.phone(ctx)     # the food finder is set up; tests/fakeai.py answers it
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
 
     def reset():
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", base)

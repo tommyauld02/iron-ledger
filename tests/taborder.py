@@ -10,7 +10,7 @@ with sync_playwright() as pw:
     ctx.add_init_script("delete window.claude;")
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
     p.reload(); p.wait_for_timeout(800)
     print("tab order:", p.eval_on_selector_all(".tabs button","e=>e.map(x=>x.textContent)"))

@@ -98,7 +98,7 @@ class H(SimpleHTTPRequestHandler):
     def translate_path(self, path):
         p = path.split("?", 1)[0].split("#", 1)[0]
         if p in ("/", "/index.html"):
-            return os.path.join(ROOT, "iron-ledger.html")
+            return os.path.join(ROOT, "mntl-dt.html")
         return super().translate_path(path)
     def log_message(self, *a): pass
 
@@ -115,7 +115,7 @@ with sync_playwright() as pw:
     b = pw.chromium.launch()
 
     # ---- 1. viewport opts into the safe area ------------------------------
-    src = io.open(os.path.join(ROOT, "iron-ledger.html"), encoding="utf-8").read()
+    src = io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()
     meta = re.search(r'<meta name="viewport" content="([^"]+)"', src).group(1)
     check("viewport opts into safe areas", "viewport-fit=cover" in meta, meta)
     check("app actually insets for them", src.count("env(safe-area-inset") >= 4,
@@ -524,7 +524,7 @@ with sync_playwright() as pw:
                   shared and shared["hasFiles"] and shared["name"].endswith(".json")
                   and shared["type"] == "application/json", json.dumps(shared)[:90])
             check("the file carries the day in its name",
-                  shared["name"].startswith("iron-ledger-2"), shared["name"])
+                  shared["name"].startswith("mntl-dt-2"), shared["name"])
             check("a completed share counts as a backup", not dot)
         elif mode == "notext":
             check("a phone that cannot share files still gets the text",
@@ -553,7 +553,7 @@ with sync_playwright() as pw:
     # assertion here would pass by measuring nothing, which is the exact
     # failure mode this suite exists to avoid. It still catches the rule being
     # deleted; whether iOS honours it is for the phone to say.
-    src = io.open(os.path.join(os.getcwd(), "iron-ledger.html"), encoding="utf-8").read()
+    src = io.open(os.path.join(os.getcwd(), "mntl-dt.html"), encoding="utf-8").read()
     # comments stripped first: the comment above this rule says the word
     # "button", and matching that instead of the selector would be a check
     # that passes on prose

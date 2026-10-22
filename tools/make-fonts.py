@@ -9,7 +9,7 @@ static, 400/500/600, one file per weight.
 
 It writes the woff2 files under the names the service worker already lists,
 writes fonts/fonts.css, and prints the same @font-face block that sits at the
-top of iron-ledger.html. sweep fails if the two ever differ.
+top of mntl-dt.html. sweep fails if the two ever differ.
 """
 import os
 import re

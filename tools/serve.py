@@ -3,7 +3,7 @@
     python tools/serve.py            # port 8000
     python tools/serve.py 8080
 
-Serves iron-ledger.html at "/", the same shape GitHub Pages gets, so what you
+Serves mntl-dt.html at "/", the same shape GitHub Pages gets, so what you
 see here is what you get there.
 
 One caveat worth knowing before you judge the result: service workers need a
@@ -22,7 +22,7 @@ class H(http.server.SimpleHTTPRequestHandler):
     def translate_path(self, path):
         p = path.split("?", 1)[0].split("#", 1)[0]
         if p in ("/", "/index.html"):
-            return os.path.join(ROOT, "iron-ledger.html")
+            return os.path.join(ROOT, "mntl-dt.html")
         return super().translate_path(path)
 
     def end_headers(self):
@@ -47,7 +47,7 @@ class S(socketserver.ThreadingTCPServer):
 
 
 with S(("0.0.0.0", PORT), functools.partial(H, directory=ROOT)) as httpd:
-    print("The Iron Ledger")
+    print("MNTL D&T")
     print("  this machine : http://localhost:%d/" % PORT)
     print("  your phone   : http://%s:%d/" % (lan_ip(), PORT))
     print("\nSame wifi, no VPN. Ctrl+C to stop.")

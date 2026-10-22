@@ -8,7 +8,7 @@ with sync_playwright() as pw:
     ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True); ctx.add_init_script("delete window.claude;")
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(900)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(900)
     print("fresh install shows tour:", p.evaluate("()=>!!document.querySelector('.welcome')"))
     print("  header:", p.text_content("#buildTag"))
     p.click("#dismissWelcome"); p.wait_for_timeout(400)
@@ -25,7 +25,7 @@ with sync_playwright() as pw:
     # existing user (Tommy) must never see it
     ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True); ctx.add_init_script("delete window.claude;")
     p=ctx.new_page(); p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))",
       {"days":{T:{"food":[{"id":"a","cal":500,"pro":40,"note":"Eggs"}],"lifts":[],"updated":1,"goal":G}},
        "moves":None,"goal":G,"region":"United States","pantry":[],"v":1})

@@ -1,4 +1,4 @@
-# The Iron Ledger team
+# MNTL D&T team
 
 How the agents that work on this app are organised. Every agent — Claude or
 any model running in Hermes — reads this file and `CLAUDE.md` before touching
@@ -6,7 +6,7 @@ anything, then the `docs/` file that `CLAUDE.md`'s index names for the area
 being changed. `CLAUDE.md` and `docs/` are how the app works; this file is how
 the team works.
 
-The goal: finish the Iron Ledger as a complete app anyone can download and
+The goal: finish MNTL D&T as a complete app anyone can download and
 use, at no added cost.
 
 ## Who's who
@@ -160,7 +160,7 @@ mistake is cheap and easy to catch:
 - First drafts of copy, `NEWS` entries, or test cases that Belico finishes
 - Reproducing a reported bug and writing down the exact steps
 
-Not intern work: anything in `iron-ledger.html`'s storage, undo, or date
+Not intern work: anything in `mntl-dt.html`'s storage, undo, or date
 logic; the service worker; anything touching how data is saved.
 
 ## Running the team

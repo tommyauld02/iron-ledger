@@ -1,7 +1,7 @@
 """The offline shell: does the app still run with the network cut?
 
 Serves the repo over http on localhost (a secure context, so service workers
-are allowed) with iron-ledger.html at "/", which is how GitHub Pages serves it.
+are allowed) with mntl-dt.html at "/", which is how GitHub Pages serves it.
 Then pulls the network out from under a loaded app and asserts it still works.
 
 A service worker that registers but caches nothing looks identical to a working
@@ -26,11 +26,11 @@ def check(n, ok, d=""): res.append(("PASS" if ok else "FAIL", n, d))
 
 
 class H(SimpleHTTPRequestHandler):
-    """Serves iron-ledger.html at / the way the Pages deploy does."""
+    """Serves mntl-dt.html at / the way the Pages deploy does."""
     def translate_path(self, path):
         p = path.split("?", 1)[0].split("#", 1)[0]
         if p in ("/", "/index.html"):
-            return os.path.join(ROOT, "iron-ledger.html")
+            return os.path.join(ROOT, "mntl-dt.html")
         return super().translate_path(path)
     def log_message(self, *a): pass
 
@@ -61,7 +61,7 @@ with sync_playwright() as pw:
     }""")
     # BUILD lives inside the app's IIFE, so read it from the source of truth
     build = re.search(r'BUILD = "([^"]+)"',
-                      io.open(os.path.join(ROOT, "iron-ledger.html"), encoding="utf-8").read()).group(1)
+                      io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()).group(1)
     check("worker version tracks BUILD", ver == build, "worker=%s app=%s" % (ver, build))
 
     # let the shell finish precaching before the network goes away

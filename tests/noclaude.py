@@ -19,7 +19,7 @@ with sync_playwright() as pw:
     ctx.add_init_script("delete window.claude;")   # a tester with no Claude at all
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+    p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
     p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", S)
     p.reload(); p.wait_for_timeout(800)
     print("NO CLAUDE ACCOUNT, plain browser\n")

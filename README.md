@@ -1,6 +1,8 @@
-# The Iron Ledger
+# MNTL D&T
 
-Gym and macro log. One HTML file, no build step, no dependencies, and offline
+Diet and training — a gym and macro log, from MNTL. Formerly The Iron Ledger.
+
+One HTML file, no build step, no dependencies, and offline
 for everything but one thing: *Ask an agent* asks a free AI about
 any food your pantry doesn't know, through a small relay (`relay/`, a
 Cloudflare Worker that holds the key) — nothing for the person using it to set
@@ -8,7 +10,7 @@ up. Only the food you describe is sent.
 
 ## Run it
 
-Open `iron-ledger.html` in a browser. That's it.
+Open `mntl-dt.html` in a browser. That's it.
 
 To use it on a phone on the same wifi:
 
@@ -34,7 +36,7 @@ nothing merges without the owner's "push it".
 On Windows use Git Bash; the scripts find their own Python (`python3` there is
 a Microsoft Store stub, not an interpreter).
 
-Nothing ships without that passing. Bump `BUILD` in `iron-ledger.html` on
+Nothing ships without that passing. Bump `BUILD` in `mntl-dt.html` on
 every publish — it versions the service worker cache as well as the header tag.
 
 `audit2` currently reports SKIPPED: it needs `tests/audit.py`, which was not in
@@ -52,7 +54,7 @@ signal. Nothing leaves the device; the log lives in localStorage.
 
     ./build.sh
 
-Writes `dist/iron-ledger.artifact.html` (publish with capabilities
-`{db, sample}`) and `dist/iron-ledger-test.artifact.html` (publish with
+Writes `dist/mntl-dt.artifact.html` (publish with capabilities
+`{db, sample}`) and `dist/mntl-dt-test.artifact.html` (publish with
 `{sample}` only — never `db`, it makes the artifact unshareable and shares one
 store across all viewers). Never hand-edit anything in `dist/`.

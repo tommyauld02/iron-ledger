@@ -83,7 +83,7 @@ with sync_playwright() as pw:
                           device_scale_factor=3)
         p=ctx.new_page(); errs=[]
         p.on("pageerror", lambda e: errs.append(str(e)))
-        p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(250)
+        p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(250)
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", store)
         p.reload(); p.wait_for_timeout(700)
         zoom=set(); over=[]; small=set()

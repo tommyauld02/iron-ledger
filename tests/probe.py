@@ -67,7 +67,7 @@ with sync_playwright() as pw:
         ctx=b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True); ctx.add_init_script(STUB)
         p=ctx.new_page(); errs=[]
         p.on("pageerror", lambda e: errs.append(str(e)))
-        p.goto("file://"+d+"/iron-ledger.html"); p.wait_for_timeout(300)
+        p.goto("file://"+d+"/mntl-dt.html"); p.wait_for_timeout(300)
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", STORE)
         p.reload(); p.wait_for_timeout(900)
         if tab!="macros":
