@@ -4077,7 +4077,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-21.74";
+  var BUILD = "2026-10-22.75";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4637,6 +4637,8 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-22.75", t: "Ask an agent holds still", items: [
+      "Opening Ask an agent with the keyboard up no longer flickers between the box and your ledger. The page moves once to show the box, then stays put." ] },
     { b: "2026-10-21.74", t: "A new name: MNTL D&T", items: [
       "The app is now MNTL D&T — diet and training. Same app, same log: everything you’ve saved is still here.",
       "On the home screen it reads MNTL D&T, and a backup you send yourself is named mntl-dt and the date." ] },
@@ -11260,29 +11262,49 @@
       var a = document.activeElement;
       return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(a.type)));
     }
+    // The room under the page only grows while the keyboard is up. The
+    // keyboard's height wobbles by a pixel or two as the phone settles it, and
+    // following the wobble made the page shorter, which is what made it jump.
+    var kbH = 0;
     function fit() {
       var open = typing() && window.innerHeight - vv.height > 120 && vv.scale < 1.05;
+      kbH = open ? Math.max(kbH, Math.round(window.innerHeight - vv.height)) : 0;
       root.classList.toggle("kb-open", open);
       root.style.setProperty("--vv-top", (open ? vv.offsetTop : 0) + "px");
       root.style.setProperty("--vv-h", (open ? vv.height : window.innerHeight) + "px");
-      root.style.setProperty("--kb-h", (open ? Math.round(window.innerHeight - vv.height) : 0) + "px");
+      root.style.setProperty("--kb-h", kbH + "px");
       return open;
     }
     // The field being typed in stays in the part of the screen the keyboard
     // leaves. Only when the keyboard comes up, changes height or focus moves —
     // never on a scroll, or looking up the page while typing would be pulled
     // back. A field in a sheet is left alone: the sheet already fits.
+    // It moves the page once, after the keyboard has finished arriving, and
+    // then leaves it be. On b74 it moved the page on every resize the phone
+    // reported, the phone moved it back to where it wanted the field, and the
+    // two took turns ten times a second until the keyboard was put away — Ask
+    // an agent flickering between the field and the ledger (the owner's video).
+    var settle = 0, lastH = 0, quietUntil = 0;
     function keep() {
       if (!fit()) return;
+      lastH = vv.height;
+      if (Date.now() < quietUntil) return;
       var a = document.activeElement;
       if (!a || (a.closest && a.closest(".sheet"))) return;
       var r = a.getBoundingClientRect(), top = vv.offsetTop, bottom = top + vv.height;
       if (r.top >= top + 8 && r.bottom <= bottom - 8) return;
+      quietUntil = Date.now() + 700;
       window.scrollBy(0, Math.round(r.top - top - Math.max(8, (vv.height - r.height) / 2)));
     }
-    vv.addEventListener("resize", keep);
+    function keepSoon() { clearTimeout(settle); settle = setTimeout(keep, 160); }
+    vv.addEventListener("resize", function () {
+      if (!fit()) { lastH = 0; return; }
+      // A resize that is not the keyboard changing height is the phone
+      // settling its own scroll: answering it is what started the tug of war.
+      if (Math.abs(vv.height - lastH) >= 2) keepSoon();
+    });
     vv.addEventListener("scroll", fit);
-    document.addEventListener("focusin", function () { setTimeout(keep, 0); });
+    document.addEventListener("focusin", function () { quietUntil = 0; keepSoon(); });
     document.addEventListener("focusout", function () { setTimeout(fit, 0); });
     fit();
   })();

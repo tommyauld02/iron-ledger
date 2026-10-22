@@ -52,7 +52,20 @@ keyboard's height (`--kb-h`) so a field at the very end can still be lifted
 above it, and `keep()` scrolls the focused field into that band when the
 keyboard comes up, changes height or focus moves. Never on a scroll, or
 looking up the page mid-entry would be pulled back. Fields in a sheet are left
-alone; the sheet already fits. `sweep` stands in a fake visual viewport for
+alone; the sheet already fits.
+
+**`keep()` moves the page once and never argues with the phone.** On b74 it ran
+on every `visualViewport` resize. iOS reports resizes while it settles its own
+scroll, and moves the page to where it wants the focused field; `keep()` moved
+it back, and the two took turns ten times a second until the keyboard was put
+away. Ask an agent, opening in place at the foot of Macros, flickered between
+its box and the ledger (the owner's video, b74). Now `keep()` waits for the
+keyboard to stop changing height (`keepSoon()`, 160 ms), moves the page at
+most once, and ignores resizes that are not the keyboard changing height by
+2px or more. `--kb-h` only grows while the keyboard is up, so a keyboard that
+wobbles by a pixel never makes the page shorter. `sweep` plays the phone's
+half: it moves the page after the lift and keeps reporting the same keyboard,
+and the app must not move it back. `sweep` stands in a fake visual viewport for
 this, since Chromium has no keyboard.
 
 **A long press on a button pops the iOS copy menu.** `.t-row` already guarded
