@@ -14,6 +14,8 @@ def check(n, ok, dt=""): res.append((("PASS" if ok else "FAIL"), n, dt))
 
 def hold_drag(p, src, dst):
     """press and hold on src, then move onto dst and release"""
+    # a finger holds the row it can see: bring it out from under the bottom bar
+    p.locator('[data-row="%s"]'%src).evaluate("e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(100)
     a=p.locator('[data-row="%s"]'%src).bounding_box()
     b=p.locator('[data-row="%s"]'%dst).bounding_box()
     p.mouse.move(a["x"]+30, a["y"]+a["height"]/2)
@@ -258,6 +260,7 @@ with sync_playwright() as pw:
     check("edit: a waiting row can have its name fixed and keep waiting",
           r["note"]=="Sriracha mayo" and r.get("pending") is True and p.locator('[data-est="r4"]').count()==1, str(r))
 
+    p.locator('[data-editrow="r1"]').evaluate("e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(100)
     a=p.locator('[data-editrow="r1"]').bounding_box()
     p.mouse.move(a["x"]+30, a["y"]+a["height"]/2); p.mouse.down(); p.wait_for_timeout(500)
     p.mouse.up(); p.wait_for_timeout(400)

@@ -60,13 +60,29 @@ scroll, and moves the page to where it wants the focused field; `keep()` moved
 it back, and the two took turns ten times a second until the keyboard was put
 away. Ask an agent, opening in place at the foot of Macros, flickered between
 its box and the ledger (the owner's video, b74). Now `keep()` waits for the
-keyboard to stop changing height (`keepSoon()`, 160 ms), moves the page at
+keyboard to stop changing height (`keepSoon()`, 320 ms since b76), moves the page at
 most once, and ignores resizes that are not the keyboard changing height by
 2px or more. `--kb-h` only grows while the keyboard is up, so a keyboard that
 wobbles by a pixel never makes the page shorter. `sweep` plays the phone's
 half: it moves the page after the lift and keeps reporting the same keyboard,
 and the app must not move it back. `sweep` stands in a fake visual viewport for
 this, since Chromium has no keyboard.
+
+**The room under the page comes before the keyboard and leaves after it.** On
+b75 the room (`--kb-h`) grew as the keyboard came up. iOS showed Ask an
+agent's box, the page grew under it mid-animation, and iOS dropped the page
+back to the ledger with the box behind the keyboard until a letter was typed.
+Putting the keyboard away took the room out at once, and the phone slid the
+page up a keyboard's height over a second and a half (the owner's video, b75).
+Now `room()` puts it there on `focusin`, before the keyboard has begun to
+arrive, sized past any phone keyboard (55% of the window; it still grows if a
+keyboard is taller). It is `html.kb-room`, separate from `kb-open`. When typing
+ends, `dropRoom()` takes it out only once it is off the screen: space below
+what is showing goes without moving anything. `keepSoon()` waits 320 ms, long
+enough for iOS to have placed the field itself, so `keep()` is the fallback
+rather than a second opinion. `sweep` checks the room is there on focus, that
+the keyboard arriving changes no height, and that putting the keyboard away at
+the foot of the page leaves the page where it was.
 
 **A long press on a button pops the iOS copy menu.** `.t-row` already guarded
 the selection magnifier; `button, [role="tab"]` now guard the same bubble

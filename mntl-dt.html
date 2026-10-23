@@ -3825,8 +3825,9 @@
   html.kb-open .dock { visibility: hidden; }
   html.kb-open .topbar { position: relative; }
   /* Room under the page as tall as the keyboard, so a field at the very end
-     (Log numbers is) can still be scrolled up above it. Growing never jumps. */
-  html.kb-open .app { padding-bottom: var(--kb-h, 0px); }
+     (Log numbers is) can still be scrolled up above it. Put there on focus,
+     before the keyboard arrives, and kept until it is off the screen. */
+  html.kb-room .app { padding-bottom: var(--kb-h, 0px); }
   html.kb-open .sheet { inset: auto 0 auto 0; top: var(--vv-top, 0px); height: var(--vv-h, 100%); }
   html.kb-open .sheet-inner { max-height: calc(var(--vv-h, 100dvh) - 8px); padding-bottom: 14px; }
   .pk-open { height: 52px; }
@@ -4077,7 +4078,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-22.75";
+  var BUILD = "2026-10-22.76";
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4637,6 +4638,9 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-22.76", t: "The keyboard settles", items: [
+      "Tapping into Ask an agent keeps its box above the keyboard from the start, instead of dropping back to your ledger until you type.",
+      "Putting the keyboard away leaves the page where it was, instead of sliding it up." ] },
     { b: "2026-10-22.75", t: "Ask an agent holds still", items: [
       "Opening Ask an agent with the keyboard up no longer flickers between the box and your ledger. The page moves once to show the box, then stays put." ] },
     { b: "2026-10-21.74", t: "A new name: MNTL D&T", items: [
@@ -11262,25 +11266,53 @@
       var a = document.activeElement;
       return !!a && (a.tagName === "TEXTAREA" || (a.tagName === "INPUT" && !/^(checkbox|radio|button|submit|file|range|color)$/i.test(a.type)));
     }
-    // The room under the page only grows while the keyboard is up. The
-    // keyboard's height wobbles by a pixel or two as the phone settles it, and
-    // following the wobble made the page shorter, which is what made it jump.
+    // The room under the page (`--kb-h`, html.kb-room) only grows while a
+    // field is being typed in. The keyboard's height wobbles by a pixel or two
+    // as the phone settles it, and following the wobble made the page shorter,
+    // which is what made it jump.
+    //
+    // It is put there the moment a field is focused, before the keyboard has
+    // begun to arrive, and sized past any phone keyboard. On b75 it grew as
+    // the keyboard came up, while iOS was placing the field: iOS showed Ask an
+    // agent's box, the page grew under it, and iOS dropped the page back to the
+    // ledger with the box behind the keyboard until a letter was typed (the
+    // owner's video, b75). Nothing changes height while the keyboard arrives now.
+    //
+    // And it stays when the keyboard goes, until it is off the screen. Taking
+    // it out at once made the page shorter by a keyboard, and the phone slid
+    // the page up to the new end over a second and a half (the same video).
+    // Space below what is on screen goes without moving anything.
     var kbH = 0;
+    var coarse = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    function room(h) {
+      if (h <= kbH) return;
+      kbH = h;
+      root.style.setProperty("--kb-h", kbH + "px");
+      root.classList.add("kb-room");
+    }
+    function dropRoom() {
+      if (!kbH || typing()) return;
+      var d = document.documentElement;
+      if (window.scrollY + window.innerHeight > d.scrollHeight - kbH - 2) return;   // still on screen
+      kbH = 0;
+      root.classList.remove("kb-room");
+      root.style.setProperty("--kb-h", "0px");
+    }
     function fit() {
       var open = typing() && window.innerHeight - vv.height > 120 && vv.scale < 1.05;
-      kbH = open ? Math.max(kbH, Math.round(window.innerHeight - vv.height)) : 0;
+      if (open) room(Math.round(window.innerHeight - vv.height));
       root.classList.toggle("kb-open", open);
       root.style.setProperty("--vv-top", (open ? vv.offsetTop : 0) + "px");
       root.style.setProperty("--vv-h", (open ? vv.height : window.innerHeight) + "px");
-      root.style.setProperty("--kb-h", kbH + "px");
       return open;
     }
     // The field being typed in stays in the part of the screen the keyboard
     // leaves. Only when the keyboard comes up, changes height or focus moves —
     // never on a scroll, or looking up the page while typing would be pulled
     // back. A field in a sheet is left alone: the sheet already fits.
-    // It moves the page once, after the keyboard has finished arriving, and
-    // then leaves it be. On b74 it moved the page on every resize the phone
+    // It moves the page once, after the keyboard has finished arriving — long
+    // enough after that iOS has placed the field itself, which it usually has,
+    // so this is the fallback — and then leaves it be. On b74 it moved the page on every resize the phone
     // reported, the phone moved it back to where it wanted the field, and the
     // two took turns ten times a second until the keyboard was put away — Ask
     // an agent flickering between the field and the ledger (the owner's video).
@@ -11296,7 +11328,7 @@
       quietUntil = Date.now() + 700;
       window.scrollBy(0, Math.round(r.top - top - Math.max(8, (vv.height - r.height) / 2)));
     }
-    function keepSoon() { clearTimeout(settle); settle = setTimeout(keep, 160); }
+    function keepSoon() { clearTimeout(settle); settle = setTimeout(keep, 320); }
     vv.addEventListener("resize", function () {
       if (!fit()) { lastH = 0; return; }
       // A resize that is not the keyboard changing height is the phone
@@ -11304,8 +11336,13 @@
       if (Math.abs(vv.height - lastH) >= 2) keepSoon();
     });
     vv.addEventListener("scroll", fit);
-    document.addEventListener("focusin", function () { quietUntil = 0; keepSoon(); });
-    document.addEventListener("focusout", function () { setTimeout(fit, 0); });
+    document.addEventListener("focusin", function () {
+      quietUntil = 0;
+      if (coarse && typing()) room(Math.round(window.innerHeight * 0.55));
+      keepSoon();
+    });
+    document.addEventListener("focusout", function () { setTimeout(function () { fit(); dropRoom(); }, 0); });
+    window.addEventListener("scroll", dropRoom, { passive: true });
     fit();
   })();
 
