@@ -1,0 +1,18 @@
+{
+  "name": "mntl-dt",
+  "private": true,
+  "description": "The iPhone shell for MNTL D&T. The app itself is mntl-dt.html; see docs/ios.md.",
+  "scripts": {
+    "www": "node tools/make-www.mjs",
+    "sync": "node tools/make-www.mjs && cap sync ios",
+    "open": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.3",
+    "@capacitor/ios": "8.5.3",
+    "@capacitor/preferences": "8.0.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}

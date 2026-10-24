@@ -31,3 +31,9 @@ tools/.vendor-dl/
 # wrangler's own working files when the relay is deployed from relay/
 relay/.wrangler/
 relay/node_modules/
+
+
+# the iPhone app: npm's packages, and www/, which tools/make-www.mjs
+# assembles from mntl-dt.html (ios/ has its own .gitignore for its copy)
+node_modules/
+www/

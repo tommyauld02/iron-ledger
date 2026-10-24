@@ -31,7 +31,7 @@ without a migration and Tommy's say-so.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 23 suites, ~1,180 checks, 16
+**1. Nothing ships without `./verify.sh` passing.** 24 suites, ~1,290 checks, 17
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -77,15 +77,18 @@ relay/              the food finder's relay, a Cloudflare Worker (README.md)
 vendor/zxing/       the barcode reader (zxing-wasm 3.1.4), downloaded, not written
 fonts/              self-hosted Archivo + IBM Plex Mono (see Fonts below)
 icons/              generated — run tools/make-icons.py, never hand-draw
+ios/                the iPhone app's Capacitor shell (docs/ios.md); its web
+                    files are copied from mntl-dt.html by tools/make-www.mjs
+package.json, capacitor.config.json   Capacitor, pinned; www/ is generated
 manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              22 Playwright suites, and relay.py, which runs the relay in Node
+tests/              23 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
-**Nothing in `fonts/`, `icons/` or `dist/` is hand-written.** Neither is the
+**Nothing in `fonts/`, `icons/`, `dist/` or `www/` is hand-written.** Neither is the
 deployed `index.html` — the Pages workflow copies `mntl-dt.html` to that
 name at deploy time and does not commit it, because a second copy of the app in
 the repo is precisely how this project once spent a while testing green against
@@ -149,6 +152,10 @@ Everything else:
   `docs/testing.md`
 - **Sharing a routine** — the Coach tab, `ILROUTINE1:` codes, the day-id trap,
   never through `mergeInto` → `docs/sharing-a-routine.md`
+- **The iPhone app** — the Capacitor shell, the log in native storage, the
+  bundle ID, running it from Xcode → `docs/ios.md`; how the log is kept
+  there → `docs/architecture.md` (*In the iPhone app the log lives in native
+  storage*)
 - **Known and deliberate** — what is left as it is on purpose, including
   *Ask an agent* needing a connection → `docs/known-and-deliberate.md`
 
@@ -195,7 +202,7 @@ is fixed, and it is worth keeping straight:
 
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `week`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
-  `handoff`, `finder`, `relay`, `label`, `hittest`, `share`.
+  `handoff`, `finder`, `relay`, `label`, `hittest`, `share`, `native`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s
