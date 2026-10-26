@@ -81,6 +81,13 @@ Each time you want the current build on the phone:
    cd iron-ledger
    ```
    (Already cloned? `cd iron-ledger` and `git pull` instead.)
+
+   Until pull request #35 is merged, `ios/` exists only on its branch, so
+   check that out too (with `git fetch` first in a clone you already had):
+   ```bash
+   git checkout claude/ios-wrap-native-storage
+   ```
+   Once it is merged, `main` has everything and this step goes.
 5. Install the pieces and copy the app into the shell, then open Xcode:
    ```bash
    npm install
@@ -91,7 +98,9 @@ Each time you want the current build on the phone:
 7. In Xcode, click **App** at the top of the left sidebar, then the **App**
    target, then **Signing & Capabilities**. Tick **Automatically manage
    signing** and choose your team. The Bundle Identifier must read
-   `app.mntldt`.
+   `app.mntldt`. Automatic signing registers the `app.mntldt` App ID with
+   Apple for you, so there is nothing to create by hand at
+   developer.apple.com.
 8. At the top of the window, pick your iPhone from the device menu (next to
    the ▶ button), then press **▶**. The first build fetches Capacitor itself,
    which takes a few minutes.
