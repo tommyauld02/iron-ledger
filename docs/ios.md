@@ -100,7 +100,12 @@ Each time you want the current build on the phone:
    signing** and choose your team. The Bundle Identifier must read
    `app.mntldt`. Automatic signing registers the `app.mntldt` App ID with
    Apple for you, so there is nothing to create by hand at
-   developer.apple.com.
+   developer.apple.com. Your team (ID `HKA266QX4X`) is committed in the
+   project, so Xcode has nothing to write here. If a clone from before that
+   shows the project file as modified, discard Xcode's copy before pulling:
+   ```bash
+   git restore ios/App/App.xcodeproj/project.pbxproj
+   ```
 8. At the top of the window, pick your iPhone from the device menu (next to
    the ▶ button), then press **▶**. The first build fetches Capacitor itself,
    which takes a few minutes.
