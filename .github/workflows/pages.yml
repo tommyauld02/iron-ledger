@@ -49,6 +49,18 @@ jobs:
           cp manifest.webmanifest sw.js _site/
           cp -r fonts icons vendor media _site/
           echo "built from $(grep -o 'BUILD = \"[^\"]*\"' mntl-dt.html | head -1)"
+      # The iPhone app's live updates: the files it ships, each with its
+      # SHA-256 and its address here, and the shell it needs (docs/ios.md,
+      # "How an update reaches phones"). The files are the ones just copied
+      # above; only the manifest is new.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Publish the live-update manifest
+        run: |
+          node tools/make-www.mjs --out "$RUNNER_TEMP/bundle" \
+            --manifest _site/live/manifest.json \
+            --base https://tommyauld02.github.io/iron-ledger/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

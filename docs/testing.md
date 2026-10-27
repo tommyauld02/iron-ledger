@@ -48,7 +48,11 @@ the pantry first, Claude only when the relay is out of reach · `native` the
 iPhone app's log in native storage, against a stand-in Capacitor bridge whose
 storage outlives the browser: a restart with the WebView wiped, a failed
 write and its retry, a log that cannot be read, taps before it is read, no
-service worker in the app · `relay` the
+service worker in the app · `live` the iPhone app's live updates against a
+stand-in updater and manifest: what is taken and when, the shell-version and
+downgrade guards, a build that failed to start, an updater that never
+answers, the manifest Pages publishes, and that the shell's version was raised
+if the shell changed · `relay` the
 relay itself, run in Node against a fake Gemini (exits 77, SKIPPED, with no
 Node) · `pwa` the offline shell, served the
 way Pages serves it, with the network cut, and what still answers offline · `handoff` safe-area opt-in, all

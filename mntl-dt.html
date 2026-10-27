@@ -4078,7 +4078,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-24.77";
+  var BUILD = "2026-10-26.78";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -12251,6 +12251,128 @@
     });
   }
 
+  // ---------- live updates (the iPhone app) ----------
+  // A store build carries the app as it was on the day it was built. Between
+  // store builds, every Pages deploy also publishes live/manifest.json: the
+  // BUILD, the oldest shell (the iPhone app's own version) it can run in, and
+  // every file with its SHA-256 (tools/make-www.mjs). The app reads it on
+  // opening and on coming back, and downloads a newer build in the background
+  // through @capgo/capacitor-updater, which checks every file against its
+  // hash and copies the ones unchanged since the store build out of the app
+  // instead of downloading them — usually only this file comes down.
+  //
+  // It switches only at a cold start, before anything is drawn: a reload in
+  // use would lose the rest timer and anything half typed. That is also why
+  // the plugin's next() is never called — the plugin swaps a "next" bundle the
+  // moment the app goes to the background, which is every time the phone goes
+  // in a pocket between sets. A build that fails to start is rolled back by
+  // the plugin (no notifyAppReady() within 10 s) and remembered here, so it is
+  // not tried again. The web build never takes any of this path.
+  var LIVE_URL = "https://tommyauld02.github.io/iron-ledger/live/manifest.json";
+  var LIVE_EVERY_MS = 30 * 60 * 1000;   // checking on every resume would be a fetch per set
+  var LIVE_WAIT_MS = 1500;              // the most a cold start waits for the updater
+  var LIVE_KEY = "mntl-live";           // { failed: [builds] }; new, so the new name
+  // Only where the shell has the updater: a call to a plugin the shell lacks
+  // is never answered, and an app from before it would wait at every start.
+  var live = NATIVE && typeof window.Capacitor.isPluginAvailable === "function" &&
+             window.Capacitor.isPluginAvailable("CapacitorUpdater") ? { checking: false, at: 0 } : null;
+
+  function updater(method, opts) {
+    try { return window.Capacitor.nativePromise("CapacitorUpdater", method, opts || {}); }
+    catch (e) { return Promise.reject(e); }
+  }
+  function liveFailed() {
+    try { return JSON.parse(localStorage.getItem(LIVE_KEY) || "{}").failed || []; }
+    catch (e) { return []; }
+  }
+  function liveMarkFailed(build) {
+    var f = liveFailed();
+    if (f.indexOf(build) > -1) return;
+    f.push(build);
+    try { localStorage.setItem(LIVE_KEY, JSON.stringify({ failed: f.slice(-20) })); } catch (e) {}
+  }
+  // Shell versions are numbers, part by part: 1.10 is newer than 1.9.
+  function versionAtLeast(have, need) {
+    var a = String(have).split("."), b = String(need).split(".");
+    for (var i = 0; i < Math.max(a.length, b.length); i++) {
+      var x = Number(a[i] || 0), y = Number(b[i] || 0);
+      if (x !== y) return x > y;
+    }
+    return true;
+  }
+  // Newer than what is running, and not one that failed to start here.
+  function liveNewer(build) {
+    return typeof build === "string" && /^\d{4}-\d\d-\d\d\.\d+$/.test(build) &&
+           buildAfter(build, BUILD) && liveFailed().indexOf(build) < 0;
+  }
+
+  // At a cold start, before the log is read or anything drawn: a build that
+  // finished downloading earlier is switched to, and the page reloads into
+  // it. Anything slow or broken here gives way to starting as usual. Only a
+  // build that suited this shell was downloaded, and a new shell from the
+  // store clears them all (resetWhenUpdate), so one still waiting suits it.
+  function liveStart(go) {
+    if (!live) { go(); return; }
+    var gone = false;
+    function start() { if (!gone) { gone = true; go(); } }
+    setTimeout(start, LIVE_WAIT_MS);
+    Promise.all([updater("getFailedUpdate"), updater("list")]).then(function (r) {
+      var failed = r[0] && r[0].bundle;
+      if (failed && failed.version) liveMarkFailed(failed.version);
+      var waiting = ((r[1] && r[1].bundles) || []).filter(function (x) {
+        return x.status === "pending" && liveNewer(x.version);
+      }).sort(function (x, y) { return buildAfter(x.version, y.version) ? -1 : 1; })[0];
+      if (!waiting || gone) { start(); return; }
+      gone = true;                            // the page is about to be replaced
+      updater("set", { id: waiting.id }).then(function () {
+        // set() reloads into the new build; if that never happens, start here
+        setTimeout(function () { gone = false; start(); }, 3000);
+      }, function (e) {
+        lastError = "live update b" + waiting.version.split(".").pop() + ": " + (e && e.message ? e.message : String(e));
+        gone = false; start();
+      });
+    }, start);
+  }
+
+  // Once the app has started: tell the updater this build works (or it is
+  // rolled back), then see whether Pages has a newer one.
+  function liveReady() {
+    if (!live) return;
+    updater("notifyAppReady").then(null, function () {});
+    liveCheck();
+  }
+
+  function liveCheck() {
+    if (!live || live.checking || Date.now() - live.at < LIVE_EVERY_MS || navigator.onLine === false) return;
+    live.checking = true;
+    live.at = Date.now();
+    var m = null;
+    fetch(LIVE_URL + "?t=" + Date.now(), { cache: "no-store" }).then(function (r) {
+      return r.ok ? r.json() : null;
+    }).then(function (got) {
+      m = got;
+      if (!m || !liveNewer(m.build) || !m.minNative || !Array.isArray(m.files) || !m.files.length) return null;
+      return Promise.all([updater("current"), updater("list")]);
+    }).then(function (r) {
+      if (!r) return;
+      // made for a newer shell: it waits for the app's next store update
+      if (!r[0] || !r[0].native || !versionAtLeast(r[0].native, m.minNative)) return;
+      var have = ((r[1] && r[1].bundles) || []).some(function (x) {
+        return x.version === m.build && (x.status === "pending" || x.status === "success");
+      });
+      if (have) return;
+      var tag = "b" + m.build.split(".").pop();
+      return updater("download", { url: LIVE_URL, version: m.build, manifest: m.files }).then(function () {
+        notify("Update " + tag + " opens next time you start the app");
+      }, function (e) {
+        lastError = "live update " + tag + ": " + (e && e.message ? e.message : String(e));
+      });
+    }).then(null, function () { /* no signal, or Pages out of reach: next time */ }).then(function () {
+      live.checking = false;
+    });
+  }
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) liveCheck(); });
+
   window.addEventListener("error", function (e) {
     lastError = (e && e.message ? e.message : "unknown") +
       (e && e.lineno ? " (line " + e.lineno + ")" : "");
@@ -13491,8 +13613,11 @@
   document.addEventListener("touchstart", function () {}, { passive: true });
 
   // Startup waits for the log: at once on the web, and in the iPhone app
-  // until native storage has answered (openLog, above).
-  openLog(function () {
+  // until native storage has answered (openLog, above) — after switching to a
+  // live update downloaded earlier, if there is one (liveStart, above).
+  liveStart(function () { openLog(startUp); });
+
+  function startUp() {
     load();
     // Which build last saved this phone's data, before this one stamps it: the
     // "What's new" pop-up shows what changed since then, once.
@@ -13542,7 +13667,8 @@
     // Said once: the first time the app opens on lists that held names it put
     // there, it says how many it took off rather than letting them vanish.
     if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
-  });
+    liveReady();
+  }
 })();
 </script>
 </body></html>

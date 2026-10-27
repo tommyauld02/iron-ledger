@@ -4,5 +4,20 @@
   "webDir": "www",
   "ios": {
     "contentInset": "never"
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "updateUrl": "",
+      "channelUrl": "",
+      "statsUrl": "",
+      "appReadyTimeout": 10000,
+      "resetWhenUpdate": true,
+      "autoDeleteFailed": true,
+      "autoDeletePrevious": true,
+      "shakeMenu": false,
+      "allowShakeChannelSelector": false,
+      "allowModifyUrl": false
+    }
   }
 }
