@@ -46,7 +46,9 @@ def shell_files(root=ROOT):
     cfg = json.load(io.open(os.path.join(root, "capacitor.config.json"), encoding="utf-8"))
     out.append(("capacitor.config.json", json.dumps(cfg, sort_keys=True).encode()))
     proj = _text(os.path.join(root, PBXPROJ)).decode("utf-8")
-    out.append((PBXPROJ, "\n".join(l for l in proj.split("\n") if not VOLATILE.match(l)).encode("utf-8")))
+    # every name with "/", or Windows and Linux fingerprint the same shell differently
+    out.append((PBXPROJ.replace(os.sep, "/"),
+                "\n".join(l for l in proj.split("\n") if not VOLATILE.match(l)).encode("utf-8")))
     for base in (os.path.join("ios", "App", "App"), os.path.join("ios", "App", "CapApp-SPM")):
         for d, dirs, files in os.walk(os.path.join(root, base)):
             dirs[:] = sorted(x for x in dirs if x != "public")      # public/ is the web app, copied in
