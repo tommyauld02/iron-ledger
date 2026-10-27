@@ -4078,7 +4078,12 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-22.76";
+  var BUILD = "2026-10-24.77";
+  // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
+  // Capacitor's bridge defines window.Capacitor before this page runs; nothing
+  // on the web does, so the web build never takes a native path.
+  var NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" &&
+                  window.Capacitor.isNativePlatform());
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4291,7 +4296,7 @@
 
   function load() {
     try {
-      var raw = localStorage.getItem(KEY);
+      var raw = readLog();
       if (raw) {
         var parsed = JSON.parse(raw);
         if (parsed && typeof parsed === "object") store = parsed;
@@ -4351,7 +4356,7 @@
     store.build = BUILD;   // so a backup always says which version wrote it
     noteSave();            // a change with no undo beside it ends the undo run
     try {
-      localStorage.setItem(KEY, JSON.stringify(store));
+      writeLog(JSON.stringify(store));
       saveError = null;
     } catch (e) {
       // Quota, private browsing, storage restrictions — the reason does not
@@ -4375,8 +4380,108 @@
     if (saveError) {
       label.textContent = saveError === "QuotaExceededError"
         ? "Storage on this phone is full — nothing is being saved. Copy your backup out now."
+        : shelf && shelf.readFailed
+        ? "Your log could not be opened, so nothing is saved over it. Close the app fully and open it again."
         : "This phone is not letting the app save — nothing you log now will be kept.";
     }
+  }
+
+  // ---------- where the log is kept ----------
+  // On the web, localStorage, as it always was. In the iPhone app, native
+  // storage (Capacitor Preferences: UserDefaults on iOS, SharedPreferences on
+  // Android) under the same key. To iOS, a WebView's localStorage is website
+  // data it may clear when the phone runs low on space, and this log has no
+  // second copy. Native storage belongs to the app and goes only with it.
+  //
+  // Native storage answers later and save() has to answer now, so the log is
+  // held in memory (it always was: `store`) and every write is sent the moment
+  // it is made. The bridge runs one plugin call after another, so the last
+  // write sent is the last one kept. A write that fails says so a moment
+  // later, after its change may already have said ✓: the ✓ is taken back,
+  // the save bar goes up, save() returns false from then on, and the newest
+  // log is sent again every few seconds until native storage takes it. Every
+  // write is the whole log, so the one that lands keeps everything before it.
+  var shelf = NATIVE ? { raw: null, open: false, readFailed: null, failing: null, sent: 0 } : null;
+  var SHELF_RETRY_MS = 5000;
+
+  function nativeStore(method, opts) {
+    try { return window.Capacitor.nativePromise("Preferences", method, opts); }
+    catch (e) { return Promise.reject(e); }
+  }
+  function shelfError(what, e) {
+    var x = new Error("native storage " + what + " failed" + (e && e.message ? ": " + e.message : ""));
+    x.name = "NativeStorageError";
+    return x;
+  }
+
+  function readLog() {
+    if (!shelf) return localStorage.getItem(KEY);
+    var raw = shelf.raw;
+    shelf.raw = null;        // read once, at startup; `store` holds it from here
+    return raw;
+  }
+
+  function writeLog(json) {
+    if (!shelf) { localStorage.setItem(KEY, json); return; }
+    // Before the log has been read, or when it could not be, a write would
+    // replace a log this session has never seen. Nothing is sent.
+    if (!shelf.open || shelf.readFailed) throw shelf.readFailed || shelfError("write before the log was read");
+    sendLog(json);
+    if (shelf.failing) throw shelf.failing;    // the last answer was a failure: no ✓ until one lands
+  }
+
+  function sendLog(json) {
+    var n = ++shelf.sent, sentAt = Date.now();
+    nativeStore("set", { key: KEY, value: json }).then(function () {
+      if (n !== shelf.sent || !shelf.failing) return;    // a newer write is still on its way
+      shelf.failing = null;
+      saveError = null;
+      refreshSaveBar();
+    }, function (e) {
+      shelf.failing = shelfError("write", e);
+      saveError = shelf.failing.name;
+      lastError = "save failed (" + shelf.failing.message + ")";
+      refreshSaveBar();
+      // The change this write carried may already have said "✓ Added". Take
+      // it back: a ✓ beside a bar saying nothing is kept is the contradiction
+      // rule 3 is about, and until a write lands the ✓ is not true.
+      if (lastAdded && lastAdded.at >= sentAt) { lastAdded = null; render(); }
+      // only the newest write is worth sending again; a newer one replaces it
+      if (n === shelf.sent) setTimeout(function () { if (n === shelf.sent) sendLog(json); }, SHELF_RETRY_MS);
+    });
+  }
+
+  // Runs `start` once the log can be read: on the web at once, so startup is
+  // exactly what it was; in the app, when native storage has answered.
+  function openLog(start) {
+    if (!shelf) { start(); return; }
+    function go() {
+      shelf.open = true;
+      // A tap before the log was read can only have changed the empty log
+      // that load() is about to replace, so its refused save means nothing.
+      // A log that could not be read is the opposite: the bar goes up now.
+      saveError = shelf.readFailed ? shelf.readFailed.name : null;
+      start();
+      refreshSaveBar();
+    }
+    nativeStore("get", { key: KEY }).then(function (r) {
+      var v = r && typeof r.value === "string" && r.value ? r.value : null;
+      if (!v) {
+        // Nothing there yet: the app's first open, or a build from before
+        // native storage. A log in the WebView's own storage is carried across
+        // before anything else is written, rather than started over.
+        try { v = localStorage.getItem(KEY); } catch (e) { v = null; }
+        if (v) sendLog(v);
+      }
+      shelf.raw = v;
+      go();
+    }, function (e) {
+      // Starting empty and saving would write an empty log over the real one,
+      // so this session writes nothing and says so.
+      shelf.readFailed = shelfError("read", e);
+      go();
+      lastError = shelf.readFailed.message;
+    });
   }
 
   function day(key) {
@@ -10824,8 +10929,9 @@
   var ocrLib = null;
 
   function ocrAvailable() {
-    // same gate as the service worker: vendor/ only exists on the hosted copy
-    return /^https?:$/.test(location.protocol) &&
+    // vendor/ only exists on the hosted copy and inside the iPhone app, which
+    // ships it and is served from capacitor://localhost rather than https
+    return (NATIVE || /^https?:$/.test(location.protocol)) &&
            !!document.querySelector('link[rel="manifest"]');
   }
   function canReadLabel() { return canSendImages || ocrAvailable(); }
@@ -12135,7 +12241,10 @@
   // isn't there and write a phantom error into the Backup panel. Under
   // file:// there is no service worker either, and the app is built to work
   // without one. The ?v= is what makes a new BUILD a new worker — see sw.js.
-  if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) &&
+  // Never inside the iPhone app: it ships its own files, so there is nothing
+  // for a worker to keep, and on Android the app is served over https, which
+  // the protocol test alone would let through.
+  if (!NATIVE && "serviceWorker" in navigator && /^https?:$/.test(location.protocol) &&
       document.querySelector('link[rel="manifest"]')) {
     navigator.serviceWorker.register("sw.js?v=" + BUILD).catch(function (e) {
       lastError = "service worker: " + (e && e.message ? e.message : String(e));
@@ -13381,55 +13490,59 @@
   // the press state above would not exist on the phone.
   document.addEventListener("touchstart", function () {}, { passive: true });
 
-  load();
-  // Which build last saved this phone's data, before this one stamps it: the
-  // "What's new" pop-up shows what changed since then, once.
-  var prevBuild = store.build;
-  // Reconciles the pre-paint guess with the log itself. They only disagree
-  // after a restore or on a phone that has never saved a preference.
-  applyLook();
-  applyTabs();
-
-  // Stamp the build straight away, so a backup always reveals which code wrote
-  // it — even if nothing has been logged since.
-  var tag = document.getElementById("buildTag");
-  if (tag) tag.textContent = "b" + BUILD.split(".").pop();
-  if (store.build !== BUILD) { save(); }
-
-  // Saved to the home screen, iOS reads these off the page as it stands when you
-  // tap Add to Home Screen — so putting them in at load makes the icon open a
-  // real full-screen app with its own status bar rather than a Safari tab.
-  (function homeScreenMeta() {
-    function meta(name, content) {
-      if (document.querySelector('meta[name="' + name + '"]')) return;
-      var m = document.createElement("meta");
-      m.setAttribute("name", name);
-      m.setAttribute("content", content);
-      document.head.appendChild(m);
-    }
-    meta("apple-mobile-web-app-capable", "yes");
-    meta("mobile-web-app-capable", "yes");
-    meta("apple-mobile-web-app-title", "MNTL D&T");
-    meta("apple-mobile-web-app-status-bar-style", "default");
-    meta("format-detection", "telephone=no");   // stops iOS linkifying rep counts
-
-    // Paint the status bar and the area behind the tab bar to match the app,
-    // and keep it matching when the phone flips between light and dark — but
-    // through applyLook(), so a chosen Light or Dark wins over the phone.
-    themeMeta = document.createElement("meta");
-    themeMeta.setAttribute("name", "theme-color");
-    document.head.appendChild(themeMeta);
+  // Startup waits for the log: at once on the web, and in the iPhone app
+  // until native storage has answered (openLog, above).
+  openLog(function () {
+    load();
+    // Which build last saved this phone's data, before this one stamps it: the
+    // "What's new" pop-up shows what changed since then, once.
+    var prevBuild = store.build;
+    // Reconciles the pre-paint guess with the log itself. They only disagree
+    // after a restore or on a phone that has never saved a preference.
     applyLook();
-    if (darkMq && darkMq.addEventListener) darkMq.addEventListener("change", applyLook);
-    else if (darkMq && darkMq.addListener) darkMq.addListener(applyLook);
-  })();
+    applyTabs();
 
-  if (movesNeedSaving) save();
-  render();
-  showNews(prevBuild);
-  // Said once: the first time the app opens on lists that held names it put
-  // there, it says how many it took off rather than letting them vanish.
-  if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
+    // Stamp the build straight away, so a backup always reveals which code wrote
+    // it — even if nothing has been logged since.
+    var tag = document.getElementById("buildTag");
+    if (tag) tag.textContent = "b" + BUILD.split(".").pop();
+    if (store.build !== BUILD) { save(); }
+
+    // Saved to the home screen, iOS reads these off the page as it stands when you
+    // tap Add to Home Screen — so putting them in at load makes the icon open a
+    // real full-screen app with its own status bar rather than a Safari tab.
+    (function homeScreenMeta() {
+      function meta(name, content) {
+        if (document.querySelector('meta[name="' + name + '"]')) return;
+        var m = document.createElement("meta");
+        m.setAttribute("name", name);
+        m.setAttribute("content", content);
+        document.head.appendChild(m);
+      }
+      meta("apple-mobile-web-app-capable", "yes");
+      meta("mobile-web-app-capable", "yes");
+      meta("apple-mobile-web-app-title", "MNTL D&T");
+      meta("apple-mobile-web-app-status-bar-style", "default");
+      meta("format-detection", "telephone=no");   // stops iOS linkifying rep counts
+
+      // Paint the status bar and the area behind the tab bar to match the app,
+      // and keep it matching when the phone flips between light and dark — but
+      // through applyLook(), so a chosen Light or Dark wins over the phone.
+      themeMeta = document.createElement("meta");
+      themeMeta.setAttribute("name", "theme-color");
+      document.head.appendChild(themeMeta);
+      applyLook();
+      if (darkMq && darkMq.addEventListener) darkMq.addEventListener("change", applyLook);
+      else if (darkMq && darkMq.addListener) darkMq.addListener(applyLook);
+    })();
+
+    if (movesNeedSaving) save();
+    render();
+    showNews(prevBuild);
+    // Said once: the first time the app opens on lists that held names it put
+    // there, it says how many it took off rather than letting them vanish.
+    if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
+  });
 })();
 </script>
 </body></html>

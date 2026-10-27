@@ -6,7 +6,7 @@ in mntl-dt.html. Re-run after changing --ink / --ground:
     python tools/make-icons.py
 
 Uses the Playwright Chromium that the test suites already need, so this adds
-no dependency. Writes icons/ from the repo root.
+no dependency. Writes icons/ and the iPhone app's icon from the repo root.
 
 The mark is Tommy's sketch (2026-10-20): a Roman II with the top-right corner
 gone, so it reads as an I and an L sharing one base. The left stem keeps the
@@ -46,13 +46,13 @@ svg{{display:block}}
 
 # pad = share of the canvas left empty around the mark. Maskable icons get the
 # 20% safe zone Android crops to; normal icons sit tighter.
-def render(page, size, out, pad):
+def render(page, size, out, pad, folder="icons"):
     w = size * (1 - pad) * 0.69
     page.set_viewport_size({"width": size, "height": size})
     page.set_content(PAGE.format(s=size, ink=INK, mark=MARK.format(
         w=round(w, 2), h=round(w * 40 / 58, 2), ground=GROUND)))
-    page.locator(".icon").screenshot(path=os.path.join(ROOT, "icons", out))
-    print("  icons/%-28s %dx%d" % (out, size, size))
+    page.locator(".icon").screenshot(path=os.path.join(ROOT, folder, out))
+    print("  %s/%-28s %dx%d" % (folder.replace(os.sep, "/"), out, size, size))
 
 
 os.makedirs(os.path.join(ROOT, "icons"), exist_ok=True)
@@ -65,5 +65,10 @@ with sync_playwright() as pw:
     render(pg, 180, "apple-touch-icon.png", 0.16)
     # Android crops maskable icons to a circle: keep the mark inside 80%
     render(pg, 512, "icon-512-maskable.png", 0.30)
+    # The iPhone app (ios/, Capacitor): one 1024 square, from which Xcode makes
+    # every size. The App Store refuses an icon with an alpha channel, and a
+    # screenshot of this opaque square has none.
+    render(pg, 1024, "AppIcon-512@2x.png", 0.16,
+           folder=os.path.join("ios", "App", "App", "Assets.xcassets", "AppIcon.appiconset"))
     b.close()
 print("done")

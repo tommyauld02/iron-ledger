@@ -1,0 +1,8 @@
+{
+  "appId": "app.mntldt",
+  "appName": "MNTL D&T",
+  "webDir": "www",
+  "ios": {
+    "contentInset": "never"
+  }
+}

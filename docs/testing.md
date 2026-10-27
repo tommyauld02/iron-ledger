@@ -44,7 +44,11 @@ contrast in both themes · `coach` routine
 builder and history preservation · `meals` combine/split/take out ·
 `estmeal` the estimate-as-one-meal path · `finder` the food finder's contract
 from the app's side: no key in the app, only the food and the country sent,
-the pantry first, Claude only when the relay is out of reach · `relay` the
+the pantry first, Claude only when the relay is out of reach · `native` the
+iPhone app's log in native storage, against a stand-in Capacitor bridge whose
+storage outlives the browser: a restart with the WebView wiped, a failed
+write and its retry, a log that cannot be read, taps before it is read, no
+service worker in the app · `relay` the
 relay itself, run in Node against a fake Gemini (exits 77, SKIPPED, with no
 Node) · `pwa` the offline shell, served the
 way Pages serves it, with the network cut, and what still answers offline · `handoff` safe-area opt-in, all

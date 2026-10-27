@@ -20,6 +20,43 @@ into `lastError`, so the Backup panel names it. Storage being full is only one
 trigger: the same path fires in private browsing and under iOS storage
 pressure, which arrive long before the quota does.
 
+**In the iPhone app the log lives in native storage.** Inside the Capacitor
+shell (`docs/ios.md`) a WebView's localStorage is website data to iOS, which
+may clear it when the phone runs low on space — and this log has no second
+copy. So when `NATIVE` is true, `readLog()` and `writeLog()` go to
+`@capacitor/preferences` (UserDefaults on iOS, SharedPreferences on Android)
+under the same key, `iron-ledger-v1`, through
+`Capacitor.nativePromise("Preferences", …)`, which the bridge provides with no
+JavaScript bundled. On the web they are localStorage, exactly as before, and
+the web build never touches the bridge. Preferences over SQLite because the
+log is one JSON document under one key, which is a key-value store's whole
+job; it is Capacitor's own plugin, released with it; and the community SQLite
+plugin brings SQLCipher, an encryption library that would muddy the App
+Store's export-compliance answer. At about 1.1 KB a day the log stays a few
+megabytes for years, well within what UserDefaults holds; revisit if it ever
+grows to tens of megabytes. `@capacitor/preferences` has no 5 MB ceiling,
+unlike localStorage.
+
+Native storage answers later and `save()` must answer now, which is why this
+needs care. Startup waits: `openLog()` reads the log before `load()` and the
+first render, and on the web runs them at once, so startup there is
+unchanged. Until the log has been read, `writeLog()` refuses — a tap in that
+moment would otherwise write an empty log over the real one — and if it
+cannot be read at all, nothing is written for the whole session and the save
+bar says the log could not be opened. Every write is sent the moment it is
+made; the bridge runs plugin calls one after another, so the last write sent
+is the last one kept. A write that fails comes back a moment later, possibly
+after its own change said "✓ Added": that ✓ is taken back (`lastAdded`
+cleared and redrawn), the bar goes up, `save()` returns false until a write
+lands, and the newest log is sent again every five seconds. Every write is the
+whole log, so the one that lands keeps everything before it. The one thing
+that can still read wrong is the other way round: while writes are failing, a
+change whose own write then lands says "Not saved" — the safe direction. A first open with nothing in native storage carries across a
+log left in the WebView's own localStorage before writing anything. The look
+key, `iron-ledger-look`, stays in localStorage: it is only the pre-paint
+script's copy of `store.theme` and `store.accent`. `tests/native.py` covers
+each of these against a stand-in bridge whose storage survives the browser.
+
 **Nothing expires, and there is no cap.** No pruning, no cutoff, no bound on
 the date or year arrows — `store.days` keeps every day forever. A fully logged
 day costs about 1.1 KB, so a 5 MB origin holds roughly 4,700 days, about
@@ -96,6 +133,10 @@ for the iOS-serves-an-old-build problem this project kept hitting — online you
 always get the current build, offline the cache answers. The worker reads its
 version from its own `?v=` query, which the app sets from `BUILD`, so there is
 no second version to bump.
+
+Inside the iPhone app there is no service worker at all: the app ships its
+own files, and on Android it would be served over https, which the protocol
+test alone would let through, so registration also checks `!NATIVE`.
 
 Registration is gated on the app's own `<link rel="manifest">`, not on the
 protocol. Artifacts are https too, so a protocol test would send them chasing a
