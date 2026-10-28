@@ -1,0 +1,104 @@
+name: Build for TestFlight
+
+# Builds the iPhone app on GitHub's Mac and uploads it to App Store Connect,
+# where it appears in TestFlight. No MacBook needed. Run it by hand:
+#   gh workflow run testflight.yml        (or Actions → Build for TestFlight → Run)
+#
+# It builds main only, and only after the full suite passes on that same
+# commit, in this run — so a build that reaches a phone has passed ./verify.sh.
+#
+# Signing is automatic: Xcode signs with a distribution certificate Apple
+# keeps in the cloud, using an App Store Connect API key. No certificate or
+# profile lives in this repo or its secrets. The three secrets are Tommy's to
+# create (docs/ios.md); they are written to a file only for the length of the
+# build, never printed, and the file is deleted however the job ends.
+#
+# Version: the marketing version is MARKETING_VERSION in the Xcode project
+# (one place; see docs/ios.md). The build number is this workflow's run
+# number, which only ever goes up, as App Store Connect requires.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Playwright
+        run: |
+          python -m pip install --quiet playwright
+          python -m playwright install --with-deps chromium
+      - name: Run the suites
+        run: sh verify.sh 8
+
+  build:
+    needs: verify
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      XCODE: /Applications/Xcode_26.6.app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Use Xcode 26.6
+        run: sudo xcode-select -s "$XCODE" && xcodebuild -version
+      - name: Assemble the app
+        run: |
+          npm ci
+          npm run sync
+      - name: Check the secrets are there
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          missing=""
+          [ -n "$ASC_KEY_ID" ] || missing="$missing ASC_KEY_ID"
+          [ -n "$ASC_ISSUER_ID" ] || missing="$missing ASC_ISSUER_ID"
+          [ -n "$ASC_KEY_P8" ] || missing="$missing ASC_KEY_P8"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (see docs/ios.md, 'How an update reaches phones')"
+            exit 1
+          fi
+      - name: Archive, sign and upload
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          set -eu
+          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          trap 'rm -f "$KEY"' EXIT
+          umask 077
+          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          AUTH="-allowProvisioningUpdates -authenticationKeyPath $KEY -authenticationKeyID $ASC_KEY_ID -authenticationKeyIssuerID $ASC_ISSUER_ID"
+          ARCHIVE="$RUNNER_TEMP/App.xcarchive"
+          xcodebuild archive \
+            -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            $AUTH
+          # destination=upload in the options file: export sends it straight
+          # to App Store Connect.
+          xcodebuild -exportArchive \
+            -archivePath "$ARCHIVE" -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            $AUTH
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print :ApplicationProperties:CFBundleShortVersionString' "$ARCHIVE/Info.plist")
+          echo "### Uploaded MNTL D&T $VERSION ($BUILD_NUMBER)" >> "$GITHUB_STEP_SUMMARY"
+          echo "Built from $(grep -o 'BUILD = \"[^\"]*\"' mntl-dt.html | head -1) at ${GITHUB_SHA}. It shows in TestFlight once Apple has processed it, usually 5-15 minutes." >> "$GITHUB_STEP_SUMMARY"

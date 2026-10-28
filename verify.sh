@@ -31,7 +31,7 @@ skipped=""
 log=$(mktemp)
 trap 'rm -f "$log"' EXIT
 for s in sweep days week probe darkcheck coach meals estmeal touch mobile \
-         commit noclaude yourwords firstrun photo2 taborder pwa handoff finder relay label hittest share native; do
+         commit noclaude yourwords firstrun photo2 taborder pwa handoff finder relay label hittest share native live; do
   echo "=================== $s ==================="
   # `cmd && rc=0 || rc=$?` keeps set -e out of it: a bare `cmd; rc=$?` would
   # abort the whole run on the first failing suite, hiding every later one.

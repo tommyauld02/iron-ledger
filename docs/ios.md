@@ -10,12 +10,18 @@ nothing here is iPhone-only except the `ios/` folder itself.
 ## What is where
 
 ```
-package.json            Capacitor 8.5.3 and @capacitor/preferences 8.0.1, pinned exactly
-capacitor.config.json   app id, the name under the icon, webDir
-tools/make-www.mjs      assembles www/ from mntl-dt.html, fonts/, icons/, vendor/
+package.json            Capacitor 8.5.3, @capacitor/preferences 8.0.1 and
+                        @capgo/capacitor-updater 8.52.1, pinned exactly
+capacitor.config.json   app id, the name under the icon, webDir, the updater's settings
+tools/make-www.mjs      assembles www/ from mntl-dt.html, fonts/, icons/, vendor/,
+                        and the live-update manifest Pages publishes
+tools/shell-version.py  the shell's version and its ledger, ios/shell-versions.json
 www/                    generated, never committed (the same rule as dist/)
 ios/App/                the Xcode project; Swift Package Manager, no CocoaPods
 ios/App/App/public/     Capacitor's copy of www/, generated, never committed
+ios/ExportOptions.plist how the TestFlight workflow signs and uploads
+.github/workflows/testflight.yml   builds on GitHub's Mac and uploads to TestFlight
+.github/workflows/ios-build.yml    compiles the app, unsigned, on pull requests
 ```
 
 `www/` holds `mntl-dt.html` as `index.html`, beside `fonts/`, `icons/`,
@@ -37,7 +43,9 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
 - **`ITSAppUsesNonExemptEncryption` is NO.** The app uses only the standard
   HTTPS the system provides (the food finder's relay). Nothing in it bundles
   encryption, which is also one reason the log is not kept in SQLite: the
-  community SQLite plugin brings SQLCipher with it.
+  community SQLite plugin brings SQLCipher with it. The live-update plugin
+  only hashes files (SHA-256, with Apple's own CryptoKit); its optional
+  encrypted bundles are not used.
 - **The camera** is asked for with words saying what it is for: barcodes and
   labels, read on the phone. iOS stops an app that opens the camera without
   them.
@@ -56,6 +64,126 @@ native storage*). In short: `@capacitor/preferences` (UserDefaults on iOS)
 under the same key, `iron-ledger-v1`, with `save()` and `saveError` keeping
 their promise that a failed write never looks like a successful one.
 `tests/native.py` proves it with a stand-in for Capacitor's bridge.
+
+## How an update reaches phones
+
+There are two ways, and neither needs the MacBook.
+
+| What changed | How it ships | Reaches phones |
+|---|---|---|
+| `mntl-dt.html` (fixes, wording, layout, new screens for logging food and training) | **Live update**: merge to `main`, as for the web app | On the next cold start after the phone has fetched it, usually the same day |
+| Anything in the shell: a plugin, a permission, the icon or name, `ios/`, `capacitor.config.json`, `package.json` dependencies | **Store build**: run *Build for TestFlight*, then submit in App Store Connect | TestFlight in about 15 minutes; the App Store after review, usually a day |
+
+### Live updates
+
+Every Pages deploy also publishes `live/manifest.json`
+(`tools/make-www.mjs --manifest`, run by `pages.yml`): the BUILD, the shell
+version it needs (`minNative`), and every file the app ships with its SHA-256
+and its address on Pages. In the app:
+
+1. On opening, and on coming back to it (at most every half hour), the app
+   reads the manifest.
+2. A newer BUILD made for this phone's shell is downloaded in the background
+   by `@capgo/capacitor-updater`. Every file is checked against its hash; a file
+   unchanged since the store build is copied out of the app instead of
+   downloaded, so usually only the HTML file comes down. A file that fails its
+   hash fails the whole download, which is tried again later.
+3. The app says *"Update b79 opens next time you start the app"*.
+4. At the next **cold start** (after the app was swiped away, or iOS closed
+   it), before anything is drawn, the app switches to it. Never while in use,
+   not even on coming back from the background, because a reload then would
+   lose the rest timer and anything half typed. This is why the plugin's own
+   `next()` is never used: it swaps the moment the app goes to the background.
+5. The new build starts and tells the plugin it is ready. The header shows its
+   number (`b79`) and What's new lists what changed, the same as on the web.
+   A build that does not get that far within 10 seconds is rolled back by the
+   plugin to the one before, and the app never tries that build again.
+
+How the app decides is in `mntl-dt.html` (*live updates*), and
+`tests/live.py` checks every rule with a stand-in for the plugin and the
+manifest.
+
+**Privacy.** The plugin is set to never contact Capgo: `updateUrl`,
+`channelUrl` and `statsUrl` are empty in `capacitor.config.json`, so it sends
+no statistics and no device ID anywhere. The only requests are the manifest and
+the files, from GitHub Pages, the same host as the web app. No log data goes
+with them. The privacy policy should still say the app checks GitHub Pages for
+updates.
+
+**A bad live update reaches every phone fast.** The rollback only catches a
+build that fails to start. A build that starts but has a bug is fixed by
+shipping the fix the same way, with a new BUILD. `./verify.sh` gates every
+Pages deploy, so it gates every live update too.
+
+### What must go through a store build
+
+Apple allows web code downloaded later only if it does not change the app's
+primary purpose or add features that do not fit what was reviewed (App Review
+Guideline 2.5.2, and the interpreted-code section of the Apple Developer
+Program License Agreement). Fixes and improvements to logging food and
+training are within that. These always go through review instead:
+
+- a new plugin or any native code, so any change under `ios/`, to
+  `capacitor.config.json`, or to `package.json`'s dependencies
+- a new permission (camera, notifications, Health, location)
+- the icon, the name, the launch screen
+- a new purpose: ads, accounts, payments, anything a reviewer would see as a
+  different app
+
+**The shell's version keeps this honest.** Each live update says which shell
+it needs (`MARKETING_VERSION` in the Xcode project, the one place the version
+is set), and a phone with an older shell ignores it. Phones on the older shell
+keep the last build made for them until the store update reaches them.
+`tools/shell-version.py` fingerprints the shell, and `tests/live.py` fails if
+the shell has changed while the version has not. So after changing the shell:
+
+1. In Xcode, raise **Version** (General tab) for the App target, e.g. 1.0 → 1.1.
+   That sets `MARKETING_VERSION` in both configurations. (Or edit both lines of
+   `project.pbxproj`.)
+2. Record it:
+   ```bash
+   python tools/shell-version.py --record
+   ```
+3. Commit both, merge, and run *Build for TestFlight*.
+
+### Store builds from GitHub: Build for TestFlight
+
+`.github/workflows/testflight.yml` runs on GitHub's Mac (macOS 26, Xcode 26.6).
+Start it from the GitHub app (**Actions → Build for TestFlight → Run
+workflow**) or from a terminal:
+
+```bash
+gh workflow run testflight.yml
+```
+
+- It builds `main` only, and only after `./verify.sh` passes on that commit in
+  the same run.
+- The version is `MARKETING_VERSION`; the build number is the workflow's run
+  number, which only goes up, as App Store Connect requires.
+- It signs automatically. Apple keeps the distribution certificate (cloud
+  signing), so no certificate or profile is in the repo or its secrets.
+- It uploads straight to App Store Connect. The build shows in TestFlight once
+  Apple has processed it, usually 5 to 15 minutes. The encryption question is
+  already answered by the app (`ITSAppUsesNonExemptEncryption` is NO).
+
+It needs three repository secrets, from one App Store Connect API key with
+the **Admin** role (cloud signing needs it):
+
+| Secret | What goes in it |
+|---|---|
+| `ASC_KEY_ID` | the key's ID, 10 characters |
+| `ASC_ISSUER_ID` | the Issuer ID shown above the list of keys |
+| `ASC_KEY_P8` | the whole text of the downloaded `AuthKey_<ID>.p8` file, including its BEGIN and END lines |
+
+The workflow writes the key to a temporary file for the length of the build,
+never prints it, and deletes it however the job ends. Agents never create or
+handle the key; Tommy makes it at App Store Connect → Users and Access →
+Integrations → App Store Connect API, and pastes the three values at GitHub →
+the repo → Settings → Secrets and variables → Actions.
+
+`.github/workflows/ios-build.yml` also compiles the app, unsigned and with no
+secrets, on every pull request that touches the shell, so a change that would
+not build is caught before it is merged.
 
 ## Running it on your iPhone (Tommy, on the MacBook)
 
