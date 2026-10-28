@@ -10,6 +10,7 @@ viewport-sized steps and each pass tests only what is fully on screen at that
 moment. Scrolling per element instead makes every rect measured before the
 scroll stale, which reports controls as covered when they are not.
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 

@@ -1,3 +1,4 @@
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, datetime, json
 

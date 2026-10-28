@@ -1,3 +1,4 @@
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import io, os, json, datetime, calendar
 import re
@@ -911,8 +912,9 @@ with sync_playwright() as pw:
           p.evaluate("()=>!document.getElementById('setSheet').hidden"))
     # what is on screen: water's goal and unit stay folded away while water is off
     PRESSED="e=>e.filter(x=>x.getClientRects().length).map(x=>x.textContent)"
+    # Ask an agent reads On: this phone is a fakeai.phone, which has already allowed it
     check("settings: it starts on the phone's own look and teal, with carbs, water and Coach hidden",
-          p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)==["Match phone","Teal","In place","Hidden","Hidden","Hidden"],
+          p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)==["Match phone","Teal","In place","Hidden","Hidden","Hidden","On"],
           str(p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)))
     small=[x for x in p.eval_on_selector_all("#setSheet button",
            "e=>e.filter(b=>b.getClientRects().length).map(b=>[b.textContent.trim()||b.getAttribute('aria-label'),Math.round(b.getBoundingClientRect().height)])")
@@ -3518,9 +3520,9 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The keyboard settles"
-          and titles[1]=="Ask an agent holds still" and titles[2]=="A new name: MNTL D&T"
-          and titles[3]=="Typing stays in sight", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="An age check, and Ask an agent asks first"
+          and titles[1]=="The keyboard settles" and titles[2]=="Ask an agent holds still"
+          and titles[3]=="A new name: MNTL D&T", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

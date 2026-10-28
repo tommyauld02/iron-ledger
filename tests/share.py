@@ -12,6 +12,7 @@ The export therefore carries no ids at all and the importer mints fresh ones,
 so a collision is not defended against, it cannot happen. This suite proves
 that with two stores that deliberately collide.
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, base64, json, datetime
 

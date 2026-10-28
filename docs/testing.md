@@ -52,7 +52,12 @@ service worker in the app · `live` the iPhone app's live updates against a
 stand-in updater and manifest: what is taken and when, the shell-version and
 downgrade guards, a build that failed to start, an updater that never
 answers, the manifest Pages publishes, and that the shell's version was raised
-if the shell changed · `relay` the
+if the shell changed · `agecheck` the age check and Ask an agent's
+permission, answered as a person would: under 18, 18 or older, an incomplete
+check, a relaunch, an existing install with a log, the web build and the
+iPhone app; Not now, Allow and ask, Find it again, Tap to estimate,
+withdrawing in Settings (one question already on its way), and that no request
+reaches the stand-in relay without both answers · `relay` the
 relay itself, run in Node against a fake Gemini (exits 77, SKIPPED, with no
 Node) · `pwa` the offline shell, served the
 way Pages serves it, with the network cut, and what still answers offline · `handoff` safe-area opt-in, all
@@ -62,6 +67,17 @@ events via CDP
 including the press-and-hold drag · `mobile` fit and font audit across five
 iPhone sizes · plus `commit`, `noclaude`, `yourwords`, `firstrun`, `photo2`,
 `taborder`.
+
+**Every suite but `agecheck` opens past the age check.** From b79 the app
+asks before anything else, which would stop every suite at the door. Each one
+imports `tests/answered.py` first; it adds `window.IRON_LEDGER_ADULT=true` to
+every browser context, the app's stand-in for an answer already given, which
+it reads only while the log holds no answer of its own. Nothing is written to
+the log, so a fixture is exactly what the suite saved. `fakeai.phone()` does
+the same for Ask an agent's permission (`IRON_LEDGER_AI`) unless
+`allowed=False`. A new suite that opens the app imports `answered` too, or it
+will time out on the age check. `darkcheck` measures both screens while hidden,
+since none of its pages ever shows them; `agecheck` measures them on screen.
 
 **CI runs Linux, and a platform default is a platform difference.** The
 technique box is a native `<select>` made invisible, and it set no colours of
