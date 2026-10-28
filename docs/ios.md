@@ -181,6 +181,17 @@ handle the key; Tommy makes it at App Store Connect → Users and Access →
 Integrations → App Store Connect API, and pastes the three values at GitHub →
 the repo → Settings → Secrets and variables → Actions.
 
+**A pasted key rarely arrives byte for byte.** The first two uploads (b78)
+failed with `Invalid authentication key credential specified
+(CryptoKit.CryptoKitASN1Error.invalidPEMDocument)`. That is Apple's tools
+refusing the key's *shape*, not the key: GitHub's web form sends line breaks as
+CRLF, and an editor can indent the lines, fold them onto one, or turn the
+dashes into long ones. The workflow now strips CRs and stray spaces and puts
+back the line breaks of a one-line paste. It stops with a plain error, before
+xcodebuild, if the BEGIN/END lines are missing or a character no key contains
+is in the body. Most reliable of all is to skip pasting:
+`gh secret set ASC_KEY_P8 --repo tommyauld02/iron-ledger < AuthKey_<ID>.p8`.
+
 `.github/workflows/ios-build.yml` also compiles the app, unsigned and with no
 secrets, on every pull request that touches the shell, so a change that would
 not build is caught before it is merged.
