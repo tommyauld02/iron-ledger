@@ -25,6 +25,7 @@ It checks that:
 What it cannot show: that UserDefaults survives a phone restart. That is
 Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools

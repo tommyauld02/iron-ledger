@@ -23,6 +23,7 @@ It checks that:
   with the right hashes and the shell they need (needs Node; skipped if absent)
 - the shell's version went up if the shell changed (tools/shell-version.py)
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, io, re, json, shutil, hashlib, tempfile, subprocess, datetime, importlib.util
 

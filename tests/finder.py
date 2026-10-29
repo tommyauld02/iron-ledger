@@ -15,6 +15,7 @@ cost a key, privacy or a wrong number:
 
 The relay is tests/fakeai.py, here as everywhere; nothing is sent anywhere.
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, io, re, json, datetime
 import fakeai
@@ -60,6 +61,7 @@ def page(b, relay=True, claude=False, reply=None, log=None, size=(402, 874)):
     ctx.add_init_script(CLAUDE if claude else "delete window.claude;")
     if relay is not None:                                # None: the app as it is, opened from disk
         ctx.add_init_script(fakeai.RELAY_SCRIPT if relay else fakeai.NO_RELAY_SCRIPT)
+    ctx.add_init_script(fakeai.AI_SCRIPT)                # Ask an agent already allowed
     fakeai.install(ctx, reply=reply, log=log)
     p = ctx.new_page(); errs = []; offsite = []; heads = []
     p.on("pageerror", lambda e: errs.append(str(e)))

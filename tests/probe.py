@@ -1,3 +1,4 @@
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, json, datetime, hashlib
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today(); Ts=T.isoformat(); Y=(T-datetime.timedelta(days=1)).isoformat()

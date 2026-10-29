@@ -121,6 +121,22 @@ version wired handlers sequentially after a long render, so one throw left
 every later button dead and silent. If `render()` throws on the Macros tab, a
 plain fallback view still lets you log.
 
+**The age check comes before anything else (b79).** Gemini's terms are for
+adults, so the whole app is 18+ (decided 2026-10-28). `startUp()` reads the
+log and applies the look, then either opens the app (`openApp()`: the build
+stamp, the first render, What's new) or shows the age check over everything,
+with `.app` inert, and opens the app only on *I'm 18 or older*. Until then
+nothing is drawn and nothing is saved, so closing the app on that screen asks
+again next time. A phone that had the app before b79 is asked once, and its
+What's new waits behind the check. *I'm under 18* is kept as a no, so the
+sorry screen comes back on every open, with no way in; a log already on the
+phone is left exactly as it was. `liveReady()` is called either way: the build
+has started, and the live updater rolls back a build that stays quiet for 10
+seconds. The answers live in the log as `store.consent` — `adult`, `ai` and
+`aiAt` (when Ask an agent was allowed), nothing else, no birth date — under
+the same key. Like `lastBackupAt`, `mergeInto()` does not carry them across a
+restore: they were answered on this phone.
+
 **Days are judged against the goal in force when they were logged.**
 `stampGoal()` snapshots it, so changing your target today never rewrites last
 month's calendar.

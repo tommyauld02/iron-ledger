@@ -31,7 +31,7 @@ without a migration and Tommy's say-so.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 25 suites, ~1,330 checks, 18
+**1. Nothing ships without `./verify.sh` passing.** 26 suites, ~1,430 checks, 19
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -84,7 +84,7 @@ manifest.webmanifest, sw.js   the PWA shell
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              24 Playwright suites, and relay.py, which runs the relay in Node
+tests/              25 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -123,6 +123,10 @@ The areas `TEAM.md` keeps for Nick, because a slip there loses someone's log:
 
 Everything else:
 
+- **The age check and Ask an agent's permission** — 18+ before anything
+  else, `store.consent`, the suites' stand-in (`tests/answered.py`) →
+  `docs/architecture.md` (*The age check comes before anything else*),
+  `docs/food.md` (*Ask an agent asks before it first sends*), `docs/testing.md`
 - **What's new and `NEWS`** — an entry with every build a person would notice
   → `docs/architecture.md`
 - **Rendering** — the full redraw into `#view`, delegated handlers →
@@ -203,7 +207,8 @@ is fixed, and it is worth keeping straight:
 
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `week`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
-  `handoff`, `finder`, `relay`, `label`, `hittest`, `share`, `native`, `live`.
+  `handoff`, `finder`, `relay`, `label`, `hittest`, `share`, `native`, `live`,
+  `agecheck`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s

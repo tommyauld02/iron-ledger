@@ -98,6 +98,8 @@ and its address on Pages. In the app:
    number (`b79`) and What's new lists what changed, the same as on the web.
    A build that does not get that far within 10 seconds is rolled back by the
    plugin to the one before, and the app never tries that build again.
+   The age check (b79) does not hold this up: the app says it is ready
+   while the check is still on screen, since the build has started.
 
 How the app decides is in `mntl-dt.html` (*live updates*), and
 `tests/live.py` checks every rule with a stand-in for the plugin and the
@@ -180,6 +182,22 @@ never prints it, and deletes it however the job ends. Agents never create or
 handle the key; Tommy makes it at App Store Connect → Users and Access →
 Integrations → App Store Connect API, and pastes the three values at GitHub →
 the repo → Settings → Secrets and variables → Actions.
+
+**A pasted key rarely arrives byte for byte.** The first two uploads (b78)
+failed with `Invalid authentication key credential specified
+(CryptoKit.CryptoKitASN1Error.invalidPEMDocument)`. That is Apple's tools
+refusing the key's *shape*, not the key: GitHub's web form sends line breaks as
+CRLF, and an editor can indent the lines, fold them onto one, or turn the
+dashes into long ones. A third (b78, run 40786069915) passed all of that and
+still failed: Apple's PEM reader wants the body in lines of exactly 64
+characters, and a re-wrapped paste has other lengths. So the workflow no longer
+repairs the paste; it takes the body alone (whatever the line breaks, spaces or
+dashes on the BEGIN/END lines), writes a fresh file with exact BEGIN/END lines
+and 64-character lines, and asks `openssl pkey` to read it. It stops with a
+plain error, before xcodebuild, if BEGIN/END is missing, a character no key
+contains is in the body, or openssl cannot read the result (a character lost or
+changed). Most reliable of all is to skip pasting:
+`gh secret set ASC_KEY_P8 --repo tommyauld02/iron-ledger < AuthKey_<ID>.p8`.
 
 `.github/workflows/ios-build.yml` also compiles the app, unsigned and with no
 secrets, on every pull request that touches the shell, so a change that would
