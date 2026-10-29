@@ -3966,6 +3966,18 @@
     <p>Questions? The privacy policy and support page are below.</p>
     <div class="ag-links"></div>
   </section>
+  <!-- After a significant change to the Terms (TERMS, below), asked once of
+       someone who already said they are 18 or older. No under-18 button: that
+       was answered. Not agreeing means not carrying on, so there is no No. -->
+  <section class="agecard" id="termsAsk" hidden>
+    <span class="ag-k">MNTL D&amp;T</span>
+    <h2 id="termsTitle">The Terms of Use have changed</h2>
+    <p>Have a look at them below, then agree to keep using the app. Your log stays as it is.</p>
+    <div class="ag-acts">
+      <button class="btn" id="termsYes">I agree</button>
+    </div>
+    <div class="ag-links"></div>
+  </section>
 </div>
 
 <div class="sheet" id="sheet" hidden>
@@ -4058,6 +4070,7 @@
     <div class="set-group">
       <span class="eyebrow">About</span>
       <div class="ag-links"></div>
+      <p class="set-hint" id="setTermsHint"></p>
     </div>
     <button class="btn ghost" id="setDone">Done</button>
   </div>
@@ -4170,7 +4183,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-28.79";
+  var BUILD = "2026-10-29.80";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4835,6 +4848,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-29.80", t: "Clearer about estimates", items: [
+      "The goal calculator now says plainly that its numbers are estimates, not medical advice.",
+      "Ask an agent’s answers now remind you they can be wrong: check the label where there is one.",
+      "Settings → About shows the day you agreed to the Terms of Use." ] },
     { b: "2026-10-28.79", t: "An age check, and Ask an agent asks first", items: [
       "MNTL D&T is for adults. The first time it opens after this update, it asks you to confirm you’re 18 or older, just once. Only your answer is kept, on this phone.",
       "The first time Ask an agent would send something, it tells you what goes to Google’s AI — what you type and your country — and asks before sending. Logging, the pantry, barcodes and labels work without it.",
@@ -5933,9 +5950,18 @@
   // 18+, asked once before anything else. And Apple's guideline 5.1.2(i) wants
   // a clear yes before anything goes to someone else's AI, so Ask an agent
   // asks the first time it would send. Only the answers are kept, in the log
-  // (store.consent: adult true/false, ai true/false, aiAt when it was given)
-  // — no birth date, no ID. They stay with this phone: mergeInto() leaves them
+  // (store.consent: adult true/false, ai true/false, aiAt when it was given,
+  // terms the version of the Terms of Use agreed to and termsAt when) — no
+  // birth date, no ID. They stay with this phone: mergeInto() leaves them
   // out, the way it leaves out lastBackupAt.
+  //
+  // The yes to the age check is also the yes to the Terms ("By continuing you
+  // agree"), so it records which version and when: that is what shows someone
+  // agreed, and what lets the app ask again. TERMS is the effective date of
+  // the Terms as published; change it only for a significant change, and
+  // everyone who agreed to an older one is asked once (#termsAsk). A yes from
+  // b79, before versions were kept, counts as the first published version.
+  var TERMS = "2026-10-29", TERMS_FIRST = "2026-10-29";
   //
   // IRON_LEDGER_ADULT and IRON_LEDGER_AI are the suites' stand-in for answers
   // already given (tests/answered.py, tests/fakeai.py), so every other suite
@@ -5953,6 +5979,15 @@
     var c = store.consent || {};
     return grownUp() && (c.ai === true || (SAID.ai && c.ai == null));
   }
+  // An adult whose yes was to an older version of the Terms.
+  function termsChanged() {
+    var c = store.consent || {};
+    return c.adult === true && (c.terms || TERMS_FIRST) !== TERMS;
+  }
+  function agreeTerms(c) {
+    c.terms = TERMS;
+    c.termsAt = Date.now();
+  }
 
   // Terms, privacy and support, wherever there is an empty .ag-links. They
   // open in Safari, outside the app, and the age screens are never without them.
@@ -5969,10 +6004,12 @@
   var ageThen = null;
   // Over everything until it is answered; the app behind it can't be reached.
   function showAgeGate(then) {
-    var no = (store.consent || {}).adult === false;
+    var no = (store.consent || {}).adult === false, again = termsChanged();
     ageThen = then;
-    document.getElementById("ageAsk").hidden = no;
+    document.getElementById("ageAsk").hidden = no || again;
     document.getElementById("ageNo").hidden = !no;
+    document.getElementById("termsAsk").hidden = !again;
+    ageGate.setAttribute("aria-labelledby", again ? "termsTitle" : "ageTitle");
     // Said as approved for a first open. A phone that already has a log keeps
     // it, so it doesn't claim nothing was saved.
     var kept = Object.keys(store.days).some(function (k) {
@@ -5986,8 +6023,7 @@
     var app = document.querySelector(".app");
     if (app) app.inert = true;
   }
-  document.getElementById("ageYes").addEventListener("click", function () {
-    consent().adult = true;
+  function leaveAgeGate(said) {
     save();
     ageGate.hidden = true;
     var app = document.querySelector(".app");
@@ -5996,11 +6032,22 @@
     ageThen = null;
     if (then) then();
     // The screen going is one sign; this says what was kept.
-    notify("Thanks — confirmed you’re 18 or older. Only that answer is kept, on this phone.");
+    notify(said);
+  }
+  document.getElementById("ageYes").addEventListener("click", function () {
+    var c = consent();
+    c.adult = true;
+    agreeTerms(c);
+    leaveAgeGate("Thanks — confirmed you’re 18 or older. Only that answer is kept, on this phone.");
+  });
+  document.getElementById("termsYes").addEventListener("click", function () {
+    agreeTerms(consent());
+    leaveAgeGate("Thanks — you’ve agreed to the new Terms of Use.");
   });
   document.getElementById("ageUnder").addEventListener("click", function () {
-    consent().adult = false;
-    delete store.consent.ai; delete store.consent.aiAt;
+    var c = consent();
+    c.adult = false;
+    delete c.ai; delete c.aiAt; delete c.terms; delete c.termsAt;
     save();
     showAgeGate(null);
   });
@@ -7158,7 +7205,7 @@
           (est.warn ? '<p class="rev-assume" style="color:var(--miss)">' + esc(est.warn) + '</p>' : '') +
           '<p class="rev-assume">' +
             (est.note ? esc(est.note) + " " : "") +
-            'Numbers from the AI are its best estimate \u2014 tap a weight to correct the portion. ' +
+            'AI answers can be wrong; check the label where there is one. Tap a weight to correct the portion. ' +
             'Anything marked <em>needs numbers</em> goes in as a placeholder you can fill later.' +
           '</p>' +
           // One description usually is one meal, so offer it here rather than
@@ -7646,6 +7693,9 @@
       '<div class="field"><label for="gcAct">How active</label><select id="gcAct">' + opt(ACTIVITY, pr.act || "1.55") + '</select></div>' +
       '<div class="field"><label for="gcAim">Aim</label><select id="gcAim">' + opt(AIMS, pr.aim || "-500") + '</select></div>' +
       '<p class="calc-out is-empty" id="gcOut">Fill these in to see the numbers.</p>' +
+      // The Terms (section 2) say targets are general information; this is
+      // that, said where the numbers are.
+      '<p class="est-note" id="gcNote">Estimates only, not medical advice.</p>' +
       '<button class="btn" id="gcUse" disabled>Use these numbers</button>' +
     '</div>';
   }
@@ -12822,6 +12872,13 @@
     document.getElementById("setAi").innerHTML = [["off", "Off"], ["on", "On"]].map(function (o) {
       return '<button data-pick-ai="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === aiOn() ? "true" : "false") + '">' + o[1] + '</button>';
     }).join("");
+    // When the Terms were agreed to, so it can be seen as well as kept. A yes
+    // from b79 has no date, and nothing is shown rather than one made up.
+    var termsAt = (store.consent || {}).termsAt;
+    document.getElementById("setTermsHint").textContent = termsAt
+      ? "You agreed to the Terms of Use on " +
+        new Date(termsAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + "."
+      : "";
     var aiAt = (store.consent || {}).aiAt;
     document.getElementById("setAiHint").textContent = aiOn()
       ? (aiAt ? "Allowed on " + new Date(aiAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + ". " : "") +
@@ -13910,7 +13967,7 @@
     // a phone that had the app before it. Until it is answered nothing is
     // drawn or saved. The build has still started, so the live update is
     // told it is good either way: the plugin rolls back one that stays quiet.
-    if (grownUp()) openApp(prevBuild);
+    if (grownUp() && !termsChanged()) openApp(prevBuild);
     else showAgeGate(function () { openApp(prevBuild); });
     liveReady();
   }
