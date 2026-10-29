@@ -237,7 +237,11 @@ minus or plus for the aim, protein at a gram per pound, the working shown. It
 fills the two fields; *Save target* still decides. Calories never go below
 1,200 (women) or 1,500 (men) without saying so. Under the working it says
 *Estimates only, not medical advice* (b80), which is what the Terms say of
-every target.
+every target. Since b81 the same arithmetic (`calcNumbers()`) runs in the
+profile's *Your goals*, from the profile's boxes; the calculator here takes
+its age from the birth date and its equation from the profile (Other picks
+one), and *Use these numbers* writes into `store.profile`, never over it
+(`docs/architecture.md`, *The profile sets the goals*).
 
 **Meals read through, never store.** A meal is `{id, note, items:[...]}`. Its
 calories and protein come from `rowCal()`/`rowPro()` summing the items on every
