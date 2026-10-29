@@ -8,10 +8,12 @@ in mntl-dt.html. Re-run after changing --ink / --ground:
 Uses the Playwright Chromium that the test suites already need, so this adds
 no dependency. Writes icons/ and the iPhone app's icon from the repo root.
 
-The mark is Tommy's sketch (2026-10-20): a Roman II with the top-right corner
-gone, so it reads as an I and an L sharing one base. The left stem keeps the
-top bar's overhang (the I); the base runs on past the right stem (the L's
-foot). Even strokes, square ends, no accent colour.
+The mark is Tommy's pick (2026-10-28): MNTL in heavy condensed capitals over
+D&T in the accent, with a barbell where a rule would be. MNTL is joined the
+way the old IL mark was: M and N share a stem, and the N's right stem carries
+one top bar across the T to the L, whose foot runs on. D&T is set in
+Anton, the condensed face Tommy picked it in, so it reads as a real "&".
+All of it is drawn as shapes, not set in a font, so it needs no font file.
 """
 import os, io, re
 from playwright.sync_api import sync_playwright
@@ -27,14 +29,35 @@ def token(css, name, fallback):
 src = io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()
 INK = token(src, "ink", "#141A19")
 GROUND = token(src, "ground", "#E9EBE8")
-print("tokens: ink=%s ground=%s" % (INK, GROUND))
+# The icon is dark, so D&T takes the dark theme's accent, the one made to
+# read on ink.
+ACCENT = token(src[src.index("prefers-color-scheme: dark"):], "accent", "#56B9A9")
+print("tokens: ink=%s ground=%s accent=%s" % (INK, GROUND, ACCENT))
 
-# The mark on a 58 x 40 grid, strokes 8 thick: top bar, the two stems, the base.
-MARK = """<svg viewBox="0 0 58 40" width="{w}" height="{h}" fill="{ground}">
-<rect x="0" y="0" width="42.5" height="8"/>
-<rect x="15" y="0" width="8" height="40"/>
-<rect x="34.5" y="0" width="8" height="40"/>
-<rect x="0" y="32" width="58" height="8"/></svg>"""
+# The mark on a 220 x 175 grid. MNTL fills y 0-100 with 18-thick strokes.
+# D&T sits on y 120-174: the outlines of Anton's D, & and T (SIL Open Font
+# License), copied in so no font is loaded. The barbell is centred on D&T and
+# ends flush with the L's foot.
+MARK = """<svg viewBox="0 0 220 175" width="{w}" height="{h}">
+<g fill="{ground}">
+<path d="M0,100 V0 H24 L35,56 L46,0 H70 V100 H52 V42 L42,86 H28 L18,42 V100 Z"/>
+<path d="M52,100 V0 H72 L98,62 V0 H116 V100 H96 L70,38 V100 Z"/>
+<rect x="98" width="94" height="18"/>
+<rect x="136" width="18" height="100"/>
+<rect x="174" width="18" height="100"/>
+<rect x="174" y="82" width="46" height="18"/></g>
+<g fill="{accent}">
+<path transform="translate(-2.39,174) scale(0.030682,-0.030682)" d="M78 0V1760H562Q752 1760 848 1654.5Q944 1549 944 1346V522Q944 272 856.5 136Q769 0 550 0ZM432 311H493Q590 311 590 405V1313Q590 1401 566.5 1426.5Q543 1452 471 1452H432Z"/>
+<path transform="translate(31.50,174) scale(0.030682,-0.030682)" d="M386 -21Q222 -21 128.5 106Q35 233 35 456Q35 615 63.5 720Q92 825 143 895Q194 965 260 1017L252 1037Q210 1141 178.5 1235.5Q147 1330 147 1430Q147 1531 190 1609Q233 1687 309.5 1731.5Q386 1776 485 1776Q583 1776 663.5 1733.5Q744 1691 792 1606Q840 1521 840 1391Q840 1250 787.5 1155Q735 1060 630 972L726 730Q785 879 896 961L1035 744Q919 651 841 441L1017 0H677L638 95Q599 47 533.5 13Q468 -21 386 -21ZM461 1461Q461 1435 474 1384.5Q487 1334 535 1210Q554 1230 569 1273Q584 1316 584 1391Q584 1468 565.5 1499Q547 1530 517 1530Q488 1530 474.5 1508.5Q461 1487 461 1461ZM341 413Q341 235 442 235Q483 235 508 265.5Q533 296 542 329L374 738Q341 668 341 493Z"/>
+<path transform="translate(68.64,174) scale(0.030682,-0.030682)" d="M229 0V1422H20V1760H790V1422H581V0Z"/></g>
+<g fill="{ground}">
+<rect x="101" y="144" width="119" height="6"/>
+<rect x="103" y="133" width="6" height="28" rx="1.5"/>
+<rect x="111" y="127" width="9" height="40" rx="1.5"/>
+<rect x="121" y="140" width="4" height="14" rx="1"/>
+<rect x="196" y="140" width="4" height="14" rx="1"/>
+<rect x="201" y="127" width="9" height="40" rx="1.5"/>
+<rect x="212" y="133" width="6" height="28" rx="1.5"/></g></svg>"""
 
 PAGE = """<!doctype html><meta charset="utf-8"><style>
 html,body{{margin:0}}
@@ -47,10 +70,10 @@ svg{{display:block}}
 # pad = share of the canvas left empty around the mark. Maskable icons get the
 # 20% safe zone Android crops to; normal icons sit tighter.
 def render(page, size, out, pad, folder="icons"):
-    w = size * (1 - pad) * 0.69
+    w = size * (1 - pad) * 0.80
     page.set_viewport_size({"width": size, "height": size})
     page.set_content(PAGE.format(s=size, ink=INK, mark=MARK.format(
-        w=round(w, 2), h=round(w * 40 / 58, 2), ground=GROUND)))
+        w=round(w, 2), h=round(w * 175 / 220, 2), ground=GROUND, accent=ACCENT)))
     page.locator(".icon").screenshot(path=os.path.join(ROOT, folder, out))
     print("  %s/%-28s %dx%d" % (folder.replace(os.sep, "/"), out, size, size))
 
