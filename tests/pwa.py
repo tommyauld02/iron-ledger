@@ -8,6 +8,7 @@ A service worker that registers but caches nothing looks identical to a working
 one until you are offline, so every check here runs with offline=True.
 """
 import fakeai
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, threading, functools
@@ -44,6 +45,7 @@ with sync_playwright() as pw:
     b = pw.chromium.launch()
     ctx = b.new_context(viewport={"width": 393, "height": 852}, has_touch=True, is_mobile=True)
     ctx.add_init_script(fakeai.RELAY_SCRIPT)
+    ctx.add_init_script(fakeai.AI_SCRIPT)
     p = ctx.new_page(); errs = []; reqs = []
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.on("request", lambda r: reqs.append(r.url))

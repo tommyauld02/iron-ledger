@@ -14,6 +14,7 @@ Two things this has to keep proving:
     larger than the calories — sodium in mg, carbs, every % daily value — so
     "take the biggest number" would log sodium.
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, datetime, threading, functools, time

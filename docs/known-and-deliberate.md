@@ -6,6 +6,15 @@ rules and the index of these docs. The rules apply here too.
 - The goal bar's centre divider does not line up with the T chart's stem. The
   owner asked to leave that section alone; it is his call.
 - Rest days are not painted red on the calendar. Offered, declined.
+- The age check is self-declared. It records the answer someone gives; it
+  cannot know their age, and someone under 18 can tap the other button. That
+  is what an age screen is in an app with no accounts and no ID check, and the
+  privacy policy and Terms say the app is for adults.
+- *I'm under 18* has no way back, as approved on 2026-10-28: the answer is
+  kept and the sorry screen shows on every open. A mis-tap on a first open
+  costs a reinstall. On a phone with a log it locks the person out of Backup
+  too; the log is kept, not deleted, but the only way back in is clearing the
+  app's data, which loses it. Raised with the owner with b79.
 - Barcode scanning used to be the one genuine reason to go native. It is in the
   web app now (b61, zxing-wasm), so nothing found so far needs a native build.
 - *Ask an agent* needs a connection for anything not in your pantry.

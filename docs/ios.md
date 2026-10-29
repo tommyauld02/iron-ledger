@@ -98,6 +98,8 @@ and its address on Pages. In the app:
    number (`b79`) and What's new lists what changed, the same as on the web.
    A build that does not get that far within 10 seconds is rolled back by the
    plugin to the one before, and the app never tries that build again.
+   The age check (b79) does not hold this up: the app says it is ready
+   while the check is still on screen, since the build has started.
 
 How the app decides is in `mntl-dt.html` (*live updates*), and
 `tests/live.py` checks every rule with a stand-in for the plugin and the

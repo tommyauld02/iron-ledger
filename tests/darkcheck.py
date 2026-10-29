@@ -12,6 +12,7 @@ row shipped at 4.08:1 in b36 because nothing ever ticked one. A contrast suite
 only measures the states its fixture puts on screen.
 """
 import fakeai
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, time, datetime
 
@@ -90,12 +91,15 @@ def fixture(theme=None, accent=None):
     return s
 
 
+# The age check and Ask an agent's permission sheet are measured while hidden:
+# every page here has already answered both, so neither is ever on screen, and
+# computed colours read the same hidden as shown (docs/ui.md).
 LOW = """() => {
   const bad = [];
   const lum = c => { const m=c.match(/\\d+/g); if(!m) return null;
     const [r,g,b]=m.slice(0,3).map(n=>{n/=255; return n<=.03928? n/12.92 : Math.pow((n+.055)/1.055,2.4);});
     return .2126*r+.7152*g+.0722*b; };
-  document.querySelectorAll('main *, .topbar *, .dock *, .sheet:not([hidden]) *').forEach(el=>{
+  document.querySelectorAll('main *, .topbar *, .dock *, .sheet:not([hidden]) *, #ageGate *, #aiSheet *').forEach(el=>{
     if(!el.textContent.trim() || el.children.length) return;
     const s=getComputedStyle(el); const f=lum(s.color);
     let p=el, bgc=null;
