@@ -83,7 +83,9 @@ refuses unless the age check and the permission are both yes, so no way in —
 the words box, a pending row's *Tap to estimate*, *Find it again*, *Look up
 this name's numbers* — can reach the relay around it. Claude, inside the
 Claude viewer, is not asked about: it is not Google, and it is only reached
-when the relay can't be. `agecheck` covers all of it.
+when the relay can't be. `agecheck` covers all of it. The review under every
+answer says *AI answers can be wrong; check the label where there is one*
+(b80), as the Terms (section 4) do.
 
 **Only the words describing the food are sent**, with the country chosen on
 the form: `{food, region}`, nothing from the day, a goal or a pantry name, no
@@ -233,7 +235,9 @@ tenth of the way to the scale — and an undoable *Log today*. The target editor
 has *Work it out from your height and weight*: Mifflin-St Jeor × activity,
 minus or plus for the aim, protein at a gram per pound, the working shown. It
 fills the two fields; *Save target* still decides. Calories never go below
-1,200 (women) or 1,500 (men) without saying so.
+1,200 (women) or 1,500 (men) without saying so. Under the working it says
+*Estimates only, not medical advice* (b80), which is what the Terms say of
+every target.
 
 **Meals read through, never store.** A meal is `{id, note, items:[...]}`. Its
 calories and protein come from `rowCal()`/`rowPro()` summing the items on every
