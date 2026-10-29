@@ -25,6 +25,9 @@ It checks that:
 - withdrawing in Settings stops sends at once, including one on its way
 - no request reaches the relay without both answers (tests/fakeai.py stands in
   for it, and every request to its address is counted, preflights included)
+- the yes keeps which version of the Terms of Use was agreed to, and when;
+  Settings shows the date; a later version asks an adult once more (#termsAsk),
+  and a b79 yes without a version counts as the first published one
 - 44px targets, and the screens' contrast in light and dark
 
 What it cannot show: that the person is 18. The check is self-declared — a
@@ -41,6 +44,7 @@ FILE = "file://" + d + "/mntl-dt.html"
 KEY = "iron-ledger-v1"
 SRC = io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()
 BUILD = re.search(r'BUILD = "([^"]+)"', SRC).group(1)
+TERMS = re.search(r'var TERMS = "([^"]+)"', SRC).group(1)
 PAGES = "https://tommyauld02.github.io/iron-ledger/"
 PHONE = {"width": 393, "height": 852}
 SMALL = {"width": 320, "height": 640}
@@ -90,6 +94,14 @@ AI_WORDS = [
 ]
 LINKS = {"Terms of Use": PAGES + "terms.html", "Privacy Policy": PAGES + "privacy.html",
          "Support": PAGES + "support.html", "mntldntsupport@gmail.com": "mailto:mntldntsupport@gmail.com"}
+
+
+def agreed(c, **more):
+    """The yes to the age check: adult, the version of the Terms agreed to and
+    when, and whatever else is named — nothing more."""
+    c = dict(c or {})
+    at = c.pop("termsAt", None)
+    return c.pop("terms", None) == TERMS and isinstance(at, (int, float)) and c == dict(adult=True, **more)
 
 
 def fixture(build="2026-10-26.78", consent=None, pending=False):
@@ -235,8 +247,8 @@ with sync_playwright() as pw:
     check("18 or older: the app is reachable again", p.evaluate("() => document.querySelector('.app').inert === false"))
     check("18 or older: it says what was kept", "18 or older" in bar(p) and "Only that answer is kept" in bar(p), bar(p))
     s = saved(p) or {}
-    check("18 or older: only the answer is kept — adult: true, nothing else",
-          s.get("consent") == {"adult": True}, s.get("consent"))
+    check("18 or older: only the answer is kept — adult: true, with the Terms' version and when",
+          agreed(s.get("consent")), s.get("consent"))
     check("18 or older: no birth date or age number anywhere in the log",
           not re.search(r'"(birth|dob|born|age|yearOfBirth)"', json.dumps(s)), "")
     p.reload(); p.wait_for_timeout(700)
@@ -287,7 +299,7 @@ with sync_playwright() as pw:
     p.click("#newsDone"); p.wait_for_timeout(200)
     s = saved(p) or {}
     check("existing install: the log is untouched", s.get("days") == old["days"] and s.get("build") == BUILD)
-    check("existing install: the answer is added beside it", s.get("consent") == {"adult": True}, s.get("consent"))
+    check("existing install: the answer is added beside it", agreed(s.get("consent")), s.get("consent"))
     p.reload(); p.wait_for_timeout(700)
     check("existing install: not asked again", not shown(p, "#ageGate") and not shown(p, "#newsSheet")
           and "Eggs and oats" in text(p, "#view"))
@@ -307,7 +319,7 @@ with sync_playwright() as pw:
     ctx, p, hits = open_phone(b, url=BASE)
     check("web over http: the age check before anything else", shown(p, "#ageAsk"))
     p.click("#ageYes"); p.wait_for_timeout(500)
-    check("web over http: the answer is in localStorage", (saved(p) or {}).get("consent") == {"adult": True})
+    check("web over http: the answer is in localStorage", agreed((saved(p) or {}).get("consent")))
     p.reload(); p.wait_for_timeout(700)
     check("web over http: not asked again", not shown(p, "#ageGate"))
     ctx.close()
@@ -340,7 +352,7 @@ with sync_playwright() as pw:
           ("CapacitorUpdater", "notifyAppReady") in calls, calls)
     check("iPhone app: nothing in native storage before it is answered", on_phone() is None)
     p.click("#ageYes"); p.wait_for_timeout(600)
-    check("iPhone app: the answer is in native storage", (on_phone() or {}).get("consent") == {"adult": True})
+    check("iPhone app: the answer is in native storage", agreed((on_phone() or {}).get("consent")))
     check("iPhone app: and not in the WebView's localStorage", saved(p) is None, saved(p))
     ctx.close()
     ctx, p, hits = open_phone(b, url=BASE, extra=native)      # a cold start, the WebView's storage gone
@@ -369,7 +381,7 @@ with sync_playwright() as pw:
     check("Not now: nothing was sent", not hits and not asked, hits)
     check("Not now: it says nothing was sent, where the answer would be",
           "Nothing was sent" in text(p, "#view"), text(p, "#view")[-300:])
-    check("Not now: kept as a no, with no date", (saved(p) or {}).get("consent") == {"adult": True, "ai": False},
+    check("Not now: kept as a no, with no date", agreed((saved(p) or {}).get("consent"), ai=False),
           (saved(p) or {}).get("consent"))
     # the food waits as a placeholder; Find it again asks again
     if shown(p, "[data-reask]"):
@@ -389,7 +401,7 @@ with sync_playwright() as pw:
     check("Allow and ask: it says so", "Ask an agent is on" in bar(p), bar(p))
     c = (saved(p) or {}).get("consent") or {}
     check("Allow and ask: kept as a yes, with when", c.get("ai") is True and isinstance(c.get("aiAt"), (int, float))
-          and set(c) == {"adult", "ai", "aiAt"}, c)
+          and set(c) == {"adult", "ai", "aiAt", "terms", "termsAt"}, c)
     n = len(asked)
     ask_agent(p, "2 eggs")
     check("once allowed, it doesn't ask every time", not shown(p, "#aiSheet") and len(asked) == n + 1)
@@ -400,12 +412,14 @@ with sync_playwright() as pw:
           p.evaluate("() => document.querySelector('[data-pick-ai=on]').getAttribute('aria-pressed')") == "true"
           and text(p, "#setAiHint").startswith("Allowed on"), text(p, "#setAiHint"))
     links(p, "#setSheet", "Settings")
+    check("Settings: when the Terms of Use were agreed to",
+          text(p, "#setTermsHint").startswith("You agreed to the Terms of Use on"), text(p, "#setTermsHint"))
     targets(p, "#setAi button, #setSheet .ag-links a", "Settings")
     p.click('[data-pick-ai="off"]'); p.wait_for_timeout(300)
     check("withdrawn: Settings shows Off and says nothing is sent",
           p.evaluate("() => document.querySelector('[data-pick-ai=off]').getAttribute('aria-pressed')") == "true"
           and "nothing is sent" in text(p, "#setAiHint"), text(p, "#setAiHint"))
-    check("withdrawn: kept as a no, the date gone", (saved(p) or {}).get("consent") == {"adult": True, "ai": False})
+    check("withdrawn: kept as a no, the date gone", agreed((saved(p) or {}).get("consent"), ai=False))
     p.click("#setDone"); p.wait_for_timeout(200)
     check("withdrawn: it says so", "Ask an agent is off" in bar(p), bar(p))
     n = len(hits)
@@ -422,6 +436,44 @@ with sync_playwright() as pw:
     check("On in Settings: on, with a date, and nothing sent by it",
           ((saved(p) or {}).get("consent") or {}).get("ai") is True and len(hits) == n
           and text(p, "#setAiHint").startswith("Allowed on"))
+    ctx.close()
+
+    # ---- the Terms change: asked once more, of an adult ----
+    TERMS_WORDS = ["The Terms of Use have changed",
+                   "Have a look at them below, then agree to keep using the app. Your log stays as it is.",
+                   "I agree"]
+    older = fixture(BUILD, {"adult": True, "terms": "2000-01-01", "termsAt": 1})
+    ctx, p, hits = open_phone(b, stored=older)
+    check("Terms changed: asked before anything else", shown(p, "#termsAsk") and not shown(p, "#ageAsk") and not shown(p, "#ageNo"))
+    words = text(p, "#termsAsk")
+    missing = [w for w in TERMS_WORDS if w not in words]
+    check("Terms changed: the words, every one", not missing, missing)
+    links(p, "#termsAsk", "Terms changed")
+    check("Terms changed: no under-18 button — that was answered",
+          p.evaluate("() => document.querySelectorAll('#termsAsk button').length") == 1)
+    check("Terms changed: the app behind it can't be reached", p.evaluate("() => document.querySelector('.app').inert === true"))
+    check("Terms changed: the dialog is named by its own heading",
+          p.evaluate("() => document.getElementById('ageGate').getAttribute('aria-labelledby')") == "termsTitle")
+    check("Terms changed: nothing written before it is answered", saved(p) == older)
+    targets(p, "#termsAsk button, #termsAsk a", "Terms changed")
+    contrast(p, "#termsAsk *", "Terms changed, light")
+    p.click("#termsYes"); p.wait_for_timeout(500)
+    check("Terms changed, I agree: the screen goes and the app opens", not shown(p, "#ageGate") and "Eggs and oats" in text(p, "#view"))
+    check("Terms changed, I agree: it says so", "agreed to the new Terms of Use" in bar(p), bar(p))
+    s = saved(p) or {}
+    check("Terms changed, I agree: this version, with a new date, the log untouched",
+          agreed(s.get("consent")) and s["consent"]["termsAt"] > 1 and s.get("days") == older["days"], s.get("consent"))
+    p.reload(); p.wait_for_timeout(700)
+    check("Terms changed: not asked again", not shown(p, "#ageGate"))
+    ctx.close()
+    ctx, p, hits = open_phone(b, stored=older, scheme="dark")
+    contrast(p, "#termsAsk *", "Terms changed, dark")
+    ctx.close()
+    # a yes from b79, before versions were kept, is the first published version
+    ctx, p, hits = open_phone(b, stored=fixture(BUILD, {"adult": True}))
+    check("a b79 yes, with no version: not asked again", not shown(p, "#ageGate") and "Eggs and oats" in text(p, "#view"))
+    p.click("#setBtn"); p.wait_for_timeout(300)
+    check("a b79 yes: Settings shows no agreed date rather than one made up", text(p, "#setTermsHint") == "", text(p, "#setTermsHint"))
     ctx.close()
 
     # dark: the permission sheet
@@ -483,6 +535,10 @@ check("one fetch to the relay in the whole app", SRC.count("fetch(RELAY") == 1)
 check("relayFind refuses without both answers before it does anything else",
       re.search(r"function relayFind\(text\) \{\s*if \(!grownUp\(\) \|\| !aiOn\(\)\) return Promise\.reject", SRC) is not None)
 check("What's new has this build", '{ b: "%s"' % BUILD in SRC)
+check("the goal calculator says its numbers are estimates, not medical advice",
+      "Estimates only, not medical advice." in SRC)
+check("Ask an agent's answers say they can be wrong",
+      "AI answers can be wrong; check the label where there is one." in SRC)
 
 for st, n, det in res:
     print("%s  %s%s" % (st, n, ("   " + str(det)[:200]) if st == "FAIL" and det != "" else ""))
