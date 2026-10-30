@@ -66,6 +66,27 @@ either would need a key on the phone. Hermes on the owner's PC is out of reach
 from a phone. Supabase was the other host considered; its free projects pause
 after a week unused, which would stop the finder for everyone.
 
+**Ask an agent asks before it first sends (b79).** Apple's guideline
+5.1.2(i) (November 2025) wants a clear yes before anything goes to someone
+else's AI, and Gemini's free tier may keep what it is sent, use it to improve
+Google's products and have people read it. So the first time a question would
+go to the relay, a sheet (`#aiSheet`) says what is sent — what you type and
+your country — and what Google may do with it, with *Allow and ask* and *Not
+now*. The question waits on the answer (`needAi()`); *Not now* sends nothing,
+and the review opens with the food as *needs numbers* and *Nothing was sent*.
+It asks again the next time, because a press that did nothing would read as a
+dead button. A food the pantry knows never asks: nothing would be sent.
+Settings → *Ask an agent* shows when it was allowed and turns it off; off
+takes effect at once, and a question already on its way is called back and its
+answer not used. *On* there goes through the same sheet. `relayFind()` itself
+refuses unless the age check and the permission are both yes, so no way in —
+the words box, a pending row's *Tap to estimate*, *Find it again*, *Look up
+this name's numbers* — can reach the relay around it. Claude, inside the
+Claude viewer, is not asked about: it is not Google, and it is only reached
+when the relay can't be. `agecheck` covers all of it. The review under every
+answer says *AI answers can be wrong; check the label where there is one*
+(b80), as the Terms (section 4) do.
+
 **Only the words describing the food are sent**, with the country chosen on
 the form: `{food, region}`, nothing from the day, a goal or a pantry name, no
 key and no cookie. The relay builds the prompt itself, so it cannot be used as
@@ -214,7 +235,9 @@ tenth of the way to the scale — and an undoable *Log today*. The target editor
 has *Work it out from your height and weight*: Mifflin-St Jeor × activity,
 minus or plus for the aim, protein at a gram per pound, the working shown. It
 fills the two fields; *Save target* still decides. Calories never go below
-1,200 (women) or 1,500 (men) without saying so.
+1,200 (women) or 1,500 (men) without saying so. Under the working it says
+*Estimates only, not medical advice* (b80), which is what the Terms say of
+every target.
 
 **Meals read through, never store.** A meal is `{id, note, items:[...]}`. Its
 calories and protein come from `rowCal()`/`rowPro()` summing the items on every

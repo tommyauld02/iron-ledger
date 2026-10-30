@@ -16,6 +16,7 @@ Four things nothing else covers:
    the mode Tommy's phone actually runs in, and it is the combination no
    other suite exercises together.
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools
@@ -228,6 +229,9 @@ with sync_playwright() as pw:
     # ---- 4. the Pages reality: no Claude and no network ------------------
     ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
     ctx.add_init_script("delete window.claude;")
+    # a phone that has already allowed Ask an agent (b79): what is checked here
+    # is what happens offline, not the permission sheet (tests/agecheck.py)
+    ctx.add_init_script("window.IRON_LEDGER_AI=true;")
     p = ctx.new_page(); errs = []
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.goto(BASE); p.wait_for_timeout(600)

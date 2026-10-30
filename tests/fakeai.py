@@ -123,7 +123,17 @@ def install(target, reply=None, log=None):
     target.route(RELAY, handle)
 
 
-def phone(ctx, reply=None, log=None):
-    """A phone whose app asks the stand-in relay."""
+AI_SCRIPT = "window.IRON_LEDGER_AI=true;"   # Ask an agent's permission, already given
+
+
+def phone(ctx, reply=None, log=None, allowed=True):
+    """A phone whose app asks the stand-in relay.
+
+    Since b79 Ask an agent asks before it sends anything. These phones have
+    already said yes (the app's stand-in, window.IRON_LEDGER_AI, which a yes
+    or no in the log overrides), unless allowed=False; tests/agecheck.py is
+    the suite that answers the sheet itself."""
     ctx.add_init_script(RELAY_SCRIPT)
+    if allowed:
+        ctx.add_init_script(AI_SCRIPT)
     install(ctx, reply=reply, log=log)

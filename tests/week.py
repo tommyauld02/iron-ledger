@@ -9,6 +9,7 @@ be opened from there and logged after the fact.
 Pinned to a Wednesday so the days either side are inside the Sunday to
 Saturday week, whatever day the suite actually runs on.
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d

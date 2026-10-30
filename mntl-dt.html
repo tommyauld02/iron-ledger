@@ -737,7 +737,7 @@
   }
 
   /* ---------- first run ---------- */
-  .welcome {
+  .welcome, .agecard {
     border: 1px solid var(--accent);
     border-left-width: 3px;
     border-radius: 2px;
@@ -747,13 +747,13 @@
     flex-direction: column;
     gap: 10px;
   }
-  .welcome h2 {
+  .welcome h2, .agecard h2 {
     margin: 0;
     font-size: 16px;
     font-weight: 600;
     letter-spacing: -.01em;
   }
-  .welcome p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+  .welcome p, .agecard p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
   .welcome dl {
     margin: 0;
     display: grid;
@@ -771,6 +771,45 @@
     padding-top: 3px;
   }
   .welcome dd { margin: 0; color: var(--ink-2); }
+
+  /* ---------- the age check ---------- */
+  /* The whole screen, over the app, until it is answered: a card styled as
+     .welcome (its own class, so .welcome still means the tour) on the page's own ground. Above the sheets, which wait behind it. */
+  .agegate {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: var(--ground);
+    overflow-y: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: calc(16px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  }
+  .agegate[hidden], .agecard[hidden] { display: none !important; }
+  .agecard { width: 100%; max-width: 440px; margin: auto 0; padding: 20px 18px; gap: 12px; }
+  .agegate h2 { font-size: 24px; font-weight: 800; font-stretch: 118%; line-height: 1.15; }
+  .agegate p { font-size: 15px; }
+  .ag-k {
+    font-family: var(--font-num); font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-2);
+  }
+  .ag-acts { display: grid; gap: 10px; }
+  .ag-acts .btn { width: 100%; }
+  .agegate .ag-fine, .sheet-inner .ag-fine { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+  .sheet-inner p strong { color: var(--ink); font-weight: 600; }
+  /* Terms, privacy and support: links, so teal, and each a full 44px tall
+     though the words are small. */
+  .ag-links {
+    display: flex; flex-wrap: wrap; align-items: center;
+    margin: -6px 0 -10px -8px; font-size: 14px;
+  }
+  .ag-links a {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px;
+    color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+  }
+  .ag-links .ag-dot { color: var(--ink-2); }
+  .ag-links .ag-mail { flex-basis: 100%; height: 0; }
 
   /* ---------- estimator ---------- */
   .est textarea {
@@ -3357,7 +3396,7 @@
   .way-head b { font-size: 17px; font-weight: 800; font-stretch: 112%; }
   .way-head button { min-height: 44px; padding: 0 8px; font-family: var(--font-num); font-size: 12.5px; color: var(--accent); }
   .log-ways .entry, .log-ways .est { border-radius: 18px; }
-  .welcome { border-radius: 22px; }
+  .welcome, .agecard { border-radius: 22px; }
 
   /* ---------- Pantry: the rack ---------- */
   .pan-top { display: flex; flex-direction: column; gap: 8px; }
@@ -3903,6 +3942,44 @@
   </div>
 </div>
 
+<!-- The age check. Gemini's terms, which Ask an agent runs on, are for adults
+     only, so the whole app is 18+ (decided 2026-10-28). Asked once, before
+     anything else; only the answer is kept. Self-declared: it is not proof of
+     age. Under 18 there is no way in, and no going back: Tommy asked for
+     neither, and a parent's permission does not change Gemini's terms. -->
+<div class="agegate" id="ageGate" role="dialog" aria-modal="true" aria-labelledby="ageTitle" hidden>
+  <section class="agecard" id="ageAsk">
+    <span class="ag-k">MNTL D&amp;T</span>
+    <h2 id="ageTitle">MNTL D&amp;T is for adults</h2>
+    <p>Confirm you’re 18 or older to use the app. Only your answer is kept, on this phone.</p>
+    <div class="ag-acts">
+      <button class="btn" id="ageYes">I’m 18 or older</button>
+      <button class="btn ghost" id="ageUnder">I’m under 18</button>
+    </div>
+    <p class="ag-fine">By continuing you agree to the Terms of Use and Privacy Policy.</p>
+    <div class="ag-links"></div>
+  </section>
+  <section class="agecard" id="ageNo" hidden>
+    <span class="ag-k">MNTL D&amp;T</span>
+    <h2>Sorry, MNTL D&amp;T is for adults</h2>
+    <p id="ageNoSaid">You need to be 18 or older to use it. Nothing has been saved about you, and nothing was sent anywhere.</p>
+    <p>Questions? The privacy policy and support page are below.</p>
+    <div class="ag-links"></div>
+  </section>
+  <!-- After a significant change to the Terms (TERMS, below), asked once of
+       someone who already said they are 18 or older. No under-18 button: that
+       was answered. Not agreeing means not carrying on, so there is no No. -->
+  <section class="agecard" id="termsAsk" hidden>
+    <span class="ag-k">MNTL D&amp;T</span>
+    <h2 id="termsTitle">The Terms of Use have changed</h2>
+    <p>Have a look at them below, then agree to keep using the app. Your log stays as it is.</p>
+    <div class="ag-acts">
+      <button class="btn" id="termsYes">I agree</button>
+    </div>
+    <div class="ag-links"></div>
+  </section>
+</div>
+
 <div class="sheet" id="sheet" hidden>
   <div class="sheet-inner">
     <h2>Backup &amp; restore</h2>
@@ -3983,7 +4060,35 @@
       <div class="seg two" id="setCoach" role="group" aria-label="Coach tab"></div>
       <p class="set-hint">For writing a routine for someone else. Your splits and history stay the same either way.</p>
     </div>
+    <!-- Ask an agent sends what is typed to Google's AI, so it asks first
+         (App Review 5.1.2(i)), and the answer can be taken back here. -->
+    <div class="set-group">
+      <span class="eyebrow">Ask an agent</span>
+      <div class="seg two" id="setAi" role="group" aria-label="Ask an agent"></div>
+      <p class="set-hint" id="setAiHint"></p>
+    </div>
+    <div class="set-group">
+      <span class="eyebrow">About</span>
+      <div class="ag-links"></div>
+      <p class="set-hint" id="setTermsHint"></p>
+    </div>
     <button class="btn ghost" id="setDone">Done</button>
+  </div>
+</div>
+
+<!-- Asked the first time Ask an agent would send a question, and from
+     Settings. Nothing goes to the relay until this has been answered yes. -->
+<div class="sheet" id="aiSheet" role="dialog" aria-modal="true" aria-labelledby="aiTitle" hidden>
+  <div class="sheet-inner">
+    <h2 id="aiTitle">Ask an agent uses Google’s AI</h2>
+    <p>To estimate a food, MNTL D&amp;T sends <strong>what you type</strong> and <strong>your country</strong> to Google Gemini, through our relay. Nothing else from your log is sent.</p>
+    <p>Google’s free service may keep it, use it to improve its products, and have people review it. Don’t include personal information.</p>
+    <div class="ag-acts">
+      <button class="btn" id="aiYes">Allow and ask</button>
+      <button class="btn ghost" id="aiNo">Not now</button>
+    </div>
+    <p class="ag-fine">Logging, the pantry, barcodes and labels all work without it. You can change this any time in Settings.</p>
+    <div class="ag-links"><a data-page="privacy" target="_blank" rel="noopener">Privacy Policy</a></div>
   </div>
 </div>
 
@@ -4078,7 +4183,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-26.78";
+  var BUILD = "2026-10-29.80";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4743,6 +4848,14 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-29.80", t: "Clearer about estimates", items: [
+      "The goal calculator now says plainly that its numbers are estimates, not medical advice.",
+      "Ask an agent’s answers now remind you they can be wrong: check the label where there is one.",
+      "Settings → About shows the day you agreed to the Terms of Use." ] },
+    { b: "2026-10-28.79", t: "An age check, and Ask an agent asks first", items: [
+      "MNTL D&T is for adults. The first time it opens after this update, it asks you to confirm you’re 18 or older, just once. Only your answer is kept, on this phone.",
+      "The first time Ask an agent would send something, it tells you what goes to Google’s AI — what you type and your country — and asks before sending. Logging, the pantry, barcodes and labels work without it.",
+      "Settings → Ask an agent turns it off, or on again, and has the privacy policy, terms and support." ] },
     { b: "2026-10-22.76", t: "The keyboard settles", items: [
       "Tapping into Ask an agent keeps its box above the keyboard from the start, instead of dropping back to your ledger until you type.",
       "Putting the keyboard away leaves the page where it was, instead of sliding it up." ] },
@@ -5831,12 +5944,168 @@
   function finder() { return RELAY ? "relay" : sampleFn ? "claude" : ""; }
 
   function aiErr(code, detail) { var e = new Error(detail || code); e.code = code; return e; }
+
+  // ---------- the age check and Ask an agent's permission ----------
+  // Decided 2026-10-28. Gemini's terms are for adults, so the whole app is
+  // 18+, asked once before anything else. And Apple's guideline 5.1.2(i) wants
+  // a clear yes before anything goes to someone else's AI, so Ask an agent
+  // asks the first time it would send. Only the answers are kept, in the log
+  // (store.consent: adult true/false, ai true/false, aiAt when it was given,
+  // terms the version of the Terms of Use agreed to and termsAt when) — no
+  // birth date, no ID. They stay with this phone: mergeInto() leaves them
+  // out, the way it leaves out lastBackupAt.
+  //
+  // The yes to the age check is also the yes to the Terms ("By continuing you
+  // agree"), so it records which version and when: that is what shows someone
+  // agreed, and what lets the app ask again. TERMS is the effective date of
+  // the Terms as published; change it only for a significant change, and
+  // everyone who agreed to an older one is asked once (#termsAsk). A yes from
+  // b79, before versions were kept, counts as the first published version.
+  var TERMS = "2026-10-29", TERMS_FIRST = "2026-10-29";
+  //
+  // IRON_LEDGER_ADULT and IRON_LEDGER_AI are the suites' stand-in for answers
+  // already given (tests/answered.py, tests/fakeai.py), so every other suite
+  // opens past the age check; tests/agecheck.py is the one that answers it.
+  // An answer in the log always wins. Nothing in the app or its pages sets them.
+  var SAID = { adult: window.IRON_LEDGER_ADULT === true, ai: window.IRON_LEDGER_AI === true };
+  var PAGES = "https://tommyauld02.github.io/iron-ledger/";
+  var SUPPORT_MAIL = "mntldntsupport@gmail.com";
+  function consent() { return store.consent || (store.consent = {}); }
+  function grownUp() {
+    var c = store.consent || {};
+    return c.adult === true || (SAID.adult && c.adult == null);
+  }
+  function aiOn() {
+    var c = store.consent || {};
+    return grownUp() && (c.ai === true || (SAID.ai && c.ai == null));
+  }
+  // An adult whose yes was to an older version of the Terms.
+  function termsChanged() {
+    var c = store.consent || {};
+    return c.adult === true && (c.terms || TERMS_FIRST) !== TERMS;
+  }
+  function agreeTerms(c) {
+    c.terms = TERMS;
+    c.termsAt = Date.now();
+  }
+
+  // Terms, privacy and support, wherever there is an empty .ag-links. They
+  // open in Safari, outside the app, and the age screens are never without them.
+  (function links() {
+    var row = '<a data-page="terms" target="_blank" rel="noopener">Terms of Use</a><span class="ag-dot">·</span>' +
+      '<a data-page="privacy" target="_blank" rel="noopener">Privacy Policy</a><span class="ag-dot">·</span>' +
+      '<a data-page="support" target="_blank" rel="noopener">Support</a><span class="ag-mail"></span>' +
+      '<a href="mailto:' + SUPPORT_MAIL + '">' + SUPPORT_MAIL + '</a>';
+    document.querySelectorAll(".ag-links").forEach(function (el) { if (!el.children.length) el.innerHTML = row; });
+    document.querySelectorAll("[data-page]").forEach(function (a) { a.href = PAGES + a.dataset.page + ".html"; });
+  })();
+
+  var ageGate = document.getElementById("ageGate");
+  var ageThen = null;
+  // Over everything until it is answered; the app behind it can't be reached.
+  function showAgeGate(then) {
+    var no = (store.consent || {}).adult === false, again = termsChanged();
+    ageThen = then;
+    document.getElementById("ageAsk").hidden = no || again;
+    document.getElementById("ageNo").hidden = !no;
+    document.getElementById("termsAsk").hidden = !again;
+    ageGate.setAttribute("aria-labelledby", again ? "termsTitle" : "ageTitle");
+    // Said as approved for a first open. A phone that already has a log keeps
+    // it, so it doesn't claim nothing was saved.
+    var kept = Object.keys(store.days).some(function (k) {
+      var dd = store.days[k];
+      return (dd.food && dd.food.length) || (dd.lifts && dd.lifts.length);
+    }) || (store.pantry || []).length;
+    document.getElementById("ageNoSaid").textContent = "You need to be 18 or older to use it. " + (kept
+      ? "What you logged before stays on this phone, and nothing was sent anywhere."
+      : "Nothing has been saved about you, and nothing was sent anywhere.");
+    ageGate.hidden = false;
+    var app = document.querySelector(".app");
+    if (app) app.inert = true;
+  }
+  function leaveAgeGate(said) {
+    save();
+    ageGate.hidden = true;
+    var app = document.querySelector(".app");
+    if (app) app.inert = false;
+    var then = ageThen;
+    ageThen = null;
+    if (then) then();
+    // The screen going is one sign; this says what was kept.
+    notify(said);
+  }
+  document.getElementById("ageYes").addEventListener("click", function () {
+    var c = consent();
+    c.adult = true;
+    agreeTerms(c);
+    leaveAgeGate("Thanks — confirmed you’re 18 or older. Only that answer is kept, on this phone.");
+  });
+  document.getElementById("termsYes").addEventListener("click", function () {
+    agreeTerms(consent());
+    leaveAgeGate("Thanks — you’ve agreed to the new Terms of Use.");
+  });
+  document.getElementById("ageUnder").addEventListener("click", function () {
+    var c = consent();
+    c.adult = false;
+    delete c.ai; delete c.aiAt; delete c.terms; delete c.termsAt;
+    save();
+    showAgeGate(null);
+  });
+
+  // ---- Ask an agent's permission ----
+  var aiSheet = document.getElementById("aiSheet");
+  var aiWaiting = [];     // questions held until the sheet is answered
+  var relayOut = [];      // questions on their way to the relay right now
+  // Resolves once Ask an agent may send; rejects, sending nothing, if not.
+  // Only the relay asks: no relay means nothing is sent anyway.
+  function needAi() {
+    if (!RELAY || aiOn()) return Promise.resolve();
+    return new Promise(function (ok, no) {
+      aiWaiting.push({ ok: ok, no: no });
+      showAiSheet();
+    });
+  }
+  function showAiSheet() {
+    document.getElementById("aiYes").textContent = aiWaiting.length ? "Allow and ask" : "Allow";
+    aiSheet.hidden = false;
+  }
+  function answerAi(yes) {
+    var c = consent();
+    c.ai = yes;
+    if (yes) c.aiAt = Date.now(); else delete c.aiAt;
+    save();
+    aiSheet.hidden = true;
+    var held = aiWaiting;
+    aiWaiting = [];
+    if (!setSheet.hidden) drawSettings();
+    notify(yes ? (held.length ? "Ask an agent is on · asking now" : "Ask an agent is on")
+               : held.length ? "Nothing was sent · Ask an agent is off" : "Ask an agent stays off");
+    held.forEach(function (w) { if (yes) w.ok(); else w.no(aiErr("not_allowed")); });
+  }
+  document.getElementById("aiYes").addEventListener("click", function () { answerAi(true); });
+  document.getElementById("aiNo").addEventListener("click", function () { answerAi(false); });
+  aiSheet.addEventListener("click", function (e) { if (e.target === aiSheet) answerAi(false); });
+  // Off in Settings: nothing more is sent, and a question already on its way
+  // is called back rather than answered.
+  function withdrawAi() {
+    var c = consent();
+    c.ai = false;
+    delete c.aiAt;
+    save();
+    relayOut.slice().forEach(function (ctl) { ctl.withdrawn = true; ctl.abort(); });
+    notify("Ask an agent is off · nothing more is sent");
+  }
+
   // One question to the relay. Every way it can fail has a code, so what the
-  // person reads says what actually happened.
+  // person reads says what actually happened. It refuses outright without
+  // both answers, whichever way it was reached.
   function relayFind(text) {
+    if (!grownUp() || !aiOn()) return Promise.reject(aiErr("not_allowed"));
     if (!window.fetch) return Promise.reject(aiErr("unreachable"));
     var ctl = window.AbortController ? new AbortController() : null;
+    if (ctl) relayOut.push(ctl);
     var timer = setTimeout(function () { if (ctl) ctl.abort(); }, RELAY_WAIT);
+    function done() { clearTimeout(timer); if (ctl && relayOut.indexOf(ctl) > -1) relayOut.splice(relayOut.indexOf(ctl), 1); }
     return fetch(RELAY, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -5851,9 +6120,14 @@
         return j;
       });
     }, function (e) {
+      if (ctl && ctl.withdrawn) throw aiErr("not_allowed");
       throw aiErr(e && e.name === "AbortError" ? "timeout" : navigator.onLine === false ? "offline" : "unreachable", String(e));
-    }).then(function (out) { clearTimeout(timer); return out; },
-            function (e) { clearTimeout(timer); throw e; });
+    }).then(function (out) {
+      done();
+      // Turned off while it was on its way: the answer is not used.
+      if (!aiOn()) throw aiErr("not_allowed");
+      return out;
+    }, function (e) { done(); throw e; });
   }
   function finderMessage(e) {
     var code = e && e.code;
@@ -5869,6 +6143,7 @@
       : code === "unreadable" ? "The answer didn’t come back as numbers. Try again, or describe it a little differently."
       : code === "rate_limited" ? "Too many estimates just now. Give it a minute and try again."
       : code === "not_granted" ? "Estimating isn’t available in this window. Open the app inside Claude and try again."
+      : code === "not_allowed" ? "Nothing was sent: Ask an agent needs your OK first. Tap Find it again to be asked, or type the numbers in."
       : "That didn’t come back. Try again, or type the numbers in.";
   }
 
@@ -6184,10 +6459,12 @@
     // When the pantry knew none of it the finder gets the words as typed: the
     // splitter can tear a dish's own name apart ("mac and cheese").
     var ask = resolved.length ? leftovers.join(" & ") : text;
-    est = { status: "loading", text: text, replacing: rep, partial: resolved.length, who: who };
-    render();
-
-    findMacros(ask).then(function (got) {
+    // The first time, Ask an agent asks before it sends anything (needAi).
+    needAi().then(function () {
+      est = { status: "loading", text: text, replacing: rep, partial: resolved.length, who: who };
+      render();
+      return findMacros(ask);
+    }).then(function (got) {
       if (!got.items.length && !resolved.length) {
         est = { status: "error", text: text, replacing: rep,
                 message: "Couldn't read that as food. Try naming the items and amounts, like \"6 oz sirloin, 1 cup rice\"." };
@@ -6215,7 +6492,7 @@
     // The row is found again by itself, not by where it was: another row's
     // answer may have arrived first as two foods and moved it down.
     function at() { return est && est.status === "review" ? est.items.indexOf(it) : -1; }
-    findMacros(it.chunk || it.food).then(function (got) {
+    needAi().then(function () { return findMacros(it.chunk || it.food); }).then(function (got) {
       var k = at();
       if (k < 0) return;
       if (got.items.length) {
@@ -6928,7 +7205,7 @@
           (est.warn ? '<p class="rev-assume" style="color:var(--miss)">' + esc(est.warn) + '</p>' : '') +
           '<p class="rev-assume">' +
             (est.note ? esc(est.note) + " " : "") +
-            'Numbers from the AI are its best estimate \u2014 tap a weight to correct the portion. ' +
+            'AI answers can be wrong; check the label where there is one. Tap a weight to correct the portion. ' +
             'Anything marked <em>needs numbers</em> goes in as a placeholder you can fill later.' +
           '</p>' +
           // One description usually is one meal, so offer it here rather than
@@ -7416,6 +7693,9 @@
       '<div class="field"><label for="gcAct">How active</label><select id="gcAct">' + opt(ACTIVITY, pr.act || "1.55") + '</select></div>' +
       '<div class="field"><label for="gcAim">Aim</label><select id="gcAim">' + opt(AIMS, pr.aim || "-500") + '</select></div>' +
       '<p class="calc-out is-empty" id="gcOut">Fill these in to see the numbers.</p>' +
+      // The Terms (section 2) say targets are general information; this is
+      // that, said where the numbers are.
+      '<p class="est-note" id="gcNote">Estimates only, not medical advice.</p>' +
       '<button class="btn" id="gcUse" disabled>Use these numbers</button>' +
     '</div>';
   }
@@ -12589,6 +12869,21 @@
     document.getElementById("setWater").innerHTML = [["off", "Hidden"], ["on", "Shown"]].map(function (o) {
       return '<button data-pick-water="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === waterOn() ? "true" : "false") + '">' + o[1] + '</button>';
     }).join("");
+    document.getElementById("setAi").innerHTML = [["off", "Off"], ["on", "On"]].map(function (o) {
+      return '<button data-pick-ai="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === aiOn() ? "true" : "false") + '">' + o[1] + '</button>';
+    }).join("");
+    // When the Terms were agreed to, so it can be seen as well as kept. A yes
+    // from b79 has no date, and nothing is shown rather than one made up.
+    var termsAt = (store.consent || {}).termsAt;
+    document.getElementById("setTermsHint").textContent = termsAt
+      ? "You agreed to the Terms of Use on " +
+        new Date(termsAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + "."
+      : "";
+    var aiAt = (store.consent || {}).aiAt;
+    document.getElementById("setAiHint").textContent = aiOn()
+      ? (aiAt ? "Allowed on " + new Date(aiAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) + ". " : "") +
+        "What you type in Ask an agent and your country go to Google Gemini, through our relay. Off, nothing more is sent."
+      : "Off: nothing is sent. Ask an agent asks first the next time you use it. Logging, the pantry, barcodes and labels work either way.";
     document.getElementById("setWaterMore").style.display = waterOn() ? "" : "none";
     // Where each one turns up, said here: switched on from the Pantry, the
     // screen behind the sheet showed nothing and looked like it hadn't caught
@@ -12651,6 +12946,14 @@
     var c = e.target.closest("[data-pick-coach]");
     var lo = e.target.closest("[data-pick-logopen]");
     var cfb = e.target.closest("[data-pick-cf]"), wb = e.target.closest("[data-pick-water]"), wu = e.target.closest("[data-pick-wunit]");
+    var aib = e.target.closest("[data-pick-ai]");
+    if (aib) {
+      // On asks with the same sheet Ask an agent shows; Off takes effect at once.
+      var want = aib.dataset.pickAi === "on";
+      if (want && !aiOn()) showAiSheet();
+      else if (!want && aiOn()) { withdrawAi(); drawSettings(); }
+      return;
+    }
     if (cfb || wb || wu) {
       if (cfb) store.cfOn = cfb.dataset.pickCf === "on";
       if (wb) store.waterOn = wb.dataset.pickWater === "on";
@@ -13488,6 +13791,8 @@
     }
     if (!gymById(store.gymLast) && gymById(incoming.gymLast)) store.gymLast = incoming.gymLast;
     if (incoming.gymAsked) store.gymAsked = true;
+    // store.consent is left out on purpose: the age check and Ask an agent's
+    // permission were answered on this phone, by whoever holds it.
     applyLook();
     applyTabs();
     if (incoming.suppsRetired) {
@@ -13627,11 +13932,8 @@
     applyLook();
     applyTabs();
 
-    // Stamp the build straight away, so a backup always reveals which code wrote
-    // it — even if nothing has been logged since.
     var tag = document.getElementById("buildTag");
     if (tag) tag.textContent = "b" + BUILD.split(".").pop();
-    if (store.build !== BUILD) { save(); }
 
     // Saved to the home screen, iOS reads these off the page as it stands when you
     // tap Add to Home Screen — so putting them in at load makes the icon open a
@@ -13661,13 +13963,24 @@
       else if (darkMq && darkMq.addListener) darkMq.addListener(applyLook);
     })();
 
-    if (movesNeedSaving) save();
+    // The age check comes before anything else, on a first open and once on
+    // a phone that had the app before it. Until it is answered nothing is
+    // drawn or saved. The build has still started, so the live update is
+    // told it is good either way: the plugin rolls back one that stays quiet.
+    if (grownUp() && !termsChanged()) openApp(prevBuild);
+    else showAgeGate(function () { openApp(prevBuild); });
+    liveReady();
+  }
+
+  function openApp(prevBuild) {
+    // Stamp the build straight away, so a backup always reveals which code wrote
+    // it — even if nothing has been logged since.
+    if (store.build !== BUILD || movesNeedSaving) save();
     render();
     showNews(prevBuild);
     // Said once: the first time the app opens on lists that held names it put
     // there, it says how many it took off rather than letting them vanish.
     if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
-    liveReady();
   }
 })();
 </script>

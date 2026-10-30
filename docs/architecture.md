@@ -121,6 +121,34 @@ version wired handlers sequentially after a long render, so one throw left
 every later button dead and silent. If `render()` throws on the Macros tab, a
 plain fallback view still lets you log.
 
+**The age check comes before anything else (b79).** Gemini's terms are for
+adults, so the whole app is 18+ (decided 2026-10-28). `startUp()` reads the
+log and applies the look, then either opens the app (`openApp()`: the build
+stamp, the first render, What's new) or shows the age check over everything,
+with `.app` inert, and opens the app only on *I'm 18 or older*. Until then
+nothing is drawn and nothing is saved, so closing the app on that screen asks
+again next time. A phone that had the app before b79 is asked once, and its
+What's new waits behind the check. *I'm under 18* is kept as a no, so the
+sorry screen comes back on every open, with no way in; a log already on the
+phone is left exactly as it was. `liveReady()` is called either way: the build
+has started, and the live updater rolls back a build that stays quiet for 10
+seconds. The answers live in the log as `store.consent` — `adult`, `ai`,
+`aiAt` (when Ask an agent was allowed), `terms` and `termsAt`, nothing else,
+no birth date — under the same key. Like `lastBackupAt`, `mergeInto()` does
+not carry them across a restore: they were answered on this phone.
+
+**The yes to the age check is the yes to the Terms (b80).** The screen says
+*By continuing you agree to the Terms of Use*, so *I'm 18 or older* records
+`terms`, the version agreed to (`TERMS`, the effective date of the Terms as
+published), and `termsAt`, when — what shows someone agreed, and Settings →
+About shows the date. The Terms (section 13) promise that a significant change
+is agreed to again, so changing `TERMS` asks every adult once, on the next
+open, with `#termsAsk` (*The Terms of Use have changed*, one *I agree*, the
+links) before the app opens. Change it for a significant change only, and
+publish the new Terms first. A b79 yes has no version and counts as
+`TERMS_FIRST`, the first published one; it shows no date rather than a made-up
+one.
+
 **Days are judged against the goal in force when they were logged.**
 `stampGoal()` snapshots it, so changing your target today never rewrites last
 month's calendar.

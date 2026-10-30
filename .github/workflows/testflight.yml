@@ -85,7 +85,31 @@ jobs:
           KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
           trap 'rm -f "$KEY"' EXIT
           umask 077
-          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
+          # The secret is the .p8 file's text, but a paste rarely arrives
+          # byte for byte: a browser form sends its line breaks as CRLF, an
+          # editor can add spaces, fold it onto one line or re-wrap it, and a
+          # dash can go missing. Apple's tools refuse all of those as
+          # invalidPEMDocument (they want 64-character lines exactly), so the
+          # key is rebuilt from its body here, checked, and never printed.
+          RAW=$(printf '%s\n' "$ASC_KEY_P8" | tr -d '\r')
+          case "$RAW" in
+            *"BEGIN PRIVATE KEY"*"END PRIVATE KEY"*) ;;
+            *)
+              echo "::error::ASC_KEY_P8 must be the whole .p8 file, from the BEGIN PRIVATE KEY line to the END PRIVATE KEY line. See docs/ios.md."
+              exit 1 ;;
+          esac
+          BODY=$(printf '%s\n' "$RAW" | sed -e 's/-*BEGIN PRIVATE KEY-*//' -e 's/-*END PRIVATE KEY-*//' | tr -d ' \t\n')
+          if printf '%s' "$BODY" | grep -q '[^A-Za-z0-9+/=]'; then
+            echo "::error::ASC_KEY_P8 has characters a .p8 key never holds between its BEGIN and END lines (quotes, long dashes or other editor changes). Set it again straight from the file. See docs/ios.md."
+            exit 1
+          fi
+          { echo '-----BEGIN PRIVATE KEY-----'; printf '%s' "$BODY" | fold -w 64; echo; echo '-----END PRIVATE KEY-----'; } > "$KEY"
+          # Right shape, but a character lost or changed in the body still
+          # makes a key nothing can read. Say so plainly, before xcodebuild.
+          if ! openssl pkey -in "$KEY" -noout > /dev/null 2>&1; then
+            echo "::error::ASC_KEY_P8 is shaped like a key but does not read as one: a character in its body is missing or changed. Set it again straight from the .p8 file. See docs/ios.md."
+            exit 1
+          fi
           AUTH="-allowProvisioningUpdates -authenticationKeyPath $KEY -authenticationKeyID $ASC_KEY_ID -authenticationKeyIssuerID $ASC_ISSUER_ID"
           ARCHIVE="$RUNNER_TEMP/App.xcarchive"
           xcodebuild archive \

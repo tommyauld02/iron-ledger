@@ -11,9 +11,10 @@ service worker is the other half of this: it caches the app's document as
 "./", and before these pages existed it cached *any* page that way, so one
 visit to the privacy policy would have made it the app's offline copy.
 """
+import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-import os, io, threading, functools
+import os, io, re, threading, datetime, functools
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PAGES = ["privacy.html", "support.html", "terms.html"]
@@ -36,6 +37,14 @@ wf = io.open(os.path.join(ROOT, ".github", "workflows", "pages.yml"), encoding="
 for f in PAGES:
     check("%s exists" % f, os.path.exists(os.path.join(ROOT, f)))
     check("the deploy copies %s" % f, f in wf.split("Assemble the site", 1)[-1].split("- uses:", 1)[0])
+
+# The app records TERMS as the version of the Terms someone agreed to, and it is
+# the effective date of the Terms as published, so the two must say the same.
+app = io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()
+version = re.search(r'var TERMS = "(\d{4}-\d\d-\d\d)"', app).group(1)
+when = datetime.date.fromisoformat(version)
+stated = "Effective date: %s %d, %d" % (when.strftime("%B"), when.day, when.year)
+check("the Terms state the date the app records", stated in io.open(os.path.join(ROOT, "terms.html"), encoding="utf-8").read(), stated)
 
 srv = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(H, directory=ROOT))
 PORT = srv.server_address[1]
