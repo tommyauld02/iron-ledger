@@ -55,7 +55,12 @@ answers, the manifest Pages publishes, and that the shell's version was raised
 if the shell changed · `relay` the
 relay itself, run in Node against a fake Gemini (exits 77, SKIPPED, with no
 Node) · `pwa` the offline shell, served the
-way Pages serves it, with the network cut, and what still answers offline · `handoff` safe-area opt-in, all
+way Pages serves it, with the network cut, and what still answers offline ·
+`legal` the Privacy Policy, Support and Terms pages App Store Connect links
+to: the deploy copies them, each links to the others and the app, no
+`[placeholder]` from the drafts is left, 44px links a press reaches, contrast
+and no sideways scroll in both themes, and the worker keeps the app as its
+offline copy after they are visited · `handoff` safe-area opt-in, all
 three wake paths, measured touch targets on a 402x874 phone, and the
 no-Claude-and-no-network mode Pages actually runs in · `touch` real touch
 events via CDP

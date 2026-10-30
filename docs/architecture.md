@@ -134,6 +134,17 @@ always get the current build, offline the cache answers. The worker reads its
 version from its own `?v=` query, which the app sets from `BUILD`, so there is
 no second version to bump.
 
+**Only the app's own document is cached as the app.** The Privacy Policy,
+Support and Terms pages (`privacy.html`, `support.html`, `terms.html`, copied
+to the site by `pages.yml` and linked from App Store Connect) sit in the
+worker's scope too. Before they existed, every page navigation was saved as
+`./`, so one visit to the privacy policy would have made it what the app
+opened offline. The worker now leaves any navigation that is not the scope
+root or `index.html` to the network, and `legal` visits all three pages,
+cuts the network and checks the app still opens. The pages carry their own
+copy of the colour tokens and fonts, and follow `iron-ledger-look`, so a
+phone set to dark in the app gets them dark.
+
 Inside the iPhone app there is no service worker at all: the app ships its
 own files, and on Android it would be served over https, which the protocol
 test alone would let through, so registration also checks `!NATIVE`.
