@@ -8,12 +8,15 @@ fakeai.phone); this one is the suite that answers them, on a phone.
 It checks that:
 - a first open shows the age check before anything else, with the approved
   words, the links to the terms, privacy policy and support, and nothing of
-  the app reachable behind it; nothing is saved until it is answered
+  the app reachable behind it; nothing is saved until it is answered. Since
+  b81 it asks for a birth date (tests/profile.py has the date's own checks:
+  bad dates, Is that right?, the second chance, the profile after it)
 - an incomplete check (the app closed on the screen) asks again next time
-- 18 or older: the app opens, says so, keeps only that answer, and doesn't ask
-  again on a relaunch
-- under 18: the sorry screen, the links, no way into the app, and the same
-  screen on a relaunch; nothing goes anywhere
+- 18 or older: the profile follows, then the app; the answer and the Terms are
+  kept in consent and the birth date in the profile; not asked again
+- under 18: the sorry screen, the links, no way into the app but entering the
+  date again, and the same screen on a relaunch; only the no is kept, no
+  date; nothing goes anywhere
 - an existing install with a log is asked once, What's new waits behind the
   check, and the log is untouched whichever way it is answered
 - the web build served over http, and the iPhone app, whose answer is kept in
@@ -31,7 +34,7 @@ It checks that:
 - 44px targets, and the screens' contrast in light and dark
 
 What it cannot show: that the person is 18. The check is self-declared — a
-child can tap the other button. It records an answer; it is not proof of age.
+child can type another year. It records an answer; it is not proof of age.
 """
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -72,15 +75,15 @@ BASE = "http://127.0.0.1:%d/" % srv.server_address[1]
 
 ASK_WORDS = [
     "MNTL D&T",
-    "MNTL D&T is for adults",
-    "Confirm you’re 18 or older to use the app. Only your answer is kept, on this phone.",
-    "I’m 18 or older",
-    "I’m under 18",
+    "When were you born?",
+    "MNTL D&T is for adults, 18 or older. Your birth date stays on this phone — the app also uses it to work out your calories.",
+    "Continue",
     "By continuing you agree to the Terms of Use and Privacy Policy.",
 ]
 NO_WORDS = [
     "Sorry, MNTL D&T is for adults",
     "You need to be 18 or older to use it. Nothing has been saved about you, and nothing was sent anywhere.",
+    "Wrong birth date? Enter it again",
     "Questions? The privacy policy and support page are below.",
 ]
 AI_WORDS = [
@@ -204,6 +207,26 @@ def tap(p, sel, wait=300):
         p.click(sel); p.wait_for_timeout(wait)
 
 
+def born(p, y="1992", m="3", d="14"):
+    """Answers the age check with a birth date, the way a person would."""
+    p.select_option("#dobM", m); p.fill("#dobD", d); p.fill("#dobY", y)
+    p.click("#ageGo"); p.wait_for_timeout(400)
+
+
+def adult(p):
+    """18 or older, and past the profile that follows a first yes."""
+    born(p)
+    if shown(p, "#pfSkip"):
+        p.click("#pfSkip"); p.wait_for_timeout(300)
+
+
+def under18(p):
+    """A date under 18, said back, and confirmed."""
+    born(p, y="2012")
+    if shown(p, "#ageSure"):
+        p.click("#ageSure"); p.wait_for_timeout(400)
+
+
 def ask_agent(p, words="6 oz sirloin"):
     if shown(p, "#discardEst"):                          # a review open from the last one
         p.click("#discardEst"); p.wait_for_timeout(250)
@@ -232,7 +255,8 @@ with sync_playwright() as pw:
     check("first open: nothing is saved before it is answered", saved(p) is None, saved(p))
     check("first open: What's new is not shown to a new phone", not shown(p, "#newsSheet"))
     targets(p, "#ageAsk button, #ageAsk a", "age check")
-    check("first open: no fields, so nothing can zoom the page", p.evaluate("() => document.querySelectorAll('#ageGate input, #ageGate select, #ageGate textarea').length") == 0)
+    check("first open: the birth date's boxes are 16px or more, so iOS doesn't zoom", p.evaluate(
+        "() => [...document.querySelectorAll('#ageAsk input, #ageAsk select')].every(e => parseFloat(getComputedStyle(e).fontSize) >= 16)"))
     contrast(p, "#ageAsk *", "age check, light")
 
     # closed on the screen, opened again
@@ -241,16 +265,18 @@ with sync_playwright() as pw:
     check("an incomplete check saved nothing", saved(p) is None, saved(p))
 
     # 18 or older
-    p.click("#ageYes"); p.wait_for_timeout(500)
+    born(p)
     check("18 or older: the age check goes", not shown(p, "#ageGate"))
+    check("18 or older: the profile follows a first yes", shown(p, "#profGate") and text(p, "#profTitle") == "About you")
+    p.click("#pfSkip"); p.wait_for_timeout(300)
     check("18 or older: the app opens on the tour", shown(p, ".welcome") and shown(p, ".tabs"))
     check("18 or older: the app is reachable again", p.evaluate("() => document.querySelector('.app').inert === false"))
-    check("18 or older: it says what was kept", "18 or older" in bar(p) and "Only that answer is kept" in bar(p), bar(p))
+    check("18 or older: it says where the profile is", "Settings" in bar(p), bar(p))
     s = saved(p) or {}
-    check("18 or older: only the answer is kept — adult: true, with the Terms' version and when",
+    check("18 or older: the answer is kept — adult: true, with the Terms' version and when",
           agreed(s.get("consent")), s.get("consent"))
-    check("18 or older: no birth date or age number anywhere in the log",
-          not re.search(r'"(birth|dob|born|age|yearOfBirth)"', json.dumps(s)), "")
+    check("18 or older: the birth date is kept in the profile, and only there",
+          (s.get("profile") or {}).get("dob") == "1992-03-14" and json.dumps(s).count("1992-03-14") == 1, s.get("profile"))
     p.reload(); p.wait_for_timeout(700)
     check("18 or older: a relaunch goes straight into the app", not shown(p, "#ageGate") and shown(p, ".tabs"))
     check("18 or older: no request to the relay", not hits, hits)
@@ -259,7 +285,9 @@ with sync_playwright() as pw:
     # dark, before answering
     ctx, p, hits = open_phone(b, scheme="dark")
     contrast(p, "#ageAsk *", "age check, dark")
-    p.click("#ageUnder"); p.wait_for_timeout(400)
+    born(p, y="2012")
+    contrast(p, "#ageCheck *", "Is that right?, dark")
+    p.click("#ageSure"); p.wait_for_timeout(400)
     contrast(p, "#ageNo *", "sorry screen, dark")
     ctx.close()
 
@@ -267,20 +295,25 @@ with sync_playwright() as pw:
     ctx, p, hits = open_phone(b, size=SMALL)
     targets(p, "#ageAsk button, #ageAsk a", "age check at 320px")
     check("age check at 320px: no sideways scroll", p.evaluate("() => document.documentElement.scrollWidth <= innerWidth"))
-    p.click("#ageUnder"); p.wait_for_timeout(400)
+    born(p, y="2012")
+    check("under 18: said back before it counts", shown(p, "#ageCheck") and not shown(p, "#ageNo"))
+    targets(p, "#ageCheck button, #ageCheck a", "Is that right? at 320px")
+    contrast(p, "#ageCheck *", "Is that right?, light")
+    p.click("#ageSure"); p.wait_for_timeout(400)
     check("under 18: the sorry screen", shown(p, "#ageNo") and not shown(p, "#ageAsk"))
     words = text(p, "#ageNo")
     missing = [w for w in NO_WORDS if w not in words]
     check("under 18: the approved words, every one", not missing, missing)
     links(p, "#ageNo", "sorry screen")
-    check("under 18: no button on it — no way into the app, no going back",
-          p.evaluate("() => document.querySelectorAll('#ageNo button').length") == 0)
+    check("under 18: one button on it, to enter the date again — no other way into the app",
+          p.evaluate("() => [...document.querySelectorAll('#ageNo button')].map(b => b.id)") == ["ageAgain"])
     check("under 18: the app stays out of reach", p.evaluate("() => document.querySelector('.app').inert === true")
           and p.evaluate("() => document.getElementById('view').innerHTML.trim() === ''"))
-    targets(p, "#ageNo a", "sorry screen at 320px")
+    targets(p, "#ageNo a, #ageNo button", "sorry screen at 320px")
     contrast(p, "#ageNo *", "sorry screen, light")
     s = saved(p) or {}
     check("under 18: only the answer is kept — adult: false", s.get("consent") == {"adult": False}, s.get("consent"))
+    check("under 18: no birth date anywhere in the log", "2012" not in json.dumps(s) and not (s.get("profile") or {}).get("dob"), s.get("profile"))
     p.reload(); p.wait_for_timeout(700)
     check("under 18: a relaunch shows the same sorry screen, not the question",
           shown(p, "#ageNo") and not shown(p, "#ageAsk"))
@@ -293,7 +326,9 @@ with sync_playwright() as pw:
     check("existing install: asked once, on the next open", shown(p, "#ageAsk"))
     check("existing install: What's new waits behind the check", not shown(p, "#newsSheet"))
     check("existing install: nothing written before it is answered", saved(p) == old)
-    p.click("#ageYes"); p.wait_for_timeout(500)
+    born(p)
+    check("existing install: the profile first, What's new waiting behind it", shown(p, "#profGate") and not shown(p, "#newsSheet"))
+    p.click("#pfSkip"); p.wait_for_timeout(300)
     check("existing install: What's new follows, with this build", shown(p, "#newsSheet") and "An age check" in text(p, "#newsBody"),
           text(p, "#newsBody")[:80])
     p.click("#newsDone"); p.wait_for_timeout(200)
@@ -306,7 +341,7 @@ with sync_playwright() as pw:
     ctx.close()
 
     ctx, p, hits = open_phone(b, stored=old)
-    p.click("#ageUnder"); p.wait_for_timeout(400)
+    under18(p)
     said = text(p, "#ageNo")
     check("existing install, under 18: it doesn't claim nothing was saved",
           "What you logged before stays on this phone, and nothing was sent anywhere." in said
@@ -318,7 +353,7 @@ with sync_playwright() as pw:
     # ---- the web build, served over http as on Pages ----
     ctx, p, hits = open_phone(b, url=BASE)
     check("web over http: the age check before anything else", shown(p, "#ageAsk"))
-    p.click("#ageYes"); p.wait_for_timeout(500)
+    adult(p)
     check("web over http: the answer is in localStorage", agreed((saved(p) or {}).get("consent")))
     p.reload(); p.wait_for_timeout(700)
     check("web over http: not asked again", not shown(p, "#ageGate"))
@@ -351,7 +386,7 @@ with sync_playwright() as pw:
     check("iPhone app: the live update is told the build started, with the check still up",
           ("CapacitorUpdater", "notifyAppReady") in calls, calls)
     check("iPhone app: nothing in native storage before it is answered", on_phone() is None)
-    p.click("#ageYes"); p.wait_for_timeout(600)
+    adult(p)
     check("iPhone app: the answer is in native storage", agreed((on_phone() or {}).get("consent")))
     check("iPhone app: and not in the WebView's localStorage", saved(p) is None, saved(p))
     ctx.close()
@@ -362,7 +397,7 @@ with sync_playwright() as pw:
     # ---- Ask an agent asks before it first sends ----
     asked = []
     ctx, p, hits = open_phone(b, relay=True, asked=asked)
-    p.click("#ageYes"); p.wait_for_timeout(400)
+    adult(p)
     p.click("#dismissWelcome"); p.wait_for_timeout(200)
     ask_agent(p)
     check("Ask an agent: the permission sheet before anything is sent", shown(p, "#aiSheet"))
@@ -494,7 +529,7 @@ with sync_playwright() as pw:
     # ---- the age answer is needed too: a stored AI yes without it sends nothing ----
     ctx, p, hits = open_phone(b, relay=True, stored=fixture(BUILD, {"ai": True, "aiAt": 1}, pending=True))
     check("AI yes but no age answer: the age check, first", shown(p, "#ageAsk"))
-    p.click("#ageUnder"); p.wait_for_timeout(300)
+    under18(p)
     check("AI yes but under 18: the AI yes is dropped, and nothing is sent",
           (saved(p) or {}).get("consent") == {"adult": False} and not hits, (saved(p) or {}).get("consent"))
     ctx.close()

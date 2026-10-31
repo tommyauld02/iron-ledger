@@ -3521,9 +3521,9 @@ with sync_playwright() as pw:
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
           q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The icon says MNTL D&T"
-          and titles[1]=="Clearer about estimates"
-          and titles[2]=="An age check, and Ask an agent asks first"
-          and titles[3]=="The keyboard settles", str(titles))
+          and titles[1]=="You, and all your goals in one place"
+          and titles[2]=="Clearer about estimates"
+          and titles[3]=="An age check, and Ask an agent asks first", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
