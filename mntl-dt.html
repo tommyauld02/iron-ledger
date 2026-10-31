@@ -810,6 +810,27 @@
   }
   .ag-links .ag-dot { color: var(--ink-2); }
   .ag-links .ag-mail { flex-basis: 100%; height: 0; }
+  /* The birth date: month by name, so 03/04 can't be read either way round. */
+  .ag-dob { display: grid; grid-template-columns: 1.5fr .8fr 1fr; gap: 10px; }
+  .agegate p.ag-err { color: var(--miss); font-size: 14px; }
+
+  /* ---------- the profile ---------- */
+  /* The age check's card, taller: it scrolls inside the gate, top first. */
+  .profgate { align-items: flex-start; }
+  .profgate .agecard { margin: 0 0 auto; }
+  .profgate h3 { margin: 0; font-size: 18px; font-weight: 700; }
+  .profgate .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .profgate .seg.four { grid-template-columns: repeat(4, 1fr); }
+  /* Four one-word buttons don't fit a 320px phone: two by two there. */
+  @media (max-width: 360px) { .profgate .seg.four { grid-template-columns: 1fr 1fr; } }
+  .profgate .set-hint, .profgate .est-note { font-size: 13px; }
+  .pf-grp { display: flex; flex-direction: column; gap: 8px; padding-top: 14px; border-top: 1px solid var(--rule); }
+  .pf-dob { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; color: var(--ink); }
+  .pf-link {
+    min-height: 44px; min-width: 44px; padding: 0 6px; background: none; border: 0;
+    font: inherit; font-size: 15px; color: var(--accent); text-decoration: underline; text-underline-offset: 3px;
+  }
+  .set-who { margin: 0; font-size: 15px; color: var(--ink); }
 
   /* ---------- estimator ---------- */
   .est textarea {
@@ -1093,6 +1114,9 @@
   .bw .bw-now b { font-size: 18px; }
   .bw svg { width: 100%; height: 120px; display: block; }
   .bw .bw-note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+  /* The goal weight, from the profile: grey on its way, green on it. */
+  .bw .bw-goal { margin: 0; font-family: var(--font-num); font-size: 13px; color: var(--ink-2); }
+  .bw .bw-goal.is-met { color: var(--hit); }
   .bw .bw-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
   .bw .bw-entry input { min-width: 0; }
   .bw .seg.two { grid-template-columns: 1fr 1fr; }
@@ -3698,6 +3722,9 @@
   .week-card .split-head { margin: 0; min-height: 44px; }
   .wb-hint { font-size: 12px; color: var(--ink-2); }
   .week-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  /* Workouts a week, from the profile, under the week it counts. */
+  .wb-goal { margin: 10px 0 0; font-family: var(--font-num); font-size: 13px; color: var(--ink-2); }
+  .wb-goal.is-met { color: var(--hit); }
   .wb-tile {
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px;
     min-height: 74px; min-width: 0; padding: 8px 2px; border-radius: 14px;
@@ -3944,25 +3971,49 @@
 
 <!-- The age check. Gemini's terms, which Ask an agent runs on, are for adults
      only, so the whole app is 18+ (decided 2026-10-28). Asked once, before
-     anything else; only the answer is kept. Self-declared: it is not proof of
-     age. Under 18 there is no way in, and no going back: Tommy asked for
-     neither, and a parent's permission does not change Gemini's terms. -->
+     anything else. Self-declared: it is not proof of age. Since b81 it asks
+     for a birth date rather than offering two buttons (Tommy, 2026-10-28):
+     one wrong tap on "I'm under 18" used to shut someone out for good. A date
+     under 18 is said back ("Is that right?") before it counts, and the sorry
+     screen lets the date be entered again, as many times as it takes. An
+     adult's birth date is kept, on this phone, for the profile and the
+     calorie estimate; for someone under 18 only the no is kept. -->
 <div class="agegate" id="ageGate" role="dialog" aria-modal="true" aria-labelledby="ageTitle" hidden>
   <section class="agecard" id="ageAsk">
     <span class="ag-k">MNTL D&amp;T</span>
-    <h2 id="ageTitle">MNTL D&amp;T is for adults</h2>
-    <p>Confirm you’re 18 or older to use the app. Only your answer is kept, on this phone.</p>
+    <h2 id="ageTitle">When were you born?</h2>
+    <p>MNTL D&amp;T is for adults, 18 or older. Your birth date stays on this phone — the app also uses it to work out your calories.</p>
+    <div class="ag-dob" role="group" aria-labelledby="ageTitle">
+      <div class="field"><label for="dobM">Month</label><select id="dobM" autocomplete="bday-month"></select></div>
+      <div class="field"><label for="dobD">Day</label><input id="dobD" inputmode="numeric" maxlength="2" autocomplete="bday-day"></div>
+      <div class="field"><label for="dobY">Year</label><input id="dobY" inputmode="numeric" maxlength="4" autocomplete="bday-year"></div>
+    </div>
+    <p class="ag-err" id="ageErr" role="alert" hidden></p>
     <div class="ag-acts">
-      <button class="btn" id="ageYes">I’m 18 or older</button>
-      <button class="btn ghost" id="ageUnder">I’m under 18</button>
+      <button class="btn" id="ageGo">Continue</button>
     </div>
     <p class="ag-fine">By continuing you agree to the Terms of Use and Privacy Policy.</p>
     <div class="ag-links"></div>
   </section>
+  <!-- A date under 18, said back before it counts: a typo (2010 for 1992) is
+       fixed here rather than found on the sorry screen. -->
+  <section class="agecard" id="ageCheck" hidden>
+    <span class="ag-k">MNTL D&amp;T</span>
+    <h2 id="checkTitle">Is that right?</h2>
+    <p id="ageCheckSaid"></p>
+    <div class="ag-acts">
+      <button class="btn" id="ageFix">Change the date</button>
+      <button class="btn ghost" id="ageSure">Yes, that’s right</button>
+    </div>
+    <div class="ag-links"></div>
+  </section>
   <section class="agecard" id="ageNo" hidden>
     <span class="ag-k">MNTL D&amp;T</span>
-    <h2>Sorry, MNTL D&amp;T is for adults</h2>
+    <h2 id="noTitle">Sorry, MNTL D&amp;T is for adults</h2>
     <p id="ageNoSaid">You need to be 18 or older to use it. Nothing has been saved about you, and nothing was sent anywhere.</p>
+    <div class="ag-acts">
+      <button class="btn ghost" id="ageAgain">Wrong birth date? Enter it again</button>
+    </div>
     <p>Questions? The privacy policy and support page are below.</p>
     <div class="ag-links"></div>
   </section>
@@ -3978,6 +4029,15 @@
     </div>
     <div class="ag-links"></div>
   </section>
+</div>
+
+<!-- The profile: name, birth date, gender, weight and height, and every
+     goal in the app, in one place (b81). Shown once after the age check on a
+     first open (About you, then Your goals; both can be skipped) and any time
+     from Settings, You. Drawn by drawProfile(); all of it is kept on this
+     phone, in the log. -->
+<div class="agegate profgate" id="profGate" role="dialog" aria-modal="true" aria-labelledby="profTitle" hidden>
+  <section class="agecard" id="profCard"></section>
 </div>
 
 <div class="sheet" id="sheet" hidden>
@@ -4013,6 +4073,14 @@
 <div class="sheet" id="setSheet" hidden>
   <div class="sheet-inner">
     <h2>Settings</h2>
+    <!-- Who this is and what they are aiming for. The profile is where every
+         goal is set. -->
+    <div class="set-group">
+      <span class="eyebrow">You</span>
+      <p class="set-who" id="setWho"></p>
+      <p class="set-hint" id="setWhoGoals"></p>
+      <button class="btn ghost" id="setProfile">Edit profile &amp; goals</button>
+    </div>
     <div class="set-group">
       <span class="eyebrow">Appearance</span>
       <div class="seg" id="setThemes" role="group" aria-label="Appearance"></div>
@@ -4183,7 +4251,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-29.81";
+  var BUILD = "2026-10-31.82";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4848,9 +4916,14 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
-    { b: "2026-10-29.81", t: "The keyboard, in the iPhone app", items: [
+    { b: "2026-10-31.82", t: "The keyboard, in the iPhone app", items: [
       "In the iPhone app, Ask an agent’s box stays above the keyboard instead of being pulled back behind it.",
       "Putting the keyboard away no longer leaves the bottom bar halfway up an empty screen." ] },
+    { b: "2026-10-29.81", t: "You, and all your goals in one place", items: [
+      "Settings → You is your profile: name, birth date, gender, weight and height, and every goal — calories and protein (worked out for you if you like), water, cardio, and two new ones.",
+      "New: workouts a week, counted under the week on the Gym tab, and a goal weight, shown beside your trend on the Log tab.",
+      "The age check now asks for your birth date. Tapped the wrong answer, or entered the wrong date? The sorry screen lets you enter it again.",
+      "All of it stays on this phone." ] },
     { b: "2026-10-29.80", t: "Clearer about estimates", items: [
       "The goal calculator now says plainly that its numbers are estimates, not medical advice.",
       "Ask an agent’s answers now remind you they can be wrong: check the label where there is one.",
@@ -5952,11 +6025,12 @@
   // Decided 2026-10-28. Gemini's terms are for adults, so the whole app is
   // 18+, asked once before anything else. And Apple's guideline 5.1.2(i) wants
   // a clear yes before anything goes to someone else's AI, so Ask an agent
-  // asks the first time it would send. Only the answers are kept, in the log
+  // asks the first time it would send. The answers are kept in the log
   // (store.consent: adult true/false, ai true/false, aiAt when it was given,
-  // terms the version of the Terms of Use agreed to and termsAt when) — no
-  // birth date, no ID. They stay with this phone: mergeInto() leaves them
-  // out, the way it leaves out lastBackupAt.
+  // terms the version of the Terms of Use agreed to and termsAt when). They
+  // stay with this phone: mergeInto() leaves them out, the way it leaves out
+  // lastBackupAt. Since b81 the age is asked as a birth date; an adult's goes
+  // into the profile (store.profile.dob), and under 18 only the no is kept.
   //
   // The yes to the age check is also the yes to the Terms ("By continuing you
   // agree"), so it records which version and when: that is what shows someone
@@ -6003,16 +6077,51 @@
     document.querySelectorAll("[data-page]").forEach(function (a) { a.href = PAGES + a.dataset.page + ".html"; });
   })();
 
+  // ---- the birth date ----
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"];
+  // Years old on a day, both "YYYY-MM-DD": the birthday itself counts.
+  function ageOn(dob, key) {
+    var a = Number(key.slice(0, 4)) - Number(dob.slice(0, 4));
+    return key.slice(5) < dob.slice(5) ? a - 1 : a;
+  }
+  function longDate(key) {
+    return parseYmd(key).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  }
+  // A birth date from its three boxes, or what is wrong with it, in words.
+  function dobFrom(m, d, y) {
+    m = Number(m); d = Number(String(d).trim()); y = String(y).trim();
+    if (!m || !(d >= 1) || !/^\d{4}$/.test(y)) return { err: "Enter the month, the day, and all four digits of the year." };
+    var dt = new Date(Number(y), m - 1, d);
+    if (dt.getMonth() !== m - 1 || dt.getDate() !== d) return { err: "There’s no " + MONTHS[m - 1] + " " + d + " — check the day." };
+    if (Number(y) < 1900) return { err: "Check the year." };
+    var key = ymd(dt);
+    if (key > TODAY) return { err: "That date hasn’t happened yet — check the year." };
+    return { dob: key };
+  }
+  // The three boxes, wherever they are: the age check's and the profile's.
+  function dobOptions(sel) {
+    return '<option value="">Month</option>' + MONTHS.map(function (n, i) {
+      return '<option value="' + (i + 1) + '"' + (Number(sel) === i + 1 ? " selected" : "") + '>' + n + '</option>';
+    }).join("");
+  }
+  document.getElementById("dobM").innerHTML = dobOptions("");
+
   var ageGate = document.getElementById("ageGate");
   var ageThen = null;
+  var setupNext = false;   // a first yes: the profile follows the age check
+  var AGE_CARDS = { ageAsk: "ageTitle", ageCheck: "checkTitle", ageNo: "noTitle", termsAsk: "termsTitle" };
+  function ageCard(which) {
+    Object.keys(AGE_CARDS).forEach(function (id) { document.getElementById(id).hidden = id !== which; });
+    ageGate.setAttribute("aria-labelledby", AGE_CARDS[which]);
+    ageGate.scrollTop = 0;
+  }
   // Over everything until it is answered; the app behind it can't be reached.
   function showAgeGate(then) {
     var no = (store.consent || {}).adult === false, again = termsChanged();
     ageThen = then;
-    document.getElementById("ageAsk").hidden = no || again;
-    document.getElementById("ageNo").hidden = !no;
-    document.getElementById("termsAsk").hidden = !again;
-    ageGate.setAttribute("aria-labelledby", again ? "termsTitle" : "ageTitle");
+    document.getElementById("ageErr").hidden = true;
+    ageCard(again ? "termsAsk" : no ? "ageNo" : "ageAsk");
     // Said as approved for a first open. A phone that already has a log keeps
     // it, so it doesn't claim nothing was saved.
     var kept = Object.keys(store.days).some(function (k) {
@@ -6034,25 +6143,59 @@
     var then = ageThen;
     ageThen = null;
     if (then) then();
-    // The screen going is one sign; this says what was kept.
-    notify(said);
+    // The screen going is one sign; this says what was kept. When the
+    // profile follows, it is the next thing on screen and says its own.
+    if (said) notify(said);
   }
-  document.getElementById("ageYes").addEventListener("click", function () {
+  // 18 or older, by a birth date: the yes, the Terms, and the date, kept in
+  // the profile. A first yes goes on to the profile; one from Settings, or
+  // from a phone that has been through it, goes back to the app.
+  function adultBy(dob) {
     var c = consent();
     c.adult = true;
     agreeTerms(c);
-    leaveAgeGate("Thanks — confirmed you’re 18 or older. Only that answer is kept, on this phone.");
+    var pr = profile();
+    pr.dob = dob;
+    setupNext = !pr.setup && !!ageThen;
+    leaveAgeGate(setupNext ? "" : "Thanks — you’re 18 or older. Your birth date stays on this phone.");
+  }
+  document.getElementById("ageGo").addEventListener("click", function () {
+    var r = dobFrom(document.getElementById("dobM").value, document.getElementById("dobD").value,
+                    document.getElementById("dobY").value);
+    var err = document.getElementById("ageErr");
+    if (r.err) { err.textContent = r.err; err.hidden = false; return; }
+    err.hidden = true;
+    if (ageOn(r.dob, TODAY) >= 18) adultBy(r.dob);
+    else sayAgeBack(r.dob);
+  });
+  function sayAgeBack(dob) {
+    document.getElementById("ageCheckSaid").innerHTML = "<strong>" + esc(longDate(dob)) + "</strong> makes you " +
+      ageOn(dob, TODAY) + ". MNTL D&amp;T is for adults, so under 18 the app stays closed.";
+    ageCard("ageCheck");
+  }
+  document.getElementById("ageFix").addEventListener("click", function () { ageCard("ageAsk"); });
+  // Under 18, said twice: kept as a no. The date is not kept, nor anything
+  // given before — Ask an agent's yes, the Terms, a birth date in the profile
+  // — and a question on its way to the relay is called back.
+  document.getElementById("ageSure").addEventListener("click", function () {
+    var c = consent();
+    c.adult = false;
+    delete c.ai; delete c.aiAt; delete c.terms; delete c.termsAt;
+    if (store.profile) delete store.profile.dob;
+    relayOut.slice().forEach(function (ctl) { ctl.withdrawn = true; ctl.abort(); });
+    save();
+    showAgeGate(ageThen);
+  });
+  // The second chance (Tommy, 2026-10-28): the date again, from empty, as
+  // many times as it takes. Self-declared either way, as the check always was.
+  document.getElementById("ageAgain").addEventListener("click", function () {
+    ["dobM", "dobD", "dobY"].forEach(function (id) { document.getElementById(id).value = ""; });
+    document.getElementById("ageErr").hidden = true;
+    ageCard("ageAsk");
   });
   document.getElementById("termsYes").addEventListener("click", function () {
     agreeTerms(consent());
     leaveAgeGate("Thanks — you’ve agreed to the new Terms of Use.");
-  });
-  document.getElementById("ageUnder").addEventListener("click", function () {
-    var c = consent();
-    c.adult = false;
-    delete c.ai; delete c.aiAt; delete c.terms; delete c.termsAt;
-    save();
-    showAgeGate(null);
   });
 
   // ---- Ask an agent's permission ----
@@ -7622,6 +7765,7 @@
           esc(last.k === TODAY ? 'today' : shortDate(last.k)) + '</span>' : '') + '</div>' +
       chart +
       '<p class="bw-note">' + note + '</p>' +
+      bwGoalHtml(last) +
       '<div class="bw-entry">' +
         '<input id="bwIn" inputmode="decimal" placeholder="' + (today != null ? bwShow(today) : (bwUnit() === "kg" ? "82.5" : "182.4")) +
           '" aria-label="Today\u2019s weight in ' + bwUnit() + '">' +
@@ -7630,6 +7774,15 @@
       '<div class="seg two" role="group" aria-label="Weigh yourself in">' +
         ["lb", "kg"].map(function (u) { return '<button data-bwunit="' + u + '" aria-pressed="' + (u === bwUnit()) + '">' + u + '</button>'; }).join("") +
       '</div></section>';
+  }
+  // The profile's goal weight, measured from the trend rather than one
+  // morning's scale, for the reason the trend is there.
+  function bwGoalHtml(last) {
+    var g = Number(store.bwGoal);
+    if (!(g > 0)) return "";
+    var off = last ? Math.abs(last.t - g) : null, met = off !== null && off < 0.5;
+    return '<p class="bw-goal' + (met ? ' is-met' : '') + '" id="bwGoal">Goal ' + bwShow(g) + ' ' + bwUnit() +
+      (off === null ? '' : met ? ' · the trend is there' : ' · ' + bwShow(off) + ' ' + bwUnit() + ' to go on the trend') + '</p>';
   }
   function wireBw() {
     var save1 = document.getElementById("bwSave"), inp = document.getElementById("bwIn");
@@ -7675,15 +7828,15 @@
   ];
   var goalCalc = false;
   function calcHtml() {
-    var pr = store.profile || {}, metric = bwUnit() === "kg", w = latestBw();
-    function opt(list, v) { return list.map(function (o) { return '<option value="' + o.id + '"' + (String(v) === o.id ? ' selected' : '') + '>' + o.name + '</option>'; }).join(""); }
+    var pr = store.profile || {}, metric = bwUnit() === "kg", w = latestBw(), sx = calcSexOf(pr);
+    var age = pr.dob ? ageOn(pr.dob, TODAY) : pr.age;
     return '<div class="calc" id="goalCalc">' +
       '<span class="eyebrow">Work it out</span>' +
       '<div class="seg two" role="group" aria-label="Sex">' +
-        [["m", "Male"], ["f", "Female"]].map(function (o) { return '<button data-gcsex="' + o[0] + '" aria-pressed="' + (pr.sex === o[0]) + '">' + o[1] + '</button>'; }).join("") +
+        [["m", "Male"], ["f", "Female"]].map(function (o) { return '<button data-gcsex="' + o[0] + '" aria-pressed="' + (sx === o[0]) + '">' + o[1] + '</button>'; }).join("") +
       '</div>' +
       '<div class="pair">' +
-        '<div class="field"><label for="gcAge">Age</label><input id="gcAge" inputmode="numeric" value="' + esc(pr.age || "") + '"></div>' +
+        '<div class="field"><label for="gcAge">Age</label><input id="gcAge" inputmode="numeric" value="' + esc(age || "") + '"></div>' +
         '<div class="field"><label for="gcWt">Weight \u00b7 ' + bwUnit() + '</label><input id="gcWt" inputmode="decimal" value="' +
           (w != null ? bwShow(w) : "") + '"></div>' +
       '</div>' +
@@ -7693,8 +7846,8 @@
             '<div class="field"><label for="gcFt">Height \u00b7 ft</label><input id="gcFt" inputmode="numeric" value="' + esc(pr.ft || "") + '"></div>' +
             '<div class="field"><label for="gcIn">and in</label><input id="gcIn" inputmode="numeric" value="' + esc(pr.inch == null ? "" : pr.inch) + '"></div>' +
           '</div>') +
-      '<div class="field"><label for="gcAct">How active</label><select id="gcAct">' + opt(ACTIVITY, pr.act || "1.55") + '</select></div>' +
-      '<div class="field"><label for="gcAim">Aim</label><select id="gcAim">' + opt(AIMS, pr.aim || "-500") + '</select></div>' +
+      '<div class="field"><label for="gcAct">How active</label><select id="gcAct">' + calcOpts(ACTIVITY, pr.act || "1.55") + '</select></div>' +
+      '<div class="field"><label for="gcAim">Aim</label><select id="gcAim">' + calcOpts(AIMS, pr.aim || "-500") + '</select></div>' +
       '<p class="calc-out is-empty" id="gcOut">Fill these in to see the numbers.</p>' +
       // The Terms (section 2) say targets are general information; this is
       // that, said where the numbers are.
@@ -7711,8 +7864,13 @@
     else cm = (Number(document.getElementById("gcFt").value) * 12 + (Number(document.getElementById("gcIn").value) || 0)) * 2.54;
     var kg = bwUnit() === "kg" ? wt : wt * LB_KG;
     var act = Number(document.getElementById("gcAct").value), aim = Number(document.getElementById("gcAim").value);
-    if (!sexB || !(age >= 14 && age <= 100) || !(kg >= 30 && kg <= 300) || !(cm >= 120 && cm <= 230)) return null;
-    var male = sexB.getAttribute("data-gcsex") === "m";
+    if (!sexB) return null;
+    return calcNumbers(sexB.getAttribute("data-gcsex") === "m", age, kg, cm, act, aim);
+  }
+  // The arithmetic, on its own, so the profile works out the same numbers
+  // from its own boxes. Null until every number is a believable one.
+  function calcNumbers(male, age, kg, cm, act, aim) {
+    if (!(age >= 14 && age <= 100) || !(kg >= 30 && kg <= 300) || !(cm >= 120 && cm <= 230)) return null;
     var bmr = 10 * kg + 6.25 * cm - 5 * age + (male ? 5 : -161);
     var tdee = bmr * act, floor = male ? 1500 : 1200;
     var cal = Math.round((tdee + aim) / 10) * 10, clipped = false;
@@ -7724,13 +7882,24 @@
     var r = calcRead(), out = document.getElementById("gcOut"), use = document.getElementById("gcUse");
     if (!out) return;
     if (!r) { out.className = "calc-out is-empty"; out.textContent = "Fill these in to see the numbers."; use.disabled = true; return; }
-    var aim = AIMS.filter(function (a) { return Number(a.id) === r.aim; })[0];
     out.className = "calc-out";
-    out.textContent = "You burn about " + fmt(Math.round(r.tdee / 10) * 10) + " kcal a day (" + fmt(Math.round(r.bmr / 10) * 10) +
+    out.textContent = calcWords(r);
+    use.disabled = false;
+  }
+  function calcWords(r) {
+    var aim = AIMS.filter(function (a) { return Number(a.id) === r.aim; })[0];
+    return "You burn about " + fmt(Math.round(r.tdee / 10) * 10) + " kcal a day (" + fmt(Math.round(r.bmr / 10) * 10) +
       " at rest \u00d7 " + r.act + " for how active you are). To " + aim.short + ": " + fmt(r.cal) + " kcal" +
       (r.clipped ? " \u2014 held at the lowest it is safe to go without a doctor" : "") +
       ", and " + fmt(r.pro) + " g protein, a gram for every pound you weigh.";
-    use.disabled = false;
+  }
+  function calcOpts(list, v) {
+    return list.map(function (o) { return '<option value="' + o.id + '"' + (String(v) === o.id ? ' selected' : '') + '>' + o.name + '</option>'; }).join("");
+  }
+  // The calculator needs one of its two equations. Someone whose gender is
+  // Other picks which, and that choice is kept apart from the gender itself.
+  function calcSexOf(pr) {
+    return pr.sex === "o" ? pr.calcSex : pr.sex;
   }
   function wireCalc(pendingDir) {
     var openB = document.getElementById("gcOpen");
@@ -7755,16 +7924,390 @@
         var w = document.getElementById(pair[0]);
         if (w) w.querySelectorAll("button").forEach(function (x) { x.setAttribute("aria-pressed", String(x.dataset.d === pair[1])); });
       });
-      var pr = { sex: r.male ? "m" : "f", age: r.age, act: String(r.act), aim: String(r.aim) };
+      // Into the profile, not over it: the name, birth date and goals stay.
+      var pr = profile();
+      if (pr.sex === "o") pr.calcSex = r.male ? "m" : "f"; else pr.sex = r.male ? "m" : "f";
+      if (!pr.dob) pr.age = r.age;
+      pr.act = String(r.act); pr.aim = String(r.aim);
       if (document.getElementById("gcCm")) pr.cm = Math.round(r.cm);
       else { pr.ft = document.getElementById("gcFt").value; pr.inch = document.getElementById("gcIn").value; }
-      store.profile = pr; save();
+      save();
       var gc = document.getElementById("gCal");
       if (gc && gc.scrollIntoView) gc.scrollIntoView({ block: "center" });
       notify("Filled in " + fmt(r.cal) + " kcal and " + r.pro + " g protein \u2014 Save target to keep them");
     });
     calcDraw();
   }
+
+  // ---------- the profile ----------
+  // Asked for by Tommy (2026-10-28): one screen where someone says who they
+  // are and what they are aiming for, and it sets the goals across the app.
+  // A local account: kept on this phone, in the log, with no server. Accounts
+  // that share and follow come later, with a server of their own.
+  //
+  // store.profile is the person: name; dob, an adult's birth date, from the
+  // age check; sex "m", "f" or "o", and for "o" calcSex, the equation the
+  // calculator uses; height (cm, or ft and inch); act and aim, the
+  // calculator's; and setup, once it has been seen. The goals stay where the
+  // tabs already read them (store.goal, store.waterOn and waterGoalMl,
+  // store.cardioGoal), with two new ones beside them: store.gymGoal, workouts
+  // a week, and store.bwGoal, a goal weight in pounds. So the target editor,
+  // Settings and the Cardio tab change the very same goals, and the profile
+  // always opens on the ones in force. The weight box is the body weight
+  // card's number: changing it logs today's weigh-in.
+  var GENDERS = [["m", "Male"], ["f", "Female"], ["o", "Other"]];
+  var PF_CALC_EMPTY = "Fill in your gender, weight and height under About you, and this works out calories and protein for you.";
+  var profGate = document.getElementById("profGate");
+  var pf = null, pfMode = "", pfStep = 1, pfThen = null;   // pf: what is on screen, until Save
+  function profile() { return store.profile || (store.profile = {}); }
+  function num1(v) { var s = String(v == null ? "" : v).trim().replace(",", "."); return s === "" ? null : Number(s); }
+  function cardioUnitName(kind) { return kind === "min" ? "Minutes" : kind === "dist" ? "Miles" : kind === "cal" ? "Calories" : "Sessions"; }
+
+  // mode "setup": once, after the age check, About you then Your goals.
+  // mode "edit": from Settings, both on one page.
+  function showProfile(mode, then) {
+    var pr = store.profile || {}, g = normGoal(store.goal), cg = cardioGoal(), w = latestBw(), metric = bwUnit() === "kg";
+    var cm = pr.cm || "", ft = pr.ft || "", inch = pr.inch == null ? "" : String(pr.inch);
+    // a height kept in the other unit, shown in this one
+    if (metric && !cm && Number(ft)) cm = Math.round((Number(ft) * 12 + (Number(inch) || 0)) * 2.54);
+    if (!metric && !Number(ft) && Number(cm)) { var ti = Math.round(Number(cm) / 2.54); ft = Math.floor(ti / 12); inch = String(ti % 12); }
+    var water = waterShow(waterGoalMl()).replace(/,/g, "");
+    pf = {
+      name: pr.name || "", dob: pr.dob || "", dobOpen: !pr.dob, dm: "", dd: "", dy: "",
+      sex: pr.sex || "", calcSex: pr.calcSex || "", unit: bwUnit(),
+      wt: w != null ? bwShow(w) : "", wt0: w != null ? bwShow(w) : "",
+      cm: String(cm), ft: String(ft), inch: inch, act: pr.act || "1.55", aim: pr.aim || "-500",
+      cal: String(g.cal.v), calDir: g.cal.dir, pro: String(g.pro.v), proDir: g.pro.dir,
+      carb: g.carb ? String(g.carb) : "", fat: g.fat ? String(g.fat) : "",
+      waterOn: waterOn(), water: water, water0: water,
+      gym: Number(store.gymGoal) > 0 ? String(store.gymGoal) : "",
+      cKind: cg.kind, cPeriod: cg.period, cV: String(cg.v),
+      bwGoal: Number(store.bwGoal) > 0 ? bwShow(store.bwGoal) : "",
+      used: false, err: ""
+    };
+    pfMode = mode; pfStep = 1; pfThen = then || null;
+    drawProfile();
+    profGate.hidden = false;
+    profGate.scrollTop = 0;
+    var app = document.querySelector(".app");
+    if (app) app.inert = true;
+  }
+  function closeProfile() {
+    profGate.hidden = true;
+    pf = null;
+    var app = document.querySelector(".app");
+    if (app && ageGate.hidden) app.inert = false;
+  }
+  // The birth date on screen: one being typed, if it is a whole one.
+  function pfDob() {
+    if (pf.dobOpen) { var r = dobFrom(pf.dm, pf.dd, pf.dy); if (r.dob) return r.dob; }
+    return pf.dob;
+  }
+  // The calculator's numbers from the profile's own boxes, or null.
+  function pfNumbers() {
+    var sx = pf.sex === "o" ? pf.calcSex : pf.sex, dob = pfDob();
+    if (sx !== "m" && sx !== "f") return null;
+    var age = dob ? ageOn(dob, TODAY) : Number((store.profile || {}).age);
+    var wt = num1(pf.wt), kg = pf.unit === "kg" ? wt : wt * LB_KG;
+    var cm = pf.unit === "kg" ? Number(pf.cm) : (Number(pf.ft) * 12 + (Number(pf.inch) || 0)) * 2.54;
+    return calcNumbers(sx === "m", age, kg, cm, Number(pf.act), Number(pf.aim));
+  }
+
+  function pfSeg(attr, opts, on, label, cls) {
+    return '<div class="seg' + (cls ? " " + cls : "") + '" role="group" aria-labelledby="' + label + '">' + opts.map(function (o) {
+      return '<button data-' + attr + '="' + o[0] + '" aria-pressed="' + (o[0] === on) + '">' + o[1] + '</button>';
+    }).join("") + '</div>';
+  }
+  function pfField(id, key, label, more) {
+    return '<div class="field"><label for="' + id + '">' + label + '</label><input id="' + id + '" data-pf="' + key + '" ' +
+      (more || 'inputmode="numeric"') + ' value="' + esc(pf[key]) + '"></div>';
+  }
+  function pfAboutHtml() {
+    var h = '<div class="field"><label for="pfName">Name</label><input class="text" id="pfName" data-pf="name" maxlength="40" ' +
+      'autocomplete="given-name" value="' + esc(pf.name) + '"></div>';
+    h += pf.dobOpen
+      ? '<span class="sec-k" id="pfDobK">Date of birth</span>' +
+        '<div class="ag-dob" role="group" aria-labelledby="pfDobK">' +
+          '<div class="field"><label for="pfDm">Month</label><select id="pfDm" data-pf="dm">' + dobOptions(pf.dm) + '</select></div>' +
+          pfField("pfDd", "dd", "Day", 'inputmode="numeric" maxlength="2"') +
+          pfField("pfDy", "dy", "Year", 'inputmode="numeric" maxlength="4"') +
+        '</div>'
+      : '<div class="pf-dob"><span><span class="sec-k">Born</span><br>' + esc(longDate(pf.dob)) + ' · ' + ageOn(pf.dob, TODAY) + '</span>' +
+        '<button class="pf-link" id="pfDobOpen" aria-label="Change your birth date">Change</button></div>';
+    h += '<span class="sec-k" id="pfSexK">Gender</span>' + pfSeg("pfsex", GENDERS, pf.sex, "pfSexK");
+    if (pf.sex === "o") {
+      h += '<p class="set-hint" id="pfCalcK">The calorie estimate uses one of two equations. Which should it use for you?</p>' +
+        pfSeg("pfcalc", [["m", "Male equation"], ["f", "Female equation"]], pf.calcSex, "pfCalcK", "two");
+    }
+    h += '<div class="pair">' + pfField("pfWt", "wt", "Weight · " + pf.unit, 'inputmode="decimal"') +
+        '<div class="field"><span class="sec-k" id="pfUnitK">Measured in</span>' + pfSeg("pfunit", [["lb", "lb"], ["kg", "kg"]], pf.unit, "pfUnitK", "two") + '</div>' +
+      '</div>' +
+      '<p class="set-hint">A new weight here is logged as today’s weigh-in on the Log tab.</p>';
+    h += pf.unit === "kg"
+      ? '<div class="pair">' + pfField("pfCm", "cm", "Height · cm") + '<div></div></div>'
+      : '<div class="pair">' + pfField("pfFt", "ft", "Height · ft") + pfField("pfIn", "inch", "and in") + '</div>';
+    h += '<div class="field"><label for="pfAct">How active</label><select id="pfAct" data-pf="act">' + calcOpts(ACTIVITY, pf.act) + '</select></div>';
+    return h;
+  }
+  function pfGoalsHtml() {
+    var r = pfNumbers();
+    var h = '<div class="pf-grp"><span class="eyebrow">Macros</span>' +
+      '<div class="field"><label for="pfAim">Aim</label><select id="pfAim" data-pf="aim">' + calcOpts(AIMS, pf.aim) + '</select></div>' +
+      '<p class="calc-out' + (r ? '' : ' is-empty') + '" id="pfCalc">' + esc(r ? calcWords(r) : PF_CALC_EMPTY) + '</p>' +
+      // The Terms (section 2) say targets are general information.
+      '<p class="est-note">Estimates only, not medical advice.</p>' +
+      '<button class="btn ghost" id="pfUse"' + (r ? '' : ' disabled') + '>Use these numbers</button>' +
+      (pf.used ? '<p class="set-hint" id="pfUsed">Filled in below from the numbers above. Change them if you like.</p>' : '') +
+      '<div class="pair">' +
+        pfField("pfCal", "cal", "Calories · " + (pf.calDir === "+" ? "at least" : "at most")) +
+        pfField("pfPro", "pro", "Protein · g " + (pf.proDir === "-" ? "at most" : "at least")) +
+      '</div>' +
+      (cfOn()
+        ? '<div class="pair">' + pfField("pfCarb", "carb", "Carbs · g", 'inputmode="numeric" placeholder="optional"') +
+            pfField("pfFat", "fat", "Fat · g", 'inputmode="numeric" placeholder="optional"') + '</div>'
+        : '') +
+    '</div>';
+    h += '<div class="pf-grp"><span class="eyebrow" id="pfWaterK">Water</span>' +
+      pfSeg("pfwater", [["off", "Hidden"], ["on", "Shown"]], pf.waterOn ? "on" : "off", "pfWaterK", "two") +
+      (pf.waterOn
+        ? '<div class="pair">' + pfField("pfWater", "water", "Daily goal · " + waterUnit()) + '<div></div></div>'
+        : '<p class="set-hint">Shown, it’s a line on Macros to tap in a glass at a time.</p>') +
+    '</div>';
+    h += '<div class="pf-grp"><span class="eyebrow">Gym</span>' +
+      '<div class="pair">' + pfField("pfGym", "gym", "Workouts a week", 'inputmode="numeric" maxlength="1" placeholder="none"') + '<div></div></div>' +
+      '<p class="set-hint">Counted on the Gym tab: each day with a workout logged, Sunday to Saturday.</p>' +
+    '</div>';
+    h += '<div class="pf-grp"><span class="eyebrow" id="pfCardioK">Cardio</span>' +
+      pfSeg("pfkind", CARDIO_KINDS, pf.cKind, "pfCardioK", "four") +
+      '<div class="pair">' +
+        '<div class="field"><label for="pfPeriod">How often</label><select id="pfPeriod" data-pf="cPeriod">' +
+          CARDIO_PERIODS.map(function (p) { return '<option value="' + p[0] + '"' + (pf.cPeriod === p[0] ? ' selected' : '') + '>' + p[1] + '</option>'; }).join("") +
+        '</select></div>' +
+        pfField("pfCv", "cV", cardioUnitName(pf.cKind), 'inputmode="decimal"') +
+      '</div>' +
+    '</div>';
+    h += '<div class="pf-grp"><span class="eyebrow">Body weight</span>' +
+      '<div class="pair">' + pfField("pfBwGoal", "bwGoal", "Goal weight · " + pf.unit, 'inputmode="decimal" placeholder="none"') + '<div></div></div>' +
+      '<p class="set-hint">Shown on the Log tab, beside your trend.</p>' +
+    '</div>';
+    return h;
+  }
+  function drawProfile() {
+    var setup = pfMode === "setup";
+    var h = '<span class="ag-k">' + (setup ? "Set up · " + pfStep + " of 2" : "MNTL D&amp;T") + '</span>' +
+      '<h2 id="profTitle">' + (!setup ? "You" : pfStep === 1 ? "About you" : "Your goals") + '</h2>' +
+      '<p>' + (!setup ? "Who you are and what you’re aiming for. It all stays on this phone, and it sets the goals across the app."
+        : pfStep === 1 ? "All of it stays on this phone. Skip anything — you can fill it in later from Settings."
+        : "The goals the app counts you toward. Change any of them later from Settings.") + '</p>';
+    if (!setup || pfStep === 1) h += (setup ? "" : '<h3>About you</h3>') + pfAboutHtml();
+    if (!setup || pfStep === 2) h += (setup ? "" : '<h3>Your goals</h3>') + pfGoalsHtml();
+    h += '<p class="ag-err" id="pfErr" role="alert"' + (pf.err ? '' : ' hidden') + '>' + esc(pf.err) + '</p>' +
+      '<div class="ag-acts">' + (!setup
+        ? '<button class="btn" id="pfSave">Save</button><button class="btn ghost" id="pfCancel">Cancel</button>'
+        : pfStep === 1
+        ? '<button class="btn" id="pfNext">Next: your goals</button><button class="btn ghost" id="pfSkip">Skip for now</button>'
+        : '<button class="btn" id="pfSave">Save and start</button><button class="btn ghost" id="pfBack">Back</button>') +
+      '</div>';
+    document.getElementById("profCard").innerHTML = h;
+  }
+  function pfCalcDraw() {
+    var out = document.getElementById("pfCalc"), use = document.getElementById("pfUse");
+    if (!out) return;
+    var r = pfNumbers();
+    out.className = "calc-out" + (r ? "" : " is-empty");
+    out.textContent = r ? calcWords(r) : PF_CALC_EMPTY;
+    use.disabled = !r;
+  }
+  function pfUseNumbers() {
+    var r = pfNumbers();
+    if (!r) return false;
+    pf.cal = String(r.cal); pf.pro = String(r.pro);
+    // Gaining means eating at least the number; losing or holding, at most.
+    pf.calDir = r.aim > 0 ? "+" : "-"; pf.proDir = "+";
+    pf.used = true;
+    return true;
+  }
+  // Switching lb and kg converts what is typed rather than re-reading 182 lb
+  // as 182 kg.
+  function pfUnit(u) {
+    if (u === pf.unit) return;
+    var toKg = u === "kg";
+    function conv(v) { var n = num1(v); return n > 0 ? (toKg ? n * LB_KG : n / LB_KG).toFixed(1) : v; }
+    pf.wt = conv(pf.wt); pf.wt0 = conv(pf.wt0); pf.bwGoal = conv(pf.bwGoal);
+    if (toKg && Number(pf.ft)) pf.cm = String(Math.round((Number(pf.ft) * 12 + (Number(pf.inch) || 0)) * 2.54));
+    if (!toKg && Number(pf.cm)) { var ti = Math.round(Number(pf.cm) / 2.54); pf.ft = String(Math.floor(ti / 12)); pf.inch = String(ti % 12); }
+    pf.unit = u;
+  }
+  // What is wrong with what is on screen, in words, or "".
+  function pfCheck(part) {
+    if (part !== "goals") {
+      if (pf.dobOpen && (pf.dm || String(pf.dd).trim() || String(pf.dy).trim())) {
+        var d = dobFrom(pf.dm, pf.dd, pf.dy);
+        if (d.err) return d.err;
+      }
+      var w = num1(pf.wt);
+      if (w !== null && !((pf.unit === "kg" ? w / LB_KG : w) >= 50 && (pf.unit === "kg" ? w / LB_KG : w) <= 900))
+        return "That weight doesn’t look right. Check it, or leave it empty.";
+      if (pf.unit === "kg") {
+        var c = num1(pf.cm);
+        if (c !== null && !(c >= 120 && c <= 230)) return "Check your height: in cm it’s usually between 120 and 230.";
+      } else {
+        var f = num1(pf.ft), i = num1(pf.inch);
+        if ((f !== null || i !== null) && !(f >= 3 && f <= 7 && (i === null || (i >= 0 && i < 12))))
+          return "Check your height: feet from 3 to 7, and inches from 0 to 11.";
+      }
+    }
+    if (part !== "about") {
+      if (!(num1(pf.cal) > 0) || !(num1(pf.pro) > 0)) return "Calories and protein each need a number.";
+      if ((num1(pf.carb) !== null && !(num1(pf.carb) > 0)) || (num1(pf.fat) !== null && !(num1(pf.fat) > 0)))
+        return "Carbs and fat each take a number, or leave them empty.";
+      if (pf.waterOn && !(num1(pf.water) > 0)) return "Water needs a daily goal, or switch it to Hidden.";
+      var g = num1(pf.gym);
+      if (g !== null && !(g >= 1 && g <= 7 && g === Math.round(g))) return "Workouts a week is a number from 1 to 7, or leave it empty.";
+      if (!(num1(pf.cV) > 0)) return "Cardio needs a goal.";
+      var bg = num1(pf.bwGoal);
+      if (bg !== null && !((pf.unit === "kg" ? bg / LB_KG : bg) >= 50 && (pf.unit === "kg" ? bg / LB_KG : bg) <= 900))
+        return "That goal weight doesn’t look right. Check it, or leave it empty.";
+    }
+    return "";
+  }
+  function pfSay(err) {
+    pf.err = err;
+    drawProfile();
+    var e = document.getElementById("pfErr");
+    if (err && e && e.scrollIntoView) e.scrollIntoView({ block: "center" });
+  }
+  // Skipped: not asked again; Settings has it whenever it's wanted.
+  function pfSkip() {
+    profile().setup = true;
+    save();
+    var then = pfThen;
+    closeProfile();
+    notify("You’re in · fill in your profile any time from Settings");
+    if (then) then();
+  }
+  var PF_KEYS = ["profile", "goal", "bwUnit", "waterOn", "waterGoalMl", "gymGoal", "cardioGoal", "bwGoal"];
+  function pfSave() {
+    var err = pfCheck("all");
+    if (err) { pfSay(err); return; }
+    var newDob = null;
+    if (pf.dobOpen && (pf.dm || String(pf.dd).trim() || String(pf.dy).trim())) newDob = dobFrom(pf.dm, pf.dd, pf.dy).dob;
+    var minor = !!newDob && ageOn(newDob, TODAY) < 18;
+    // As it was, for Undo: the goals, the profile, and today's goal and weigh-in.
+    var before = {};
+    PF_KEYS.forEach(function (k) { before[k] = store[k] === undefined ? undefined : JSON.parse(JSON.stringify(store[k])); });
+    var td = store.days[TODAY];
+    var todayWas = td ? { goal: td.goal ? JSON.parse(JSON.stringify(td.goal)) : undefined, bw: td.bw } : { goal: undefined, bw: undefined };
+
+    var pr = profile();
+    var name = pf.name.trim().slice(0, 40);
+    if (name) pr.name = name; else delete pr.name;
+    if (pf.sex) pr.sex = pf.sex;
+    if (pf.sex === "o" && pf.calcSex) pr.calcSex = pf.calcSex; else if (pf.sex !== "o") delete pr.calcSex;
+    if (newDob && !minor) pr.dob = newDob;
+    if (pr.dob) delete pr.age;
+    delete pr.cm; delete pr.ft; delete pr.inch;
+    if (pf.unit === "kg") { if (num1(pf.cm)) pr.cm = Math.round(num1(pf.cm)); }
+    else if (num1(pf.ft)) { pr.ft = String(num1(pf.ft)); pr.inch = String(num1(pf.inch) || 0); }
+    pr.act = pf.act; pr.aim = pf.aim;
+    pr.setup = true;
+    store.bwUnit = pf.unit;
+    // The weight box is the body weight card's number: changed, it is today's weigh-in.
+    var w = num1(pf.wt);
+    if (w !== null && pf.wt !== pf.wt0) {
+      day(TODAY).bw = Math.round((pf.unit === "kg" ? w / LB_KG : w) * 10) / 10;
+      touch(TODAY);
+    }
+    // Calories and protein from today on, as Save target does: the days
+    // already logged keep the target they were judged against.
+    var next = { cal: { dir: pf.calDir, v: num1(pf.cal) }, pro: { dir: pf.proDir, v: num1(pf.pro) } };
+    var og = normGoal(store.goal);
+    if (cfOn()) { if (num1(pf.carb) > 0) next.carb = num1(pf.carb); if (num1(pf.fat) > 0) next.fat = num1(pf.fat); }
+    else { if (og.carb) next.carb = og.carb; if (og.fat) next.fat = og.fat; }
+    if (JSON.stringify(normGoal(next)) !== JSON.stringify(og)) {
+      store.goal = next;
+      day(TODAY).goal = JSON.parse(JSON.stringify(next));
+      touch(TODAY);
+    }
+    store.waterOn = pf.waterOn;
+    if (pf.waterOn && pf.water !== pf.water0) store.waterGoalMl = waterUnit() === "ml" ? num1(pf.water) : num1(pf.water) * WATER_OZ;
+    var gy = num1(pf.gym);
+    if (gy) store.gymGoal = gy; else delete store.gymGoal;
+    var cg = cardioGoal();
+    if (cg.kind !== pf.cKind || cg.period !== pf.cPeriod || cg.v !== num1(pf.cV))
+      store.cardioGoal = { kind: pf.cKind, period: pf.cPeriod, v: num1(pf.cV) };
+    var bg = num1(pf.bwGoal);
+    if (bg) store.bwGoal = Math.round((pf.unit === "kg" ? bg / LB_KG : bg) * 10) / 10; else delete store.bwGoal;
+
+    var ok = save(), then = pfThen, mode = pfMode;
+    closeProfile();
+    // A birth date under 18 goes to the age check, said back first, exactly
+    // as on a first open. Nothing to undo there: it is on screen.
+    if (minor) { askAge(newDob); return; }
+    render();
+    // A save that didn't happen says so on the save bar; no ✓ beside it.
+    if (ok) offerUndo(mode === "setup" ? "You’re all set · your goals are in" : "Saved your profile and goals", function () {
+      PF_KEYS.forEach(function (k) { if (before[k] === undefined) delete store[k]; else store[k] = before[k]; });
+      var dd = day(TODAY);
+      ["goal", "bw"].forEach(function (f) { if (todayWas[f] === undefined) delete dd[f]; else dd[f] = todayWas[f]; });
+      save(); render();
+    });
+    if (then) then();
+  }
+  // From the profile: a birth date under 18, said back on the age check.
+  function askAge(dob) {
+    document.getElementById("dobM").value = String(Number(dob.slice(5, 7)));
+    document.getElementById("dobD").value = String(Number(dob.slice(8)));
+    document.getElementById("dobY").value = dob.slice(0, 4);
+    showAgeGate(null);
+    sayAgeBack(dob);
+  }
+
+  profGate.addEventListener("input", pfTyped);
+  profGate.addEventListener("change", pfTyped);
+  function pfTyped(e) {
+    var k = e.target.getAttribute && e.target.getAttribute("data-pf");
+    if (!k || !pf || pf[k] === e.target.value) return;
+    pf[k] = e.target.value;
+    // A new "how often" starts from that pair's own number, as on the Cardio tab.
+    if (k === "cPeriod") {
+      pf.cV = String(CARDIO_GOAL_START[pf.cKind][pf.cPeriod]);
+      var cv = document.getElementById("pfCv");
+      if (cv) cv.value = pf.cV;
+    }
+    pfCalcDraw();
+  }
+  profGate.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("button");
+    if (!b || !pf) return;
+    var ds = b.dataset;
+    if (ds.pfsex) { pf.sex = ds.pfsex; drawProfile(); return; }
+    if (ds.pfcalc) { pf.calcSex = ds.pfcalc; drawProfile(); return; }
+    if (ds.pfunit) { pfUnit(ds.pfunit); drawProfile(); return; }
+    if (ds.pfwater) { pf.waterOn = ds.pfwater === "on"; drawProfile(); return; }
+    if (ds.pfkind) {
+      if (pf.cKind !== ds.pfkind) { pf.cKind = ds.pfkind; pf.cV = String(CARDIO_GOAL_START[pf.cKind][pf.cPeriod]); }
+      drawProfile(); return;
+    }
+    if (b.id === "pfDobOpen") {
+      pf.dobOpen = true;
+      pf.dm = String(Number(pf.dob.slice(5, 7))); pf.dd = String(Number(pf.dob.slice(8))); pf.dy = pf.dob.slice(0, 4);
+      drawProfile(); return;
+    }
+    if (b.id === "pfUse") { if (pfUseNumbers()) drawProfile(); return; }
+    if (b.id === "pfNext") {
+      var err = pfCheck("about");
+      if (err) { pfSay(err); return; }
+      pfStep = 2; pf.err = "";
+      // Nobody has set a target yet: the calculator's are the place to start.
+      if (!pf.used && JSON.stringify(normGoal(store.goal)) === JSON.stringify(normGoal(DEFAULT_GOAL))) pfUseNumbers();
+      drawProfile(); profGate.scrollTop = 0; return;
+    }
+    if (b.id === "pfBack") { pfStep = 1; pf.err = ""; drawProfile(); profGate.scrollTop = 0; return; }
+    if (b.id === "pfSkip") { pfSkip(); return; }
+    if (b.id === "pfSave") { pfSave(); return; }
+    if (b.id === "pfCancel") { closeProfile(); drawSettings(); setSheet.hidden = false; }
+  });
 
   // ---------- the barbell: the bar is calories, the plates are protein ----------
   // Plain functions with no drawing in them, so the suites can call them.
@@ -9282,6 +9825,26 @@
     '</section>';
   }
 
+  // Workouts a week, the profile's Gym goal: days in the week the day falls
+  // in (Sunday to Saturday, like the board above it) with a lift logged.
+  function gymWeekCount(key) {
+    var dt = parseYmd(weekStart(key)), n = 0;
+    for (var i = 0; i < 7; i++) {
+      var dd = store.days[ymd(dt)];
+      if (dd && dd.lifts && dd.lifts.length) n++;
+      dt.setDate(dt.getDate() + 1);
+    }
+    return n;
+  }
+  function gymGoalHtml(key) {
+    var g = Number(store.gymGoal);
+    if (!(g > 0)) return "";
+    var n = gymWeekCount(key), met = n >= g;
+    return '<p class="wb-goal' + (met ? ' is-met' : '') + '" id="gymGoal">' +
+      (weekStart(key) === weekStart(TODAY) ? 'This week: ' : 'That week: ') + n + ' of ' + g + (g === 1 ? ' workout' : ' workouts') +
+      (met ? ' · done' : ' · ' + (g - n) + ' to go') + '</p>';
+  }
+
   function renderGym(key, d) {
     // Someone whose routine no longer contains the day we were showing (a reset,
     // a restore from another phone) must land on a real day, not an empty one.
@@ -9393,6 +9956,7 @@
         (weekPick ? '<button id="wbDone">Done</button>' : '<span class="wb-hint">Tap a day to plan it</span>') +
       '</div>' +
       '<div class="week-board">' + tiles + '</div>' +
+      gymGoalHtml(key) +
       pickHtml +
     '</div>';
 
@@ -12848,6 +13412,21 @@
 
   function drawSettings() {
     var l = look();
+    // You: who, then the goals in force, as the profile holds them.
+    var pr = store.profile || {}, w = latestBw(), gg = normGoal(store.goal), cg = cardioGoal();
+    var who = [pr.name || "", pr.dob ? String(ageOn(pr.dob, TODAY)) : "",
+      (GENDERS.filter(function (o) { return o[0] === pr.sex; })[0] || [])[1] || "",
+      w != null ? bwShow(w) + " " + bwUnit() : ""].filter(Boolean);
+    document.getElementById("setWho").textContent = who.length ? who.join(" · ")
+      : "Your name, birth date and weight, and every goal, in one place.";
+    var gy = Number(store.gymGoal);
+    document.getElementById("setWhoGoals").textContent = [
+      fmt(gg.cal.v) + " kcal", fmt(gg.pro.v) + " g protein",
+      gy > 0 ? gy + (gy === 1 ? " workout" : " workouts") + " a week" : "",
+      goalNum(cg.kind, cg.v) + " " + goalWord(cg.kind, cg.v) + " cardio " + periodWord(cg.period),
+      waterOn() ? waterShow(waterGoalMl()) + " " + waterUnit() + " water" : "",
+      Number(store.bwGoal) > 0 ? "goal weight " + bwShow(store.bwGoal) + " " + bwUnit() : ""
+    ].filter(Boolean).join(" · ");
     document.getElementById("setThemes").innerHTML = LOOKS.map(function (t) {
       return '<button data-pick-theme="' + t.id + '" aria-pressed="' +
         (t.id === l.theme ? "true" : "false") + '">' + t.name + '</button>';
@@ -12927,6 +13506,10 @@
     setSheet.hidden = false;
   });
   document.getElementById("setDone").addEventListener("click", function () { setSheet.hidden = true; });
+  document.getElementById("setProfile").addEventListener("click", function () {
+    setSheet.hidden = true;
+    showProfile("edit");
+  });
 
   // Download or remove the grocery brands from Settings. Removing drops the
   // file from the phone's store; what was logged from it stays logged.
@@ -13778,7 +14361,14 @@
     if (incoming.waterUnit) store.waterUnit = incoming.waterUnit;
     if (Number(incoming.waterGoalMl) > 0) store.waterGoalMl = incoming.waterGoalMl;
     if (incoming.bwUnit) store.bwUnit = incoming.bwUnit;
-    if (incoming.profile && typeof incoming.profile === "object") store.profile = incoming.profile;
+    if (incoming.profile && typeof incoming.profile === "object") {
+      // A birth date given on this phone, with its age check, stays.
+      var dob = store.profile && store.profile.dob;
+      store.profile = incoming.profile;
+      if (dob) store.profile.dob = dob;
+    }
+    if (Number(incoming.gymGoal) > 0) store.gymGoal = Number(incoming.gymGoal);
+    if (Number(incoming.bwGoal) > 0) store.bwGoal = Number(incoming.bwGoal);
     // Cardio: the types are merged like movements; the goal is the phone's own.
     (Array.isArray(incoming.cardioTypes) ? incoming.cardioTypes : []).forEach(function (t) {
       if (cardioTypes().indexOf(t) === -1) cardioTypes().push(t);
@@ -13988,7 +14578,10 @@
     // it — even if nothing has been logged since.
     if (store.build !== BUILD || movesNeedSaving) save();
     render();
-    showNews(prevBuild);
+    // A first yes to the age check goes on to the profile; What's new, if
+    // there is any, waits until it is done or skipped.
+    if (setupNext) { setupNext = false; showProfile("setup", function () { showNews(prevBuild); }); }
+    else showNews(prevBuild);
     // Said once: the first time the app opens on lists that held names it put
     // there, it says how many it took off rather than letting them vanish.
     if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
