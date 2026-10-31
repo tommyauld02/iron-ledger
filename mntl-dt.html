@@ -4251,7 +4251,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-29.81";
+  var BUILD = "2026-10-31.82";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4916,6 +4916,9 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-31.82", t: "The keyboard, in the iPhone app", items: [
+      "In the iPhone app, Ask an agent’s box stays above the keyboard instead of being pulled back behind it.",
+      "Putting the keyboard away no longer leaves the bottom bar halfway up an empty screen." ] },
     { b: "2026-10-29.81", t: "You, and all your goals in one place", items: [
       "Settings → You is your profile: name, birth date, gender, weight and height, and every goal — calories and protein (worked out for you if you like), water, cardio, and two new ones.",
       "New: workouts a week, counted under the week on the Gym tab, and a goal weight, shown beside your trend on the Log tab.",
@@ -12232,10 +12235,18 @@
     // it out at once made the page shorter by a keyboard, and the phone slid
     // the page up to the new end over a second and a half (the same video).
     // Space below what is on screen goes without moving anything.
+    //
+    // None of it happens in the iPhone app. Its WebView already makes the
+    // page as much taller as the keyboard and lifts the field above it; the
+    // room and keep() on top of that undid it. Ask an agent's box went up
+    // above the keyboard, then the page was pulled back to the ledger with the
+    // box behind it, and once the keyboard went the dock hung halfway up the
+    // screen over an empty page (the owner's video, b77, the TestFlight app).
+    // In the app the keyboard only hides the dock and fits a sheet.
     var kbH = 0;
     var coarse = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
     function room(h) {
-      if (h <= kbH) return;
+      if (NATIVE || h <= kbH) return;
       kbH = h;
       root.style.setProperty("--kb-h", kbH + "px");
       root.classList.add("kb-room");
@@ -12268,7 +12279,7 @@
     // an agent flickering between the field and the ledger (the owner's video).
     var settle = 0, lastH = 0, quietUntil = 0;
     function keep() {
-      if (!fit()) return;
+      if (!fit() || NATIVE) return;
       lastH = vv.height;
       if (Date.now() < quietUntil) return;
       var a = document.activeElement;

@@ -84,6 +84,21 @@ rather than a second opinion. `sweep` checks the room is there on focus, that
 the keyboard arriving changes no height, and that putting the keyboard away at
 the foot of the page leaves the page where it was.
 
+**In the iPhone app the WebView handles the keyboard, and the page leaves it
+alone.** The owner's video (b77, the TestFlight app): iOS lifted Ask an
+agent's box above the keyboard, then the page was pulled back to the ledger
+with the box behind it. After Log numbers, the dock hung halfway up the
+screen over an empty page once the keyboard went. The app's WebView already
+makes the page scrollable past its end by the keyboard's height and lifts the
+field itself, so the room and `keep()` on top of that were a second correction
+to a page that was already right. When `NATIVE`, `room()` adds nothing and
+`keep()` never moves the page. `kb-open` still hides the dock and fits a
+sheet. The Pages web app keeps everything above. `sweep` stands in for the
+bridge (`keyboard (app)`): no room on focus, the keyboard arriving moves
+nothing and adds no height, and the page is its own height once it goes. What
+it cannot show is the WebView's own lift, since Chromium has no keyboard.
+Only the phone can check that.
+
 **A long press on a button pops the iOS copy menu.** `.t-row` already guarded
 the selection magnifier; `button, [role="tab"]` now guard the same bubble
 appearing over a control held a beat too long with a wet thumb. Inputs are
