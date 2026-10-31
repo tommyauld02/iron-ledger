@@ -86,7 +86,7 @@ privacy.html, support.html, terms.html   the public pages App Store Connect
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              26 Playwright suites, and relay.py, which runs the relay in Node
+tests/              27 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 

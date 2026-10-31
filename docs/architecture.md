@@ -183,9 +183,9 @@ links) before the app opens. Change it for a significant change only, and
 publish the new Terms first. A b79 yes has no version and counts as
 `TERMS_FIRST`; it shows no date rather than a made-up one.
 
-**`TERMS_FIRST` is older than the Terms as published, on purpose.** b79 to b81
+**`TERMS_FIRST` is older than the Terms as published, on purpose.** b79 to b83
 asked people to agree while the links to the Terms led to a 404, so those
-yeses are asked once more at b82, now there is something to read. `TERMS` is
+yeses are asked once more at b84, now there is something to read. `TERMS` is
 the Terms' effective date, and `legal` fails if the page says otherwise.
 
 **Days are judged against the goal in force when they were logged.**
