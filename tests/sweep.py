@@ -3041,6 +3041,46 @@ with sync_playwright() as pw:
                   not q.evaluate(ROOM) and q.evaluate(HIGH)<tall, "room %s, %s then %s" % (q.evaluate(ROOM), tall, q.evaluate(HIGH)))
         c.close()
 
+    # b77, the owner's video, the TestFlight app: its WebView makes room for the
+    # keyboard and lifts the field itself. The room and keep() on top of that
+    # pulled Ask an agent's box back under the keyboard, and left the dock
+    # halfway up an empty screen once it went. In the app neither happens.
+    NATIVEFAKE = """window.Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios',
+      nativePromise:(p,m,o)=>{const k='__pref_'+(o&&o.key);
+        if(p==='Preferences'&&m==='get') return Promise.resolve({value:sessionStorage.getItem(k)});
+        if(p==='Preferences'&&m==='set'){sessionStorage.setItem(k,o.value); return Promise.resolve({});}
+        return Promise.reject(new Error(p+'.'+m+' is not stood in for'));}};"""
+    c = b.new_context(viewport={"width":393,"height":852}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;"); c.add_init_script(KBFAKE); c.add_init_script(NATIVEFAKE); fakeai.phone(c)
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("keyboard (app): "+str(e)))
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
+    q.evaluate("""s=>{const j=JSON.stringify(s); localStorage.setItem('iron-ledger-v1',j);
+                     sessionStorage.setItem('__pref_iron-ledger-v1',j);}""", dict(FSTORE, logOpen="inplace"))
+    q.reload(); q.wait_for_timeout(900)
+    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    check("keyboard (app): the page knows it is in the iPhone app and Ask an agent is open",
+          q.evaluate("()=>!!window.Capacitor.isNativePlatform()") and q.locator("#estText").count()==1)
+    q.evaluate("()=>{window.__moves=0; const sb=window.scrollBy.bind(window); window.scrollBy=(x,y)=>{window.__moves++; sb(x,y);};}")
+    high=q.evaluate(HIGH)
+    q.focus("#estText"); q.wait_for_timeout(50)
+    check("keyboard (app): no room is added on focus, the WebView makes its own",
+          not q.evaluate(ROOM) and q.evaluate(HIGH)==high, "room %s, %s then %s" % (q.evaluate(ROOM), high, q.evaluate(HIGH)))
+    q.evaluate("()=>window.scrollBy(0,-250)")
+    q.evaluate("()=>window.__moves=0")
+    y=q.evaluate("()=>Math.round(scrollY)")
+    q.evaluate("()=>window.__kb(330)"); q.wait_for_timeout(60)
+    q.evaluate("()=>window.__kb(336)"); q.wait_for_timeout(600)
+    check("keyboard (app): the keyboard arriving never moves the page, iOS has placed the field",
+          q.evaluate("()=>window.__moves")==0 and q.evaluate("()=>Math.round(scrollY)")==y,
+          "moved %s times, scrollY %s then %s" % (q.evaluate("()=>window.__moves"), y, q.evaluate("()=>Math.round(scrollY)")))
+    check("keyboard (app): nor makes the page any taller", q.evaluate(HIGH)==high, "%s then %s" % (high, q.evaluate(HIGH)))
+    check("keyboard (app): up, the dock still steps aside", q.evaluate(DOCK)=="hidden", q.evaluate(DOCK))
+    q.evaluate("()=>{document.activeElement.blur(); window.__kb(0);}"); q.wait_for_timeout(250)
+    check("keyboard (app): down, the dock is back and the page is its own height",
+          q.evaluate(DOCK)=="visible" and not q.evaluate(ROOM) and q.evaluate(HIGH)==high,
+          "dock %s, room %s, %s then %s" % (q.evaluate(DOCK), q.evaluate(ROOM), high, q.evaluate(HIGH)))
+    c.close()
+
     # ---------- HOW THE WAYS IN OPEN ----------
     # The owner could not choose from pictures between a box opening in place,
     # a pop-up like the set sheet, and a mix of the two, and asked to try
@@ -3521,9 +3561,9 @@ with sync_playwright() as pw:
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
           q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The icon says MNTL D&T"
-          and titles[1]=="You, and all your goals in one place"
-          and titles[2]=="Clearer about estimates"
-          and titles[3]=="An age check, and Ask an agent asks first", str(titles))
+          and titles[1]=="The keyboard, in the iPhone app"
+          and titles[2]=="You, and all your goals in one place"
+          and titles[3]=="Clearer about estimates", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

@@ -329,7 +329,7 @@ with sync_playwright() as pw:
     born(p)
     check("existing install: the profile first, What's new waiting behind it", shown(p, "#profGate") and not shown(p, "#newsSheet"))
     p.click("#pfSkip"); p.wait_for_timeout(300)
-    check("existing install: What's new follows, with this build", shown(p, "#newsSheet") and "An age check" in text(p, "#newsBody"),
+    check("existing install: What's new follows, with this build", shown(p, "#newsSheet") and ("b" + BUILD.split(".")[1]).upper() in text(p, "#newsBody").upper(),
           text(p, "#newsBody")[:80])
     p.click("#newsDone"); p.wait_for_timeout(200)
     s = saved(p) or {}
