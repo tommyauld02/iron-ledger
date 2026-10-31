@@ -57,7 +57,13 @@ permission, answered as a person would: under 18, 18 or older, an incomplete
 check, a relaunch, an existing install with a log, the web build and the
 iPhone app; Not now, Allow and ask, Find it again, Tap to estimate,
 withdrawing in Settings (one question already on its way), and that no request
-reaches the stand-in relay without both answers · `relay` the
+reaches the stand-in relay without both answers · `profile` the birth date
+and the profile it opens: dates that can't be right, *Is that right?*, the
+second chance as many times as it takes (a log untouched), nothing to the relay
+before both yeses, About you and Your goals saved where the tabs read them,
+with Undo, Other's equation, lb and kg, Settings → You and Cancel, the
+calculator writing into the profile rather than over it, a birth date changed
+to under 18, the Gym and Log goal lines, a restore, native storage · `relay` the
 relay itself, run in Node against a fake Gemini (exits 77, SKIPPED, with no
 Node) · `pwa` the offline shell, served the
 way Pages serves it, with the network cut, and what still answers offline ·
@@ -73,7 +79,7 @@ including the press-and-hold drag · `mobile` fit and font audit across five
 iPhone sizes · plus `commit`, `noclaude`, `yourwords`, `firstrun`, `photo2`,
 `taborder`.
 
-**Every suite but `agecheck` opens past the age check.** From b79 the app
+**Every suite but `agecheck` and `profile` opens past the age check.** From b79 the app
 asks before anything else, which would stop every suite at the door. Each one
 imports `tests/answered.py` first; it adds `window.IRON_LEDGER_ADULT=true` to
 every browser context, the app's stand-in for an answer already given, which
