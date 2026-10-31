@@ -173,16 +173,20 @@ first. `mergeInto()` brings the profile and the two new goals back, but keeps
 this phone's birth date: it came with this phone's age check.
 
 **The yes to the age check is the yes to the Terms (b80).** The screen says
-*By continuing you agree to the Terms of Use*, so *I'm 18 or older* records
-`terms`, the version agreed to (`TERMS`, the effective date of the Terms as
+*By tapping Continue, you agree to the Terms of Use*, so a birth date of 18 or
+older records `terms`, the version agreed to (`TERMS`, the effective date of the Terms as
 published), and `termsAt`, when — what shows someone agreed, and Settings →
 About shows the date. The Terms (section 13) promise that a significant change
 is agreed to again, so changing `TERMS` asks every adult once, on the next
 open, with `#termsAsk` (*The Terms of Use have changed*, one *I agree*, the
 links) before the app opens. Change it for a significant change only, and
 publish the new Terms first. A b79 yes has no version and counts as
-`TERMS_FIRST`, the first published one; it shows no date rather than a made-up
-one.
+`TERMS_FIRST`; it shows no date rather than a made-up one.
+
+**`TERMS_FIRST` is older than the Terms as published, on purpose.** b79 to b83
+asked people to agree while the links to the Terms led to a 404, so those
+yeses are asked once more at b84, now there is something to read. `TERMS` is
+the Terms' effective date, and `legal` fails if the page says otherwise.
 
 **Days are judged against the goal in force when they were logged.**
 `stampGoal()` snapshots it, so changing your target today never rewrites last
@@ -196,6 +200,17 @@ for the iOS-serves-an-old-build problem this project kept hitting — online you
 always get the current build, offline the cache answers. The worker reads its
 version from its own `?v=` query, which the app sets from `BUILD`, so there is
 no second version to bump.
+
+**Only the app's own document is cached as the app.** The Privacy Policy,
+Support and Terms pages (`privacy.html`, `support.html`, `terms.html`, copied
+to the site by `pages.yml` and linked from App Store Connect) sit in the
+worker's scope too. Before they existed, every page navigation was saved as
+`./`, so one visit to the privacy policy would have made it what the app
+opened offline. The worker now leaves any navigation that is not the scope
+root or `index.html` to the network, and `legal` visits all three pages,
+cuts the network and checks the app still opens. The pages carry their own
+copy of the colour tokens and fonts, and follow `iron-ledger-look`, so a
+phone set to dark in the app gets them dark.
 
 Inside the iPhone app there is no service worker at all: the app ships its
 own files, and on Android it would be served over https, which the protocol

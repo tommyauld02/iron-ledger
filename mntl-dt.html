@@ -3992,7 +3992,7 @@
     <div class="ag-acts">
       <button class="btn" id="ageGo">Continue</button>
     </div>
-    <p class="ag-fine">By continuing you agree to the Terms of Use and Privacy Policy.</p>
+    <p class="ag-fine">By tapping Continue, you agree to the Terms of Use and acknowledge the Privacy Policy.</p>
     <div class="ag-links"></div>
   </section>
   <!-- A date under 18, said back before it counts: a typo (2010 for 1992) is
@@ -4251,7 +4251,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-31.83";
+  var BUILD = "2026-10-31.84";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4916,6 +4916,9 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-31.84", t: "The Terms and Privacy Policy are published", items: [
+      "The Terms of Use, Privacy Policy and Support page are now up, and the links in the app open them.",
+      "The next time you open the app, it asks you once to look at the Terms and agree. Your log stays as it is." ] },
     { b: "2026-10-31.83", t: "The icon says MNTL D&T", items: [
       "The home-screen icon catches up with the name: MNTL in heavy capitals, joined the way the old IL was — M and N share a stem, one bar runs across the T to the L — over D&T in teal, with a barbell beside it." ] },
     { b: "2026-10-31.82", t: "The keyboard, in the iPhone app", items: [
@@ -6034,13 +6037,15 @@
   // lastBackupAt. Since b81 the age is asked as a birth date; an adult's goes
   // into the profile (store.profile.dob), and under 18 only the no is kept.
   //
-  // The yes to the age check is also the yes to the Terms ("By continuing you
+  // The yes to the age check is also the yes to the Terms ("By tapping Continue, you
   // agree"), so it records which version and when: that is what shows someone
   // agreed, and what lets the app ask again. TERMS is the effective date of
   // the Terms as published; change it only for a significant change, and
   // everyone who agreed to an older one is asked once (#termsAsk). A yes from
-  // b79, before versions were kept, counts as the first published version.
-  var TERMS = "2026-10-29", TERMS_FIRST = "2026-10-29";
+  // b79, before versions were kept, counts as TERMS_FIRST, which is older than
+  // the Terms as published: until b84 the links to them led nowhere, so those
+  // yeses are asked once more, now that there is something to read.
+  var TERMS = "2026-10-31", TERMS_FIRST = "2026-10-29";
   //
   // IRON_LEDGER_ADULT and IRON_LEDGER_AI are the suites' stand-in for answers
   // already given (tests/answered.py, tests/fakeai.py), so every other suite

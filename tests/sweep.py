@@ -3560,10 +3560,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The icon says MNTL D&T"
-          and titles[1]=="The keyboard, in the iPhone app"
-          and titles[2]=="You, and all your goals in one place"
-          and titles[3]=="Clearer about estimates", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The Terms and Privacy Policy are published"
+          and titles[1]=="The icon says MNTL D&T"
+          and titles[2]=="The keyboard, in the iPhone app"
+          and titles[3]=="You, and all your goals in one place", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

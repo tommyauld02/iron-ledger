@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Privacy Policy · MNTL D&amp;T</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script>
+/* The app's own theme choice, if this phone has one, before the first paint. */
+(function () {
+  try {
+    var l = JSON.parse(localStorage.getItem("iron-ledger-look") || "{}");
+    if (l.theme === "light" || l.theme === "dark") document.documentElement.setAttribute("data-theme", l.theme);
+  } catch (e) {}
+})();
+</script>
+<style>
+/* Tokens copied from mntl-dt.html's :root, light and dark, so these pages
+   look like the app. The app's own look (iron-ledger-look) is honoured too. */
+@font-face{font-family:'Archivo';font-style:normal;font-weight:400 800;font-stretch:100% 125%;font-display:swap;src:url(fonts/Archivo-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/IBMPlexMono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/IBMPlexMono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+:root {
+    --ground: #F2F4F1;
+    --surface: #FFFFFF;
+    --surface-2: #E9EEEB;
+    --ink: #121816;
+    --ink-2: #46524D;
+    --ink-3: #5B6863;
+    --rule: #D9E0DC;
+    --accent: #0B6E63;
+    --accent-soft: #D8E8E4;
+    --on-accent: #FFFFFF;
+    --font-ui: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    color-scheme: light;
+  }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0E1211;
+    --surface: #171D1B;
+    --surface-2: #1F2725;
+    --ink: #ECF1EE;
+    --ink-2: #A9B5B0;
+    --ink-3: #8C9893;
+    --rule: #2A3431;
+    --accent: #56B9A9;
+    --accent-soft: #17342F;
+    --on-accent: #0B1614;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --ground: #0E1211;
+    --surface: #171D1B;
+    --surface-2: #1F2725;
+    --ink: #ECF1EE;
+    --ink-2: #A9B5B0;
+    --ink-3: #8C9893;
+    --rule: #2A3431;
+    --accent: #56B9A9;
+    --accent-soft: #17342F;
+    --on-accent: #0B1614;
+    color-scheme: dark;
+  }
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 17px/1.6 var(--font-ui)}
+.bar{background:var(--surface);border-bottom:1px solid var(--rule)}
+.wrap{max-width:680px;margin:0 auto;padding:0 16px}
+.bar .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--ink);text-decoration:none;font-weight:800;font-stretch:112%;letter-spacing:.01em;font-size:18px}
+.brand img{width:32px;height:32px;border-radius:8px}
+nav ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);color:var(--accent);font-weight:600;font-size:16px;text-decoration:none}
+nav a[aria-current="page"]{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
+nav a.app{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+main{padding-top:24px;padding-bottom:16px}
+h1{font-size:30px;line-height:1.15;font-weight:800;font-stretch:112%;margin:8px 0 4px}
+.eff{font:500 14px/1.5 var(--font-num);color:var(--ink-3);margin:0 0 20px}
+h2{font-size:20px;line-height:1.3;font-weight:750;margin:32px 0 6px}
+p,ul,ol{margin:0 0 14px}
+ul,ol{padding-left:24px}
+li{margin:0 0 8px}
+li::marker{color:var(--ink-3)}
+.lead{font-size:18px}
+code{font:400 15px var(--font-num);background:var(--surface-2);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+/* Links inside a sentence keep the line spacing but take a 44px-tall press:
+   vertical padding on an inline box grows what a finger can hit, not the line. */
+main a,footer p a{color:var(--accent);text-decoration:underline;text-underline-offset:3px;padding:14px 0;overflow-wrap:anywhere}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:12px;background:var(--accent);color:var(--on-accent)!important;font-weight:650;text-decoration:none!important;margin:4px 0 8px}
+footer{border-top:1px solid var(--rule);background:var(--surface);margin-top:32px}
+footer .wrap{padding-top:16px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+footer p{color:var(--ink-2);font-size:15px;margin:12px 0 0}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+<a class="brand" href="./"><img src="icons/icon-192.png" alt="">MNTL D&amp;T</a>
+<nav aria-label="MNTL D&amp;T pages"><ul><li><a href="privacy.html" aria-current="page">Privacy Policy</a></li><li><a href="support.html">Support</a></li><li><a href="terms.html">Terms of Use</a></li><li><a class="app" href="./">Open the app</a></li></ul></nav>
+</div></header>
+<main class="wrap">
+<h1>Privacy Policy</h1>
+<p class="eff">Effective date: October 31, 2026</p>
+<p class="lead"><strong>MNTL D&amp;T keeps your log on your phone. We have no account system, no servers that store your log, no ads and no tracking.</strong> Information leaves your phone only when you use <em>Ask an agent</em>, when the app or website downloads its own files, when you choose to send or share something, or when you email us. Each is explained below.</p>
+<p>MNTL D&amp;T is made by Thomas Alexander Auld ("we", "us").</p>
+
+<h2>What stays on your phone</h2>
+<p>Everything you log: food, macros, water, body weight, workouts, sets, cardio, routines, notes, the daily checklist and your settings. So does your profile, if you fill it in: your name, birth date, gender, height, weight, activity level and goals. It is stored on your device only, in the app's own storage on iPhone or your browser's storage on the web version. We have no remote access to it, and we keep no copy. Depending on your phone's settings, its own backups (iCloud Backup, or a backup to a computer) may include it. Those backups are managed by you and Apple, not by us.</p>
+<ul>
+<li><strong>Camera:</strong> barcode scanning and label reading happen on your phone. Pictures are never saved or sent anywhere.</li>
+<li><strong>Grocery brands:</strong> the barcode data (from the US Department of Agriculture) is downloaded to your phone once and looked up there.</li>
+</ul>
+
+<h2>What leaves your phone, and why</h2>
+<ul>
+<li><strong>Ask an agent.</strong> Only after you give permission in the app (you can turn it off again in Settings). When you ask it about a food, the words you typed (for example "chicken burrito bowl") and your country setting are sent to our relay, a small server run on Cloudflare, which passes them to an AI provider to estimate the nutrition. Today that provider is Google (Gemini). If we add another, we will name it here and ask your permission again before using it. The app does not add your name, your log or anything else on your phone to the question, but anything you type into it is sent. Cloudflare receives your IP address, as with any internet request. Our relay uses it only in a counter that lasts about a minute, to limit how many questions one address can send, and does not store it. Cloudflare handles its own service and security information under its own policies. We use Google's unpaid Gemini service. Google uses what is submitted and the answers it gives to provide and improve its products and technologies, and people at Google may review them. <strong>Enter only food descriptions and amounts. Do not type names, contact details, medical conditions or anything else personal, sensitive or confidential into Ask an agent.</strong></li>
+<li><strong>App updates and the website.</strong> The iPhone app checks our website for updates and downloads them, and the web version loads from it. It is hosted on GitHub Pages. GitHub receives a normal web request, including your IP address, which it logs for security purposes.</li>
+<li><strong>Things you choose to send.</strong> <em>Send a copy</em> (your backup) and routine sharing codes go only where you send them, using your phone's share sheet. A backup contains your whole log and profile, including your birth date, so keep it somewhere safe.</li>
+<li><strong>Emails to us.</strong> If you email <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a>, we receive your email address, your message and anything you attach, and use them to answer you. The mailbox is Gmail, provided by Google. We keep support emails for up to 12 months after the issue is closed, then delete them, or sooner if you ask. Please remove anything you don't need us to see from screenshots, and don't send a whole backup unless we ask for one.</li>
+</ul>
+
+<h2>What we don't do</h2>
+<p>No ads. No analytics or tracking. No accounts and no sign-in. We do not sell personal information or share it for advertising. This version does not connect to Apple Health. We pass information only to the services described in this policy, to run the features you use, and Google's own use of what you send through Ask an agent is explained above.</p>
+
+<h2>Your choices</h2>
+<ul>
+<li>You can decline or withdraw the Ask an agent permission at any time and keep using the rest of the app fully without <em>Ask an agent</em>.</li>
+<li>To delete what is on your phone, delete the app (offloading it keeps your data), or clear the site's data on the web version. Make a backup first with <em>Send a copy</em> if you want to keep it. This does not delete copies you made, your phone's own backups, emails you sent us, or what Google has already received through Ask an agent.</li>
+<li>To ask us to delete emails or anything else we hold, or to ask what we hold, email <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a>. We cannot see or delete a log that is only on your phone.</li>
+</ul>
+
+<h2>Children</h2>
+<p>MNTL D&amp;T is for adults 18 and older, and the app asks for your birth date before use. If you are 18 or older, the date is kept on your phone in your profile, and the app also uses it to work out your calories. If you are under 18, only that answer is kept, not the date. We never ask for ID, and the date is never sent to us. If you are under 18, please don't use it. If you believe someone under 18 has used Ask an agent or contacted us, email <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a> and we will delete any message from them we hold.</p>
+
+<h2>California residents</h2>
+<p>We do not sell personal information or share it for cross-context behavioral advertising. To ask about, correct or delete information we hold, email <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a>. We will respond as the law requires.</p>
+
+<h2>Changes and contact</h2>
+<p>If this policy changes, we will update the effective date and say so in the app's <em>What's new</em>. Before materially changing how we collect, use or disclose personal information, we will give notice and ask for any permission the law requires. Questions: <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a>.</p>
+</main>
+<footer><div class="wrap">
+<nav aria-label="MNTL D&amp;T pages"><ul><li><a href="privacy.html" aria-current="page">Privacy Policy</a></li><li><a href="support.html">Support</a></li><li><a href="terms.html">Terms of Use</a></li><li><a class="app" href="./">Open the app</a></li></ul></nav>
+<p>MNTL D&amp;T is made by Thomas Alexander Auld. Questions: <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a></p>
+</div></footer>
+</body>
+</html>

@@ -30,7 +30,7 @@ It checks that:
   for it, and every request to its address is counted, preflights included)
 - the yes keeps which version of the Terms of Use was agreed to, and when;
   Settings shows the date; a later version asks an adult once more (#termsAsk),
-  and a b79 yes without a version counts as the first published one
+  and a yes from before the Terms were published is asked once too
 - 44px targets, and the screens' contrast in light and dark
 
 What it cannot show: that the person is 18. The check is self-declared — a
@@ -78,7 +78,7 @@ ASK_WORDS = [
     "When were you born?",
     "MNTL D&T is for adults, 18 or older. Your birth date stays on this phone — the app also uses it to work out your calories.",
     "Continue",
-    "By continuing you agree to the Terms of Use and Privacy Policy.",
+    "By tapping Continue, you agree to the Terms of Use and acknowledge the Privacy Policy.",
 ]
 NO_WORDS = [
     "Sorry, MNTL D&T is for adults",
@@ -504,22 +504,30 @@ with sync_playwright() as pw:
     ctx, p, hits = open_phone(b, stored=older, scheme="dark")
     contrast(p, "#termsAsk *", "Terms changed, dark")
     ctx.close()
-    # a yes from b79, before versions were kept, is the first published version
+    # A yes from before the Terms were published agreed to links that led
+    # nowhere, so it is asked once, whichever build gave it.
     ctx, p, hits = open_phone(b, stored=fixture(BUILD, {"adult": True}))
-    check("a b79 yes, with no version: not asked again", not shown(p, "#ageGate") and "Eggs and oats" in text(p, "#view"))
+    check("a b79 yes, with no version: asked once", shown(p, "#termsAsk"))
+    ctx.close()
+    ctx, p, hits = open_phone(b, stored=fixture(BUILD, {"adult": True, "terms": "2026-10-29", "termsAt": 1}))
+    check("a b80 yes, to the unpublished version: asked once", shown(p, "#termsAsk"))
+    ctx.close()
+    # this version, but with no date kept: nothing is made up
+    ctx, p, hits = open_phone(b, stored=fixture(BUILD, {"adult": True, "terms": TERMS}))
+    check("a yes with no date: not asked again", not shown(p, "#ageGate") and "Eggs and oats" in text(p, "#view"))
     p.click("#setBtn"); p.wait_for_timeout(300)
-    check("a b79 yes: Settings shows no agreed date rather than one made up", text(p, "#setTermsHint") == "", text(p, "#setTermsHint"))
+    check("a yes with no date: Settings shows none rather than one made up", text(p, "#setTermsHint") == "", text(p, "#setTermsHint"))
     ctx.close()
 
     # dark: the permission sheet
-    ctx, p, hits = open_phone(b, relay=True, scheme="dark", stored=fixture(BUILD, {"adult": True}))
+    ctx, p, hits = open_phone(b, relay=True, scheme="dark", stored=fixture(BUILD, {"adult": True, "terms": TERMS}))
     ask_agent(p)
     contrast(p, "#aiSheet *", "permission sheet, dark")
     ctx.close()
 
     # ---- a pending row's Tap to estimate goes through the same sheet ----
     asked = []
-    ctx, p, hits = open_phone(b, relay=True, asked=asked, stored=fixture(BUILD, {"adult": True}, pending=True))
+    ctx, p, hits = open_phone(b, relay=True, asked=asked, stored=fixture(BUILD, {"adult": True, "terms": TERMS}, pending=True))
     p.click('[data-est="w1"]'); p.wait_for_timeout(400)
     check("Tap to estimate: the permission sheet, nothing sent", shown(p, "#aiSheet") and not hits, hits)
     tap(p, "#aiNo", 300)
@@ -545,7 +553,7 @@ with sync_playwright() as pw:
                 held.append(route)
         ctx.route(fakeai.RELAY, h)
     ctx, p, hits = open_phone(b, relay=True, extra=hold,
-                              stored=fixture(BUILD, {"adult": True, "ai": True, "aiAt": 1}))
+                              stored=fixture(BUILD, {"adult": True, "terms": TERMS, "ai": True, "aiAt": 1}))
     ask_agent(p)
     p.wait_for_timeout(400)
     check("on its way: the question is out", len(held) == 1 and "Finding the numbers" in text(p, "#view"), len(held))

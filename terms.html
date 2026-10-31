@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Terms of Use · MNTL D&amp;T</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script>
+/* The app's own theme choice, if this phone has one, before the first paint. */
+(function () {
+  try {
+    var l = JSON.parse(localStorage.getItem("iron-ledger-look") || "{}");
+    if (l.theme === "light" || l.theme === "dark") document.documentElement.setAttribute("data-theme", l.theme);
+  } catch (e) {}
+})();
+</script>
+<style>
+/* Tokens copied from mntl-dt.html's :root, light and dark, so these pages
+   look like the app. The app's own look (iron-ledger-look) is honoured too. */
+@font-face{font-family:'Archivo';font-style:normal;font-weight:400 800;font-stretch:100% 125%;font-display:swap;src:url(fonts/Archivo-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/IBMPlexMono-400-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/IBMPlexMono-500-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+:root {
+    --ground: #F2F4F1;
+    --surface: #FFFFFF;
+    --surface-2: #E9EEEB;
+    --ink: #121816;
+    --ink-2: #46524D;
+    --ink-3: #5B6863;
+    --rule: #D9E0DC;
+    --accent: #0B6E63;
+    --accent-soft: #D8E8E4;
+    --on-accent: #FFFFFF;
+    --font-ui: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --font-num: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    color-scheme: light;
+  }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0E1211;
+    --surface: #171D1B;
+    --surface-2: #1F2725;
+    --ink: #ECF1EE;
+    --ink-2: #A9B5B0;
+    --ink-3: #8C9893;
+    --rule: #2A3431;
+    --accent: #56B9A9;
+    --accent-soft: #17342F;
+    --on-accent: #0B1614;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+    --ground: #0E1211;
+    --surface: #171D1B;
+    --surface-2: #1F2725;
+    --ink: #ECF1EE;
+    --ink-2: #A9B5B0;
+    --ink-3: #8C9893;
+    --rule: #2A3431;
+    --accent: #56B9A9;
+    --accent-soft: #17342F;
+    --on-accent: #0B1614;
+    color-scheme: dark;
+  }
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font:400 17px/1.6 var(--font-ui)}
+.bar{background:var(--surface);border-bottom:1px solid var(--rule)}
+.wrap{max-width:680px;margin:0 auto;padding:0 16px}
+.bar .wrap{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding-top:8px;padding-bottom:8px}
+.brand{display:inline-flex;align-items:center;gap:10px;min-height:44px;color:var(--ink);text-decoration:none;font-weight:800;font-stretch:112%;letter-spacing:.01em;font-size:18px}
+.brand img{width:32px;height:32px;border-radius:8px}
+nav ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+nav a{display:inline-flex;align-items:center;min-height:44px;padding:0 16px;border:1px solid var(--rule);border-radius:999px;background:var(--surface);color:var(--accent);font-weight:600;font-size:16px;text-decoration:none}
+nav a[aria-current="page"]{background:var(--accent-soft);border-color:transparent;color:var(--ink)}
+nav a.app{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+main{padding-top:24px;padding-bottom:16px}
+h1{font-size:30px;line-height:1.15;font-weight:800;font-stretch:112%;margin:8px 0 4px}
+.eff{font:500 14px/1.5 var(--font-num);color:var(--ink-3);margin:0 0 20px}
+h2{font-size:20px;line-height:1.3;font-weight:750;margin:32px 0 6px}
+p,ul,ol{margin:0 0 14px}
+ul,ol{padding-left:24px}
+li{margin:0 0 8px}
+li::marker{color:var(--ink-3)}
+.lead{font-size:18px}
+code{font:400 15px var(--font-num);background:var(--surface-2);padding:1px 5px;border-radius:5px;overflow-wrap:anywhere}
+/* Links inside a sentence keep the line spacing but take a 44px-tall press:
+   vertical padding on an inline box grows what a finger can hit, not the line. */
+main a,footer p a{color:var(--accent);text-decoration:underline;text-underline-offset:3px;padding:14px 0;overflow-wrap:anywhere}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:0 20px;border-radius:12px;background:var(--accent);color:var(--on-accent)!important;font-weight:650;text-decoration:none!important;margin:4px 0 8px}
+footer{border-top:1px solid var(--rule);background:var(--surface);margin-top:32px}
+footer .wrap{padding-top:16px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+footer p{color:var(--ink-2);font-size:15px;margin:12px 0 0}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<header class="bar"><div class="wrap">
+<a class="brand" href="./"><img src="icons/icon-192.png" alt="">MNTL D&amp;T</a>
+<nav aria-label="MNTL D&amp;T pages"><ul><li><a href="privacy.html">Privacy Policy</a></li><li><a href="support.html">Support</a></li><li><a href="terms.html" aria-current="page">Terms of Use</a></li><li><a class="app" href="./">Open the app</a></li></ul></nav>
+</div></header>
+<main class="wrap">
+<h1>Terms of Use</h1>
+<p class="eff">Effective date: October 31, 2026</p>
+
+<h2>1. The agreement</h2>
+<p>These terms are an agreement between you and Thomas Alexander Auld ("we", "us"), who makes MNTL D&amp;T ("the App"). By tapping Continue on the App's age screen, after being shown links to these terms and our <a href="privacy.html">Privacy Policy</a>, you confirm that you are 18 or older and agree to these terms. The Privacy Policy explains how information is handled. If you do not agree, do not use the App.</p>
+
+<h2>2. Not medical advice</h2>
+<p><strong>The App supports diet and training records and general wellness. Its estimates, calculations, targets and exercise suggestions are general information, and are not a substitute for individual advice from a qualified healthcare professional.</strong> That includes calorie and macro targets, the goal calculator, body weight trends, training plans and anything shown by <em>Ask an agent</em>. The App is not intended to diagnose, treat, cure or prevent any disease.</p>
+<ul>
+<li>Talk to a doctor or a registered dietitian before starting or changing a diet, a training programme or a weight goal. This matters most if you are pregnant, have a medical condition, take medication, or have a history of disordered eating.</li>
+<li>Never ignore professional medical advice, or delay seeking it, because of something in the App.</li>
+<li>If you feel pain, dizziness, shortness of breath or any other warning sign, stop and get medical help. In an emergency, call 911.</li>
+</ul>
+
+<h2>3. Exercise at your own risk</h2>
+<p>Strength training, cardio and changes to what you eat carry a risk of injury, illness and, rarely, death. <strong>You choose your own exercises, weights, sets and food, and you take part at your own risk.</strong> You are responsible for using correct form and safe equipment, for having a spotter where one is needed, and for knowing your own limits. Plans, targets, "set to beat" suggestions and weight increases shown in the App are prompts, not instructions; ignore any that do not suit you.</p>
+
+<h2>4. Nutrition numbers are estimates</h2>
+<p><strong>Calories, protein, carbs, fat and every other figure in the App may be wrong.</strong> They come from what you type, from food labels read by your camera, from barcode data published by the US Department of Agriculture, and from AI models answering <em>Ask an agent</em>. AI answers in particular can be confidently incorrect. Check any number that matters to you against the food's own label, and do not rely on the App where accuracy is important to your health, such as for allergies, diabetes or a medical diet.</p>
+
+<h2>5. Your data stays on your phone</h2>
+<p>Your log is stored on your own device, not on our servers. That means:</p>
+<ul>
+<li><strong>You are responsible for keeping a backup.</strong> The App offers <em>Send a copy</em> for this. If your phone is lost, reset or replaced, or the App is deleted, we cannot recover your log.</li>
+<li>Any limit on our responsibility for lost data is subject to section 9 and the law.</li>
+<li>What you type into <em>Ask an agent</em> is sent, with your country, to the AI providers listed in our <a href="privacy.html">Privacy Policy</a> to get an answer, and only after you have given permission in the App. You can withdraw that permission in Settings at any time; the rest of the App keeps working. The App does not add your name or log, but anything you type is sent. Google's unpaid service uses what is submitted and its answers to provide and improve its products and technologies, and people at Google may review them. Enter only food descriptions and amounts. Do not type names, contact details, medical conditions or anything else personal, sensitive or confidential there.</li>
+<li>A copy you make with <em>Send a copy</em>, and backups your phone makes on its own (such as iCloud), are kept by you and those services, not by us.</li>
+<li>In the web version, your browser holds the log. Clearing the browser's website data deletes it.</li>
+</ul>
+
+<h2>6. Third-party services</h2>
+<p>The App relies on services we do not control, including the Apple App Store, the AI providers behind <em>Ask an agent</em>, and Cloudflare, which carries those questions to them. Their own terms and privacy policies apply to them. We do not control their availability or performance. This does not exclude our own obligations under the law. <em>Ask an agent</em> may be slow, limited each day, or unavailable at times.</p>
+
+<h2>7. Your licence and fair use</h2>
+<p>We give you a personal, non-exclusive, non-transferable licence to use the App on devices you own or control, for your personal use. Coaches and trainers may also use it to build routines and share them with clients through the Coach tab. You agree not to:</p>
+<ul>
+<li>copy, resell or redistribute the App, or publish a copy of it under another name;</li>
+<li>misuse <em>Ask an agent</em>, for example by automated requests, by trying to get around its daily limits, or by using it for anything other than food questions;</li>
+<li>use the App to break any law.</li>
+</ul>
+<p>We may limit or block access for anyone who does. The App, its name, design and code belong to us, except for the open-source parts listed in its credits, which keep their own licences.</p>
+<p><strong>Your content.</strong> Your log, routines and notes are yours. We do not automatically receive your saved log. We receive only what you submit through <em>Ask an agent</em> or choose to send us, as the Privacy Policy describes. If you share a routine with someone, you are responsible for what is in it, and they use it at their own risk.</p>
+<p><strong>Feedback.</strong> If you send us ideas or suggestions, we may use them freely, without owing you anything.</p>
+
+<h2>8. No warranties</h2>
+<p><strong>THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE", WITHOUT WARRANTIES OF ANY KIND.</strong> To the fullest extent the law allows, we disclaim all warranties, express or implied, including merchantability, fitness for a particular purpose, accuracy and non-infringement. We do not promise that the App will be error-free, uninterrupted, or that it will help you reach any fitness, weight or health goal.</p>
+
+<h2>9. Limitation of liability</h2>
+<p><strong>TO THE EXTENT THE LAW ALLOWS, WE ARE NOT LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL OR PUNITIVE DAMAGES ARISING FROM YOUR USE OF THE APP.</strong></p>
+<p><strong>For claims that may lawfully be limited, our total liability to you is limited to the greater of US$50 or the amount you paid us for the App in the 12 months before the event behind the claim.</strong></p>
+<p>These exclusions and limits do not apply to fraud, wilful misconduct, gross negligence, or any liability, statutory duty or consumer right that the law does not allow us to exclude or limit. Some places do not allow these exclusions or limits, so some of them may not apply to you.</p>
+
+<h2>10. Indemnity</h2>
+<p>You are responsible for third-party claims to the extent they are directly caused by your unlawful use of the App or your intentional breach of these terms. Any duty to repay us is limited to reasonable costs the law allows, and does not cover claims caused by our own negligence, misconduct or breach of the law.</p>
+
+<h2>11. Age</h2>
+<p>You must be 18 or older to use the App, including its web version and <em>Ask an agent</em>. The App asks you to confirm this before you can use it. If you are under 18, do not use the App; a parent's or guardian's permission does not change this. If we learn that someone under 18 is using the App, we may block access to <em>Ask an agent</em> or the App.</p>
+
+<h2>12. Disputes and California law</h2>
+<p>These terms are governed by the laws of the State of California, without regard to its conflict-of-law rules, except where the law requires otherwise. This does not remove consumer protections that cannot lawfully be waived. Before bringing any claim, contact us at <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a> and give us 30 days to try to resolve it. This does not stop you meeting a legal deadline, asking a court for urgent help, or contacting a regulator. To the extent the law allows, any claim not settled that way will be heard in the state or federal courts in Orange County, California, or in small claims court where it qualifies, and you and we agree to those courts' jurisdiction.</p>
+
+<h2>13. Changes and ending</h2>
+<p>We may update these terms. When we do, we will change the effective date and say so in the App's <em>What's new</em>. If a change is significant, the App will ask you to agree to the new terms before you keep using it. Otherwise, if you keep using the App after a change, you accept the new terms. Changes apply going forward and do not reduce rights you already have. You may stop using the App at any time by deleting it. The App can download updates from our website between App Store releases. They fix problems and improve how the App logs food and training, and can change how parts of it work. Larger changes come through the App Store. The web version may change when you next load it. We may change, suspend or stop offering the App, or any part of it, at any time. Sections 2&ndash;6, 8&ndash;12 and 15 continue to apply after you stop.</p>
+
+<h2>14. Apple App Store terms</h2>
+<p>If you got the App from the Apple App Store:</p>
+<ul>
+<li>These terms are between you and us, not Apple. Apple is not responsible for the App or its content.</li>
+<li>Your licence is limited to Apple-branded devices you own or control, as the App Store's Usage Rules allow.</li>
+<li>Apple has no duty to provide maintenance or support for the App.</li>
+<li>If the App fails to meet a warranty that applies by law, you may tell Apple, and Apple will refund the price you paid (if any). Apple has no other warranty duty for the App.</li>
+<li>We, not Apple, are responsible for any claims about the App, including product liability, legal or regulatory compliance, consumer protection, and claims that the App infringes someone's intellectual property.</li>
+<li>You confirm that you are not in a country subject to a US government embargo, and not on any US government list of prohibited or restricted parties.</li>
+<li>You must also follow any third-party terms that apply when you use the App.</li>
+<li>Apple and its subsidiaries are third-party beneficiaries of these terms and may enforce them against you.</li>
+</ul>
+
+<h2>15. General</h2>
+<p>These terms and the Privacy Policy are the whole agreement between you and us about the App. If a court finds any part of them unenforceable, the rest still applies. If we do not enforce a term straight away, we can still enforce it later. You may not transfer these terms to anyone else. We may transfer them to a company we form to run the App, or to anyone who takes the App over, and your rights under them stay the same. Any transfer of personal information remains subject to the Privacy Policy and the law. We may contact you about these terms in the App or by replying to an email you sent us. We are not responsible for delays or failures caused by events outside our reasonable control.</p>
+
+<h2>16. Contact</h2>
+<ul>
+<li>Thomas Alexander Auld, United States</li>
+<li><a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a></li>
+</ul>
+</main>
+<footer><div class="wrap">
+<nav aria-label="MNTL D&amp;T pages"><ul><li><a href="privacy.html">Privacy Policy</a></li><li><a href="support.html">Support</a></li><li><a href="terms.html" aria-current="page">Terms of Use</a></li><li><a class="app" href="./">Open the app</a></li></ul></nav>
+<p>MNTL D&amp;T is made by Thomas Alexander Auld. Questions: <a href="mailto:mntldntsupport@gmail.com">mntldntsupport@gmail.com</a></p>
+</div></footer>
+</body>
+</html>

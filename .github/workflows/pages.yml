@@ -47,6 +47,8 @@ jobs:
           mkdir -p _site
           cp mntl-dt.html _site/index.html
           cp manifest.webmanifest sw.js _site/
+          # the Privacy Policy and Support URLs in App Store Connect point here
+          cp privacy.html support.html terms.html _site/
           cp -r fonts icons vendor media _site/
           echo "built from $(grep -o 'BUILD = \"[^\"]*\"' mntl-dt.html | head -1)"
       # The iPhone app's live updates: the files it ships, each with its

@@ -69,6 +69,13 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
+  // The privacy, support and terms pages are documents in this scope too, and
+  // left to the branch below they would be cached as "./": the next offline
+  // open would show the privacy policy instead of the app. They go straight
+  // to the network.
+  const scope = new URL(self.registration.scope).pathname;
+  if (req.mode === "navigate" && url.pathname !== scope && url.pathname !== scope + "index.html") return;
+
   // Documents: current build when online, cached build when not.
   if (req.mode === "navigate") {
     e.respondWith(
