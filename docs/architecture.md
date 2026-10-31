@@ -125,17 +125,52 @@ plain fallback view still lets you log.
 adults, so the whole app is 18+ (decided 2026-10-28). `startUp()` reads the
 log and applies the look, then either opens the app (`openApp()`: the build
 stamp, the first render, What's new) or shows the age check over everything,
-with `.app` inert, and opens the app only on *I'm 18 or older*. Until then
+with `.app` inert, and opens the app only for someone 18 or older. Until then
 nothing is drawn and nothing is saved, so closing the app on that screen asks
 again next time. A phone that had the app before b79 is asked once, and its
-What's new waits behind the check. *I'm under 18* is kept as a no, so the
-sorry screen comes back on every open, with no way in; a log already on the
-phone is left exactly as it was. `liveReady()` is called either way: the build
-has started, and the live updater rolls back a build that stays quiet for 10
-seconds. The answers live in the log as `store.consent` — `adult`, `ai`,
-`aiAt` (when Ask an agent was allowed), `terms` and `termsAt`, nothing else,
-no birth date — under the same key. Like `lastBackupAt`, `mergeInto()` does
-not carry them across a restore: they were answered on this phone.
+What's new waits behind the check. A no is kept, so the sorry screen comes
+back on every open; a log already on the phone is left exactly as it was.
+`liveReady()` is called either way: the build has started, and the live
+updater rolls back a build that stays quiet for 10 seconds. The answers live
+in the log as `store.consent` — `adult`, `ai`, `aiAt` (when Ask an agent was
+allowed), `terms` and `termsAt`, nothing else — under the same key. Like
+`lastBackupAt`, `mergeInto()` does not carry them across a restore: they were
+answered on this phone.
+
+**It asks for a birth date, and gives a second chance (b81).** b79's two
+buttons meant one wrong tap on *I'm under 18* shut a phone out for good, and
+the only way back was clearing the app, log and all. Tommy chose the birth
+date as the fix (2026-10-28): month by name, day and year (`dobFrom()` says
+what is wrong with one that can't be right). A date under 18 is said back
+first, *Is that right?* (`#ageCheck`), with *Change the date* keeping it to
+fix; *Yes, that's right* keeps the no and drops anything given before (Ask an
+agent's yes, the Terms, a birth date) and calls back a question on its way to
+the relay. The sorry screen has *Wrong birth date? Enter it again*, from empty,
+as many times as it takes — Tommy's call; the check is self-declared either
+way, and a limit would be the dead end again. An adult's birth date is kept in
+the profile (`store.profile.dob`), never in `consent`; under 18 only the no is
+kept, no date. A first yes goes on to the profile, with What's new behind it.
+
+**The profile sets the goals (b81).** Asked for by Tommy (2026-10-28) as a
+"log in": a local account on this phone, with no server (accounts that share
+and follow come later, with one). `showProfile()` draws it into `#profGate`,
+the age check's card on its own ground: after a first yes, *About you* then
+*Your goals*, each skippable, and from Settings → You both on one page with
+Save and Cancel. `store.profile` is the person — `name`, `dob`, `sex` (`m`, `f`
+or `o`, and for `o`, `calcSex`, the equation the calculator uses), height (`cm`,
+or `ft` and `inch`), `act`, `aim`, `setup`. The goals are not copied into it:
+they stay where the tabs already read them (`store.goal`, `waterOn` and
+`waterGoalMl`, `cardioGoal`), with two new ones beside them, `gymGoal`
+(workouts a week, under the week board on Gym) and `bwGoal` (a goal weight in
+pounds, beside the trend on Log). So the target editor, Settings and the
+Cardio tab change the same goals, and the profile always opens on the ones in
+force. Calories and protein apply from today on, as *Save target* does; the
+weight box is the body weight card's number, so a changed one is today's
+weigh-in. The goal calculator's arithmetic is `calcNumbers()`, shared by both,
+and its *Use these numbers* writes into the profile, never over it. One Save is
+one Undo. A birth date changed to under 18 goes to the age check, said back
+first. `mergeInto()` brings the profile and the two new goals back, but keeps
+this phone's birth date: it came with this phone's age check.
 
 **The yes to the age check is the yes to the Terms (b80).** The screen says
 *By continuing you agree to the Terms of Use*, so *I'm 18 or older* records
