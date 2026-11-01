@@ -90,6 +90,17 @@ the same for Ask an agent's permission (`IRON_LEDGER_AI`) unless
 will time out on the age check. `darkcheck` measures both screens while hidden,
 since none of its pages ever shows them; `agecheck` measures them on screen.
 
+**`agecheck` and `profile` open over http, and seed their log once.** They used
+to fail now and then on CI with the age check back after a reload (2026-10-29,
+2026-10-31; a rerun passed). Opened from `file://`, Chromium sometimes hands a
+reloaded page an empty `localStorage` for seconds on end, while the log is safe
+and back on the next reload: 7 of 1,320 tries under load, against 0 of 560 over
+`http://127.0.0.1`. The fixture's "write it if the key is empty" then wrote the
+old log back. So these suites use the address a phone would, and `window.name`
+lets the fixture go in once per tab. Zero in 560 is not proof, Safari's engine
+was not tried, and answering the age check during such a read would save over
+the log, so if this ever appears on `http` treat it as an app bug.
+
 **CI runs Linux, and a platform default is a platform difference.** The
 technique box is a native `<select>` made invisible, and it set no colours of
 its own. Linux Chromium gave its options a dark-scheme default that measured
