@@ -4,9 +4,10 @@ main = "worker.js"
 compatibility_date = "2025-09-01"
 
 [vars]
-# The app's own address. Anything else gets no answer (a phone on the home
-# wifi running tools/serve.py is let through by the code itself).
-ALLOWED_ORIGINS = "https://tommyauld02.github.io"
+# The app's own addresses: the Pages site and the iPhone app. Anything else gets
+# no answer (a phone on the home wifi running tools/serve.py is let through by
+# the code itself).
+ALLOWED_ORIGINS = "https://tommyauld02.github.io,capacitor://localhost"
 # Asked in this order; each has its own free daily allowance. The lightest is
 # first: it is the fastest, the least often overloaded, and has the most
 # allowance (the big Flash model allows 20 a day on the free tier). Aliases,

@@ -52,10 +52,9 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
 - **The launch screen** is a plain background in the phone's light or dark,
   not Capacitor's logo.
 - **`capacitor://localhost`** is the app's address on iPhone (Capacitor's
-  default). The relay will need it in `ALLOWED_ORIGINS` before the food finder
-  answers inside the app — a later step of the launch plan. Until then, Ask an
-  agent says it cannot reach the food finder, and the pantry, barcodes and
-  label reading all still work.
+  default), and it is in the relay's `ALLOWED_ORIGINS`. Without it the relay
+  answers 403, Ask an agent says it cannot reach the food finder, and the
+  pantry, barcodes and label reading all still work.
 
 ## The log lives in native storage
 
@@ -273,8 +272,7 @@ These are the things only the iPhone can answer:
    pantry's *+ New*. Both read on the phone with no signal.
 6. Backup → *Send a copy*: the share sheet opens with an `mntl-dt-<date>.json`
    file.
-7. Ask an agent with a connection: it says it cannot reach the food finder.
-   That is expected until the relay knows the app's address.
+7. Ask an agent with a connection: it asks permission, then answers.
 8. Type in any box: the keyboard does not cover it, and the page does not
    zoom.
 
