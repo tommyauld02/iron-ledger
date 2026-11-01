@@ -19,6 +19,7 @@ if not node:
     raise SystemExit(77)
 
 HARNESS = r"""
+import { readFileSync } from "node:fs";
 import worker, { originAllowed, findMacros, tidy, readJson, restFor, forgetResting, MAX_FOOD, MAX_BODY } from "./worker.mjs";
 
 const res = [];
@@ -63,6 +64,9 @@ async function call(r, env) {
 // ---- who gets an answer ----
 check("the Pages site is let in", originAllowed(PAGES, ENV));
 check("a phone on the home wifi is let in", originAllowed("http://192.168.1.20:8000", ENV) && originAllowed("http://localhost:8000", ENV));
+const DEPLOYED = { ALLOWED_ORIGINS: /ALLOWED_ORIGINS = "([^"]+)"/.exec(readFileSync("wrangler.toml", "utf8"))[1] };
+check("as deployed: the Pages site and the iPhone app are let in", originAllowed(PAGES, DEPLOYED) && originAllowed("capacitor://localhost", DEPLOYED), DEPLOYED.ALLOWED_ORIGINS);
+check("as deployed: another app's address is not", !originAllowed("capacitor://evil.example", DEPLOYED) && !originAllowed("ionic://localhost", DEPLOYED));
 check("another website is not", !originAllowed("https://evil.example", ENV) && !originAllowed("", ENV)
   && !originAllowed("http://192.168.1.20.evil.example", ENV));
 let r = await call(new Request("https://x.workers.dev/find", { method: "OPTIONS", headers: { Origin: PAGES } }));
@@ -240,6 +244,7 @@ try:
     shutil.copy(os.path.join(ROOT, "relay", "worker.js"), os.path.join(tmp, "worker.mjs"))
     with open(os.path.join(tmp, "suite.mjs"), "w", encoding="utf-8") as f:
         f.write(HARNESS)
+    shutil.copy(os.path.join(ROOT, "relay", "wrangler.toml"), tmp)
     rc = subprocess.run([node, os.path.join(tmp, "suite.mjs")], cwd=tmp).returncode
 finally:
     shutil.rmtree(tmp, ignore_errors=True)

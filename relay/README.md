@@ -56,7 +56,7 @@ status and message (`Gemini 400: …`); the app only ever gets a code like
 ## What it guards
 
 - Browsers on other websites get no answer: only `ALLOWED_ORIGINS` (the Pages
-  site) and a phone on the home wifi do. **That is not a lock.** A script can
+  site and the iPhone app) and a phone on the home wifi do. **That is not a lock.** A script can
   claim any origin, and an app whose every byte is public has no secret to
   prove itself with. What limits the damage is the rest of this list.
 - `PER_PHONE`: 20 lookups a minute from any one address.
