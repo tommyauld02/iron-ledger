@@ -119,14 +119,17 @@ def fixture(build="2026-10-26.78", consent=None, pending=False):
     return s
 
 
-def open_phone(b, url=FILE, stored=None, relay=False, size=PHONE, asked=None, scheme=None, extra=None):
+def open_phone(b, url=BASE, stored=None, relay=False, size=PHONE, asked=None, scheme=None, extra=None):
     ctx = b.new_context(viewport=size, has_touch=True, is_mobile=True, color_scheme=scheme or "light")
     ctx.add_init_script("delete window.claude;")
     if relay:
         fakeai.phone(ctx, log=asked, allowed=False)      # nobody has said yes here
     if stored is not None:
-        # written before the app's first open only: a reload keeps what the app saved
-        ctx.add_init_script("localStorage.getItem(%r) || localStorage.setItem(%r, %s)"
+        # written once, before the app's first open: a reload keeps what the app
+        # saved. A reload can read storage as empty for a moment on file:// and
+        # under load (docs/testing.md), so "if it is empty" alone would seed again.
+        ctx.add_init_script("if (location.protocol !== 'about:' && !window.name) { window.name = 'seeded'; "
+                            "localStorage.getItem(%r) || localStorage.setItem(%r, %s) }"
                             % (KEY, KEY, json.dumps(json.dumps(stored))))
     if extra:
         extra(ctx)
@@ -500,6 +503,9 @@ with sync_playwright() as pw:
           agreed(s.get("consent")) and s["consent"]["termsAt"] > 1 and s.get("days") == older["days"], s.get("consent"))
     p.reload(); p.wait_for_timeout(700)
     check("Terms changed: not asked again", not shown(p, "#ageGate"))
+    # the fixture goes in once: a reload that reads storage as empty must not get it back
+    p.evaluate("k => localStorage.removeItem(k)", KEY); p.reload(); p.wait_for_timeout(700)
+    check("the test's starter log goes in once, never over a reload", not saved(p) and shown(p, "#ageAsk"))
     ctx.close()
     ctx, p, hits = open_phone(b, stored=older, scheme="dark")
     contrast(p, "#termsAsk *", "Terms changed, dark")

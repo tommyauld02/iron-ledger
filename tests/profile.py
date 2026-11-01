@@ -30,7 +30,8 @@ not import answered. It checks that:
 - 44px targets, 16px fields, contrast in light and dark, no sideways scroll
 """
 from playwright.sync_api import sync_playwright
-import os, io, re, json, datetime, sys
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+import os, io, re, json, datetime, threading, functools, sys
 import fakeai
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -57,6 +58,20 @@ def age_on(y, m, dd):
     return a - 1 if (TODAY.month, TODAY.day) < (m, dd) else a
 
 
+class H(SimpleHTTPRequestHandler):
+    def translate_path(self, path):
+        p = path.split("?", 1)[0].split("#", 1)[0]
+        if p in ("/", "/index.html"):
+            return os.path.join(ROOT, "mntl-dt.html")
+        return super().translate_path(path)
+    def log_message(self, *a): pass
+
+
+srv = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(H, directory=ROOT))
+threading.Thread(target=srv.serve_forever, daemon=True).start()
+BASE = "http://127.0.0.1:%d/" % srv.server_address[1]
+
+
 def fixture(consent=None, **more):
     s = {"days": {T: {"food": [{"id": "f1", "cal": 480, "pro": 40, "note": "Eggs and oats"}], "lifts": [], "updated": 1, "goal": G}},
          "moves": {}, "movesOwned": True, "goal": G, "region": "United States",
@@ -73,7 +88,11 @@ def open_phone(b, stored=None, size=PHONE, scheme=None, relay=False, asked=None,
     if relay:
         fakeai.phone(ctx, log=asked, allowed=False)
     if stored is not None:
-        ctx.add_init_script("localStorage.getItem(%r) || localStorage.setItem(%r, %s)"
+        # written once, before the app's first open: a reload keeps what the app
+        # saved. A reload can read storage as empty for a moment on file:// and
+        # under load (docs/testing.md), so "if it is empty" alone would seed again.
+        ctx.add_init_script("if (location.protocol !== 'about:' && !window.name) { window.name = 'seeded'; "
+                            "localStorage.getItem(%r) || localStorage.setItem(%r, %s) }"
                             % (KEY, KEY, json.dumps(json.dumps(stored))))
     if extra:
         extra(ctx)
@@ -81,7 +100,7 @@ def open_phone(b, stored=None, size=PHONE, scheme=None, relay=False, asked=None,
     p.on("pageerror", lambda e: errs.append(str(e)))
     hits = []
     p.on("request", lambda r: hits.append(r.method + " " + r.url) if r.url.startswith(fakeai.RELAY) else None)
-    p.goto(FILE)
+    p.goto(BASE)
     p.wait_for_timeout(700)
     return ctx, p, hits
 
