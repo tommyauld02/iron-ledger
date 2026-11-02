@@ -193,8 +193,8 @@ listener on `#view` swallows clicks for 400 ms after a drag, before any card's
 own handler can see one. Put straight back where it started, nothing changes
 and nothing is offered to undo.
 
-**The rest timer is start and stop, and nothing else.** Asked for as the
-simplest possible thing, and kept that way: it lives in the `.dock` above the
+**The rest timer is start and stop, plus an alert in the iPhone app.** Asked
+for as the simplest possible thing, and kept that way: it lives in the `.dock` above the
 tab bar on the Gym tab only, so it is under the thumb wherever the page is
 scrolled, and it saves nothing. It is a timestamp (`restStart`) and not a
 counter, for the workout clock's reason — the phone goes in a pocket between
@@ -202,6 +202,21 @@ sets and iOS suspends the app. It keeps running while another tab is looked at.
 Because it sits in the dock, **`hittest`'s usable band now ends at the dock's
 top, not the tab bar's**, and the whole dock counts as chrome; otherwise
 anything scrolled under the rest bar reads as covered.
+
+**The rest alert tells a phone in a pocket.** iPhone app only (b85), because
+only a notification reaches a locked phone; added to help the app pass Apple's
+4.2 review as more than a website. While the clock runs, a row above it offers
+*Buzz at* 1:00, 1:30, 2:00, 3:00 or Off. It starts Off, and the row is gone when
+the clock is stopped, so a rest with no alert looks as it always did. The first
+pick asks iOS's permission; refused, it says so and still buzzes with the app
+open. The time is kept under `mntl-rest-alert` in native storage, not in the log:
+backups have no use for it, and a `save()` would end the undo run for the set
+just logged. With the app open the notification stays quiet (`foreground: false`)
+and `drawRestAlert()` says it instead, so it never arrives twice.
+`sound: "default"` is not decoration: iOS plays nothing without a sound, and with
+no sound a phone in a pocket does not buzz. `schedule.at` must be a real `Date`;
+the bridge passes it to iOS as a date, and a string is ignored, which would make
+the notification go off at once.
 
 **The movement lists are the owner's own names.** The app used to start every
 split with a dozen movements of its own, and in real use the owner spent time
