@@ -10,8 +10,9 @@ nothing here is iPhone-only except the `ios/` folder itself.
 ## What is where
 
 ```
-package.json            Capacitor 8.5.3, @capacitor/preferences 8.0.1 and
-                        @capgo/capacitor-updater 8.52.1, pinned exactly
+package.json            Capacitor 8.5.3, @capacitor/preferences 8.0.1,
+                        @capacitor/haptics 8.0.2, @capacitor/local-notifications
+                        8.3.1 and @capgo/capacitor-updater 8.52.1, pinned exactly
 capacitor.config.json   app id, the name under the icon, webDir, the updater's settings
 tools/make-www.mjs      assembles www/ from mntl-dt.html, fonts/, icons/, vendor/,
                         and the live-update manifest Pages publishes
@@ -55,6 +56,26 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
   default), and it is in the relay's `ALLOWED_ORIGINS`. Without it the relay
   answers 403, Ask an agent says it cannot reach the food finder, and the
   pantry, barcodes and label reading all still work.
+
+## What only the iPhone app does
+
+Added in b85 (shell 1.2), partly so the app is more to Apple's reviewers than a
+website in a wrapper (guideline 4.2). `tests/native.py` checks all three with a
+stand-in for the plugins; the feel of them is on the list below.
+
+- **The rest alert**: `docs/gym.md` (*The rest alert tells a phone in a pocket*).
+- **Haptics**: `buzz()` in `mntl-dt.html`. A tap for food or a set going in, a
+  stronger one when Undo is offered, a double buzz when rest is up, a firm one
+  when the save bar goes up. iOS's System Haptics switch turns them off, so the
+  app has no switch of its own. `notify()` does not buzz: the app also uses it
+  for things nobody just did, such as an update arriving.
+- **Quick actions on the icon**: `UIApplicationShortcutItems` in `Info.plist`,
+  fixed in the app so they are there before it is first opened. No plugin:
+  `SceneDelegate.swift` writes the choice to `UserDefaults` under
+  `CapacitorStorage.mntl-quick-action`, where `@capacitor/preferences` reads it,
+  and rings the page with a `mntlquickaction` window event. The page reads it once
+  the app is open, so it never gets past the age check. Changing a title or
+  adding one needs a store build.
 
 ## The log lives in native storage
 
@@ -275,6 +296,12 @@ These are the things only the iPhone can answer:
 7. Ask an agent with a connection: it asks permission, then answers.
 8. Type in any box: the keyboard does not cover it, and the page does not
    zoom.
+9. Gym → Start the rest timer → pick *1:00*, allow notifications, lock the phone
+   and put it in a pocket: it buzzes and shows *Rest is up: 1:00* on the lock
+   screen. Again with the app open: one buzz and the notice, no banner.
+10. Log a food and a set, delete one: you feel a tap, then a stronger one.
+11. Hold the icon. Each of the four quick actions lands in the right place, from
+    a closed app and from one already running.
 
 Anything that looks wrong: a screenshot and the build number from the
 header (`b77`) is enough to start from.

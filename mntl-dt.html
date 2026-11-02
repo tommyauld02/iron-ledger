@@ -3186,6 +3186,20 @@
     border: 1px solid var(--rule); border-radius: 28px; background: var(--surface);
   }
   .restbar.is-running { border-color: var(--accent); background: var(--accent-soft); }
+  /* The iPhone app's rest alert: above the running clock, gone when it stops. */
+  .rest-alert { display: flex; align-items: center; gap: 3px; margin: 8px 16px 0; }
+  .rest-alert[hidden] { display: none; }
+  .rest-alert span {
+    margin-right: auto; padding-right: 2px; white-space: nowrap;
+    font-size: 13px; font-weight: 600; color: var(--ink-2);
+  }
+  .rest-alert button {
+    flex: 0 1 50px; min-width: 44px; min-height: 44px; padding: 0;
+    font-family: var(--font-num); font-size: 13px; font-variant-numeric: tabular-nums;
+    color: var(--accent); background: var(--surface);
+    border: 1px solid var(--accent); border-radius: 10px;
+  }
+  .rest-alert button[aria-pressed="true"] { color: var(--on-accent); background: var(--accent); }
   .rest-clock { font-family: var(--font-ui); font-size: 26px; font-weight: 800; font-stretch: 118%; }
   .restbar button {
     min-width: 92px; height: 46px; min-height: 46px; border-radius: 23px;
@@ -3951,6 +3965,7 @@
        nothing; #ctxMain is filled by the tab's own render. -->
   <div class="ctxbar" id="ctxbar">
     <div id="ctxMain"></div>
+    <div class="rest-alert" id="restAlert" role="group" aria-label="Buzz when rest is up" hidden></div>
     <div class="restbar" id="restbar" hidden>
       <span class="rest-label">Rest</span>
       <span class="rest-clock" id="restClock">0:00</span>
@@ -4251,12 +4266,40 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-31.84";
+  var BUILD = "2026-10-31.85";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
   var NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === "function" &&
                   window.Capacitor.isNativePlatform());
+
+  // A plugin only the newer shells have: a call to one the shell lacks is
+  // never answered, so ask first.
+  function shellHas(plugin) {
+    return NATIVE && typeof window.Capacitor.isPluginAvailable === "function" &&
+           window.Capacitor.isPluginAvailable(plugin);
+  }
+
+  // Taps you can feel, iPhone app only. They back up what the screen says and
+  // never replace it (rule 3): tap, food or a set went in; soft, Undo is on
+  // offer; up, rest is over; fail, the log is not being saved. iOS's own
+  // System Haptics switch turns them all off. One press can do two of these,
+  // and a phone that buzzes twice for one thing reads as two things.
+  var hapticsOn = shellHas("Haptics"), lastBuzz = 0;
+  var BUZZ = {
+    tap: ["impact", { style: "LIGHT" }],
+    soft: ["impact", { style: "MEDIUM" }],
+    up: ["notification", { type: "SUCCESS" }],
+    fail: ["notification", { type: "ERROR" }]
+  };
+  function buzz(kind) {
+    if (!hapticsOn) return;
+    var now = Date.now();
+    if (kind !== "fail" && now - lastBuzz < 150) return;
+    lastBuzz = now;
+    try { window.Capacitor.nativePromise("Haptics", BUZZ[kind][0], BUZZ[kind][1]).catch(function () {}); }
+    catch (e) {}
+  }
 
   // A routine is a list of training days. It is the ONLY place a split is
   // defined — the Gym tab renders whatever is here. The three starting days
@@ -4549,6 +4592,9 @@
     var bar = document.getElementById("savebar");
     var label = document.getElementById("saveLabel");
     if (!bar || !label) return;
+    // Once as the bar goes up, not on every retry. A tap before the log has
+    // been read is refused and means nothing (openLog), so it says nothing.
+    if (saveError && bar.hidden && (!shelf || shelf.open)) buzz("fail");
     bar.hidden = !saveError;
     if (saveError) {
       label.textContent = saveError === "QuotaExceededError"
@@ -4916,6 +4962,12 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-10-31.85", t: "The iPhone app buzzes back", items: [
+      "These are in the iPhone app only. It needs a new version from TestFlight or the App Store to get them.",
+      "Rest alert: while the rest timer runs on the Gym tab, pick 1:00, 1:30, 2:00 or 3:00. Your phone tells you when rest is up, even locked in your pocket. It starts Off, and your phone asks once if the app may send notifications.",
+      "You can feel it now: a tap when food or a set goes in, a stronger one when Undo is offered, a double buzz when rest is up, and a firm one if your log isn\u2019t saving.",
+      "Hold the app icon to jump straight to Log food, Ask an agent, Start workout or Scan a barcode.",
+      "The Privacy Policy now says how the rest alert works: it is set on your phone, and nothing is sent anywhere." ] },
     { b: "2026-10-31.84", t: "The Terms and Privacy Policy are published", items: [
       "The Terms of Use, Privacy Policy and Support page are now up, and the links in the app open them.",
       "The next time you open the app, it asks you once to look at the Terms and agree. Your log stays as it is." ] },
@@ -6868,6 +6920,7 @@
     made.forEach(function (r) { addCal += rowCal(r); addPro += rowPro(r); });
     lastAdded = ok ? { label: made.length === 1 ? rowNote(made[0]) || "Entry" : made.length + " items",
                        cal: addCal, pro: addPro, at: Date.now() } : null;
+    if (ok) buzz("tap");
     if (ok && popsUp("estimate")) logWay = null;
     render();
   }
@@ -7070,6 +7123,7 @@
     // Only claim it went in if it actually did. The row still renders — it is
     // real for this session — but the savebar says it will not survive.
     lastAdded = ok ? { label: label, cal: c, pro: p, at: Date.now() } : null;
+    if (ok) buzz("tap");
     // A pop-up goes once it has done its job, leaving the confirmation above
     // the buttons; in place, the box stays for the next entry. A write that
     // failed keeps the pop-up up, so its button can say "Not saved".
@@ -12360,6 +12414,7 @@
   }
 
   function offerUndo(label, restore) {
+    buzz("soft");
     if (!restore) { notify(label); return; }   // nothing to restore, nothing to press
     if (undoStack.length && undoScreen !== screenKey()) undoStack = [];
     undoScreen = screenKey();
@@ -12426,7 +12481,7 @@
     rowEditing = null;
     stampGoal(key);
     lastAdded = { label: rowNote(copy), cal: rowCal(copy), pro: rowPro(copy), at: Date.now(), id: copy.id };
-    touch(key); save(); render();
+    touch(key); if (save()) buzz("tap"); render();
     notify("Logged " + rowNote(copy) + " again \u00b7 " + fmt(rowCal(copy)) + " kcal \u00b7 " + fmt(rowPro(copy)) + " g");
   }
 
@@ -13323,8 +13378,8 @@
   }
 
   // ---------- rest between sets ----------
-  // Start, stop, nothing else: asked for as the simplest possible thing, and
-  // nothing about it is saved. It is a timestamp and not a counter for the
+  // Start, stop, and in the iPhone app an alert (below): asked for as the
+  // simplest possible thing, and nothing about it goes in the log. It is a timestamp and not a counter for the
   // same reason the workout clock is — the phone goes in a pocket between
   // sets, iOS suspends the app, and a counter would come back reading two
   // seconds for a two minute rest. Running on and not shown on other tabs,
@@ -13342,18 +13397,145 @@
     var btn = document.getElementById("restBtn");
     btn.textContent = on ? "Stop" : "Start";
     btn.setAttribute("aria-label", on ? "Stop the rest timer" : "Start the rest timer");
+    drawRestAlert();
   }
 
   document.getElementById("restBtn").addEventListener("click", function () {
     if (restStart) {
       restStart = 0;
       if (restTick) { clearInterval(restTick); restTick = null; }
+      restAlertCancel();
     } else {
       restStart = Date.now();
       restTick = setInterval(drawRest, 1000);
+      if (restAlert) restAlert.fired = false;
+      restAlertSchedule();
     }
     drawRest();
   });
+
+  // The rest alert, iPhone app only, because only a notification reaches a
+  // phone in a pocket. Off until a time is picked; the time is kept for the
+  // next rest under its own key, not in the log: backups have no use for it,
+  // and a save() here would end the undo run for the set just logged.
+  // With the app open the notification stays quiet (foreground: false) and
+  // the app says it itself, so nothing arrives twice. `sound` has to be named:
+  // iOS plays nothing without one, and with no sound there is no buzz either.
+  var REST_ALERT_KEY = "mntl-rest-alert", REST_ALERT_ID = 7701;
+  var REST_ALERT_TIMES = [60, 90, 120, 180, 0];
+  var restAlert = shellHas("LocalNotifications") ? { secs: 0, fired: false } : null;
+
+  function alertNative(method, opts) {
+    try { return window.Capacitor.nativePromise("LocalNotifications", method, opts || {}); }
+    catch (e) { return Promise.reject(e); }
+  }
+  function alertFailed(e) { lastError = "rest alert: " + (e && e.message ? e.message : String(e)); }
+  function restAlertCancel() {
+    if (restAlert) alertNative("cancel", { notifications: [{ id: REST_ALERT_ID }] }).catch(alertFailed);
+  }
+  function restAlertSchedule() {
+    if (!restAlert || !restAlert.secs || !restStart) return;
+    var at = restStart + restAlert.secs * 1000;
+    if (at <= Date.now()) return;
+    alertNative("schedule", { notifications: [{
+      id: REST_ALERT_ID,
+      title: "Rest is up: " + fmtDur(restAlert.secs * 1000),
+      body: "Time for your next set.",
+      sound: "default",
+      foreground: false,
+      schedule: { at: new Date(at) }          // a Date: the bridge hands iOS a date, and a string is ignored
+    }] }).catch(alertFailed);
+  }
+  function drawRestAlert() {
+    var row = document.getElementById("restAlert");
+    if (!row || !restAlert) return;
+    row.hidden = tab !== "gym" || !restStart;
+    if (!row.firstChild) {
+      row.innerHTML = "<span>Buzz at</span>" + REST_ALERT_TIMES.map(function (s) {
+        var t = s ? fmtDur(s * 1000) : "Off";
+        return '<button data-rest-alert="' + s + '" aria-label="' + (s ? "Buzz at " + t : "No rest alert") + '">' + t + "</button>";
+      }).join("");
+    }
+    row.querySelectorAll("button").forEach(function (b) {
+      b.setAttribute("aria-pressed", String(Number(b.dataset.restAlert) === restAlert.secs));
+    });
+    if (restStart && restAlert.secs && !restAlert.fired && Date.now() - restStart >= restAlert.secs * 1000) {
+      restAlert.fired = true;
+      notify("Rest is up: " + fmtDur(restAlert.secs * 1000));
+      // Late means the phone was away and the notification has said it already.
+      if (Date.now() - restStart < restAlert.secs * 1000 + 5000) buzz("up");
+    }
+  }
+  function pickRestAlert(secs) {
+    restAlert.secs = secs;
+    nativeStore("set", { key: REST_ALERT_KEY, value: String(secs) }).catch(alertFailed);
+    restAlertCancel();
+    if (!secs) { restAlert.fired = false; notify("Rest alert off"); drawRest(); return; }
+    var t = fmtDur(secs * 1000), past = !!restStart && Date.now() - restStart >= secs * 1000;
+    restAlert.fired = past;           // already past it: this rest has nothing left to say
+    drawRest();
+    alertNative("requestPermissions").then(function (r) {
+      if (r && r.display === "granted") {
+        restAlertSchedule();
+        notify(past ? "Past " + t + " already \u00b7 it will buzz at " + t + " next rest" : "It will buzz at " + t);
+      } else {
+        notify("Notifications are off, so it only buzzes with the app open \u00b7 turn them on in iPhone Settings");
+      }
+    }, function (e) { alertFailed(e); notify("Couldn\u2019t set the rest alert"); });
+  }
+  if (restAlert) {
+    document.getElementById("restAlert").addEventListener("click", function (e) {
+      var b = e.target.closest ? e.target.closest("[data-rest-alert]") : null;
+      if (b) pickRestAlert(Number(b.dataset.restAlert));
+    });
+  }
+  // A cold start: the clock it was timing is gone, so its alert must go too.
+  function restAlertStart() {
+    if (!restAlert) return;
+    restAlertCancel();
+    nativeStore("get", { key: REST_ALERT_KEY }).then(function (r) {
+      var secs = Number(r && r.value);
+      if (REST_ALERT_TIMES.indexOf(secs) > -1) { restAlert.secs = secs; drawRest(); }
+    }, alertFailed);
+  }
+
+  // ---------- quick actions on the icon ----------
+  // Holding the app's icon offers these (UIApplicationShortcutItems in
+  // ios/App/App/Info.plist). SceneDelegate.swift leaves the choice in native
+  // storage, because at a cold start nothing is here yet to tell, and rings
+  // this page if it is already up. Read once, and only with the app open:
+  // nothing gets round the age check or a profile still being filled in.
+  var QUICK_KEY = "mntl-quick-action";
+  var appOpen = false;
+
+  function quickCheck() {
+    if (!NATIVE || !appOpen) return;
+    nativeStore("get", { key: QUICK_KEY }).then(function (r) {
+      var act = r && r.value;
+      if (!act) return;
+      nativeStore("remove", { key: QUICK_KEY }).catch(function () {});
+      quickRun(act);
+    }, function (e) { lastError = "quick action: " + (e && e.message ? e.message : String(e)); });
+  }
+  function quickRun(act) {
+    var app = document.querySelector(".app");
+    if (app && app.inert) return;
+    function press(sel) { var b = document.querySelector(sel); if (b) b.click(); return !!b; }
+    cursor = new Date(); logPeek = null;
+    if (act === "start-workout") {
+      setTab("gym");
+      if (press("#startWorkout.wo-start")) notify("Workout started");
+      return;
+    }
+    setTab("macros");
+    if (act === "log-food") press('#ctxMain [data-logway="numbers"][aria-expanded="false"]');
+    else if (act === "ask-agent") press('#ctxMain [data-logway="estimate"][aria-expanded="false"]');
+    else if (act === "scan") press("#ctxMain [data-scanway]");
+  }
+  if (NATIVE) {
+    window.addEventListener("mntlquickaction", quickCheck);
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) quickCheck(); });
+  }
 
   // ---------- how it looks ----------
   // Teal is the base palette; every other accent is a block of CSS keyed on
@@ -13718,7 +13900,7 @@
     if (starts) d.workoutStart = now;
     l.sets.push(st);
     stampGym(key, d);
-    touch(key); save(); render();
+    touch(key); if (save()) buzz("tap"); render();
     if (starts) notify("Workout started with your first set");
     return true;
   }
@@ -14203,6 +14385,7 @@
     touch(key);
     var wrote = save();
     lastAdded = wrote ? { label: note, cal: c, pro: pr, at: Date.now() } : null;
+    if (wrote) buzz("tap");
     closePanSheet();
     render();
 
@@ -14592,6 +14775,9 @@
     // Said once: the first time the app opens on lists that held names it put
     // there, it says how many it took off rather than letting them vanish.
     if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
+    restAlertStart();
+    appOpen = true;
+    quickCheck();
   }
 })();
 </script>

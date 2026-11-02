@@ -21,6 +21,8 @@ It checks that:
 - no service worker inside the app, even served over http(s) as on Android
 - the label reader is still offered, though the app is not on https
 - the web build never touches the bridge
+- a shell without the newer plugins is never called for them
+- the rest alert, haptics and quick actions (b85), with stand-ins for the plugins
 
 What it cannot show: that UserDefaults survives a phone restart. That is
 Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
@@ -28,7 +30,7 @@ Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
 import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
-import os, io, re, json, datetime, threading, functools
+import os, io, re, json, datetime, threading, functools, plistlib
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 d = ROOT.replace("\\", "/"); d = "/" + d if d[1:2] == ":" else d
@@ -314,6 +316,187 @@ with sync_playwright() as pw:
     check("the web build keeps its log in localStorage",
           "WEB-ROW" in (p.evaluate("k => localStorage.getItem(k)", KEY) or ""))
     check("and never calls native storage", native["calls"] == [], str(native["calls"]))
+    allerrs += errs; ctx.close()
+
+    # ---- 10. a shell without the newer plugins ------------------------------
+    native["prefs"] = {}; native["calls"] = []
+    ctx, p, errs = open_app(b)
+    add_food(p, 200, "OLD-SHELL"); p.wait_for_timeout(300)
+    p.click('.tabs button[data-tab="gym"]'); p.click("#restBtn"); p.wait_for_timeout(200)
+    check("a shell without the plugins is never called for them",
+          {c[0] for c in native["calls"]} == {"Preferences"}, str(native["calls"][:6]))
+    check("and offers no rest alert", p.locator("#restAlert").is_hidden())
+    allerrs += errs; ctx.close()
+
+    # ---- 11. rest alert, haptics, quick actions -----------------------------
+    # The shell as of 1.2: the plugins answer here, in the page, and every call
+    # is written down with whether `at` really is a Date, which is what iOS needs.
+    PLUGINS = """(() => {
+      window.__calls = []; window.__perm = 'granted';
+      window.Capacitor = {
+        isNativePlatform: () => true, getPlatform: () => 'ios',
+        isPluginAvailable: () => true,
+        nativePromise: (plugin, method, opts) => {
+          opts = opts || {};
+          if (plugin === 'Preferences')
+            return window.__native(plugin, method, opts).then(r => {
+              if (r && r.error) throw new Error(r.error); return r; });
+          const n = (opts.notifications || [])[0], at = n && n.schedule && n.schedule.at;
+          window.__calls.push({ plugin, method, opts: JSON.parse(JSON.stringify(opts)),
+                                atIsDate: at instanceof Date, atIn: at ? (at - Date.now()) / 1000 : null });
+          return Promise.resolve(method === 'requestPermissions' ? { display: window.__perm } : {});
+        }
+      };
+    })();"""
+    QUICK = "CapacitorStorage.mntl-quick-action"
+    _bridge = bridge
+    def bridge(plugin, method, opts):        # the suites above never remove anything
+        if plugin == "Preferences" and method == "remove":
+            native["prefs"].pop("CapacitorStorage." + opts.get("key", ""), None)
+            return {}
+        return _bridge(plugin, method, opts)
+
+    def open_new_shell(b, width=402, fake_clock=False):
+        ctx = b.new_context(viewport={"width": width, "height": 874}, has_touch=True, is_mobile=True)
+        ctx.expose_function("__native", bridge)
+        ctx.add_init_script(PLUGINS)
+        p = ctx.new_page(); errs = []
+        p.on("pageerror", lambda e: errs.append(str(e)))
+        if fake_clock: p.clock.install()
+        p.goto(BASE); p.wait_for_timeout(900)
+        for t in ("Got it", "Start"):
+            try: p.click("text=" + t, timeout=500)
+            except Exception: pass
+        p.wait_for_timeout(200)
+        return ctx, p, errs
+    def calls(p, plugin, method=None):
+        return p.evaluate("""([pl, m]) => window.__calls.filter(c => c.plugin === pl && (!m || c.method === m))""",
+                          [plugin, method])
+    def bar(p): return p.inner_text("#undobar") if p.locator("#undobar").is_visible() else ""
+    def chip(p, s): return '[data-rest-alert="%d"]' % s
+    def pressed(p): return p.evaluate(
+        "() => [...document.querySelectorAll('#restAlert [aria-pressed=\"true\"]')].map(b => b.textContent)")
+
+    # the rest alert
+    native["prefs"] = {}
+    ctx, p, errs = open_new_shell(b, fake_clock=True)
+    p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(200)
+    check("no alert row until the rest clock runs", p.locator("#restAlert").is_hidden())
+    p.click("#restBtn"); p.wait_for_timeout(200)
+    check("with the clock running the row shows, and starts on Off",
+          p.locator("#restAlert").is_visible() and pressed(p) == ["Off"], str(pressed(p)))
+    check("Off schedules nothing", not calls(p, "LocalNotifications", "schedule"))
+    check("no permission is asked for until a time is picked", not calls(p, "LocalNotifications", "requestPermissions"))
+    sizes = p.evaluate("() => [...document.querySelectorAll('#restAlert button')].map(b => { const r = b.getBoundingClientRect(); return [r.width, r.height]; })")
+    check("every choice is at least 44px", len(sizes) == 5 and all(w >= 44 and h >= 44 for w, h in sizes), str(sizes))
+    p.click(chip(p, 120)); p.wait_for_timeout(300)
+    check("picking a time asks permission", len(calls(p, "LocalNotifications", "requestPermissions")) == 1)
+    s = calls(p, "LocalNotifications", "schedule")
+    n = s[-1]["opts"]["notifications"][0] if s else {}
+    check("and schedules one notification", len(s) == 1, str(s)[:160])
+    check("its time is a real Date, about two minutes off",
+          bool(s) and s[-1]["atIsDate"] and 110 < s[-1]["atIn"] <= 120, str(s)[:160])
+    check("it names a sound, or iOS plays nothing and a pocket feels nothing", n.get("sound") == "default", str(n)[:160])
+    check("it stays quiet with the app open", n.get("foreground") is False, str(n)[:160])
+    check("it says what is up", n.get("title") == "Rest is up: 2:00", str(n.get("title")))
+    check("the pick shows and is said", pressed(p) == ["2:00"] and "buzz at 2:00" in bar(p), bar(p))
+    check("the time is kept outside the log",
+          native["prefs"].get("CapacitorStorage.mntl-rest-alert") == "120" and "rest-alert" not in on_phone()
+          and "restAlert" not in on_phone())
+    p.clock.fast_forward(121000); p.wait_for_timeout(1500)
+    check("with the app open, it says rest is up", "Rest is up: 2:00" in bar(p), bar(p))
+    up = [c for c in calls(p, "Haptics", "notification") if c["opts"].get("type") == "SUCCESS"]
+    check("and buzzes once", len(up) == 1, str(up))
+    p.clock.fast_forward(5000); p.wait_for_timeout(300)
+    check("and not again", len([c for c in calls(p, "Haptics", "notification") if c["opts"].get("type") == "SUCCESS"]) == 1)
+    p.click("#restBtn"); p.wait_for_timeout(200)
+    check("stopping cancels the alert and folds the row",
+          len(calls(p, "LocalNotifications", "cancel")) >= 2 and p.locator("#restAlert").is_hidden())
+    p.click("#restBtn"); p.wait_for_timeout(200)
+    check("the next rest uses the same time", pressed(p) == ["2:00"] and len(calls(p, "LocalNotifications", "schedule")) == 2)
+    p.clock.fast_forward(150000); p.wait_for_timeout(300)
+    late = len([c for c in calls(p, "Haptics", "notification") if c["opts"].get("type") == "SUCCESS"])
+    check("coming back long after, it says so without a late buzz", "Rest is up" in bar(p) and late == 1, "%s %d" % (bar(p), late))
+    before = len(calls(p, "LocalNotifications", "schedule"))
+    p.click(chip(p, 60)); p.wait_for_timeout(300)
+    check("a time already past is said, not scheduled", "next rest" in bar(p)
+          and len(calls(p, "LocalNotifications", "schedule")) == before, bar(p))
+    p.click(chip(p, 0)); p.wait_for_timeout(300)
+    check("Off says so and is kept", "Rest alert off" in bar(p)
+          and native["prefs"].get("CapacitorStorage.mntl-rest-alert") == "0", bar(p))
+    p.click(chip(p, 180)); p.wait_for_timeout(300); allerrs += errs; ctx.close()
+    ctx, p, errs = open_new_shell(b)
+    check("a cold start cancels what the old clock left behind", len(calls(p, "LocalNotifications", "cancel")) == 1)
+    p.click('.tabs button[data-tab="gym"]'); p.click("#restBtn"); p.wait_for_timeout(200)
+    check("and remembers the time", pressed(p) == ["3:00"], str(pressed(p)))
+    p.evaluate("() => { window.__perm = 'denied'; window.__calls = []; }")
+    p.click(chip(p, 90)); p.wait_for_timeout(300)
+    check("refused notifications are said plainly", "iPhone Settings" in bar(p), bar(p))
+    check("and nothing is scheduled", not calls(p, "LocalNotifications", "schedule"))
+    allerrs += errs; ctx.close()
+    ctx, p, errs = open_new_shell(b, width=320)
+    p.click('.tabs button[data-tab="gym"]'); p.click("#restBtn"); p.wait_for_timeout(200)
+    over = p.evaluate("() => { const r = document.getElementById('restAlert'); return r.scrollWidth > r.clientWidth || document.documentElement.scrollWidth > innerWidth; }")
+    check("the row fits a small phone", not over)
+    allerrs += errs; ctx.close()
+
+    # haptics
+    native["prefs"] = {}
+    ctx, p, errs = open_new_shell(b)
+    p.evaluate("() => { window.__calls = []; }")
+    add_food(p, 300, "BUZZ-ROW"); p.wait_for_timeout(300)
+    h = calls(p, "Haptics")
+    check("logging food is one light tap", len(h) == 1 and h[0]["method"] == "impact"
+          and h[0]["opts"].get("style") == "LIGHT", str(h))
+    p.evaluate("() => { window.__calls = []; }")
+    native["fail_set"] = 99
+    add_food(p, 301, "BUZZ-FAIL"); p.wait_for_timeout(400)
+    add_food(p, 302, "BUZZ-FAIL2"); p.wait_for_timeout(400)
+    e = [c for c in calls(p, "Haptics", "notification") if c["opts"].get("type") == "ERROR"]
+    check("a failed save is one firm buzz, not one per try", len(e) == 1, str(e))
+    native["fail_set"] = 0
+    p.wait_for_timeout(5800)
+    allerrs += errs; ctx.close()
+
+    # quick actions
+    plist = plistlib.load(open(os.path.join(ROOT, "ios", "App", "App", "Info.plist"), "rb"))
+    acts = [x["UIApplicationShortcutItemType"] for x in plist.get("UIApplicationShortcutItems", [])]
+    check("the icon offers the four actions, in order", acts == ["log-food", "ask-agent", "start-workout", "scan"], str(acts))
+    swift = io.open(os.path.join(ROOT, "ios", "App", "App", "SceneDelegate.swift"), encoding="utf-8").read()
+    check("the shell leaves the choice where the page reads it",
+          '"%s"' % QUICK in swift and 'eventName: "mntlquickaction"' in swift)
+
+    def active_tab(p): return p.evaluate("() => document.querySelector('.tabs button[aria-selected=\"true\"]').dataset.tab")
+    native["prefs"] = {QUICK: "log-food"}
+    ctx, p, errs = open_new_shell(b)
+    check("Log food from a closed app opens Log numbers", active_tab(p) == "macros"
+          and p.locator("#fCal").count() == 1, active_tab(p))
+    check("and is only done once", QUICK not in native["prefs"])
+    allerrs += errs; ctx.close()
+    native["prefs"] = {QUICK: "ask-agent"}
+    ctx, p, errs = open_new_shell(b)
+    check("Ask an agent opens its box", active_tab(p) == "macros" and p.locator("#estText").count() == 1)
+    allerrs += errs; ctx.close()
+    native["prefs"] = {QUICK: "scan"}
+    ctx, p, errs = open_new_shell(b)
+    check("Scan a barcode opens the reader", active_tab(p) == "macros" and
+          p.evaluate("() => /barcode/i.test(document.getElementById('view').innerText)"),
+          p.evaluate(VIEW)[:120])
+    allerrs += errs; ctx.close()
+    native["prefs"] = {QUICK: "start-workout"}
+    ctx, p, errs = open_new_shell(b)
+    p.wait_for_timeout(200)
+    check("Start workout opens the Gym tab", active_tab(p) == "gym", active_tab(p))
+    check("and what it did is said", "Workout started" in bar(p) and p.locator("#startWorkout.wo-start").count() == 0, bar(p))
+    # the app already open
+    native["prefs"][QUICK] = "log-food"
+    p.evaluate("() => window.dispatchEvent(new Event('mntlquickaction'))"); p.wait_for_timeout(300)
+    check("from an app already running, it goes there too", active_tab(p) == "macros"
+          and p.locator("#fCal").count() == 1 and QUICK not in native["prefs"], active_tab(p))
+    native["prefs"][QUICK] = "start-workout"
+    p.evaluate("() => { document.querySelector('.app').inert = true; window.dispatchEvent(new Event('mntlquickaction')); }")
+    p.wait_for_timeout(300)
+    check("nothing gets past a screen that holds the app", active_tab(p) == "macros" and QUICK not in native["prefs"], active_tab(p))
     allerrs += errs; ctx.close()
 
     check("no page errors", not allerrs, str(allerrs[:3]))
