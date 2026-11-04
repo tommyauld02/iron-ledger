@@ -705,7 +705,7 @@ with sync_playwright() as pw:
         ("how much from the pantry",
                            ['.tabs button[data-tab="pantry"]', "[data-addpan]"], "#panQty"),
         ("rename a checklist item",
-                           ['.tabs button[data-tab="pantry"]', "[data-editsupp]"], "#suppRename"),
+                           ['.tabs button[data-tab="pantry"]', "#suppToggle", "[data-editsupp]"], "#suppRename"),
         # Today has no movement in this fixture, so the steps add one first.
         ("change a movement",
                            ['.tabs button[data-tab="gym"]', "#addLift", "[data-editlift]"], "#liftMove"),

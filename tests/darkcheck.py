@@ -203,6 +203,21 @@ def walk(p, label):
             low = p.evaluate(LOW)
             if low: found.append("pantry (combining): %s" % low)
             p.click("#combCancel"); p.wait_for_timeout(150)
+            # the checklist is folded until its header is pressed (b86): the
+            # open header, its rows and the add form only exist after that
+            p.click("#suppToggle"); p.wait_for_timeout(250)
+            if not p.locator(".supp-item").count() or not p.locator("#suppNameIn").count():
+                found.append("pantry: the open checklist is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("pantry (checklist open): %s" % low)
+            p.click("#suppToggle"); p.wait_for_timeout(150)
+            # and the list folded away by pressing the section on show
+            p.click('[data-pantab="all"]'); p.wait_for_timeout(200)
+            if not p.locator("#panShutLine:not([hidden])").count():
+                found.append("pantry: the folded list is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("pantry (list folded): %s" % low)
+            p.click('[data-pantab="all"]'); p.wait_for_timeout(150)
         if tab == "cardio":
             # every look of it: the goal met and not, its editor, the chooser,
             # a running clock, a session being changed, and finished
