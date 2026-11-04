@@ -3537,6 +3537,8 @@
   .sec-title span { font-family: var(--font-num); font-size: 12px; color: var(--ink-2); }
   .supp-item { border-radius: 14px; background: var(--surface); }
   .pan-supps .entry { border-radius: 18px; }
+  .pan-supps .supp-head { border-radius: 18px; }
+  .pan-shut { margin: -2px 0 0; padding: 0 2px; font-family: var(--font-num); font-size: 12px; color: var(--ink-2); }
 
   /* the bottom bar on Pantry: find, scan, new */
   .pan-find { padding: 0 5px 0 14px; gap: 4px; }
@@ -4266,7 +4268,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-10-31.85";
+  var BUILD = "2026-11-04.86";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4437,6 +4439,13 @@
   // the app opens on All, so nothing saved is ever hidden behind a tab someone
   // forgot they left open.
   var panTab = "all";
+  // Pressing the section already on show folds the list away; pressing any
+  // section opens it again. Transient, like panTab: the app opens with it out.
+  var panShut = false;
+  // The daily checklist on the Pantry tab is folded until its header is
+  // pressed, the way Macros folds its two ways in. Survives redraws, so
+  // adding an item leaves it open for the next one.
+  var suppOpen = false;
   var panEditing = null;   // the food whose meals are being chosen, if any
   var panNewOpen = false;  // the new-food sheet, behind + New
   var panQuery = "";      // Find in your pantry: transient, never saved
@@ -4962,6 +4971,9 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-04.86", t: "The Pantry folds like Macros", items: [
+      "Tap the section you are looking at — All, Breakfast, whichever is lit — to fold your foods away. Tap any section to bring them back. Searching opens them too.",
+      "The daily checklist is folded until you tap it. Folded, it still names what is on it; tapped, it opens to rename, remove and add, the way it always was." ] },
     { b: "2026-10-31.85", t: "The iPhone app buzzes back", items: [
       "These are in the iPhone app only. It needs a new version from TestFlight or the App Store to get them.",
       "Rest alert: while the rest timer runs on the Gym tab, pick 1:00, 1:30, 2:00 or 3:00. Your phone tells you when rest is up, even locked in your pocket. It starts Off, and your phone asks once if the app may send notifications.",
@@ -11098,6 +11110,10 @@
     list.forEach(function (raw) { panSecs(raw).forEach(function (id) { counts[id]++; }); });
     if (panTab !== "all" && !secName(panTab)) panTab = "all";
     if (panEditing && !list.some(function (raw) { return raw.id === panEditing; })) panEditing = null;
+    // A draft being built needs the foods' + buttons, and a search needs
+    // something to search, so neither leaves the list folded. Nor does having
+    // no sections: with no tabs there would be nothing to press to open it.
+    if (panCombine || panQuery.trim() || !panSections().length) panShut = false;
 
     function rowHtml(raw) {
       var n = normPantry(raw);
@@ -11175,7 +11191,7 @@
     // anything is tapped. No sections at all means no tabs: All on its own is
     // not a choice.
     function tab(id, name, n) {
-      return '<button type="button" data-pantab="' + id + '" aria-pressed="' + (panTab === id ? 'true' : 'false') + '">' +
+      return '<button type="button" data-pantab="' + id + '" aria-pressed="' + (panTab === id && !panShut ? 'true' : 'false') + '">' +
         name + (n ? ' <span class="n">' + n + '</span>' : '') + '</button>';
     }
     var tabs = list.length && panSections().length
@@ -11280,6 +11296,25 @@
       '</div>';
     }).join("");
 
+    // The checklist's header says what is on it, so folded it still answers
+    // "what do I take?" — the names, not just a count.
+    var suppNames = supps().map(function (x) { return x.name; });
+    var suppSummary = !suppNames.length ? "Nothing on it yet — tap to add what you take"
+      : suppNames.slice(0, 3).join(" · ") + (suppNames.length > 3 ? " · " + (suppNames.length - 3) + " more" : "");
+    var suppShown = suppOpen || !!suppEditing;
+    var suppBody = (suppRows ||
+          '<p class="empty">Creatine, a multivitamin, whatever you take every day. ' +
+          'Add them here and tick them off on the Macros tab.</p>') +
+        '<div class="entry">' +
+          '<div class="pair">' +
+            '<div class="field"><label for="suppNameIn">Name</label>' +
+              '<input id="suppNameIn" class="text" placeholder="Creatine"></div>' +
+            '<div class="field"><label for="suppDoseIn">How much</label>' +
+              '<input id="suppDoseIn" class="text" placeholder="5 g"></div>' +
+          '</div>' +
+          '<button class="btn" id="addSupp">Add to the checklist</button>' +
+        '</div>';
+
     var f = pantryForm || { name: "", servingG: "", cal: "", pro: "" };
     // Standing in a section's tab, a new food starts out filed under it —
     // the obvious place for it — and presses add others or take it off.
@@ -11370,27 +11405,24 @@
           : '<div class="pan-chips">' + tabs.replace('<div class="sec-row pan-tabs" role="group" aria-label="Show">', '').replace(/<\/div>$/, '') +
               '<button class="pan-secedit" id="editPanSecs">Edit sections</button></div>') +
         '<p class="pan-q" id="panQueryLine" hidden></p>' +
-        '<div class="pan-rows">' +
+        // Folded: the tabs stay, so the way back is the thing just pressed.
+        '<p class="pan-shut" id="panShutLine"' + (panShut ? '' : ' hidden') + '>' +
+          (list.length === 1 ? '1 food' : list.length + ' foods') + ' folded away. Tap a section to show them.</p>' +
+        '<div class="pan-rows"' + (panShut ? ' hidden' : '') + '>' +
           (rows || '<p class="empty">Foods you save here are matched first — ahead of the food finder, and with no connection — every time you describe a meal. Tap New to save one.</p>') +
         '</div>' +
       '</section>' +
 
       // The checklist lives here because this is where you set up what the
       // app should know about you, and it is not something you edit mid-set.
+      // Folded until its header is pressed, like the two ways in on Macros:
+      // what is on the list is said on the header, and editing it is a press away.
       '<section class="pan-supps">' +
-        '<div class="sec-title"><h2>Daily checklist</h2><span>ticked on Macros</span></div>' +
-        (suppRows ||
-          '<p class="empty">Creatine, a multivitamin, whatever you take every day. ' +
-          'Add them here and tick them off on the Macros tab.</p>') +
-        '<div class="entry">' +
-          '<div class="pair">' +
-            '<div class="field"><label for="suppNameIn">Name</label>' +
-              '<input id="suppNameIn" class="text" placeholder="Creatine"></div>' +
-            '<div class="field"><label for="suppDoseIn">How much</label>' +
-              '<input id="suppDoseIn" class="text" placeholder="5 g"></div>' +
-          '</div>' +
-          '<button class="btn" id="addSupp">Add to the checklist</button>' +
-        '</div>' +
+        '<button class="log-way supp-head" id="suppToggle" aria-expanded="' + (suppShown ? 'true' : 'false') + '">' +
+          '<span class="lw-t">Daily checklist</span>' +
+          '<span class="lw-s">' + esc(suppSummary) + '</span>' +
+          '<span class="lw-c" aria-hidden="true">' + (suppShown ? '▴' : '▾') + '</span></button>' +
+        (suppShown ? suppBody : '') +
       '</section>' + newSheet;
 
     // The bottom bar: find a food, scan one, or save a new one.
@@ -11408,6 +11440,17 @@
     // from under the thumb on every letter.
     function filterPantry() {
       var q = panQuery.trim().toLowerCase(), shown = 0, line = document.getElementById("panQueryLine");
+      // Searching a folded list opens it — patched in place, because a redraw
+      // would take the field away from under the thumb.
+      if (q && panShut) {
+        panShut = false;
+        var rowsEl = view.querySelector(".pan-rows"), shutEl = document.getElementById("panShutLine");
+        if (rowsEl) rowsEl.hidden = false;
+        if (shutEl) shutEl.hidden = true;
+        view.querySelectorAll("[data-pantab]").forEach(function (b) {
+          b.setAttribute("aria-pressed", b.getAttribute("data-pantab") === panTab ? "true" : "false");
+        });
+      }
       view.querySelectorAll(".pan-rows .pan-item").forEach(function (it) {
         var hit = !q || it.getAttribute("data-name").indexOf(q) > -1 || it.classList.contains("is-open");
         it.hidden = !hit;
@@ -11581,6 +11624,7 @@
       // nothing. So the list follows it, and the bar says where it went.
       var into = panSecs(entry);
       if (panTab !== "all" && into.indexOf(panTab) === -1) panTab = into[0] || "all";
+      panShut = false;
       // The sheet goes once the food is in, and the list follows it. When the
       // count was turned into one piece it stays open to say so.
       if (!normalised) panNewOpen = false;
@@ -11642,7 +11686,13 @@
     }
 
     view.querySelectorAll("[data-pantab]").forEach(function (b) {
-      b.addEventListener("click", function () { panTab = b.getAttribute("data-pantab"); render(); });
+      b.addEventListener("click", function () {
+        // The section already on show folds the list; any other opens it there.
+        var id = b.getAttribute("data-pantab");
+        panShut = id === panTab && !panShut;
+        panTab = id;
+        render();
+      });
     });
     view.querySelectorAll("[data-pansec]").forEach(function (b) {
       b.addEventListener("click", function () {
@@ -11751,7 +11801,19 @@
       // Saved under a section other than the one on show, the list follows it,
       // the way saving a food does.
       if (secs.length && panTab !== "all" && secs.indexOf(panTab) === -1) panTab = secs[0];
+      panShut = false;
       saveMealToPantry(name, draft.parts, secs);
+    });
+
+    // Opening puts the cursor in Name, the way Macros' boxes open; folding
+    // also drops a rename half done, since its fields go with the box.
+    document.getElementById("suppToggle").addEventListener("click", function () {
+      var opening = !(suppOpen || suppEditing);
+      suppOpen = opening;
+      if (!opening) suppEditing = null;
+      render();
+      var head = document.getElementById("suppToggle");
+      if (opening && head && head.scrollIntoView) head.scrollIntoView({ block: "start", behavior: "smooth" });
     });
 
     var addSupp = document.getElementById("addSupp");

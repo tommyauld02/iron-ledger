@@ -47,6 +47,14 @@ you are looking at, and it is the last thing you check rather than the first
 thing you log. Nothing renders at all when the list is empty — an empty
 checklist is a nag with no content.
 
+**On the Pantry tab the checklist is folded until pressed (b86).** Its header
+is a `.log-way` button like the two ways in on Macros (`#suppToggle`,
+`suppOpen`): folded, it names the first three items and how many more, so it
+still answers "what do I take?"; pressed, it opens the rows and the add form
+as they always were, and stays open across adds. Folding drops a rename half
+done, since its fields go with the box. `mobile`, `hittest` and `darkcheck`
+open it (`pantry:checklist`), because the form only exists after a press.
+
 **Ticking patches the DOM; it must not call `render()`.** The add-food fields
 keep no draft, so a redraw would wipe whatever is half typed into them — and
 you reach for the checklist mid-entry precisely because it is sitting right
@@ -101,6 +109,19 @@ Lunch, Dinner, Snacks and Desserts (`PAN_SECS`), in the order a day runs — he
 listed them in another order; this one is for finding things. `panTab` is
 transient: the app always opens on All, so nothing saved is hidden behind a
 tab someone forgot they left open.
+
+**The section on show folds the list (b86).** Asked for by the owner, to
+bring the pantry into line with Macros, where only what you watch all day is
+open. Pressing the tab already lit folds the foods away (`panShut`); pressing
+any tab opens them on that section. Folded, no tab is lit and `#panShutLine`
+says how many foods are put away and how to get them back — a list that
+vanished with nothing said would read as an empty pantry. It is transient like
+`panTab`, so the app still opens with the list out. Three things open it by
+themselves, because each needs the rows on screen: typing in *Find in your
+pantry* (patched in place, since a redraw would take the field from under the
+thumb), a combination draft, whose foods are added through their own `+`, and
+saving a food or a meal, so the save lands where it is seen. With no sections
+there are no tabs to press, so it never stays folded.
 
 **A food is in as many sections as it is eaten at — or none.** b45 filed each
 food in exactly one, and the first morning of sorting showed why that was

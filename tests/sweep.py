@@ -779,6 +779,12 @@ with sync_playwright() as pw:
     check("checklist: nothing on macros until there is a list",
           p.locator(".supps").count()==0)
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    # Folded until its header is pressed, like the two ways in on Macros.
+    check("checklist: on the pantry it is folded until pressed",
+          p.locator("#suppToggle[aria-expanded=false]").count()==1 and p.locator("#suppNameIn").count()==0)
+    p.click("#suppToggle"); p.wait_for_timeout(300)
+    check("checklist: pressing it opens the list and the form",
+          p.locator("#suppToggle[aria-expanded=true]").count()==1 and p.locator("#suppNameIn").count()==1)
     for nm, ds in [("Ashwagandha","2 pills"), ("Creatine","5 g")]:
         p.fill("#suppNameIn", nm); p.fill("#suppDoseIn", ds)
         p.click("#addSupp"); p.wait_for_timeout(350)
@@ -788,6 +794,12 @@ with sync_playwright() as pw:
     p.fill("#suppNameIn",""); p.click("#addSupp"); p.wait_for_timeout(300)
     check("checklist: a nameless one is not added",
           p.locator(".supp-item").count()==2)
+    check("checklist: adding leaves it open for the next one", p.locator("#suppNameIn").count()==1)
+    p.click("#suppToggle"); p.wait_for_timeout(300)
+    hd=p.locator("#suppToggle .lw-s").text_content()
+    check("checklist: folded, its header names what is on it",
+          p.locator(".supp-item").count()==0 and "Ashwagandha" in hd and "Creatine" in hd, hd)
+    p.click("#suppToggle"); p.wait_for_timeout(300)
 
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(500)
     # Pin the day first. Earlier sections leave the cursor on whatever they
@@ -861,6 +873,9 @@ with sync_playwright() as pw:
     # ---------- RENAMING KEEPS HISTORY, REMOVING KEEPS THE NAME ----------
     p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
     was=p.evaluate(MARKS)
+    # a reload since: the app opens with the checklist folded again
+    check("checklist: a reload opens it folded", p.locator("#suppToggle[aria-expanded=false]").count()==1)
+    p.click("#suppToggle"); p.wait_for_timeout(300)
     p.locator("[data-editsupp]").first.click(); p.wait_for_timeout(400)
     rb=p.locator("#suppRename").bounding_box()
     check("checklist: the rename field is a proper target", rb and rb["height"]>=MIN_TAP,
@@ -1692,6 +1707,21 @@ with sync_playwright() as pw:
     q.click("#panEditDone"); q.wait_for_timeout(250)
     check("sections: Done closes it", q.locator("[data-pansecfor]").count()==0)
 
+    # The section on show, pressed again, folds the list away; any section opens it.
+    ROWS="()=>{const r=document.querySelector('.pan-rows');return !!r&&!r.hidden&&r.offsetHeight>0}"
+    q.click('[data-pantab="all"]'); q.wait_for_timeout(250)
+    check("sections: pressing the one on show folds the list",
+          not q.evaluate(ROWS) and not any(t.endswith("*") for t in q.evaluate(TABS))
+          and q.locator("#panShutLine:not([hidden])").count()==1, str(q.evaluate(TABS)))
+    q.fill("#panFind","bacon"); q.wait_for_timeout(200)
+    check("sections: searching a folded list opens it",
+          q.evaluate(ROWS) and q.evaluate(TABS)[0].endswith("*")
+          and q.locator(".pan-item:not([hidden])").count()==1, str(q.evaluate(TABS)))
+    q.fill("#panFind",""); q.wait_for_timeout(150)
+    q.click('[data-pantab="all"]'); q.wait_for_timeout(250)
+    q.click('[data-pantab="all"]'); q.wait_for_timeout(250)
+    check("sections: pressing it again opens it", q.evaluate(ROWS) and q.evaluate(TABS)[0].endswith("*"))
+
     q.click('[data-pantab="snacks"]'); q.wait_for_timeout(300)
     check("sections: a section's tab shows every food eaten then",
           q.evaluate(SHOWN)==["Costco protein coffee [Breakfast and Snacks]","Protein bar [Snacks]"], str(q.evaluate(SHOWN)))
@@ -1717,6 +1747,7 @@ with sync_playwright() as pw:
     check("sections: and says where it went", q.evaluate(SAYS)=="Saved Turkey chili under Lunch and Dinner", q.evaluate(SAYS))
     check("sections: the list keeps showing a section it went into", "Dinner 1*" in q.evaluate(TABS), str(q.evaluate(TABS)))
     q.click('[data-pantab="snacks"]'); q.wait_for_timeout(300)
+    q.click('[data-pantab="snacks"]'); q.wait_for_timeout(300)   # folded: the save must still be seen
     pan_new(q); q.fill("#panName","Rice cakes"); q.fill("#panServe","1"); q.fill("#panCal","35"); q.fill("#panPro","1")
     q.click('[data-pansec="snacks"]'); q.wait_for_timeout(100)
     check("sections: a press on a chosen one takes it off", q.evaluate(CHOSEN, "data-pansec")==[])
@@ -1796,6 +1827,7 @@ with sync_playwright() as pw:
     check("undo: back where it was made, it can still be taken back",
           gone.startswith("Removed") and q.evaluate(SAYS)==gone, "%s -> %s" % (gone, q.evaluate(SAYS)))
     q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    q.click("#suppToggle"); q.wait_for_timeout(200)
     q.fill("#suppNameIn","Zinc"); q.click("#addSupp"); q.wait_for_timeout(300)
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
     check("undo: a change that cannot be undone ends it, wherever it was made", q.evaluate(SAYS)=="", q.evaluate(SAYS))
@@ -3227,7 +3259,9 @@ with sync_playwright() as pw:
         q.click('.tabs button[data-tab="%s"]'%t); q.wait_for_timeout(400)
         if t=="macros": q.click(".meal-open"); q.wait_for_timeout(300)
         if t=="coach" and q.locator("[data-openday]").count(): q.locator("[data-openday]").first.click(); q.wait_for_timeout(300)
-        bare_all += [(t,)+tuple(x) for x in q.evaluate(BARE, acc)]
+        # the checklist's Rename and Remove only exist once it is opened (b86)
+        if t=="pantry" and q.locator("#suppToggle[aria-expanded=false]").count(): q.click("#suppToggle"); q.wait_for_timeout(300)
+        bare_all +=[(t,)+tuple(x) for x in q.evaluate(BARE, acc)]
         stray_all += [(t,x) for x in q.evaluate(STRAY, acc)]
     check("teal: the walk met the small buttons it is about",
           sum(1 for x in bare_all if x[0] in ("macros","gym","pantry"))>=12, str(len(bare_all)))
@@ -3560,10 +3594,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The iPhone app buzzes back"
-          and titles[1]=="The Terms and Privacy Policy are published"
-          and titles[2]=="The icon says MNTL D&T"
-          and titles[3]=="The keyboard, in the iPhone app", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The Pantry folds like Macros"
+          and titles[1]=="The iPhone app buzzes back"
+          and titles[2]=="The Terms and Privacy Policy are published"
+          and titles[3]=="The icon says MNTL D&T", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

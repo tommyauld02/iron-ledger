@@ -146,7 +146,7 @@ def sweep(p):
 
 # Macros is walked three times: folded, then with each way in open, because
 # a control that only exists after a press is the one nothing else measures.
-TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "log"]
+TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "pantry:checklist", "gym", "cardio", "coach", "log"]
 covered = []          # anything a tap cannot reach — this suite gates on it
 
 with sync_playwright() as pw:
@@ -174,9 +174,11 @@ with sync_playwright() as pw:
         if ":" in tab:
             box = tab.split(":")[1]
             # already open, a press would fold it
-            if p.locator('[data-logway="%s"][aria-expanded="false"]' % box).count():
-                p.click('[data-logway="%s"]' % box); p.wait_for_timeout(350)
-            if not p.locator('[data-logway="%s"][aria-expanded="true"]' % box).count():
+            # the checklist folds on Pantry the way the two ways in do on Macros
+            opener = "#suppToggle" if box == "checklist" else '[data-logway="%s"]' % box
+            if p.locator(opener + '[aria-expanded="false"]').count():
+                p.click(opener); p.wait_for_timeout(350)
+            if not p.locator(opener + '[aria-expanded="true"]').count():
                 covered.append("%s did not open, so nothing in it was tested" % tab)
         # open the panels that only exist once something is expanded
         if tab == "coach" and p.locator("[data-openday]").count():
