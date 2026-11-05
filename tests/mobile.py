@@ -48,11 +48,13 @@ DEVICES=[("iPhone SE",320,568),("iPhone 13 mini",375,812),("iPhone 15",393,852),
          ("iPhone 17 Pro",402,874),("iPhone 17 Pro Max",440,956),
          ("iPhone 15 Pro Max",430,932),("landscape 17 Pro",874,402)]
 # Macros three times: folded, then with each way in open.
-TABS=["macros","macros:numbers","macros:estimate","pantry","pantry:checklist","gym","cardio","coach","log"]
+TABS=["macros","macros:numbers","macros:estimate","pantry","pantry:checklist","gym","gym:gym","gym:move","gym:rest","cardio","coach","log"]
 # What each way in shows first, so a box that failed to open is said, not passed.
 # Log numbers opens on calories, Ask an agent on its words box (b71: its tabs
 # went, and Scan opens the barcode sheet rather than a box).
-FIRST={"numbers":"#fCal","estimate":"#estText","checklist":"#suppNameIn"}
+FIRST={"numbers":"#fCal","estimate":"#estText","checklist":"#suppNameIn",
+       # the Gym's bottom bar, b87: Training at, Add movement and the rest timer
+       "gym":"[data-gym]","move":"#mSel","rest":"#restbar:not([hidden])"}
 
 # iOS zooms the page whenever you focus a field smaller than 16px, and never zooms back
 ZOOM="""()=>{const bad=[];
@@ -94,7 +96,9 @@ with sync_playwright() as pw:
                 box=t.split(":")[1]          # not `w`: that is the phone's width
                 # already open, a press would fold it
                 # the checklist folds on Pantry the way the two ways in do on Macros
-                opener='#suppToggle' if box=="checklist" else '[data-logway="%s"]'%box
+                opener=('#suppToggle' if box=="checklist"
+                        else '#ctxMain [data-gymway="%s"]'%box if box in ("gym","move","rest")
+                        else '[data-logway="%s"]'%box)
                 if p.locator(opener+'[aria-expanded="false"]').count():
                     p.click(opener); p.wait_for_timeout(300)
                 if not p.locator(FIRST[t.split(":",1)[1]]).count():

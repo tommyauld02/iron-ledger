@@ -2068,7 +2068,10 @@
     white-space: nowrap;
   }
 
-  .split-new { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; }
+  /* minmax(0, …) and min-width: 0: a field's own minimum width made this row
+     379px on a 320px phone, and the whole page zoomed out to fit it (b87, keys). */
+  .split-new { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+  .split-new input { min-width: 0; width: 100%; }
   .split-new .btn { padding: 0 14px; }
 
   /* ---------- where you train ---------- */
@@ -3430,6 +3433,15 @@
   .w3-main, .w3-main[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .w3-main svg { stroke: var(--on-accent); }
   .w3-main[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--accent-soft); }
+  /* The Gym's bar (b87): a dot on Training at when the day needs a gym, and
+     the rest timer's button holds the count while its box is folded. */
+  .gym-ways3 .w3 { position: relative; }
+  .gym-ways3 .w3.is-due::after {
+    content: ""; position: absolute; top: 8px; right: 10px; width: 8px; height: 8px;
+    border-radius: 4px; background: var(--accent);
+  }
+  .gym-ways3 .w3.is-running { border-color: var(--accent); background: var(--accent-soft); font-variant-numeric: tabular-nums; }
+  .gym-ways .gym-pick { padding: 12px 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: 18px; }
   .way-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
   .way-head b { font-size: 17px; font-weight: 800; font-stretch: 112%; }
   .way-head button { min-height: 44px; padding: 0 8px; font-family: var(--font-num); font-size: 12.5px; color: var(--accent); }
@@ -3737,16 +3749,22 @@
   }
   .week-card .split-head { margin: 0; min-height: 44px; }
   .wb-hint { font-size: 12px; color: var(--ink-2); }
-  .week-board { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  /* One row of seven (b87), so Today's split is on the first screen. A tile
+     is about (width - 78) / 7: 46px on a 402px phone, 44px from 388px. Narrower
+     phones (the SE, the 13 mini) keep two rows rather than drop under 44px. */
+  .week-board { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin: 0 -2px; }
+  @media (max-width: 387px) { .week-board { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 0; } }
   /* Workouts a week, from the profile, under the week it counts. */
   .wb-goal { margin: 10px 0 0; font-family: var(--font-num); font-size: 13px; color: var(--ink-2); }
   .wb-goal.is-met { color: var(--hit); }
   .wb-tile {
     display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px;
-    min-height: 74px; min-width: 0; padding: 8px 2px; border-radius: 14px;
+    min-height: 66px; min-width: 0; padding: 7px 0; border-radius: 14px;
     background: var(--surface-2); border: 1.5px solid transparent; color: var(--ink);
   }
-  .wb-tile .wb-d { font-family: var(--font-num); font-size: 10px; letter-spacing: .06em; color: var(--ink-2); white-space: nowrap; }
+  .wb-tile .wb-d { display: flex; flex-direction: column; align-items: center; gap: 1px;
+    font-family: var(--font-num); font-size: 10px; letter-spacing: .06em; line-height: 1.2; color: var(--ink-2); white-space: nowrap; }
+  .wb-tile .wb-d b { font-size: 13px; font-weight: 600; letter-spacing: 0; color: var(--ink); }
   .wb-tile .wb-tag {
     display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 4px;
     box-sizing: border-box; border-radius: 10px; font-family: var(--font-num); font-size: 11px; font-weight: 600;
@@ -3755,18 +3773,9 @@
   .wb-tile.is-rest { --catcolor: var(--ink-2); }
   .wb-tile.is-done .wb-tag, .wb-tile.is-rest .wb-tag { background: var(--catcolor); border-color: var(--catcolor); color: var(--ground); }
   .wb-tile.is-open .wb-tag { border-style: dashed; color: var(--ink-2); }
-  .wb-tile .wb-n {
-    max-width: 100%; font-size: 11px; font-weight: 600; line-height: 1.2; text-align: center;
-    padding: 0 2px; overflow-wrap: anywhere;
-  }
-  .wb-tile.is-open .wb-n, .wb-tile.is-rest .wb-n { color: var(--ink-2); }
   .wb-tile.is-day .wb-d { color: var(--ink); font-weight: 700; }
   .wb-tile.is-day { border-color: var(--rule); }
   .wb-tile.is-pick { border-color: var(--accent); background: var(--accent-soft); }
-  .wb-clear {
-    justify-content: center; background: none; border: 1.5px dashed var(--rule);
-    font-family: var(--font-ui); font-size: 13px; font-weight: 600; color: var(--accent);
-  }
   .wb-pick { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--rule); }
   .wb-q { font-size: 14px; font-weight: 600; color: var(--ink); }
   .wb-pick .btn { width: 100%; }
@@ -3909,7 +3918,15 @@
   /* Room under the page as tall as the keyboard, so a field at the very end
      (Log numbers is) can still be scrolled up above it. Put there on focus,
      before the keyboard arrives, and kept until it is off the screen. */
-  html.kb-room .app { padding-bottom: var(--kb-h, 0px); }
+  /* It goes under the page's own content, above the dock (b87): under the
+     .app, after the dock, it sat below the dock, so at the foot of the page
+     the dock hung over an empty stretch once the keyboard went. */
+  html.kb-room main { padding-bottom: calc(24px + var(--kb-h, 0px)); }
+  /* A field in the dock itself (Find in your pantry): the dock is the thing
+     being typed in, so it stays, lifted to sit on the keyboard with the tabs
+     behind it (--kb-lift, from fit()). Hidden, the field vanished mid-word. */
+  html.kb-open.kb-dock .dock { visibility: visible; transform: translateY(calc(-1 * var(--kb-lift, 0px))); }
+  html.kb-open.kb-dock .dock .tabs { visibility: hidden; }
   html.kb-open .sheet { inset: auto 0 auto 0; top: var(--vv-top, 0px); height: var(--vv-h, 100%); }
   html.kb-open .sheet-inner { max-height: calc(var(--vv-h, 100dvh) - 8px); padding-bottom: 14px; }
   .pk-open { height: 52px; }
@@ -3966,13 +3983,13 @@
        action under the thumb. The rest timer is the Gym's, and records
        nothing; #ctxMain is filled by the tab's own render. -->
   <div class="ctxbar" id="ctxbar">
-    <div id="ctxMain"></div>
     <div class="rest-alert" id="restAlert" role="group" aria-label="Buzz when rest is up" hidden></div>
     <div class="restbar" id="restbar" hidden>
       <span class="rest-label">Rest</span>
       <span class="rest-clock" id="restClock">0:00</span>
       <button id="restBtn">Start</button>
     </div>
+    <div id="ctxMain"></div>
   </div>
 
   <nav class="tabs" role="tablist">
@@ -4268,7 +4285,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-04.86";
+  var BUILD = "2026-11-04.87";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4462,6 +4479,13 @@
   // day, so tapping another chip sticks instead of being put back on redraw.
   var planPickedFor = null;
   var gymEdit = false;      // the places you train, being added to or changed
+  // The Gym's bottom bar, Macros' three ways in carried over (b87): Training at
+  // and Add movement open a box at the foot of the page, one at a time, and
+  // pressing the open one folds it. Transient, but it survives redraws, so
+  // adding a movement leaves the box open for the next. The rest timer's box
+  // opens in the dock instead (restOpen, below), because it is watched while
+  // the page is scrolled to the set being logged.
+  var gymWay = null;        // "gym", "move" or null
   var splitAdding = false;
   // Coach inline editing, same idea: which day is being renamed, which is
   // taking a custom movement, and whether a new day is being named.
@@ -4971,6 +4995,15 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-04.87", t: "The Gym tab folds like Macros", items: [
+      "Three boxes at the bottom of the Gym tab: Choose gym, Add movement and Rest timer. Each opens when you tap it and folds when you tap it again.",
+      "The top is Start workout, then your Planned week split, then Today’s split.",
+      "The planned week fits on one row, so Today’s split is on the first screen. Clear plan moved up beside its heading.",
+      "Choose gym shows a dot when today still needs a gym.",
+      "One tap on Rest timer starts your rest, in a box just above the three. Fold it while it runs and the count stays on its button.",
+      "Typing in Find in your pantry keeps the search bar above the keyboard. It used to disappear while you typed.",
+      "Putting the keyboard away near the bottom of a page no longer leaves the bottom bar floating over empty space.",
+      "On smaller phones, the set pop-up keeps Reps above the keyboard, and adding a split no longer zooms the page out." ] },
     { b: "2026-11-04.86", t: "The Pantry folds like Macros", items: [
       "Tap the section you are looking at — All, Breakfast, whichever is lit — to fold your foods away. Tap any section to bring them back. Searching opens them too.",
       "The daily checklist is folded until you tap it. Folded, it still names what is on it; tapped, it opens to rename, remove and add, the way it always was." ] },
@@ -5431,8 +5464,9 @@
           '<button class="btn ghost" data-gymask="">Leave them unmarked</button>' +
         '</div>'
       : '';
+    // In its box the box's own head says Training at, so this row says which day.
     return '<div class="gym-pick">' +
-      '<div class="split-head"><span class="eyebrow">Training at</span>' +
+      '<div class="split-head"><span class="eyebrow">' + (key === TODAY ? 'Today' : esc(shortDate(key))) + '</span>' +
         '<button id="editGyms">Edit gyms</button></div>' +
       '<div class="cats">' + chips + '</div>' + note + ask +
     '</div>';
@@ -9968,7 +10002,7 @@
       '</div>';
     }).join("");
 
-    // The week board, between where you train and today's split: the week on
+    // The week board, between Start workout and today's split: the week on
     // screen, one tile a day. Tap one to plan that day of the week; a day
     // already gone can be opened from there and logged after the fact.
     var SHORT_DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -9988,13 +10022,12 @@
       tiles += '<button class="wb-tile is-' + tl.kind + (wk === key ? ' is-day' : '') + (wk === weekPick ? ' is-pick' : '') +
           '" data-planday="' + wk + '" aria-pressed="' + (wk === weekPick) + '" style="--catcolor:' + (tl.c ? tl.c.color : 'var(--ink-3)') + '" ' +
           'aria-label="' + WEEK_DAYS[wi] + ' ' + wdt.getDate() + (wk === TODAY ? ', today' : '') + ': ' + esc(say) + '">' +
-        '<span class="wb-d">' + (tl.kind === "done" ? '✓ ' : '') + SHORT_DAYS[wi] + ' ' + wdt.getDate() + '</span>' +
+        // One row of seven (b87): the day over its date, and the tag. The
+        // split's name went with the room for it; the tag's letter and colour
+        // say which, and the label says it in words.
+        '<span class="wb-d">' + SHORT_DAYS[wi] + '<b>' + (tl.kind === "done" ? '✓' : '') + wdt.getDate() + '</b></span>' +
         '<span class="wb-tag">' + esc(tag) + '</span>' +
-        '<span class="wb-n">' + esc(nm) + '</span>' +
       '</button>';
-    }
-    if (anyPlanned()) {
-      tiles += '<button class="wb-tile wb-clear" id="wbClear" aria-label="Clear the week’s plan">Clear plan</button>';
     }
     var pickHtml = "";
     if (weekPick) {
@@ -10026,7 +10059,10 @@
     var boardHtml = '<div class="week-card">' +
       '<div class="split-head">' +
         '<span class="eyebrow">Planned week split</span>' +
-        (weekPick ? '<button id="wbDone">Done</button>' : '<span class="wb-hint">Tap a day to plan it</span>') +
+        // Clear plan sits up here since the board went to one row (b87).
+        (weekPick ? '<button id="wbDone">Done</button>'
+          : anyPlanned() ? '<button id="wbClear" aria-label="Clear the week’s plan">Clear plan</button>'
+          : '<span class="wb-hint">Tap a day to plan it</span>') +
       '</div>' +
       '<div class="week-board">' + tiles + '</div>' +
       gymGoalHtml(key) +
@@ -10288,9 +10324,31 @@
       var v = volume(l); a.sets += v.sets; a.reps += v.reps; a.vol += v.vol; return a;
     }, { sets: 0, reps: 0, vol: 0 });
 
-    // One card for the session — the clock, where, the day's note and what
-    // has been moved so far — and one for the split, so the first movement
-    // is not four bands down the page. Every control is still on screen.
+    // One card for the session — the clock, the day's note and what has been
+    // moved so far — and one for the split, so the first movement is not four
+    // bands down the page. Where you train is in the bottom bar (b87).
+    // The two boxes the bottom bar opens in the page. Adding or changing a gym
+    // is done in Training at's box, so that keeps it open; one box at a time.
+    if (gymEdit) gymWay = "gym";
+    var gymShown = gymWay === "gym" && !splitEdit;
+    var moveShown = gymWay === "move" && !splitEdit;
+    var moveBox = locked
+      // A press must never look dead: the box says why there is no form.
+      ? '<p class="est-note">This day is locked in. Unlock it above to add a movement.</p>'
+      : '<div class="entry" style="--catcolor:' + c.color + '">' +
+          '<div class="field"><label for="mSel">' + esc(c.name) + '</label>' +
+            // A native picker cannot hold a button per option, so the minus
+            // sits beside it and takes out whichever movement is chosen.
+            '<div class="msel-row">' +
+              '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select>' +
+              '<button id="mDrop" aria-label="Take the chosen movement off this list">−</button>' +
+            '</div></div>' +
+          // With nothing named yet, the field to name one is simply there.
+          '<input id="mNew" class="text" placeholder="Name it the way you’ll look for it" ' + (opts ? 'hidden ' : '') +
+            'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);border-radius:2px;font-size:15px;width:100%">' +
+          '<button class="btn" id="addLift">Add to today</button>' +
+        '</div>';
+
     var moved = d.lifts.length
       ? '<p class="sess-stats">' + d.lifts.length + (d.lifts.length === 1 ? ' movement' : ' movements') + ' \u00b7 ' +
           totals.sets + (totals.sets === 1 ? ' set' : ' sets') + ' \u00b7 ' + fmt(totals.vol) + ' lb moved</p>'
@@ -10299,7 +10357,6 @@
       '<section class="gym-top">' +
         '<div class="session-card">' +
           clock +
-          gymPickHtml(key, d) +
           dayNoteHtml(d) +
           moved +
         '</div>' +
@@ -10355,31 +10412,85 @@
             : '')
         : planned && planned.rest
           ? '<p class="empty">A rest day on your plan.<br>Training anyway? Pick a split above.</p>'
-          : '<p class="empty">No movements logged for this day.<br>Pick a split above and add your first below.</p>') +
+          : '<p class="empty">No movements logged for this day.<br>Pick a split above, then tap Add movement below.</p>') +
 
-      // Add movement sits *under* the list, so the movements read in the order
-      // you trained them and the next one to add is always the next thing on
-      // screen rather than back up at the top.
-      (locked ? '' :
-        '<section class="entry" style="--catcolor:' + c.color + '">' +
-          '<div class="field"><label for="mSel">Add movement · ' + esc(c.name) + '</label>' +
-            // A native picker cannot hold a button per option, so the minus
-            // sits beside it and takes out whichever movement is chosen.
-            '<div class="msel-row">' +
-              '<select id="mSel">' + opts + '<option value="__new">+ New movement…</option></select>' +
-              '<button id="mDrop" aria-label="Take the chosen movement off this list">−</button>' +
-            '</div></div>' +
-          // With nothing named yet, the field to name one is simply there.
-          '<input id="mNew" class="text" placeholder="Name it the way you\u2019ll look for it" ' + (opts ? 'hidden ' : '') +
-            'style="height:46px;padding:0 10px;background:var(--surface);border:1px solid var(--rule);border-radius:2px;font-size:15px;width:100%">' +
-          '<button class="btn" id="addLift">Add to today</button>' +
-        '</section>') +
+      // Training at and Add movement open here, at the foot of the page, from
+      // the bottom bar: under the list, so the movements read in the order you
+      // trained them and the one just added sits right above the box.
+      (gymShown || moveShown
+        ? '<section class="log-ways gym-ways" id="gymWays" aria-label="' + (gymShown ? 'Training at' : 'Add movement') + '">' +
+            '<div class="way-head"><b>' + (gymShown ? 'Training at' : 'Add movement') + '</b>' +
+              '<button data-gymclose="1">Close</button></div>' +
+            (gymShown ? gymPickHtml(key, d) : moveBox) +
+          '</section>'
+        : '') +
 
       // Nothing logged yet is nothing to lock in — but a clock running is
       // something: yoga on a special day has a time and no sets.
       (!locked && (d.lifts.length || d.workoutStart)
         ? '<button class="btn ghost" id="lockDay" style="width:100%">Lock in the day</button>'
         : '');
+
+    // The bottom bar: Macros' three ways in, carried over (b87). Choose gym
+    // opens Training at's box, and shows a dot when the day needs a gym;
+    // Add movement is the one most used, so it is the filled one in the middle;
+    // the rest timer shows its count on the button while it runs, so folding
+    // its box never hides a rest in progress.
+    var hereG = gyms().length ? dayGym(key) : null, hereGym = null;
+    gyms().forEach(function (g) { if (g.id === hereG) hereGym = g; });
+    // A day marked at a gym since removed is marked: its box says where it was.
+    var gymDue = gyms().length && !hereG && (key === TODAY || d.lifts.length || (!store.gymAsked && gymAskDays().length));
+    document.getElementById("ctxMain").innerHTML =
+      '<div class="ways3 gym-ways3" role="group" aria-label="Gym">' +
+        '<button class="w3' + (gymDue ? ' is-due' : '') + '" data-gymway="gym" aria-expanded="' + gymShown + '"' +
+            (hereGym ? ' aria-label="Choose gym, training at ' + esc(hereGym.name) + '"' : '') + '>' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/></svg>' +
+          // "Choose gym", as the owner asked: what the button does, the way
+          // "Add movement" is. Where today is marked is on every movement's tag.
+          '<span>Choose gym</span></button>' +
+        '<button class="w3 w3-main" data-gymway="move" aria-expanded="' + moveShown + '">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>' +
+          '<span>Add movement</span></button>' +
+        '<button class="w3" data-gymway="rest" aria-expanded="' + restOpen + '">' +
+          '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7"/><path d="M12 13.5V10M10 3h4M18 6.5l1.5-1.5"/></svg>' +
+          '<span id="restWayT">Rest timer</span></button>' +
+      '</div>';
+    drawRest();
+
+    document.querySelectorAll("#ctxMain [data-gymway]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var w = b.dataset.gymway, wasOpen = b.getAttribute("aria-expanded") === "true";
+        // The rest box lives in the dock and patches itself: a redraw would
+        // take a half-typed weight or movement name away for no reason.
+        // One tap starts the rest (b87): after a set is the only time it is
+        // reached for. Open on a rest already running, it just shows it.
+        if (w === "rest") { restOpen = !wasOpen; if (restOpen) restGo(true); else drawRest(); return; }
+        gymWay = wasOpen ? null : w;
+        if (w !== "gym" || wasOpen) gymEdit = false;
+        if (gymWay) { splitEdit = false; splitAdding = false; weekPick = null; }
+        render();
+        if (wasOpen) return;
+        showGymWay();
+        // With nothing named yet, the field to name one is the place to start.
+        var nf = document.getElementById("mNew");
+        if (w === "move" && nf && !nf.hidden) { try { nf.focus({ preventScroll: true }); } catch (e) { nf.focus(); } }
+      });
+    });
+    // The box opens at the foot of the page, so it is brought up to just above
+    // the dock, never past its own top. Nothing moves if it is already in view.
+    function showGymWay() {
+      var box = document.getElementById("gymWays");
+      if (!box) return;
+      var dock = document.querySelector(".dock"), bar = document.querySelector(".topbar");
+      var r = box.getBoundingClientRect();
+      var floor = (dock ? dock.getBoundingClientRect().top : window.innerHeight) - 8;
+      var ceil = (bar ? bar.getBoundingClientRect().bottom : 0) + 8;
+      var by = r.bottom > floor ? Math.min(r.bottom - floor, r.top - ceil) : r.top < ceil ? r.top - ceil : 0;
+      if (by) window.scrollBy(0, by);
+    }
+    view.querySelectorAll("[data-gymclose]").forEach(function (b) {
+      b.addEventListener("click", function () { gymWay = null; gymEdit = false; render(); });
+    });
 
     view.querySelectorAll("[data-cat]").forEach(function (b) {
       b.addEventListener("click", function () { activeCat = b.dataset.cat; render(); });
@@ -10527,6 +10638,9 @@
         d.lifts.push({ id: uid(), cat: activeCat, movement: name, sets: [] });
         stampGym(key, d);
         touch(key); save(); render();
+        // The box stays open for the next one, and the movement just added
+        // sits right above it: both are brought into view, never left below.
+        showGymWay();
       });
     }
 
@@ -12368,16 +12482,34 @@
     // In the app the keyboard only hides the dock and fits a sheet.
     var kbH = 0;
     var coarse = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    // A field in the dock is lifted with the dock, so it needs no room.
+    function inDock() {
+      var a = document.activeElement;
+      return !!(a && a.closest && a.closest(".dock"));
+    }
     function room(h) {
-      if (NATIVE || h <= kbH) return;
+      if (NATIVE || h <= kbH || inDock()) return;
       kbH = h;
       root.style.setProperty("--kb-h", kbH + "px");
       root.classList.add("kb-room");
     }
+    // With the keyboard gone, the room keeps only what is on the screen, and
+    // gives that up as the page is scrolled back up: the page never moves and
+    // never gets shorter under the eye, and there is never more blank to scroll
+    // into than was already showing (b87; it used to keep all of it until the
+    // whole room was off the screen).
     function dropRoom() {
       if (!kbH || typing()) return;
       var d = document.documentElement;
-      if (window.scrollY + window.innerHeight > d.scrollHeight - kbH - 2) return;   // still on screen
+      var showing = window.scrollY + window.innerHeight - (d.scrollHeight - kbH);
+      if (showing > 2) {
+        // Two pixels to spare, so the page's end stays just past the screen's:
+        // cut flush, a scroll position a fraction off would be clamped, fire
+        // another scroll, and the room would shrink a pixel a frame — a slide.
+        var want = Math.ceil(showing) + 2;
+        if (want < kbH) { kbH = want; root.style.setProperty("--kb-h", kbH + "px"); }
+        return;
+      }
       kbH = 0;
       root.classList.remove("kb-room");
       root.style.setProperty("--kb-h", "0px");
@@ -12386,6 +12518,14 @@
       var open = typing() && window.innerHeight - vv.height > 120 && vv.scale < 1.05;
       if (open) room(Math.round(window.innerHeight - vv.height));
       root.classList.toggle("kb-open", open);
+      // Typing in the dock: lift it so its bar sits on the keyboard.
+      var dk = open && inDock() ? document.querySelector(".dock") : null;
+      root.classList.toggle("kb-dock", !!dk);
+      if (dk) {
+        var tb = dk.querySelector(".tabs");
+        root.style.setProperty("--kb-lift", Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height -
+          (tb ? tb.offsetHeight : 0))) + "px");
+      }
       root.style.setProperty("--vv-top", (open ? vv.offsetTop : 0) + "px");
       root.style.setProperty("--vv-h", (open ? vv.height : window.innerHeight) + "px");
       return open;
@@ -12402,11 +12542,23 @@
     // an agent flickering between the field and the ledger (the owner's video).
     var settle = 0, lastH = 0, quietUntil = 0;
     function keep() {
-      if (!fit() || NATIVE) return;
+      if (!fit()) return;
       lastH = vv.height;
       if (Date.now() < quietUntil) return;
       var a = document.activeElement;
-      if (!a || (a.closest && a.closest(".sheet"))) return;
+      if (!a) return;
+      // A sheet fits what the keyboard leaves, but what is in it can be taller:
+      // on a small phone the set pop-up's Reps went under the keyboard (b87,
+      // keys). The sheet's own scroll brings the field up, never the page, so
+      // it is the same in the iPhone app, whose WebView only moves the page.
+      var inner = a.closest ? a.closest(".sheet-inner") : null;
+      if (inner) {
+        var fr = a.getBoundingClientRect(), sr = inner.getBoundingClientRect();
+        var by = fr.bottom > sr.bottom - 8 ? fr.bottom - sr.bottom + 8 : fr.top < sr.top + 8 ? fr.top - sr.top - 8 : 0;
+        if (by) { quietUntil = Date.now() + 700; inner.scrollTop += Math.round(by); }
+        return;
+      }
+      if (NATIVE || (a.closest && a.closest(".sheet"))) return;
       var r = a.getBoundingClientRect(), top = vv.offsetTop, bottom = top + vv.height;
       if (r.top >= top + 8 && r.bottom <= bottom - 8) return;
       quietUntil = Date.now() + 700;
@@ -13448,33 +13600,45 @@
   // so going to check a macro mid-rest does not lose it.
   var restStart = 0;
   var restTick = null;
+  // Its box is folded until the bottom bar's Rest timer is pressed (b87).
+  // Folded, the count goes on, and shows on that button while it does.
+  var restOpen = false;
 
   function drawRest() {
     var bar = document.getElementById("restbar");
     if (!bar) return;
-    bar.hidden = tab !== "gym";
-    var on = !!restStart;
+    bar.hidden = tab !== "gym" || !restOpen;
+    var on = !!restStart, t = fmtDur(on ? Math.max(0, Date.now() - restStart) : 0);
     bar.classList.toggle("is-running", on);
-    document.getElementById("restClock").textContent = fmtDur(on ? Math.max(0, Date.now() - restStart) : 0);
+    document.getElementById("restClock").textContent = t;
     var btn = document.getElementById("restBtn");
     btn.textContent = on ? "Stop" : "Start";
     btn.setAttribute("aria-label", on ? "Stop the rest timer" : "Start the rest timer");
+    var way = document.querySelector('#ctxMain [data-gymway="rest"]');
+    if (way) {
+      way.setAttribute("aria-expanded", String(restOpen));
+      way.classList.toggle("is-running", on);
+      way.setAttribute("aria-label", on ? "Rest timer, " + t + " — " + (restOpen ? "fold it" : "open it") : "Rest timer");
+      var wt = document.getElementById("restWayT");
+      if (wt) wt.textContent = on ? "Rest " + t : "Rest timer";
+    }
     drawRestAlert();
   }
 
-  document.getElementById("restBtn").addEventListener("click", function () {
-    if (restStart) {
+  function restGo(on) {
+    if (!on) {
       restStart = 0;
       if (restTick) { clearInterval(restTick); restTick = null; }
       restAlertCancel();
-    } else {
+    } else if (!restStart) {
       restStart = Date.now();
       restTick = setInterval(drawRest, 1000);
       if (restAlert) restAlert.fired = false;
       restAlertSchedule();
     }
     drawRest();
-  });
+  }
+  document.getElementById("restBtn").addEventListener("click", function () { restGo(!restStart); });
 
   // The rest alert, iPhone app only, because only a notification reaches a
   // phone in a pocket. Off until a time is picked; the time is kept for the
@@ -13511,7 +13675,7 @@
   function drawRestAlert() {
     var row = document.getElementById("restAlert");
     if (!row || !restAlert) return;
-    row.hidden = tab !== "gym" || !restStart;
+    row.hidden = tab !== "gym" || !restStart || !restOpen;
     if (!row.firstChild) {
       row.innerHTML = "<span>Buzz at</span>" + REST_ALERT_TIMES.map(function (s) {
         var t = s ? fmtDur(s * 1000) : "Off";

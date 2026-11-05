@@ -84,6 +84,27 @@ rather than a second opinion. `sweep` checks the room is there on focus, that
 the keyboard arriving changes no height, and that putting the keyboard away at
 the foot of the page leaves the page where it was.
 
+**The room goes above the dock, and keeps only what is showing (b87).** The
+room was `.app`'s padding, which put it *below* the dock: put the keyboard away
+near the foot of a page and the dock hung over an empty stretch, the b77
+video's symptom on the web. It is `main`'s padding now, so the dock stays at
+the bottom of the screen. And once typing ends, `dropRoom()` shrinks the room
+to what is on screen rather than keeping all of it until it is out of sight:
+the page never moves and never gets shorter under the eye, and there is never
+more blank to scroll down into than was already showing.
+
+**A field in the dock lifts the dock (b87).** *Find in your pantry* is in the
+dock, and the dock hides while typing, so the field vanished mid-word. When the
+focused field is in the dock (`kb-dock`), the dock stays and is lifted by
+`--kb-lift` to sit on the keyboard, the tabs behind it; it needs no room.
+
+**A field in a sheet is brought up inside the sheet (b87).** The sheet fits what
+the keyboard leaves, but its contents can be taller: on a 320px phone the set
+pop-up's Reps went under the keyboard. `keep()` scrolls the sheet's own
+`.sheet-inner`, never the page, once per keyboard; it does this in the iPhone
+app too, since the WebView only moves the page. `keys` checks all three, on
+every field the app has.
+
 **In the iPhone app the WebView handles the keyboard, and the page leaves it
 alone.** The owner's video (b77, the TestFlight app): iOS lifted Ask an
 agent's box above the keyboard, then the page was pulled back to the ledger

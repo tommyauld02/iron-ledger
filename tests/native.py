@@ -28,6 +28,7 @@ What it cannot show: that UserDefaults survives a phone restart. That is
 Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools, plistlib
@@ -322,7 +323,7 @@ with sync_playwright() as pw:
     native["prefs"] = {}; native["calls"] = []
     ctx, p, errs = open_app(b)
     add_food(p, 200, "OLD-SHELL"); p.wait_for_timeout(300)
-    p.click('.tabs button[data-tab="gym"]'); p.click("#restBtn"); p.wait_for_timeout(200)
+    p.click('.tabs button[data-tab="gym"]'); gymways.rest(p); p.wait_for_timeout(200)
     check("a shell without the plugins is never called for them",
           {c[0] for c in native["calls"]} == {"Preferences"}, str(native["calls"][:6]))
     check("and offers no rest alert", p.locator("#restAlert").is_hidden())
@@ -382,7 +383,7 @@ with sync_playwright() as pw:
     ctx, p, errs = open_new_shell(b, fake_clock=True)
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(200)
     check("no alert row until the rest clock runs", p.locator("#restAlert").is_hidden())
-    p.click("#restBtn"); p.wait_for_timeout(200)
+    gymways.rest(p); p.wait_for_timeout(200)     # one tap opens it and starts the count (b87)
     check("with the clock running the row shows, and starts on Off",
           p.locator("#restAlert").is_visible() and pressed(p) == ["Off"], str(pressed(p)))
     check("Off schedules nothing", not calls(p, "LocalNotifications", "schedule"))
@@ -414,6 +415,11 @@ with sync_playwright() as pw:
           len(calls(p, "LocalNotifications", "cancel")) >= 2 and p.locator("#restAlert").is_hidden())
     p.click("#restBtn"); p.wait_for_timeout(200)
     check("the next rest uses the same time", pressed(p) == ["2:00"] and len(calls(p, "LocalNotifications", "schedule")) == 2)
+    n_cancel = len(calls(p, "LocalNotifications", "cancel"))
+    p.click('#ctxMain [data-gymway="rest"]'); p.wait_for_timeout(200)
+    check("folding the rest box hides the row, and the alert stays set",
+          p.locator("#restAlert").is_hidden() and len(calls(p, "LocalNotifications", "cancel")) == n_cancel)
+    p.click('#ctxMain [data-gymway="rest"]'); p.wait_for_timeout(200)
     p.clock.fast_forward(150000); p.wait_for_timeout(300)
     late = len([c for c in calls(p, "Haptics", "notification") if c["opts"].get("type") == "SUCCESS"])
     check("coming back long after, it says so without a late buzz", "Rest is up" in bar(p) and late == 1, "%s %d" % (bar(p), late))
@@ -427,7 +433,7 @@ with sync_playwright() as pw:
     p.click(chip(p, 180)); p.wait_for_timeout(300); allerrs += errs; ctx.close()
     ctx, p, errs = open_new_shell(b)
     check("a cold start cancels what the old clock left behind", len(calls(p, "LocalNotifications", "cancel")) == 1)
-    p.click('.tabs button[data-tab="gym"]'); p.click("#restBtn"); p.wait_for_timeout(200)
+    p.click('.tabs button[data-tab="gym"]'); gymways.rest(p); p.wait_for_timeout(200)
     check("and remembers the time", pressed(p) == ["3:00"], str(pressed(p)))
     p.evaluate("() => { window.__perm = 'denied'; window.__calls = []; }")
     p.click(chip(p, 90)); p.wait_for_timeout(300)
@@ -435,7 +441,7 @@ with sync_playwright() as pw:
     check("and nothing is scheduled", not calls(p, "LocalNotifications", "schedule"))
     allerrs += errs; ctx.close()
     ctx, p, errs = open_new_shell(b, width=320)
-    p.click('.tabs button[data-tab="gym"]'); p.click("#restBtn"); p.wait_for_timeout(200)
+    p.click('.tabs button[data-tab="gym"]'); gymways.rest(p); p.wait_for_timeout(200)
     over = p.evaluate("() => { const r = document.getElementById('restAlert'); return r.scrollWidth > r.clientWidth || document.documentElement.scrollWidth > innerWidth; }")
     check("the row fits a small phone", not over)
     allerrs += errs; ctx.close()

@@ -27,7 +27,10 @@ SNAP="""()=>JSON.stringify({dom:document.querySelector('.app').innerHTML.length,
   // are all sheets now, and a control that opens one is not a dead control
   sheet:[...document.querySelectorAll('.sheet')].map(x=>x.hidden?0:1).join(''),
   tab:[...document.querySelectorAll('.tabs button')].map(b=>b.getAttribute('aria-selected')).join(''),
-  date:document.getElementById('dateFull').textContent})"""
+  date:document.getElementById('dateFull').textContent,
+  // a choice that only moves a highlight (a split, a section) changes no text
+  // and no length: what is pressed or open is part of the screen too
+  on:[...document.querySelectorAll('[aria-pressed=true],[aria-expanded=true]')].map(e=>e.dataset.cat||e.id||e.className).join('|')})"""
 
 # element, how to reach it, expected effect
 PROBES=[
@@ -44,7 +47,10 @@ PROBES=[
  ("macros",".pending-chip","resolve pending entry",None),
  ("gym",".cat:nth-child(2)","switch split",None),
  ("gym",".cat:nth-child(3)","switch split (legs)",None),
- ("gym","#addLift","add movement",None),
+ ("gym",'[data-gymway="gym"]',"open Training at",None),
+ ("gym",'[data-gymway="move"]',"open Add movement",None),
+ ("gym",'[data-gymway="rest"]',"open the rest timer",None),
+ ("gym","#addLift","add movement",[('[data-gymway="move"]',None)]),
  ("gym",'[data-addset="0"]',"open the set sheet",None),
  ("gym",'[data-r="0"]',"open the set sheet on the reps",None),
  ("gym",".set","open a set to change it",None),
@@ -99,6 +105,7 @@ with sync_playwright() as pw:
                 if bj["sheet"]!=aj["sheet"]: bits.append("sheet opened")
                 if bj["tab"]!=aj["tab"]: bits.append("tab changed")
                 if bj["date"]!=aj["date"]: bits.append("date changed")
+                if bj["on"]!=aj["on"]: bits.append("choice shown")
                 rows.append(("OK",tab,sel,what,", ".join(bits)))
             if errs: rows.append(("ERROR",tab,sel,what,errs[0][:80]))
         except Exception as ex:

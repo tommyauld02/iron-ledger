@@ -29,6 +29,50 @@ destructive. The calendar and the Log tab's *Avg session* read **banked** time
 only: a clock still running is not a finished session and must not drag the
 average down all afternoon.
 
+**The bottom bar: three boxes, the way Macros has them (b87).** Asked for by
+the owner, to carry Macros' layout over: what you watch all session stays open
+at the top — the workout clock, then the planned week, then *Today's split* —
+and the rest is folded until pressed. The dock holds three buttons (`.ways3`,
+`data-gymway`): *Choose gym*, *Add movement* (the filled one in the middle,
+because it is used most) and *Rest timer*. Choose gym and Add movement open a
+box at the foot of the page, under the movements, one at a time (`gymWay`),
+with Close in its head; pressing the open one folds it. It survives redraws,
+so adding a movement leaves the box open for the next, and `showGymWay()`
+brings the box up to just above the dock, never past its own top, so the
+movement just added — right above the box — is on screen too (rule 3).
+
+The gym button reads *Choose gym*, the owner's words, not where the day is
+marked (*At APT* was tried first): it says what it does, the way *Add
+movement* does, and every movement already wears the gym's tag. Its spoken
+label adds where today is. It carries a dot when the day needs a gym: today with gyms and none marked, a past day with
+lifts and none, or the one-time question about earlier workouts still
+waiting. Adding or editing a gym keeps its box open (`gymEdit` sets `gymWay`).
+Add movement on a locked day opens to a line saying why there is no form,
+because a press that shows nothing reads as a dead button.
+
+The rest timer's box opens **in the dock**, above the three, not in the page,
+because it is watched while the page is scrolled to the set being logged.
+**One tap starts it** (`restGo(true)`): the box is only ever reached for after a
+set, so opening it and pressing Start were two taps for one job. Opened on a
+rest already running, it shows it and does not restart it; Stop is inside.
+`restOpen` is that state; it is patched by `drawRest()` rather than a redraw,
+so a half-typed weight survives it. Folded while it runs, the count goes on and
+shows on the button itself (*Rest 1:23*, highlighted) — a rest in progress is
+never hidden. The iPhone app's *Buzz at* row shows only with the box open and
+the clock running; folding it does not cancel an alert already set.
+
+**The week is one row of seven (b87)**, so *Today's split* is on the first
+screen. A tile is the day over its date and the tag; the split's name went
+with the room for it, and the tag's letter and colour (and the label, read
+aloud) say which. *Clear plan* moved from an eighth tile to the board's
+heading. A tile is about `(width − 78) / 7` wide — 46px on the owner's 402px
+phone, 44px from 388px — so narrower phones (the SE, the 13 mini) keep two rows
+rather than drop under rule 5's 44px.
+
+The suites open each box the way a person would, through `tests/gymways.py`;
+`mobile` and `hittest` walk the Gym three more times (`gym:gym`, `gym:move`,
+`gym:rest`), and `darkcheck` checks each box and the folded running count.
+
 **A forgotten Start is started by the first set.** Found in the gym: Start was
 never pressed and a whole session went untimed. `addSet()` now starts the
 clock at the first set of the day — at that set's own `t`, so the two agree to
@@ -196,7 +240,8 @@ and nothing is offered to undo.
 **The rest timer is start and stop, plus an alert in the iPhone app.** Asked
 for as the simplest possible thing, and kept that way: it lives in the `.dock` above the
 tab bar on the Gym tab only, so it is under the thumb wherever the page is
-scrolled, and it saves nothing. It is a timestamp (`restStart`) and not a
+scrolled, and it saves nothing. Since b87 its box is folded until *Rest timer*
+in the bottom bar is pressed (see *The bottom bar* above). It is a timestamp (`restStart`) and not a
 counter, for the workout clock's reason — the phone goes in a pocket between
 sets and iOS suspends the app. It keeps running while another tab is looked at.
 Because it sits in the dock, **`hittest`'s usable band now ends at the dock's
@@ -251,8 +296,9 @@ listed a longer session with the heavier weights, so time is coloured the same
 way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
 
-**The planned week split: a board of this week, between where you train and
-today's split.** Asked for by the owner, for two kinds of people. Someone who
+**The planned week split: a board of this week, between the workout clock
+and today's split** (between where you train and today's split until b87,
+when where you train moved to the bottom bar). Asked for by the owner, for two kinds of people. Someone who
 plans gives each day of the week a split — Mondays back, Tuesdays legs —
 by tapping that day's tile and choosing a split, *Rest day* or *Open*; the
 choice is for every week (`store.week`, seven entries, Sunday first like the
