@@ -179,8 +179,14 @@ with sync_playwright() as pw:
                       "%s then %s" % (high, p.evaluate(HIGH)))
                 before=p.input_value(field)
                 p.keyboard.type("12"); p.wait_for_timeout(120)
-                check("keyboard (%s): what is typed goes in" % tag, p.input_value(field).endswith("12"),
-                      "%r then %r" % (before, p.input_value(field)))
+                # Wherever the tap put the caret: in a field with text in it,
+                # that is inside the word on one platform's fonts and at its end
+                # on another's (CI's Linux put "12" into "Creatine" mid-word).
+                after=p.input_value(field)
+                # A rename field that selects its name on focus is replaced instead.
+                check("keyboard (%s): what is typed goes in" % tag,
+                      "12" in after and (len(after)==len(before)+2 or after=="12"),
+                      "%r then %r" % (before, after))
                 y=p.evaluate("()=>Math.round(scrollY)")
                 p.evaluate("()=>{document.activeElement.blur(); window.__kb(0);}"); p.wait_for_timeout(400)
                 dk=p.evaluate(DOCK)
