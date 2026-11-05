@@ -19,6 +19,28 @@ the tabs as it finds them will ever paint these. `handoff` now opens every one
 of them — meal name, rename a day, add a movement, add a day, add a split —
 and measures it for 44px and the 16px iOS-zoom rule.
 
+**`keys` types into every field and scrolls every tab, on two phones (b87).**
+The owner: "when new updates drop there seem to be keyboard and scroll bugs
+that come back." They came back because only Macros' two boxes were ever typed
+into under a keyboard (sweep's *THE KEYBOARD*), and nothing scrolled the other
+tabs. Its first run found four that had been shipping: Find in your pantry
+vanished while typed in (the dock it sits in hid with the keyboard); the room
+under the page sat below the dock, so putting the keyboard away near the foot
+of Macros, the checklist, Add movement, Choose gym or Cardio left the dock
+hanging over an empty stretch; on a 320px phone the add-a-split row was 379px
+wide and zoomed the whole page out; and the set pop-up's Reps went under the
+keyboard. For each field in its `FIELDS` list it taps, raises a keyboard (the
+same visual-viewport stand-in as sweep's), and wants the field above it,
+uncovered, focused and taking what is typed, the page never shorter and never
+wider than the phone; then puts the keyboard away and wants the dock at the
+bottom, there and at the very end of the page, and the room gone once
+scrolled away. It does it again as the iPhone app (no room of the page's own,
+the field never hidden with the dock). Then each of `SCREENS` — every tab,
+folded and with each box open — is scrolled top to bottom: the dock at the
+bottom the whole way, nothing off the side, and the last thing on the page
+ending above the dock. On the owner's 402x874 and a 320x568. **A new field or
+a new box goes into its lists.**
+
 When you add a suite, end it the way the gates do. A suite that reports FAIL
 and exits 0 is a report wearing a test's clothes, and rule 1 quietly stops
 meaning anything.

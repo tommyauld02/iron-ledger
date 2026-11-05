@@ -129,6 +129,11 @@ with sync_playwright() as pw:
     # ---- logging a set with a finger, the thing he'll do most at the gym ----
     tb=p.locator('.tabs button[data-tab="gym"]').bounding_box()
     p.touchscreen.tap(tb["x"]+tb["width"]/2, tb["y"]+tb["height"]/2); p.wait_for_timeout(450)
+    # Add movement is folded in the bar at the bottom until pressed (b87)
+    wb=p.locator('#ctxMain [data-gymway="move"]').bounding_box()
+    check("Add movement in the bar is a proper target", wb["height"]>=44 and wb["width"]>=44, "%dx%d"%(wb["width"],wb["height"]))
+    p.touchscreen.tap(wb["x"]+wb["width"]/2, wb["y"]+wb["height"]/2); p.wait_for_timeout(450)
+    check("a finger on Add movement opens its box", p.locator("#mNew").count()==1)
     # the lists start empty: name it, the way the owner does
     p.fill("#mNew","Barbell Row")
     # a finger scrolls to what it is about to press; under the dock it is not there

@@ -1,5 +1,5 @@
 """The planned week split on the Gym tab: a board of this week's days, between
-where you train and today's split.
+the workout clock and today's split (one row of seven since b87).
 
 A day trained says what it was (today once it is locked in), a day gone by
 with nothing on it says Rest, and today and the days ahead show the weekly
@@ -10,6 +10,7 @@ Pinned to a Wednesday so the days either side are inside the Sunday to
 Saturday week, whatever day the suite actually runs on.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
@@ -44,7 +45,8 @@ def undo_label(p): return p.evaluate("()=>{const b=document.getElementById('undo
 def tile(p, key):
     return p.evaluate("""k=>{const b=document.querySelector('[data-planday="'+k+'"]'); if(!b) return null;
         return {cls:b.className, d:b.querySelector('.wb-d').textContent, tag:b.querySelector('.wb-tag').textContent,
-                n:b.querySelector('.wb-n').textContent, aria:b.getAttribute('aria-label')}}""", key)
+                // b87: one row of seven, no word under the tag; the label says it
+                n:(b.getAttribute('aria-label')||'').split(': ').pop(), aria:b.getAttribute('aria-label')}}""", key)
 def plan(p, key, val):
     p.click('[data-planday="%s"]' % key); p.wait_for_timeout(200)
     p.click('[data-setplan="%s"]' % val); p.wait_for_timeout(250)
@@ -79,9 +81,9 @@ with sync_playwright() as pw:
     t=tile(p, TUE)
     check("a day gone by counts even if never locked in", "is-done" in t["cls"] and t["tag"]=="C", str(t))
     t=tile(p, SUN)
-    check("a day gone by with nothing logged is Rest", "is-rest" in t["cls"] and t["n"]=="Rest", str(t))
+    check("a day gone by with nothing logged is Rest", "is-rest" in t["cls"] and t["n"].startswith("rest"), str(t))
     t=tile(p, WED)
-    check("today with nothing locked in is Open", "is-open" in t["cls"] and t["n"]=="Open", str(t))
+    check("today with nothing locked in is Open", "is-open" in t["cls"] and t["n"]=="open", str(t))
     check("the days ahead are Open", all("is-open" in tile(p, x)["cls"] for x in (THU, FRI, SAT)))
     check("no Clear plan with nothing planned", p.locator("#wbClear").count()==0)
     sizes=p.evaluate("()=>[...document.querySelectorAll('.week-card button')].map(e=>{const r=e.getBoundingClientRect();return Math.min(r.width,r.height)})")
@@ -123,6 +125,7 @@ with sync_playwright() as pw:
     check("planning a day gone by leaves it Rest", "is-rest" in tile(p, SUN)["cls"])
 
     # ---------- today, locked in, takes its place ----------
+    gymways.move(p)
     p.select_option("#mSel", "Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
     check("today with a lift but not locked in still shows the plan", "is-plan" in tile(p, WED)["cls"], str(tile(p, WED)))
     p.click("#lockDay"); p.wait_for_timeout(500)
@@ -144,6 +147,7 @@ with sync_playwright() as pw:
     p.click("#wbGo"); p.wait_for_timeout(400)
     check("Log goes to that day", p.evaluate("()=>document.querySelector('.week-day[aria-pressed=\"true\"]').dataset.day")==SUN)
     p.click('.split-card .cat[data-cat="push"]'); p.wait_for_timeout(200)
+    gymways.move(p)
     p.select_option("#mSel", "Bench Press"); p.click("#addLift"); p.wait_for_timeout(350)
     p.click("#lockDay"); p.wait_for_timeout(500)
     t=tile(p, SUN)

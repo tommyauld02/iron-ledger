@@ -146,7 +146,7 @@ def sweep(p):
 
 # Macros is walked three times: folded, then with each way in open, because
 # a control that only exists after a press is the one nothing else measures.
-TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "pantry:checklist", "gym", "cardio", "coach", "log"]
+TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "pantry:checklist", "gym", "gym:gym", "gym:move", "gym:rest", "cardio", "coach", "log"]
 covered = []          # anything a tap cannot reach — this suite gates on it
 
 with sync_playwright() as pw:
@@ -175,7 +175,10 @@ with sync_playwright() as pw:
             box = tab.split(":")[1]
             # already open, a press would fold it
             # the checklist folds on Pantry the way the two ways in do on Macros
-            opener = "#suppToggle" if box == "checklist" else '[data-logway="%s"]' % box
+            opener = ("#suppToggle" if box == "checklist"
+                      # the Gym's bottom bar, b87: Training at, Add movement, the rest timer
+                      else '#ctxMain [data-gymway="%s"]' % box if box in ("gym", "move", "rest")
+                      else '[data-logway="%s"]' % box)
             if p.locator(opener + '[aria-expanded="false"]').count():
                 p.click(opener); p.wait_for_timeout(350)
             if not p.locator(opener + '[aria-expanded="true"]').count():

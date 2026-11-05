@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 import io, os, json, datetime, calendar
 import re
@@ -100,6 +101,7 @@ def log_set(pg, i, w, r, tech=None, wait=300):
 # Movements are the owner's own names now: a split's list starts empty and
 # holds what he has named. Pick one if the list has it, otherwise name it.
 def add_movement(pg, name, wait=300):
+    gymways.move(pg)
     have = pg.eval_on_selector_all("#mSel option", "e=>e.map(o=>o.value)")
     if name in have:
         pg.select_option("#mSel", name)
@@ -403,6 +405,7 @@ with sync_playwright() as pw:
     check("gym: undo set", p.eval_on_selector_all(".set","e=>e.length")==2
           and p.evaluate(SETS)==["185x6","185x5"], str(p.evaluate(SETS)))
     # custom movement
+    gymways.move(p)
     p.select_option("#mSel","__new"); p.wait_for_timeout(200)
     p.fill("#mNew","Meadows Row"); p.click("#addLift"); p.wait_for_timeout(400)
     check("gym: custom movement", p.eval_on_selector_all(".lift","e=>e.length")==2)
@@ -456,6 +459,8 @@ with sync_playwright() as pw:
           p.eval_on_selector_all(".confetti","e=>e.length")==0)
     liftsWere=p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.sets.length)", Ts)
     p.click("#unlockDay"); p.wait_for_timeout(500)
+    # Add movement is folded in the bar since b87: unlocked, it opens to the form again
+    gymways.move(p)
     check("gym: unlock restores editing", p.evaluate("()=>!!document.getElementById('addLift')"))
     check("gym: locking never touched the sets",
           p.evaluate("k=>JSON.parse(localStorage.getItem('iron-ledger-v1')).days[k].lifts.map(l=>l.sets.length)", Ts)==liftsWere,
@@ -554,6 +559,7 @@ with sync_playwright() as pw:
     check("splits: lands on the one you just made",
           "Walk" in p.eval_on_selector(".cat[aria-pressed=true]","e=>e.textContent"))
     # a new split is a blank canvas: nothing assumed about what goes in it
+    gymways.move(p)
     check("splits: a new split starts empty",
           p.eval_on_selector_all("#mSel option","e=>e.length")==1,
           str(p.eval_on_selector_all("#mSel option","e=>e.map(x=>x.textContent)")))
@@ -1005,7 +1011,7 @@ with sync_playwright() as pw:
     p.click('[data-pick-coach="off"]'); p.wait_for_timeout(300)
     check("coach tab: hidden while standing on it lands on Gym, not on nothing",
           p.evaluate("()=>document.querySelector('.tabs [aria-selected=true]').dataset.tab")=="gym"
-          and "coach" not in p.evaluate(TABSHOWN) and p.locator("#addLift").count()==1)
+          and "coach" not in p.evaluate(TABSHOWN) and p.locator('#ctxMain [data-gymway="move"]').count()==1)
     check("coach tab: and the routine is untouched", p.evaluate(ROUTINE)==rt)
     p.click('[data-pick-coach="on"]'); p.wait_for_timeout(300)
     p.click("#setDone"); p.wait_for_timeout(200)
@@ -1278,6 +1284,7 @@ with sync_playwright() as pw:
         goal:{cal:{dir:'-',v:2000},pro:{dir:'+',v:150}},region:'United States',pantry:[],v:1}))""")
     q.reload(); q.wait_for_timeout(900)
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    gymways.move(q)
     q.select_option("#mSel", "Barbell Curl"); q.click("#addLift"); q.wait_for_timeout(300)
     for _ in range(2):
         log_set(q, 0, 30, 12, wait=150)
@@ -1550,12 +1557,16 @@ with sync_playwright() as pw:
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(250)
     check("rest: not on the other tabs", not q.evaluate(RB))
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(250)
-    check("rest: on the gym tab", q.evaluate(RB))
+    # b87: its box is folded until Rest timer in the bottom bar is pressed
+    RW='#ctxMain [data-gymway="rest"]'
+    check("rest: folded on the gym tab until pressed", not q.evaluate(RB) and q.locator(RW).count()==1)
+    logged=q.evaluate("()=>localStorage.getItem('iron-ledger-v1')")
+    # b87: one tap on Rest timer opens the box already counting
+    check("rest: one tap on Rest timer opens it, counting",
+          gymways.rest(q) and q.evaluate(RB) and q.eval_on_selector("#restBtn","e=>e.textContent")=="Stop")
     bb=q.locator("#restBtn").bounding_box(); tb=q.locator(".tabs").bounding_box()
     check("rest: a proper target", bb["height"]>=MIN_TAP and bb["width"]>=MIN_TAP, "%dx%d"%(bb["width"],bb["height"]))
     check("rest: docked above the tab bar, under the thumb", bb["y"]+bb["height"] <= tb["y"]+1)
-    logged=q.evaluate("()=>localStorage.getItem('iron-ledger-v1')")
-    q.click("#restBtn"); q.wait_for_timeout(200)
     q.evaluate("ms=>window.__advance(ms)", 95000); q.wait_for_timeout(1300)
     clk=q.eval_on_selector("#restClock","e=>e.textContent")
     check("rest: counts from the tap", clk in ("1:35","1:36","1:37"), clk)
@@ -1564,9 +1575,28 @@ with sync_playwright() as pw:
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(1200)
     check("rest: a look at another tab does not lose it",
           q.eval_on_selector("#restClock","e=>e.textContent") not in ("0:00",""))
+    q.click(RW); q.wait_for_timeout(1200)
+    lbl=q.eval_on_selector(RW,"e=>e.textContent")
+    check("rest: folded, it keeps counting, on the button itself",
+          not q.evaluate(RB) and lbl.startswith("Rest 1:3") and "is-running" in q.eval_on_selector(RW,"e=>e.className"), lbl)
+    q.click(RW); q.wait_for_timeout(250)
+    def secs(t):
+        try: m,s2=t.split(":"); return int(m)*60+int(s2)
+        except Exception: return -1
+    clk=q.eval_on_selector("#restClock","e=>e.textContent")
+    # still counting from the first tap (95 s moved by hand, a few more real)
+    check("rest: and opens again on the same count, not a new one",
+          q.evaluate(RB) and 95<=secs(clk)<=110, clk)
     q.click("#restBtn"); q.wait_for_timeout(250)
     check("rest: Stop resets it", q.eval_on_selector("#restClock","e=>e.textContent")=="0:00"
-          and q.eval_on_selector("#restBtn","e=>e.textContent")=="Start")
+          and q.eval_on_selector("#restBtn","e=>e.textContent")=="Start"
+          and q.eval_on_selector(RW,"e=>e.textContent")=="Rest timer")
+    q.click("#restBtn"); q.wait_for_timeout(200)
+    check("rest: Start in the open box starts it again", q.eval_on_selector("#restBtn","e=>e.textContent")=="Stop")
+    q.click(RW); q.wait_for_timeout(200); q.click(RW); q.wait_for_timeout(200)
+    check("rest: and reopening a rest already running does not restart it",
+          q.eval_on_selector("#restBtn","e=>e.textContent")=="Stop")
+    q.click("#restBtn"); q.wait_for_timeout(200)
     check("rest: and nothing about it is kept",
           q.evaluate("()=>localStorage.getItem('iron-ledger-v1')")==logged)
 
@@ -2134,6 +2164,7 @@ with sync_playwright() as pw:
           str(s2.evaluate(FIELDS))+" / "+s2.evaluate(HINT))
     c2.close()
     # two gyms: rows come only from this gym
+    gymways.gym(q)
     q.click('[data-gym="g24"]'); q.wait_for_timeout(300)
     rows=q.evaluate(LROWS, 0)
     check("lastsets: at the other gym, the rows come from the last time there, not here",
@@ -2310,6 +2341,7 @@ with sync_playwright() as pw:
           sb is not None and sb["height"]>=MIN_TAP
           and q.eval_on_selector_all(".cats .cat","e=>e.map(x=>x.dataset.cat||x.id)")[-2:]==["special","addSplitChip"])
     q.click('[data-cat="special"]'); q.wait_for_timeout(300)
+    gymways.move(q)
     groups=q.eval_on_selector_all("#mSel optgroup","e=>e.map(g=>g.label)")
     check("special: it offers every split's movements, grouped by split",
           groups==["Back / Bi / Rear Delt","Chest / Shoulder / Tri","Legs"], str(groups))
@@ -2365,6 +2397,7 @@ with sync_playwright() as pw:
         "lifts":[{"id":"h1","cat":"special","movement":"Hammer Curl","sets":[{"w":25,"r":20}]}]}
     c, q = sp_page(later)
     q.click('[data-cat="back"]'); q.wait_for_timeout(300)
+    gymways.move(q)
     q.select_option("#mSel","Hammer Curl"); q.click("#addLift"); q.wait_for_timeout(300)
     last=q.eval_on_selector(".lift .last","e=>e.textContent")
     check("special: back at the gym, the home session is last time",
@@ -2591,6 +2624,11 @@ with sync_playwright() as pw:
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    check("own: Add movement is folded until its button in the bar is pressed",
+          q.locator("#mNew").count()==0 and q.locator('#ctxMain [data-gymway="move"][aria-expanded="false"]').count()==1)
+    gymways.move(q)
+    check("own: pressed, it opens with the cursor in the name, ready to type",
+          q.evaluate("()=>document.activeElement&&document.activeElement.id")=="mNew")
     check("own: with nothing named yet, the field to name one is simply there",
           q.locator("#mNew").is_visible() and q.eval_on_selector_all("#mSel option","e=>e.map(o=>o.value)")==["__new"])
     check("own: and it will not zoom the page",
@@ -2643,8 +2681,14 @@ with sync_playwright() as pw:
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
     q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    # b87: where you train is Training at, in the bottom bar, folded until pressed
+    GW='#ctxMain [data-gymway="gym"]'
+    check("gyms: Training at is in the bottom bar, folded, and asks nothing with no gyms",
+          q.locator(GW+'[aria-expanded="false"]').count()==1 and q.locator("#addGymFirst").count()==0
+          and "is-due" not in q.eval_on_selector(GW,"e=>e.className"))
+    check("gyms: pressing it opens its box", gymways.gym(q))
     ab=q.locator("#addGymFirst").bounding_box()
-    check("gyms: with none yet, one quiet button near the top to add where you train",
+    check("gyms: with none yet, one quiet button in it to add where you train",
           ab is not None and ab["height"]>=MIN_TAP and q.locator(".gymtag").count()==0)
     q.click("#addGymFirst"); q.wait_for_timeout(300)
     check("gyms: it opens on the name, ready to type",
@@ -2656,6 +2700,10 @@ with sync_playwright() as pw:
           [(g["name"],g["tag"]) for g in st.get("gyms",[])]==[("Apartment gym","APT")])
     check("gyms: the first one is where today is, and it says so",
           st.get("gymLast")==APT and q.evaluate(GSAYS)=="Added Apartment gym \u2014 training there today", q.evaluate(GSAYS))
+    check("gyms: the bar's button says Choose gym, and its label says where",
+          q.eval_on_selector(GW,"e=>e.textContent")=="Choose gym"
+          and q.eval_on_selector(GW,"e=>e.getAttribute('aria-label')")=="Choose gym, training at Apartment gym",
+          q.eval_on_selector(GW,"e=>e.textContent")+" / "+str(q.eval_on_selector(GW,"e=>e.getAttribute('aria-label')")))
     q.fill("#newGymName","24 Hour Fitness"); q.fill("#newGymTag","24"); q.press("#newGymTag","Enter"); q.wait_for_timeout(300)
     st=q.evaluate(GST)
     G24=st["gyms"][1]["id"] if len(st.get("gyms",[]))>1 else None
@@ -2705,6 +2753,7 @@ with sync_playwright() as pw:
           q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 150×10"
           and q.eval_on_selector(".lift .last","e=>e.textContent").startswith("Last at APT · "),
           q.eval_on_selector(".lift .beat","e=>e.textContent"))
+    gymways.gym(q)          # Add movement's box was open: one box at a time
     q.click('[data-gym="%s"]' % G24); q.wait_for_timeout(300)
     check("gyms: training somewhere else changes the target to that gym's",
           q.eval_on_selector(".lift .beat","e=>e.textContent")=="To beat · 110×10"
@@ -2740,6 +2789,7 @@ with sync_playwright() as pw:
     q.click("#cmpDone"); q.wait_for_timeout(200)
 
     # changing a gym: the history follows by id
+    gymways.gym(q)
     q.click("#editGyms"); q.wait_for_timeout(250)
     q.fill('[data-gymtag="%s"]' % G24, "24HR")
     q.eval_on_selector('[data-gymtag="%s"]' % G24, "e=>e.dispatchEvent(new Event('change'))")
@@ -3594,10 +3644,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The Pantry folds like Macros"
-          and titles[1]=="The iPhone app buzzes back"
-          and titles[2]=="The Terms and Privacy Policy are published"
-          and titles[3]=="The icon says MNTL D&T", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The Gym tab folds like Macros"
+          and titles[1]=="The Pantry folds like Macros"
+          and titles[2]=="The iPhone app buzzes back"
+          and titles[3]=="The Terms and Privacy Policy are published", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

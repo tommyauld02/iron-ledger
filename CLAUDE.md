@@ -31,7 +31,7 @@ without a migration and Tommy's say-so.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 28 suites, ~1,650 checks, 21
+**1. Nothing ships without `./verify.sh` passing.** 29 suites, ~2,100 checks, 22
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -86,7 +86,7 @@ privacy.html, support.html, terms.html   the public pages App Store Connect
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              27 Playwright suites, and relay.py, which runs the relay in Node
+tests/              28 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -214,7 +214,7 @@ is fixed, and it is worth keeping straight:
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `week`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
   `handoff`, `finder`, `relay`, `label`, `hittest`, `share`, `native`, `live`,
-  `agecheck`, `profile`, `legal`.
+  `agecheck`, `profile`, `legal`, `keys`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s

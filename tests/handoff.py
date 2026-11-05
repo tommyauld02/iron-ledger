@@ -656,6 +656,8 @@ with sync_playwright() as pw:
     # same bar, with no button: on the Gym tab it sits right above the rest
     # timer, and a thumb on its way to Start rest must reach Start rest.
     p.click('.tabs button[data-tab="gym"]'); p.wait_for_timeout(400)
+    p.click('#ctxMain [data-gymway="move"]'); p.wait_for_timeout(250)
+    p.click('#ctxMain [data-gymway="rest"]'); p.wait_for_timeout(250)
     p.select_option("#mSel", "Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
     p.click('[data-addset="0"]'); p.wait_for_timeout(200)
     p.fill("#seW", "135"); p.fill("#seR", "10")
@@ -665,7 +667,7 @@ with sync_playwright() as pw:
           and "first set" in p.eval_on_selector("#undoLabel", "e => e.textContent"))
     check("the notice has nothing on it to press",
           p.evaluate("() => document.getElementById('undoBtn').getBoundingClientRect().height === 0"))
-    check("the rest timer's Start is still what a tap on it reaches", p.evaluate("""() => {
+    check("the rest timer's button is still what a tap on it reaches", p.evaluate("""() => {
         const b = document.getElementById('restBtn'), r = b.getBoundingClientRect();
         return r.height > 0 && b.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)); }"""))
     check("and the tab bar is still reachable", p.evaluate(TABS_REACHABLE))
@@ -694,11 +696,11 @@ with sync_playwright() as pw:
         ("add a movement", ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-newmove]"], "#rtNewMove"),
         ("add a day",      ['.tabs button[data-tab="coach"]', "#addDay"], "#rtNewDay"),
         ("add a split",    ['.tabs button[data-tab="gym"]', "#addSplitChip"], "#newSplitName"),
-        ("where you train", ['.tabs button[data-tab="gym"]', "#addGymFirst"], "#newGymName"),
+        ("where you train", ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="gym"]', "#addGymFirst"], "#newGymName"),
         ("a cardio session, by name", ['.tabs button[data-tab="cardio"]', "#cardioStart"], "#cPickNew"),
         ("the cardio goal",  ['.tabs button[data-tab="cardio"]', "#cgOpen"], "#cgVal"),
         ("cardio minutes",   ['.tabs button[data-tab="cardio"]', "#cardioByHand"], "#cMin"),
-        ("a gym's tag",    ['.tabs button[data-tab="gym"]', "#addGymFirst"], "#newGymTag"),
+        ("a gym's tag",    ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="gym"]', "#addGymFirst"], "#newGymTag"),
         # Sheets rather than inline editors, but the same blind spot: neither
         # exists until something is pressed, so nothing that walks the tabs as
         # it finds them will ever paint them.
@@ -708,17 +710,17 @@ with sync_playwright() as pw:
                            ['.tabs button[data-tab="pantry"]', "#suppToggle", "[data-editsupp]"], "#suppRename"),
         # Today has no movement in this fixture, so the steps add one first.
         ("change a movement",
-                           ['.tabs button[data-tab="gym"]', "#addLift", "[data-editlift]"], "#liftMove"),
+                           ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-editlift]"], "#liftMove"),
         ("a note for the day",
                            ['.tabs button[data-tab="gym"]', "#dayNoteAdd"], "#dayNoteIn"),
         ("a note on a movement",
-                           ['.tabs button[data-tab="gym"]', "#addLift", "[data-liftnote]"], "#liftNoteIn"),
+                           ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-liftnote]"], "#liftNoteIn"),
         ("the pantry's sections",
                            ['.tabs button[data-tab="pantry"]', "#editPanSecs"], "#newSecName"),
         ("combining foods into one",
                            ['.tabs button[data-tab="pantry"]', "#combStart"], "#combName"),
         # the set sheet, opened from the card, and its Edit for the movement
-        ("a new set",      ['.tabs button[data-tab="gym"]', "#addLift", "[data-r]"], "#seR"),
+        ("a new set",      ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-r]"], "#seR"),
         # Last, because the choice is saved and every later editor would
         # open in it: the same two fields, as pop-ups.
         ("log numbers, as a pop-up",
@@ -727,7 +729,7 @@ with sync_playwright() as pw:
         ("ask an agent, as a pop-up",
                            ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], "#estText"),
         ("the movement, from the set sheet",
-                           ['.tabs button[data-tab="gym"]', "#addLift", "[data-addset]", "#seMoveBtn"], "#seMove"),
+                           ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-addset]", "#seMoveBtn"], "#seMove"),
     ]
     unopened, small, zoomy = [], [], []
     for name, steps, field in EDITORS:

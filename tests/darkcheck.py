@@ -13,6 +13,7 @@ only measures the states its fixture puts on screen.
 """
 import fakeai
 import answered   # every page has said 18 or older: tests/answered.py
+import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 import os, time, datetime
 
@@ -298,7 +299,10 @@ def walk(p, label):
             p.click('[data-cat="back"]'); p.wait_for_timeout(200)
             # where you train: a chosen gym, the tag on a card, the one-time
             # question, the sheet's Targets row — then the editor, which only
-            # exists after a press
+            # exists after a press. All of it is in Training at's box (b87).
+            if not gymways.gym(p): found.append("gym: Training at's box did not open")
+            low = p.evaluate(LOW)
+            if low: found.append("gym (training at): %s" % low)
             gyms = p.evaluate("""()=>({
               chosen: document.querySelectorAll('[data-gym][aria-pressed=true]').length,
               tag: document.querySelectorAll('.lift h3 .gymtag').length,
@@ -313,10 +317,20 @@ def walk(p, label):
             low = p.evaluate(LOW)
             if low: found.append("gym (editing gyms): %s" % low)
             p.click("#editGyms"); p.wait_for_timeout(200)
-            # the rest bar lives in the dock, and running looks different
-            p.click("#restBtn"); p.wait_for_timeout(200)
+            # Add movement's box, open from the bar (b87)
+            if not gymways.move(p): found.append("gym: Add movement's box did not open")
+            low = p.evaluate(LOW)
+            if low: found.append("gym (adding a movement): %s" % low)
+            # the rest box lives in the dock, and running looks different —
+            # folded while running too, when the count is on the bar's button
+            if not gymways.rest(p): found.append("gym: the rest timer's box did not open")
+            p.wait_for_timeout(200)           # one tap opened it counting (b87)
             low = p.evaluate(LOW)
             if low: found.append("gym (resting): %s" % low)
+            p.click('#ctxMain [data-gymway="rest"]'); p.wait_for_timeout(1100)
+            low = p.evaluate(LOW)
+            if low: found.append("gym (resting, folded): %s" % low)
+            p.click('#ctxMain [data-gymway="rest"]'); p.wait_for_timeout(150)
             p.click("#restBtn"); p.wait_for_timeout(150)
             # the comparison is a sheet, open only after a press
             if p.locator("#openCompare").count():

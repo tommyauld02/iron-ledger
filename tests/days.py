@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 import os, json, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
@@ -26,6 +27,7 @@ def keys(p): return p.evaluate("()=>Object.keys(JSON.parse(localStorage.getItem(
 
 
 def add_movement(pg, name, wait=350):
+    gymways.move(pg)
     have = pg.eval_on_selector_all("#mSel option", "e=>e.map(o=>o.value)")
     if name in have: pg.select_option("#mSel", name)
     else: pg.select_option("#mSel", "__new"); pg.fill("#mNew", name)
