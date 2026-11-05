@@ -105,6 +105,7 @@ SCREENS=[
  ("gym, Choose gym open",    "gym",    ['#ctxMain [data-gymway="gym"]']),
  ("gym, Add movement open",  "gym",    ['#ctxMain [data-gymway="move"]']),
  ("gym, rest timer open",    "gym",    ['#ctxMain [data-gymway="rest"]']),
+ ("gym, locked in (recovery)","gym",   ["#lockDay"]),
  ("cardio",                  "cardio", []),
  ("coach",                   "coach",  ["[data-openday]"]),
  ("log",                     "log",    []),

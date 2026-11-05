@@ -338,6 +338,30 @@ def walk(p, label):
                 low = p.evaluate(LOW)
                 if low: found.append("compare: %s" % low)
                 p.click("#cmpDone"); p.wait_for_timeout(200)
+            # What a movement works (b88): the question sheet, chips in all
+            # three states, then the recovery card, which only a locked day has
+            if p.locator("[data-works]").count():
+                p.locator("[data-works]").first.click(); p.wait_for_timeout(250)
+                mc = p.locator("[data-musc]")
+                if mc.count() >= 3:
+                    mc.nth(0).click(); mc.nth(1).click(); mc.nth(1).click(); p.wait_for_timeout(100)
+                if not p.locator('[data-musc][data-state="p"]').count() or not p.locator('[data-musc][data-state="s"]').count():
+                    found.append("muscles: the sheet's main and helps states are not on screen")
+                low = p.evaluate(LOW)
+                if low: found.append("muscles (what it works): %s" % low)
+                p.click("#worksCancel"); p.wait_for_timeout(200)
+            else:
+                found.append("muscles: no movement offers what it works")
+            if p.locator("#lockDay").count():
+                p.click("#lockDay"); p.wait_for_timeout(500)
+                if not p.locator("#recovery").count():
+                    found.append("recovery: the card is not on screen once the day is locked")
+                elif p.locator("[data-bodyfig]").count():
+                    p.locator('[data-bodyfig="male"]').click(); p.wait_for_timeout(300)
+                low = p.evaluate(LOW)
+                if low: found.append("recovery (day complete): %s" % low)
+                if p.locator("#unlockDay").count():
+                    p.click("#unlockDay"); p.wait_for_timeout(300)
             # The held state only exists mid-drag — the superset zones and the
             # lit one under the finger. Put on screen and measured, because a
             # state no test paints is a state no test measures.
