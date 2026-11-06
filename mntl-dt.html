@@ -3442,6 +3442,50 @@
   }
   .gym-ways3 .w3.is-running { border-color: var(--accent); background: var(--accent-soft); font-variant-numeric: tabular-nums; }
   .gym-ways .gym-pick { padding: 12px 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: 18px; }
+  /* What a movement works (b88): a line under its name, and the sheet that
+     asks. Change is 44px tall (rule 5); the line sits beside it. */
+  .lift .works { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 44px; }
+  .lift .works .wk-t { flex: 1; min-width: 0; font-size: 13px; line-height: 1.35; color: var(--ink-2); }
+  .lift .works .wk-t b { font-weight: 600; color: var(--ink); }
+  .lift .works .wk-g { font-family: var(--font-num); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
+  .lift .works .wk-ed { flex: none; min-height: 44px; min-width: 44px; padding: 0 2px 0 8px;
+    font-size: 13.5px; font-weight: 600; color: var(--accent); background: none; border: 0; }
+  .works-ask { align-self: flex-start; min-height: 44px; padding: 0; font-size: 14px; font-weight: 600;
+    color: var(--accent); background: none; border: 0; text-align: left; }
+  .works-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+  .works-grid button { min-height: 44px; padding: 0 13px; border-radius: 22px; border: 1px solid var(--rule);
+    background: var(--surface); color: var(--ink); font-size: 14.5px; font-weight: 600; }
+  .works-grid button[data-state="p"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .works-grid button[data-state="s"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+  .works-grid button[data-state="s"]::after { content: " ½"; font-family: var(--font-num); font-size: 12.5px; }
+  .works-key { margin: 0; font-size: 12.5px; color: var(--ink-2); }
+  /* The recovery card, inside Day complete (b88). */
+  .daydone .rec { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--rule); display: flex; flex-direction: column; gap: 10px; }
+  .daydone .rec-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .daydone .rec-sub { font-size: 12px; color: var(--ink-2); }
+  /* --ink-3 is 4.4:1 on the card's tint in some accents; its stats' labels use --ink-2 */
+  .daydone .rec-head .eyebrow { color: var(--ink-2); }
+  .daydone .rec-bodies { display: flex; justify-content: center; gap: 18px; }
+  .daydone .rec-bodies figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 0 1 132px; }
+  .daydone .body-fig { width: 100%; max-width: 132px; height: auto; display: block; }
+  .daydone .rec-bodies figcaption { font-family: var(--font-num); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+  .daydone .rec-key { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--ink-2); }
+  .daydone .rec-key span { display: inline-flex; align-items: center; gap: 6px; }
+  .daydone .rec-key i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .daydone .rec-key .lv-red, .daydone .rec-list .lv-red::before { background: var(--miss); }
+  .daydone .rec-key .lv-yellow, .daydone .rec-list .lv-yellow::before { background: var(--warn-fill); }
+  .daydone .rec-key .lv-green, .daydone .rec-list .lv-green::before { background: var(--hit); }
+  .daydone .rec-key .lv-none { background: var(--surface-2); border: 1px solid var(--rule); }
+  .daydone .rec-list { display: flex; flex-direction: column; }
+  .daydone .rec-list p { margin: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto 96px; gap: 10px; align-items: center;
+    padding: 7px 0; border-top: 1px solid var(--rule); font-size: 14.5px; color: var(--ink); }
+  .daydone .rec-list b { font-weight: 600; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .daydone .rec-list b::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 5px; }
+  .daydone .rec-list span { font-family: var(--font-num); font-size: 13px; color: var(--ink-2); }
+  .daydone .rec-list em { font-style: normal; font-size: 13px; text-align: right; color: var(--ink); }
+  .daydone .rec-note, .daydone .rec-none, .daydone .rec-pick p { margin: 0; font-size: 12.5px; line-height: 1.4; color: var(--ink-2); }
+  .daydone .rec-pick { display: flex; flex-direction: column; gap: 8px; }
+  .daydone .rec-ask { font-size: 14px; }
   .way-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; }
   .way-head b { font-size: 17px; font-weight: 800; font-stretch: 112%; }
   .way-head button { min-height: 44px; padding: 0 8px; font-family: var(--font-num); font-size: 12.5px; color: var(--accent); }
@@ -4285,7 +4329,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-04.87";
+  var BUILD = "2026-11-05.88";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4387,6 +4431,258 @@
         "Assault Bike", "Cycling", "Elliptical", "Jump Rope", "Sled Push", "Farmer's Carry"] }
   ];
 
+  // ---------- what a movement works (b88) ----------
+  // For the recovery body map: the muscles each movement works, the main ones
+  // and the ones that help. A helping muscle's set counts half — fractional
+  // counting, which matched results best across 67 studies (Pelland et al.
+  // 2024). Movements are the owner's own names, so there are three ways to
+  // know: one he has said (store.muscles, by name, kept forever like every
+  // other name), the built-in list below (every name the app suggests), or a
+  // guess from the words in the name that says it is a guess. Nothing else
+  // is assumed: a name none of those place asks, once.
+  var MUSCLES = [
+    { id: "chest", name: "Chest" }, { id: "fdelt", name: "Front delts" }, { id: "sdelt", name: "Side delts" },
+    { id: "rdelt", name: "Rear delts" }, { id: "upback", name: "Upper back" }, { id: "lats", name: "Lats" },
+    { id: "traps", name: "Traps" }, { id: "lowback", name: "Lower back" }, { id: "biceps", name: "Biceps" },
+    { id: "triceps", name: "Triceps" }, { id: "forearms", name: "Forearms" }, { id: "abs", name: "Abs" },
+    { id: "glutes", name: "Glutes" }, { id: "quads", name: "Quads" }, { id: "hams", name: "Hamstrings" },
+    { id: "calves", name: "Calves" }
+  ];
+  function muscleName(id) {
+    for (var i = 0; i < MUSCLES.length; i++) if (MUSCLES[i].id === id) return MUSCLES[i].name;
+    return id;
+  }
+  // "main muscles|helping muscles". An empty entry is a movement that is not
+  // on the body map at all (a treadmill), said so rather than guessed at.
+  var MOVE_WORKS = {
+    "Bench Press": "chest|triceps fdelt", "Incline Bench Press": "chest fdelt|triceps",
+    "Decline Bench Press": "chest|triceps", "Dumbbell Bench Press": "chest|triceps fdelt",
+    "Incline DB Press": "chest fdelt|triceps", "Machine Chest Press": "chest|triceps fdelt",
+    "Cable Fly": "chest|fdelt", "Pec Deck": "chest|fdelt", "Dumbbell Fly": "chest|fdelt",
+    "Dip": "chest triceps|fdelt", "Push-Up": "chest|triceps fdelt abs", "Svend Press": "chest|fdelt",
+    "Deadlift": "glutes hams lowback|upback traps quads forearms", "Barbell Row": "upback lats|biceps rdelt lowback",
+    "Pendlay Row": "upback lats|biceps rdelt", "T-Bar Row": "upback lats|biceps rdelt",
+    "Seated Cable Row": "upback lats|biceps rdelt", "Chest-Supported Row": "upback lats|biceps rdelt",
+    "Meadows Row": "lats upback|biceps rdelt", "Single-Arm DB Row": "lats upback|biceps rdelt",
+    "Lat Pulldown": "lats|biceps upback", "Close-Grip Pulldown": "lats|biceps upback",
+    "Pull-Up": "lats|biceps upback", "Chin-Up": "lats biceps|upback", "Straight-Arm Pulldown": "lats|triceps",
+    "Shrug": "traps|forearms", "Rack Pull": "upback traps lowback|glutes hams forearms",
+    "Overhead Press": "fdelt|sdelt triceps", "DB Shoulder Press": "fdelt|sdelt triceps",
+    "Arnold Press": "fdelt|sdelt triceps", "Machine Shoulder Press": "fdelt|sdelt triceps",
+    "Lateral Raise": "sdelt|", "Cable Lateral Raise": "sdelt|", "Front Raise": "fdelt|",
+    "Rear Delt Fly": "rdelt|upback", "Face Pull": "rdelt|upback traps", "Reverse Pec Deck": "rdelt|upback",
+    "Upright Row": "sdelt traps|fdelt biceps",
+    "Barbell Curl": "biceps|forearms", "EZ-Bar Curl": "biceps|forearms", "Dumbbell Curl": "biceps|forearms",
+    "Hammer Curl": "biceps forearms|", "Incline DB Curl": "biceps|", "Preacher Curl": "biceps|",
+    "Cable Curl": "biceps|forearms", "Concentration Curl": "biceps|", "Spider Curl": "biceps|",
+    "Close-Grip Bench": "triceps chest|fdelt", "Triceps Pushdown": "triceps|", "Rope Pushdown": "triceps|",
+    "Skullcrusher": "triceps|", "Overhead Triceps Ext": "triceps|", "Dumbbell Kickback": "triceps|",
+    "Bench Dip": "triceps|chest fdelt", "JM Press": "triceps|chest",
+    "Back Squat": "quads glutes|hams lowback", "Front Squat": "quads|glutes abs", "Hack Squat": "quads|glutes",
+    "Leg Press": "quads|glutes hams", "Bulgarian Split Squat": "quads glutes|hams",
+    "Walking Lunge": "quads glutes|hams", "Reverse Lunge": "quads glutes|hams", "Step-Up": "quads glutes|",
+    "Leg Extension": "quads|", "Goblet Squat": "quads|glutes abs", "Sissy Squat": "quads|",
+    "Romanian Deadlift": "hams glutes|lowback", "Stiff-Leg Deadlift": "hams|glutes lowback",
+    "Lying Leg Curl": "hams|calves", "Seated Leg Curl": "hams|", "Leg Curl": "hams|", "Nordic Curl": "hams|",
+    "Good Morning": "hams lowback|glutes", "Glute-Ham Raise": "hams|glutes calves",
+    "Hip Thrust": "glutes|hams", "Glute Bridge": "glutes|hams", "Cable Kickback": "glutes|hams",
+    "Sumo Deadlift": "glutes quads hams|lowback upback forearms", "Abduction Machine": "glutes|",
+    "Standing Calf Raise": "calves|", "Seated Calf Raise": "calves|", "Leg Press Calf Raise": "calves|",
+    "Donkey Calf Raise": "calves|",
+    "Hanging Leg Raise": "abs|forearms", "Cable Crunch": "abs|", "Plank": "abs|", "Ab Wheel": "abs|lats",
+    "Russian Twist": "abs|", "Decline Sit-Up": "abs|", "Pallof Press": "abs|", "Side Plank": "abs|",
+    "Treadmill": "|", "Incline Walk": "|", "Stair Master": "|", "Rowing Machine": "|", "Assault Bike": "|",
+    "Cycling": "|", "Elliptical": "|", "Jump Rope": "|", "Sled Push": "quads glutes|calves",
+    "Farmer's Carry": "forearms traps|abs"
+  };
+  // A name as a key: case, hyphens and stray spacing are not what makes two
+  // names different, so "pull-up", "Pull Up" and "pull up " are one movement.
+  function moveKey(name) {
+    return String(name || "").toLowerCase().replace(/[-_/.,'’()]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+  var MOVE_WORKS_BY_KEY = {};
+  Object.keys(MOVE_WORKS).forEach(function (n) { MOVE_WORKS_BY_KEY[moveKey(n)] = MOVE_WORKS[n]; });
+  // The guess, from the words in a name. First match wins, so the narrow
+  // ones come first: a dumbbell kickback is triceps before "kickback" is
+  // glutes, a leg curl is hamstrings before "curl" is biceps, and a rowing
+  // machine is cardio before "row" is back. Each says which word it read.
+  var MOVE_GUESS = [
+    [/\b(farmer|farmers|suitcase) (carry|carries|walk|walks)\b|\bcarry\b/, "forearms traps|abs"],
+    [/\b(sled|prowler)\b/, "quads glutes|calves"],
+    [/\b(treadmill|elliptical|stair ?master|stairs|rowing machine|erg|assault bike|bike|cycling|spin|jump rope|swim|swimming|run|running|jog|walk)\b/, "|"],
+    [/\b(rear delts?|reverse (pec|fly|flye)|face pulls?|rear fly)\b/, "rdelt|upback"],
+    [/\b(lateral|side|lat) raises?\b/, "sdelt|"],
+    [/\bfront raises?\b/, "fdelt|"],
+    [/\bupright rows?\b/, "sdelt traps|fdelt biceps"],
+    [/\bshrugs?\b/, "traps|forearms"],
+    [/\b(calf|calves)\b/, "calves|"],
+    [/\b(leg|ham|hamstring|nordic) curls?\b|\bglute ham\b/, "hams|"],
+    [/\b(rdl|romanian|stiff leg|good mornings?)\b/, "hams glutes|lowback"],
+    [/\b(back extensions?|hyperextensions?|superman)\b/, "lowback|glutes hams"],
+    [/\b(tricep|triceps|db|dumbbell) kickbacks?\b/, "triceps|"],
+    [/\b(hip thrusts?|glute bridges?|bridge|kickbacks?|abduction|abductor)\b/, "glutes|hams"],
+    [/\b(deadlifts?|rack pulls?)\b/, "glutes hams lowback|upback traps forearms"],
+    [/\b(leg extensions?)\b/, "quads|"],
+    [/\b(squats?|leg press|lunges?|split squats?|step ups?|hack)\b/, "quads glutes|hams"],
+    [/\bstraight arm\b/, "lats|triceps"],
+    [/\b(pull ?downs?|pull ?ups?|chin ?ups?|lat)\b/, "lats|biceps upback"],
+    [/\b(rows?)\b/, "upback lats|biceps rdelt"],
+    [/\bclose grip bench\b/, "triceps chest|fdelt"],
+    [/\b(push ?downs?|skull ?crushers?|tricep|triceps|french press|jm press|kickbacks?)\b/, "triceps|"],
+    [/\bdips?\b/, "chest triceps|fdelt"],
+    [/\b(wrist curls?|reverse curls?)\b/, "forearms|"],
+    [/\bhammer\b/, "biceps forearms|"],
+    [/\bcurls?\b/, "biceps|forearms"],
+    [/\b(overhead|shoulder|military|arnold|ohp|push press)\b/, "fdelt|sdelt triceps"],
+    [/\b(bench|chest press|incline press|decline press|floor press|push ?ups?|press ?ups?)\b/, "chest|triceps fdelt"],
+    [/\b(fly|flye|flyes|flies|pec|crossover|svend)\b/, "chest|fdelt"],
+    [/\b(crunch|crunches|sit ?ups?|planks?|ab wheel|leg raises?|knee raises?|russian twists?|pallof|abs|ab|core|v ups?)\b/, "abs|"]
+  ];
+  function parseWorks(str) {
+    var parts = String(str || "|").split("|");
+    function ids(s) { return (s || "").split(" ").filter(function (x) { return !!x; }); }
+    return { p: ids(parts[0]), s: ids(parts[1]) };
+  }
+  // What a movement works, and how the app knows: "saved" (said by the
+  // owner), "list" (built in), "guess" (from `word`), or "unknown".
+  function worksOf(name) {
+    var key = moveKey(name), mine = store.muscles && store.muscles[key];
+    if (mine) return { p: (mine.p || []).slice(), s: (mine.s || []).slice(), how: "saved" };
+    if (MOVE_WORKS_BY_KEY[key] != null) {
+      var w = parseWorks(MOVE_WORKS_BY_KEY[key]); w.how = "list"; return w;
+    }
+    for (var i = 0; i < MOVE_GUESS.length; i++) {
+      var m = key.match(MOVE_GUESS[i][0]);
+      if (m) { var g = parseWorks(MOVE_GUESS[i][1]); g.how = "guess"; g.word = m[0]; return g; }
+    }
+    return { p: [], s: [], how: "unknown" };
+  }
+  // The line under a movement's name: what it works, in words.
+  function worksText(w) {
+    return w.p.map(function (id) { return '<b>' + esc(muscleName(id)) + '</b>'; })
+      .concat(w.s.map(function (id) { return esc(muscleName(id)) + ' ½'; })).join(' · ');
+  }
+
+  // The recovery body map's figures (b88), drawn for this app: front and
+  // back, male and female, in a 200 x 432 box. Each shape is the figure's
+  // left half and is mirrored unless it sits on the centre line (mid). m is a
+  // muscle id, coloured by how hard it was worked; "x" is muscle the map does
+  // not track; "" is the body around them; skin is the head, neck and hands.
+  var BODY = {
+    front: [
+      { m: "", d: "M100 60 L89 60 Q72 67 60 73 Q45 78 41 94 Q38 112 44 128 L62 124 Q64 148 67 172 Q70 194 67 210 L100 216 Z" },
+      { m: "", d: "M44 90 Q35 122 38 160 Q32 190 28 220 Q28 236 34 240 Q41 238 43 226 Q52 196 57 174 Q62 150 63 126 Z" },
+      { m: "", skin: 1, d: "M30 220 Q23 236 27 251 Q33 258 38 248 Q41 236 39 224 Z" },
+      { m: "", low: 1, d: "M67 206 Q60 240 62 284 Q64 312 69 332 Q64 364 68 400 Q68 414 67 426 L89 428 Q88 412 87 400 Q91 360 89 334 Q97 302 99 262 L100 220 Z" },
+      { m: "traps", d: "M92 61 Q82 66 70 72 Q80 77 90 74 Q96 70 98 64 Z" },
+      { m: "sdelt", d: "M69 72 Q46 70 39 92 Q37 108 46 124 Q52 104 56 92 Q61 80 69 72 Z" },
+      { m: "fdelt", d: "M71 75 Q62 82 58 94 Q53 110 48 124 Q62 116 67 102 Q72 90 75 79 Z" },
+      { m: "chest", sex: "male", d: "M99 77 Q85 73 75 79 Q67 86 66 98 Q66 112 72 119 Q84 126 99 122 Z" },
+      { m: "chest", sex: "female", d: "M99 84 Q87 79 77 84 Q68 91 68 104 Q70 117 81 121 Q91 123 99 119 Z" },
+      { m: "biceps", d: "M48 126 Q40 140 40 158 Q42 170 50 170 Q58 154 60 136 Q58 124 48 126 Z" },
+      { m: "forearms", d: "M41 172 Q34 190 31 210 Q32 222 40 222 Q49 202 54 182 Q55 170 48 170 Z" },
+      { m: "abs", d: "M88 125 h9 a2 2 0 0 1 2 2 v12 a2 2 0 0 1 -2 2 h-9 a2 2 0 0 1 -2 -2 v-12 a2 2 0 0 1 2 -2 Z" },
+      { m: "abs", d: "M88 144 h9 a2 2 0 0 1 2 2 v13 a2 2 0 0 1 -2 2 h-9 a2 2 0 0 1 -2 -2 v-13 a2 2 0 0 1 2 -2 Z" },
+      { m: "abs", d: "M88 164 h9 a2 2 0 0 1 2 2 v13 a2 2 0 0 1 -2 2 h-9 a2 2 0 0 1 -2 -2 v-13 a2 2 0 0 1 2 -2 Z" },
+      { m: "abs", d: "M88 184 h9 a2 2 0 0 1 2 2 v17 q0 6 -6 9 q-7 -3 -7 -9 v-17 a2 2 0 0 1 2 -2 Z" },
+      { m: "abs", d: "M85 124 Q72 130 69 152 Q70 180 80 204 L85 204 Z" },
+      { m: "quads", low: 1, d: "M97 218 Q80 210 69 222 Q61 250 64 288 Q68 312 80 320 Q92 316 96 294 Q100 256 97 218 Z" },
+      { m: "x", low: 1, d: "M99 226 Q95 260 94 296 Q96 304 99 306 Z" },
+      { m: "calves", low: 1, d: "M72 336 Q63 358 67 394 L80 398 Q87 364 85 338 Z" },
+      { m: "x", low: 1, d: "M86 340 Q90 366 86 396 L83 396 Q86 366 84 340 Z" },
+      { m: "", skin: 1, mid: 1, d: "M100 9 Q117 9 117 31 Q117 52 100 56 Q83 52 83 31 Q83 9 100 9 Z" },
+      { m: "", skin: 1, mid: 1, d: "M92 50 Q93 58 90 64 L110 64 Q107 58 108 50 Z" }
+    ],
+    back: [
+      { m: "", d: "M100 60 L89 60 Q72 67 60 73 Q45 78 41 94 Q38 112 44 128 L62 124 Q64 148 67 172 Q70 194 67 210 L100 216 Z" },
+      { m: "", d: "M44 90 Q35 122 38 160 Q32 190 28 220 Q28 236 34 240 Q41 238 43 226 Q52 196 57 174 Q62 150 63 126 Z" },
+      { m: "", skin: 1, d: "M30 220 Q23 236 27 251 Q33 258 38 248 Q41 236 39 224 Z" },
+      { m: "", low: 1, d: "M67 206 Q60 240 62 284 Q64 312 69 332 Q64 364 68 400 Q68 414 67 426 L89 428 Q88 412 87 400 Q91 360 89 334 Q97 302 99 262 L100 220 Z" },
+      { m: "traps", d: "M99 56 Q88 62 76 68 Q66 72 62 76 Q76 80 88 88 Q95 104 99 134 Z" },
+      { m: "rdelt", d: "M63 76 Q44 74 38 92 Q36 108 46 124 Q53 106 60 96 Q66 88 74 84 Z" },
+      { m: "upback", d: "M89 92 Q78 84 66 86 Q60 96 62 110 Q76 114 92 113 Z" },
+      { m: "lats", d: "M62 113 Q58 134 66 160 Q78 178 93 186 L95 150 Q94 130 91 115 Q76 118 62 113 Z" },
+      { m: "lowback", d: "M95 150 L99 150 L99 206 Q92 206 88 202 Q91 178 95 150 Z" },
+      { m: "triceps", d: "M48 125 Q40 141 41 160 Q45 170 53 166 Q59 147 59 128 Q55 122 48 125 Z" },
+      { m: "forearms", d: "M41 172 Q34 190 31 210 Q32 222 40 222 Q49 202 54 182 Q55 170 48 170 Z" },
+      { m: "glutes", low: 1, d: "M99 208 Q80 200 69 213 Q62 235 70 253 Q86 261 99 253 Z" },
+      { m: "hams", low: 1, d: "M97 261 Q80 255 70 265 Q64 293 72 321 Q84 327 94 319 Q99 289 97 261 Z" },
+      { m: "calves", low: 1, d: "M76 332 Q63 350 67 376 Q73 392 83 384 Q91 362 88 336 Z" },
+      { m: "", skin: 1, mid: 1, d: "M100 9 Q117 9 117 31 Q117 52 100 56 Q83 52 83 31 Q83 9 100 9 Z" },
+      { m: "", skin: 1, mid: 1, d: "M92 50 Q93 58 90 64 L110 64 Q107 58 108 50 Z" }
+    ]
+  };
+  // Hair, so the two figures read as the two people they are at a glance.
+  var HAIR = {
+    male: { front: "M84 28 Q83 9 100 8 Q117 9 116 28 Q110 17 100 17 Q90 17 84 28 Z",
+            back: "M84 30 Q83 9 100 8 Q117 9 116 30 Q117 44 112 50 Q100 54 88 50 Q83 44 84 30 Z" },
+    female: { front: "M82 36 Q80 8 100 7 Q120 8 118 36 Q120 54 117 68 Q109 64 108 46 Q110 22 100 20 Q90 22 92 46 Q91 64 83 68 Q80 54 82 36 Z",
+              back: "M83 30 Q82 8 100 7 Q118 8 117 30 Q118 46 110 60 Q100 64 90 60 Q82 46 83 30 Z" }
+  };
+  // The female figure is narrower through the shoulders and waist and wider
+  // at the hips: the same shapes, scaled about the centre line, head excepted.
+  // `level` maps a muscle id to "red", "yellow" or "green"; anything else is
+  // drawn untrained. Colours are the app's own, so both themes follow.
+  var BODY_COLORS = { body: "var(--surface)", edge: "var(--rule)", gap: "var(--surface)", none: "var(--surface-2)",
+    hair: "var(--rule)", red: "var(--miss)", yellow: "var(--warn-fill)", green: "var(--hit)" };
+  function bodySvg(view, sex, level) {
+    var colors = BODY_COLORS, fem = sex === "female";
+    function scaled(k) { return k === 1 ? "" : ' transform="translate(100 0) scale(' + k + ' 1) translate(-100 0)"'; }
+    function paint(sh) {
+      var body = sh.m === "";
+      var fill = sh.skin ? colors.body : body || sh.m === "x" ? colors.none : colors[level[sh.m] || "none"];
+      var attrs = ' fill="' + fill + '" stroke="' + (body ? colors.edge : colors.gap) + '" stroke-width="' +
+        (body ? 1.4 : 1.8) + '" stroke-linejoin="round"' + (sh.m && sh.m !== "x" ? ' data-musc-on="' + sh.m + '"' : '');
+      return '<path d="' + sh.d + '"' + attrs + '/>' +
+        (sh.mid ? '' : '<path d="' + sh.d + '" transform="matrix(-1 0 0 1 200 0)"' + attrs + '/>');
+    }
+    var shapes = BODY[view].filter(function (sh) { return !sh.sex || sh.sex === sex; });
+    function part(test, k) { return '<g' + scaled(k) + '>' + shapes.filter(test).map(paint).join("") + '</g>'; }
+    function upper(sh) { return !sh.low && !sh.mid; }
+    function lower(sh) { return !!sh.low; }
+    function head(sh) { return !!sh.mid; }
+    function under(t) { return function (sh) { return t(sh) && sh.m === ""; }; }
+    function over(t) { return function (sh) { return t(sh) && sh.m !== ""; }; }
+    var up = fem ? 0.88 : 1, low = fem ? 1.07 : 1;
+    return '<svg class="body-fig" viewBox="0 0 200 432" aria-hidden="true" focusable="false">' +
+      part(under(lower), low) + part(under(upper), up) + part(head, 1) +
+      part(over(lower), low) + part(over(upper), up) +
+      '<path d="' + HAIR[sex][view] + '" fill="' + colors.hair + '"/></svg>';
+  }
+
+  // How hard each muscle was worked in a day, in working sets: warm-ups do
+  // not count, a muscle that helps counts half (fractional sets), and a set
+  // taken to or past failure counts one and a half, because going there is
+  // what the studies tie to a slower recovery (Pareja-Blanco et al. 2017,
+  // 2020). A movement nobody has placed counts nowhere, and is named.
+  var HARD_TECH = { failure: 1, drop: 1, restpause: 1, myo: 1, forced: 1, negative: 1, amrap: 1 };
+  function dayMuscles(d) {
+    var sets = {}, unknown = [];
+    (d.lifts || []).forEach(function (l, i) {
+      var n = 0;
+      (l.sets || []).forEach(function (st) {
+        if (st.tech === "warmup" || !(Number(st.r) > 0)) return;
+        n += HARD_TECH[st.tech] ? 1.5 : 1;
+      });
+      if (!n) return;
+      var w = worksOf(l.movement);
+      if (w.how === "unknown") { unknown.push(i); return; }
+      w.p.forEach(function (id) { sets[id] = (sets[id] || 0) + n; });
+      w.s.forEach(function (id) { sets[id] = (sets[id] || 0) + n / 2; });
+    });
+    return { sets: sets, unknown: unknown };
+  }
+  // The colour for a muscle's sets, and roughly how long until it is ready.
+  // Red from 6, yellow from 3, green under 3: an estimate, said as one.
+  function recLevel(n) { return n >= 6 ? "red" : n >= 3 ? "yellow" : n > 0 ? "green" : null; }
+  var REC_SAY = { red: "about 3 days", yellow: "about 2 days", green: "about 1 day" };
+  // Which figure: the profile's, or the one picked here when the profile does
+  // not say (Other with no equation chosen, or nothing filled in yet).
+  function bodyFig() {
+    var pr = store.profile || {}, sx = pr.sex === "o" ? pr.calcSex : pr.sex;
+    return sx === "m" ? "male" : sx === "f" ? "female" : store.bodyFig || null;
+  }
+
   // ---------- state ----------
   var DEFAULT_GOAL = { cal: { dir: "-", v: 2000 }, pro: { dir: "+", v: 150 } };
 
@@ -4486,6 +4782,10 @@
   // opens in the dock instead (restOpen, below), because it is watched while
   // the page is scrolled to the set being logged.
   var gymWay = null;        // "gym", "move" or null
+  // What a movement works, being said (b88): the movement's name, and the
+  // choices so far as {id: "p" | "s"} — main or helps. Nothing is written
+  // until Save, so backing out leaves it as it was.
+  var worksFor = null, worksDraft = null;
   var splitAdding = false;
   // Coach inline editing, same idea: which day is being renamed, which is
   // taking a custom movement, and whether a new day is being named.
@@ -4995,6 +5295,12 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-05.88", t: "See what you worked", items: [
+      "Each movement on the Gym tab now says what it works, like \u201cWorks Upper back \u00b7 Lats \u00b7 Biceps \u00bd\u201d. Tap Change if it\u2019s wrong; it\u2019s kept for that name from then on.",
+      "A movement the app can\u2019t place asks once: tap the main muscle, tap again for one that helps.",
+      "Lock in the day and Day complete shows your body, front and back: red for the muscles you worked most, yellow for some, green for light, from your working sets. Under it, each muscle, its sets, and roughly how long until it\u2019s ready.",
+      "It\u2019s a guide from your sets, not a measurement. Warm-ups don\u2019t count, a muscle that only helps counts half, and a set taken to failure counts one and a half.",
+      "The body follows your profile. If your profile doesn\u2019t say, it asks once which to show." ] },
     { b: "2026-11-04.87", t: "The Gym tab folds like Macros", items: [
       "Three boxes at the bottom of the Gym tab: Choose gym, Add movement and Rest timer. Each opens when you tap it and folds when you tap it again.",
       "The top is Start workout, then your Planned week split, then Today’s split.",
@@ -6837,6 +7143,11 @@
                       .map(function (s) { return s.id; }));
     delete raw.sec;
     if (next.length) raw.secs = next; else delete raw.secs;
+  }
+  // "Lats", "Lats and Biceps", "Upper back, Lats and Biceps ½"
+  function listWords(names) {
+    return names.length < 2 ? (names[0] || "")
+      : names.slice(0, -1).join(", ") + " and " + names[names.length - 1];
   }
   // "Breakfast", "Breakfast and Snacks", "Breakfast, Lunch and Snacks"
   function secList(ids) {
@@ -10091,6 +10402,60 @@
     // Where today is: the targets below come from the last time at this gym.
     var here = gyms().length ? dayGym(key) : null;
     var hereInfo = here ? gymInfo(here) : null;
+    // With the day locked in: the body, coloured by how hard each muscle was
+    // worked, and the same in words under it — colour alone says nothing to
+    // a colour-blind eye, and the list gives the numbers (b88).
+    function recoveryHtml(d) {
+      var r = dayMuscles(d), ids = Object.keys(r.sets).sort(function (a, b) { return r.sets[b] - r.sets[a]; });
+      if (!ids.length && !r.unknown.length) return "";
+      var level = {};
+      ids.forEach(function (id) { level[id] = recLevel(r.sets[id]); });
+      var fig = bodyFig();
+      var figs = !ids.length ? ''
+        : fig
+          ? '<div class="rec-bodies">' +
+              '<figure>' + bodySvg("front", fig, level) + '<figcaption>Front</figcaption></figure>' +
+              '<figure>' + bodySvg("back", fig, level) + '<figcaption>Back</figcaption></figure>' +
+            '</div>'
+          : '<div class="rec-pick"><p>Which body should this show? Your profile does not say, so pick one. It is kept.</p>' +
+              '<div class="sheet-actions"><button class="btn ghost" data-bodyfig="male">Male</button>' +
+              '<button class="btn ghost" data-bodyfig="female">Female</button></div></div>';
+      function setsSay(n) { var v = Math.round(n * 2) / 2; return v + (v === 1 ? ' set' : ' sets'); }
+      var unknown = r.unknown.map(function (i) { return d.lifts[i].movement; });
+      return '<div class="rec" id="recovery">' +
+        '<div class="rec-head"><span class="eyebrow">Recovery</span><span class="rec-sub">from today’s working sets</span></div>' +
+        figs +
+        (ids.length
+          ? '<div class="rec-key"><span><i class="lv-red"></i>Most · 6+ sets</span><span><i class="lv-yellow"></i>Some · 3–5</span>' +
+              '<span><i class="lv-green"></i>Light · under 3</span><span><i class="lv-none"></i>Not trained</span></div>' +
+            '<div class="rec-list">' + ids.map(function (id) {
+              var lv = level[id];
+              return '<p data-rec="' + id + '"><b class="lv-' + lv + '">' + esc(muscleName(id)) + '</b>' +
+                '<span>' + setsSay(r.sets[id]) + '</span><em>' + REC_SAY[lv] + '</em></p>';
+            }).join("") + '</div>'
+          : '<p class="rec-none">Nothing on the body map yet.</p>') +
+        (unknown.length
+          ? '<button class="works-ask rec-ask" data-works="' + r.unknown[0] + '">' +
+              (unknown.length === 1 ? esc(unknown[0]) + ' is not counted yet. Tap to say what it works'
+                : unknown.length + ' movements are not counted yet. Tap to say what ' + esc(unknown[0]) + ' works') + '</button>'
+          : '') +
+        '<p class="rec-note">A guide from your sets, not a measurement. A set taken to failure counts one and a half, ' +
+          'a muscle that only helps counts half. How fast you recover is your own.</p>' +
+      '</div>';
+    }
+
+    // Under a movement's name: what it works, and a way to change it. A guess
+    // says it is one; a name nothing places asks, once (b88).
+    function worksLine(l, i) {
+      var w = worksOf(l.movement);
+      if (w.how === "unknown") {
+        return '<button class="works-ask" data-works="' + i + '">What does this work? Tap to say</button>';
+      }
+      return '<p class="works"><span class="wk-t">' +
+        (w.p.length || w.s.length ? 'Works ' + worksText(w) : 'Not on the body map') +
+        (w.how === "guess" ? ' <span class="wk-g">a guess from “' + esc(w.word) + '”</span>' : '') +
+        '</span><button class="wk-ed" data-works="' + i + '" aria-label="Change what ' + esc(l.movement) + ' works">Change</button></p>';
+    }
     var cardList = d.lifts.map(function (l, i) {
       var lc = cat(l.cat);
       var inGroup = !!l.ss;
@@ -10166,7 +10531,7 @@
                 ? '<span class="lap" title="Time on this movement">' + fmtDur(l.lapMs) + '</span>'
                 : '<span class="lap is-untimed">not timed</span>') +
               grip +
-            '</div>' + zone +
+            '</div>' + zone + worksLine(l, i) +
             (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
                        '</em> — a day you no longer train.</p>' : '') +
             (l.sets.length
@@ -10218,7 +10583,7 @@
             : '') +
           '<div class="lift-head">' + (editing ? '<h3>' + esc(l.movement) + '</h3>' : nameHtml) +
             '<span class="cattag"' + (lc.gone ? ' title="' + esc(lc.name) + '"' : '') + '>' +
-              lc.tag + '</span>' + grip + '</div>' + zone +
+              lc.tag + '</span>' + grip + '</div>' + zone + worksLine(l, i) +
           (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
                      '</em> — a day you no longer train.</p>' : '') +
           '<p class="last">' + lastLine + '</p>' +
@@ -10399,6 +10764,7 @@
             (d.workoutMs
               ? '<div class="dd-time">Took ' + fmtDur(d.workoutMs) + '</div>'
               : '') +
+            recoveryHtml(d) +
           '</section>'
         : '') +
 
@@ -10429,7 +10795,32 @@
       // something: yoga on a special day has a time and no sets.
       (!locked && (d.lifts.length || d.workoutStart)
         ? '<button class="btn ghost" id="lockDay" style="width:100%">Lock in the day</button>'
-        : '');
+        : '') +
+      worksSheetHtml();
+
+    // What a movement works, said by tapping muscles: once for the main one,
+    // again for one that helps (counts half), again to take it off. Drawn
+    // inside #view like the pantry's new-food sheet, so a redraw keeps it.
+    function worksSheetHtml() {
+      if (!worksFor || !worksDraft) return "";
+      return '<div class="sheet works-sheet" id="worksSheet"><div class="sheet-inner">' +
+        '<div class="sh-head"><h2>What does ' + esc(worksFor) + ' work?</h2>' +
+          '<button id="worksClose" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+        '<p class="est-note">Tap a muscle once for the main one it works, again for one that helps. ' +
+          'It is kept by name, so every ' + esc(worksFor) + ' you log counts from now on.</p>' +
+        '<div class="works-grid" role="group" aria-label="Muscles ' + esc(worksFor) + ' works">' +
+          MUSCLES.map(function (m) {
+            var st = worksDraft[m.id] || "";
+            return '<button type="button" data-musc="' + m.id + '" data-state="' + st + '" aria-pressed="' + (st ? 'true' : 'false') + '"' +
+              ' aria-label="' + esc(m.name) + (st === "p" ? ', main' : st === "s" ? ', helps' : '') + '">' +
+              esc(m.name) + '</button>';
+          }).join("") +
+        '</div>' +
+        '<p class="works-key">Filled is the main muscle. Light is one that helps, and counts half.</p>' +
+        '<div class="sheet-actions"><button class="btn" id="worksSave">Save</button>' +
+          '<button class="btn ghost" id="worksCancel">Not now</button></div>' +
+      '</div></div>';
+    }
 
     // The bottom bar: Macros' three ways in, carried over (b87). Choose gym
     // opens Training at's box, and shows a dot when the day needs a gym;
@@ -10487,6 +10878,65 @@
       var ceil = (bar ? bar.getBoundingClientRect().bottom : 0) + 8;
       var by = r.bottom > floor ? Math.min(r.bottom - floor, r.top - ceil) : r.top < ceil ? r.top - ceil : 0;
       if (by) window.scrollBy(0, by);
+    }
+    // What a movement works: open, tap, save. Taps patch the button in place;
+    // nothing is written until Save, which says what it did and can be undone.
+    view.querySelectorAll("[data-works]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var lf = d.lifts[Number(b.dataset.works)];
+        if (!lf) return;
+        var w = worksOf(lf.movement);
+        worksFor = lf.movement; worksDraft = {};
+        w.p.forEach(function (id) { worksDraft[id] = "p"; });
+        w.s.forEach(function (id) { if (!worksDraft[id]) worksDraft[id] = "s"; });
+        render();
+      });
+    });
+    // The figure, when the profile does not say which: picked once, kept.
+    view.querySelectorAll("[data-bodyfig]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        store.bodyFig = b.dataset.bodyfig;
+        save(); render();
+        notify("The body map shows the " + store.bodyFig + " figure");
+      });
+    });
+    var wSheet = document.getElementById("worksSheet");
+    if (wSheet) {
+      var shutWorks = function () { worksFor = null; worksDraft = null; render(); };
+      wSheet.addEventListener("click", function (e) { if (e.target === wSheet) shutWorks(); });
+      document.getElementById("worksClose").addEventListener("click", shutWorks);
+      document.getElementById("worksCancel").addEventListener("click", shutWorks);
+      wSheet.querySelectorAll("[data-musc]").forEach(function (b) {
+        b.addEventListener("click", function () {
+          var id = b.dataset.musc, st = worksDraft[id] || "";
+          st = st === "" ? "p" : st === "p" ? "s" : "";
+          if (st) worksDraft[id] = st; else delete worksDraft[id];
+          b.dataset.state = st;
+          b.setAttribute("aria-pressed", st ? "true" : "false");
+          var m = MUSCLES.filter(function (x) { return x.id === id; })[0];
+          b.setAttribute("aria-label", m.name + (st === "p" ? ", main" : st === "s" ? ", helps" : ""));
+        });
+      });
+      document.getElementById("worksSave").addEventListener("click", function () {
+        var name = worksFor, key = moveKey(name);
+        var now = { p: [], s: [], n: name };
+        MUSCLES.forEach(function (m) {
+          if (worksDraft[m.id] === "p") now.p.push(m.id);
+          else if (worksDraft[m.id] === "s") now.s.push(m.id);
+        });
+        store.muscles = store.muscles || {};
+        var was = store.muscles[key];
+        store.muscles[key] = now;
+        worksFor = null; worksDraft = null;
+        save(); render();
+        var said = now.p.length || now.s.length
+          ? name + " works " + listWords(now.p.map(muscleName).concat(now.s.map(function (id) { return muscleName(id) + " ½"; })))
+          : name + " is not on the body map";
+        offerUndo(said, function () {
+          if (was) store.muscles[key] = was; else delete store.muscles[key];
+          save(); render();
+        });
+      });
     }
     view.querySelectorAll("[data-gymclose]").forEach(function (b) {
       b.addEventListener("click", function () { gymWay = null; gymEdit = false; render(); });
@@ -14757,6 +15207,15 @@
     // The pantry's sections come with it, the way the routine does: a restored
     // phone files food the way the old one did.
     if (Array.isArray(incoming.panSecs)) store.panSecs = incoming.panSecs;
+    if (incoming.bodyFig === "male" || incoming.bodyFig === "female") store.bodyFig = store.bodyFig || incoming.bodyFig;
+    // What movements work, by name: the backup's answers join this phone's,
+    // and a name answered on both keeps this phone's (b88).
+    if (incoming.muscles && typeof incoming.muscles === "object") {
+      store.muscles = store.muscles || {};
+      Object.keys(incoming.muscles).forEach(function (k) {
+        if (!store.muscles[k]) store.muscles[k] = incoming.muscles[k];
+      });
+    }
     if (incoming.retired) {
       Object.keys(incoming.retired).forEach(function (k) {
         if (!store.retired[k]) store.retired[k] = incoming.retired[k];

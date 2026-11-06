@@ -41,6 +41,18 @@ bottom the whole way, nothing off the side, and the last thing on the page
 ending above the dock. On the owner's 402x874 and a 320x568. **A new field or
 a new box goes into its lists.**
 
+**`muscles` covers what a movement works and the recovery body map (b88).**
+The built-in list, the guesses (narrow rules before broad ones, and a name
+with nothing to read left as a question), the question sheet's three-state
+taps, Save that says what it did and undoes, Not now / the X / the dim page
+keeping nothing, Change starting from the list and winning from then on, by
+name and on every day. Then a locked day: the body front and back, the sets
+by hand (warm-up out, helping muscle half, a set to failure one and a half),
+the colours on the list and on the figure, an unplaced movement named and
+then counted once answered, the profile's figure, and the one-time choice
+when the profile does not say. `darkcheck` opens the sheet and a locked day
+for contrast, and `keys` scrolls a locked day.
+
 When you add a suite, end it the way the gates do. A suite that reports FAIL
 and exits 0 is a report wearing a test's clothes, and rule 1 quietly stops
 meaning anything.

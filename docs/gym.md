@@ -533,3 +533,47 @@ and the suggestions line is gone from the card and the sheet. `darkcheck`'s
 fixture paints matched, beat, short and next — and fails if one is missing —
 and measures the pop-up with its line; `mobile` fits a six-set history with a
 tag on both sides of a row on every phone size.
+
+**What a movement works (b88).** For the recovery body map, every movement
+needs its muscles: the main ones and the ones that help. Movements are the
+owner's own names, so there are three ways to know, in this order, and
+`worksOf()` says which it used: what he has said (`store.muscles`, keyed by
+`moveKey()` — case, hyphens and spacing do not make a different movement),
+the built-in `MOVE_WORKS` (every name the Coach library and the starter lists
+suggest), or a guess from the words in the name (`MOVE_GUESS`, first match
+wins, so the narrow rules come first: a dumbbell kickback is triceps before
+"kickback" is glutes, a leg curl hamstrings before "curl" is biceps, a rowing
+machine cardio before "row" is back). A guess says so on the card — *a guess
+from "row"* — because a guess passed off as fact is how a wrong number gets
+trusted. A name none of the three place asks, once: *What does this work? Tap
+to say*. The sheet's sixteen muscles cycle main → helps → off; nothing is
+written until Save, which says what it saved and can be undone (rules 3 and
+6). The answer is kept by name, so it holds for every day the movement was
+or will be logged, and a restore adds the backup's answers without
+overwriting this phone's. *Change* on any card starts from what the app
+believes and wins over the list from then on.
+
+**The recovery body map (b88).** Asked for by the owner: after a workout, the
+body coloured by what needs recovery. Locked in, *Day complete* shows the
+figure front and back, and under it each muscle with its sets and roughly how
+long until it is ready — colour alone says nothing to a colour-blind eye, and
+the list gives the numbers. Counting (`dayMuscles()`) is in working sets:
+warm-ups are out; a helping muscle counts half, the fractional counting that
+matched results best across 67 studies (Pelland et al. 2024, a preprint); a
+set to failure, drop, rest-pause, myo-reps, forced, negatives or AMRAP counts
+one and a half, because going to or past failure is what the recovery studies
+tie to a slower recovery (Pareja-Blanco et al. 2017, 2020). Red from 6 sets
+(about 3 days), yellow from 3 (about 2), green under 3 (about 1), untrained
+grey. No study gives a "this many sets, this many days" chart, so these are a
+reasoned estimate and the card says so: *a guide from your sets, not a
+measurement*. A movement nobody has placed is named on the card rather than
+silently left out, and counts once answered.
+
+The figures are drawn for this app (`BODY`, `HAIR`, `bodySvg()`): a
+200 x 432 box, each shape the left half and mirrored, muscle shapes carrying
+their muscle id. The female figure is the same shapes narrowed through the
+shoulders and waist and widened at the hips, with its own chest and hair.
+The profile picks the figure (`bodyFig()`: male, female, or Other's chosen
+equation); with nothing to go on, the card asks once and keeps the answer in
+`store.bodyFig`. Colours are the app's own tokens, so both themes follow.
+`muscles` is the suite.
