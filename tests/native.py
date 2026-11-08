@@ -23,6 +23,9 @@ It checks that:
 - the web build never touches the bridge
 - a shell without the newer plugins is never called for them
 - the rest alert, haptics and quick actions (b85), with stand-ins for the plugins
+- the privacy manifest (shell 1.3): Xcode bundles it, it gives Apple's reasons
+  and App Privacy's answers, and every "required reason" API in the shell's
+  Swift, and the plugins' where node_modules is installed, is declared
 
 What it cannot show: that UserDefaults survives a phone restart. That is
 Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
@@ -471,6 +474,65 @@ with sync_playwright() as pw:
     swift = io.open(os.path.join(ROOT, "ios", "App", "App", "SceneDelegate.swift"), encoding="utf-8").read()
     check("the shell leaves the choice where the page reads it",
           '"%s"' % QUICK in swift and 'eventName: "mntlquickaction"' in swift)
+
+    # the privacy manifest (shell 1.3). App Store Connect refuses an upload
+    # whose code uses one of Apple's "required reason" APIs without a reason
+    # in PrivacyInfo.xcprivacy (ITMS-91053).
+    APP = os.path.join(ROOT, "ios", "App", "App")
+    man_path = os.path.join(APP, "PrivacyInfo.xcprivacy")
+    man = plistlib.load(open(man_path, "rb")) if os.path.exists(man_path) else {}
+    pbx = io.open(os.path.join(ROOT, "ios", "App", "App.xcodeproj", "project.pbxproj"), encoding="utf-8").read()
+    res_phase = re.search(r"/\* Resources \*/ = \{\s*isa = PBXResourcesBuildPhase;.*?files = \((.*?)\);", pbx, re.S)
+    check("the shell has a privacy manifest that Xcode bundles", bool(man) and res_phase is not None
+          and "PrivacyInfo.xcprivacy in Resources" in res_phase.group(1)
+          and "path = PrivacyInfo.xcprivacy;" in pbx, man_path)
+    declared = {t.get("NSPrivacyAccessedAPIType", "").replace("NSPrivacyAccessedAPICategory", ""):
+                t.get("NSPrivacyAccessedAPITypeReasons", []) for t in man.get("NSPrivacyAccessedAPITypes", [])}
+    # CA92.1: settings read and written by the app itself (Preferences, the
+    # updater, SceneDelegate). C617.1: dates of files in the app's own
+    # container (the filesystem library, the updater's bundles). E174.1: room
+    # to write files (the updater checks free space before a download).
+    check("it gives the reasons: its own settings, its own files' dates, room to write",
+          declared == {"UserDefaults": ["CA92.1"], "FileTimestamp": ["C617.1"], "DiskSpace": ["E174.1"]},
+          str(declared))
+    col = man.get("NSPrivacyCollectedDataTypes", [])
+    check("it declares what App Privacy says: Ask an agent's words, not linked, no tracking",
+          man.get("NSPrivacyTracking") is False and man.get("NSPrivacyTrackingDomains") == []
+          and len(col) == 1 and col[0].get("NSPrivacyCollectedDataType") == "NSPrivacyCollectedDataTypeOtherUserContent"
+          and col[0].get("NSPrivacyCollectedDataTypeLinked") is False
+          and col[0].get("NSPrivacyCollectedDataTypeTracking") is False
+          and col[0].get("NSPrivacyCollectedDataTypePurposes") == ["NSPrivacyCollectedDataTypePurposeAppFunctionality"],
+          str(col))
+    # Every category the shell's and the plugins' own Swift uses must be
+    # declared. The plugins are read from node_modules, which CI's verify job
+    # does not install, so there only the shell's own code is read. The
+    # filesystem plugin's library (ion-ios-filesystem) comes from Swift
+    # Package Manager and is never on disk here: it reads file dates, which is
+    # why FileTimestamp is declared above, and its plugin's own code says so.
+    REASONED = {
+        "UserDefaults": r"\b(NS)?UserDefaults\b",
+        "FileTimestamp": r"creationDate|modificationDate|ModificationDate|getattrlist|\bf?l?stat\(",
+        "SystemBootTime": r"systemUptime|mach_absolute_time|KERN_BOOTTIME",
+        "DiskSpace": r"volumeAvailableCapacity|volumeTotalCapacity|systemFreeSize|\.systemSize\b|statv?fs\(",
+        "ActiveKeyboards": r"activeInputModes",
+    }
+    deps = json.load(io.open(os.path.join(ROOT, "package.json"), encoding="utf-8"))["dependencies"]
+    roots = [APP] + [os.path.join(ROOT, "node_modules", n, "ios") for n in deps
+                     if os.path.isdir(os.path.join(ROOT, "node_modules", n, "ios"))]
+    used = {}
+    for r0 in roots:
+        for dp, _, fs in os.walk(r0):
+            if os.sep + "Tests" in dp or os.sep + "public" in dp: continue
+            for f in fs:
+                if not f.endswith((".swift", ".m", ".h")): continue
+                src = io.open(os.path.join(dp, f), encoding="utf-8", errors="replace").read()
+                for cat, rx in REASONED.items():
+                    if re.search(rx, src): used.setdefault(cat, set()).add(os.path.relpath(os.path.join(dp, f), ROOT))
+    missing = sorted(c for c in used if c not in declared)
+    check("every reasoned API the shell%s uses is declared" % (" and its plugins" if len(roots) > 1 else ""),
+          not missing and "UserDefaults" in used,
+          ("missing %s: %s" % (missing, sorted(used[missing[0]])[:2])) if missing
+          else "%d plugin folders read; found %s" % (len(roots) - 1, sorted(used)))
 
     def active_tab(p): return p.evaluate("() => document.querySelector('.tabs button[aria-selected=\"true\"]').dataset.tab")
     native["prefs"] = {QUICK: "log-food"}

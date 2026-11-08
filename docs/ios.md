@@ -61,6 +61,28 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
   the library itself: the plugins link no Photos framework. Saving a photo
   *into* the library would need `NSPhotoLibraryAddUsageDescription`, and a
   store build.
+- **The privacy manifest** (`ios/App/App/PrivacyInfo.xcprivacy`, from shell
+  1.3) gives Apple a reason for each "required reason" API the app's code
+  uses. App Store Connect refuses an upload that uses one without a reason
+  (ITMS-91053). Shells 1.0 to 1.2 went up without one. Three are used, none
+  to identify anyone:
+  - **UserDefaults, CA92.1** (the app's own settings): the log through
+    `@capacitor/preferences`, the quick action in `SceneDelegate.swift`, the
+    updater's own state.
+  - **File timestamps, C617.1** (files in the app's own container): the
+    filesystem library, and the updater tidying its downloaded builds.
+  - **Disk space, E174.1** (room to write files): the updater checks free
+    space before it downloads a build.
+
+  It also declares what the App Privacy answers in App Store Connect say: the
+  words typed into *Ask an agent* (Other User Content), for app
+  functionality, not linked to the person, no tracking. If those answers
+  change, this file changes with them, in a store build. `tests/native.py`
+  checks that Xcode bundles the file, that it says the above, and that every
+  such API in the shell's and the plugins' own Swift is declared. It reads
+  the plugins from `node_modules`, so that last check covers them only where
+  `npm install` has run, not in CI's verify job. Adding a plugin means
+  running `native` locally first.
 - **The launch screen** is a plain background in the phone's light or dark,
   not Capacitor's logo.
 - **`capacitor://localhost`** is the app's address on iPhone (Capacitor's
@@ -191,6 +213,11 @@ the shell has changed while the version has not. So after changing the shell:
    ```bash
    python tools/shell-version.py --record
    ```
+   It refuses a version already recorded with a different shell. If that
+   version has never been built for TestFlight, delete its line in
+   `ios/shell-versions.json` and record again (shell 1.3 was recorded twice
+   this way, before and after its privacy manifest). Once a version has been
+   built, raise it instead.
 3. Commit both, merge, and run *Build for TestFlight*.
 
 ### Store builds from GitHub: Build for TestFlight

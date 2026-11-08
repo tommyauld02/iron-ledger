@@ -93,7 +93,9 @@ the pantry first, Claude only when the relay is out of reach · `native` the
 iPhone app's log in native storage, against a stand-in Capacitor bridge whose
 storage outlives the browser: a restart with the WebView wiped, a failed
 write and its retry, a log that cannot be read, taps before it is read, no
-service worker in the app · `live` the iPhone app's live updates against a
+service worker in the app, and the privacy manifest: bundled by Xcode, its
+reasons, and every reasoned API in the shell's and installed plugins' Swift
+declared · `live` the iPhone app's live updates against a
 stand-in updater and manifest: what is taken and when, the shell-version and
 downgrade guards, a build that failed to start, an updater that never
 answers, the manifest Pages publishes, and that the shell's version was raised
