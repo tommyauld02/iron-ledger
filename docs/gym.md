@@ -197,6 +197,14 @@ keep the sets, both undo, and both take a typed name back off the list.
 `logSet()` is the one way a set is added, which keeps the first-set clock
 start in one place. The suites log through it with a `log_set()` helper.
 
+**The set sheet has no steppers (b89).** b66 put −5 / +5 under the weight and
+−1 / +1 under the reps. The owner asked on 2026-11-07 for them to go, to clean
+the sheet up: the numbers are typed, and the sheet already opens on last
+time's next set, so there is usually little to type. The five-pounds-a-rep rule
+(*Five pounds is worth one rep*, below) is untouched — it never depended on the
+buttons. `sweep` checks the sheet has no such button, so they cannot drift back
+on unnoticed.
+
 **Supersets are a tag, not a nesting.** `l.ss` marks the members; every loop
 over `d.lifts` — totals, *Last*, laps, the calendar — keeps working untouched,
 and only drawing, timing and the drag know about groups. `tidySupersets()` is

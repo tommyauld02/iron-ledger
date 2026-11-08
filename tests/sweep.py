@@ -2071,6 +2071,12 @@ with sync_playwright() as pw:
           not q.evaluate(ONFIELD))
     check("lastsets: the pop-up has no suggestions line either", q.locator("#seWays").count()==0
           and "+1 rep" not in q.eval_on_selector("#setEditSheet","e=>e.textContent"))
+    # Taken off in b89, asked for by the owner to clean the pop-up up. Checked
+    # gone so they cannot drift back on unnoticed.
+    STEPS="()=>[...document.querySelectorAll('#setEditSheet button')].map(b=>b.textContent.trim()).filter(t=>/^[−+-][15]$/.test(t))"
+    check("lastsets: the pop-up has no −5 / +5 or −1 / +1 buttons",
+          q.locator("#setEditSheet [data-step], #setEditSheet .stp").count()==0 and q.evaluate(STEPS)==[],
+          str(q.evaluate(STEPS)))
     q.click("#seSave"); q.wait_for_timeout(300)
     check("lastsets: Add set on a filled pop-up logs the warm-up as a warm-up", q.evaluate(LSSETS)[0]==["60x15:warmup"], str(q.evaluate(LSSETS)))
     q.click('[data-addset="0"]'); q.wait_for_timeout(250)
@@ -3645,9 +3651,9 @@ with sync_playwright() as pw:
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
           q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Progress: photos, notes and weight"
-          and titles[1]=="See what you worked"
-          and titles[2]=="The Gym tab folds like Macros"
-          and titles[3]=="The Pantry folds like Macros", str(titles))
+          and titles[1]=="A cleaner set pop-up"
+          and titles[2]=="See what you worked"
+          and titles[3]=="The Gym tab folds like Macros", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

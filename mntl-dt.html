@@ -3843,13 +3843,12 @@
   .daydone { border-radius: 22px; }
   .ss-group, .superset { border-radius: 20px; }
 
-  /* the set sheet: steppers and what goes on the bar */
+  /* the set sheet: big numbers and what goes on the bar. No −5/+5 or −1/+1
+     under them since b89, asked for by the owner to clean the sheet up. The
+     button row was what spaced Reps from the weight, so the pair keeps the
+     sheet's own 12px between its two fields. */
+  .se-pair { display: flex; flex-direction: column; gap: 12px; }
   .se-pair input#seW, .se-pair input#seR { --field-size: 28px; height: 60px; font-weight: 700; }
-  .stp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; }
-  .stp {
-    min-height: 44px; border-radius: 12px; border: 1px solid var(--rule); background: var(--surface-2);
-    font-family: var(--font-num); font-size: 15px; font-weight: 600; color: var(--accent);
-  }
   .se-bar {
     display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 14px;
     background: var(--surface-2); border: 1px solid var(--rule);
@@ -4367,11 +4366,9 @@
     </div>
     <div class="pair se-pair">
       <div class="field"><label for="seW">Weight · lb</label>
-        <input id="seW" inputmode="decimal">
-        <div class="stp-row"><button type="button" class="stp" data-step="seW" data-by="-5" aria-label="5 lb less">−5</button><button type="button" class="stp" data-step="seW" data-by="5" aria-label="5 lb more">+5</button></div></div>
+        <input id="seW" inputmode="decimal"></div>
       <div class="field"><label for="seR">Reps</label>
-        <input id="seR" inputmode="numeric">
-        <div class="stp-row"><button type="button" class="stp" data-step="seR" data-by="-1" aria-label="One rep less">−1</button><button type="button" class="stp" data-step="seR" data-by="1" aria-label="One rep more">+1</button></div></div>
+        <input id="seR" inputmode="numeric"></div>
     </div>
     <div id="seBar" class="se-bar" hidden></div>
     <div class="field"><label for="seT">Technique</label>
@@ -5409,6 +5406,8 @@
       "On the Log calendar, a camera marks a day with a progress photo, and a small ring a check-in without one. Tap the day, then See check-in.",
       "Photos stay on this phone. They aren’t in your backup and are never sent anywhere. In the iPhone app they come with its next update; notes and weight work now.",
       "The Privacy Policy now says how progress photos are kept: on your phone, and nowhere else." ] },
+    { b: "2026-11-07.89", t: "A cleaner set pop-up", items: [
+      "The −5 / +5 and −1 / +1 buttons under weight and reps are gone. Type the numbers in. The pop-up still opens on last time’s set." ] },
     { b: "2026-11-05.88", t: "See what you worked", items: [
       "Each movement on the Gym tab now says what it works, like \u201cWorks Upper back \u00b7 Lats \u00b7 Biceps \u00bd\u201d. Tap Change if it\u2019s wrong; it\u2019s kept for that name from then on.",
       "A movement the app can\u2019t place asks once: tap the main muscle, tap again for one that helps.",
@@ -15573,21 +15572,6 @@
   });
   document.getElementById("seR").addEventListener("keydown", function (e) {
     if (e.key === "Enter") document.getElementById("seSave").click();
-  });
-  // Five pounds and one rep a press (the owner's five-pounds-a-rep rule). It
-  // never goes below nothing, and from an empty weight — bodyweight — +5 is 5
-  // and −5 leaves it empty.
-  setEditSheet.querySelectorAll("[data-step]").forEach(function (b) {
-    b.addEventListener("click", function () {
-      var el = document.getElementById(b.getAttribute("data-step")), by = Number(b.getAttribute("data-by"));
-      var v = el.value.trim() === "" ? null : Number(el.value);
-      if (v === null || isNaN(v)) v = by > 0 ? 0 : null;
-      if (v !== null) {
-        v = Math.max(0, Math.round((v + by) * 100) / 100);
-        el.value = el.id === "seW" && v === 0 && by < 0 && el.value.trim() === "" ? "" : String(v);
-      }
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-    });
   });
   document.getElementById("seW").addEventListener("input", drawSeBar);
 
