@@ -31,7 +31,7 @@ without a migration and Tommy's say-so.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 30 suites, ~2,150 checks, 23
+**1. Nothing ships without `./verify.sh` passing.** 31 suites, ~2,250 checks, 24
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -86,7 +86,7 @@ privacy.html, support.html, terms.html   the public pages App Store Connect
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              29 Playwright suites, and relay.py, which runs the relay in Node
+tests/              30 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -158,6 +158,10 @@ Everything else:
 - **Targets** — compare with last time, special day, notes, the set to beat,
   five pounds a rep, gyms, last time set by set → `docs/gym.md`
 - **Cardio tab and cardio goals** → `docs/cardio.md`
+- **Progress tab** — check-ins (photo, note, weight), photos kept beside the
+  log and never in it or a backup, the photo bin, Compare, the Log's camera
+  and ring, photos in the iPhone app waiting on the Filesystem plugin →
+  `docs/progress.md`
 - **Testing in detail** — what each suite covers and the lessons behind them →
   `docs/testing.md`
 - **Sharing a routine** — the Coach tab, `ILROUTINE1:` codes, the day-id trap,
@@ -214,7 +218,7 @@ is fixed, and it is worth keeping straight:
 - **Gates** (exit non-zero on a failed check *or* a page error): `sweep`,
   `days`, `week`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
   `handoff`, `finder`, `relay`, `label`, `hittest`, `share`, `native`, `live`,
-  `agecheck`, `profile`, `legal`, `keys`, `muscles`.
+  `agecheck`, `profile`, `legal`, `keys`, `muscles`, `progress`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s

@@ -3983,6 +3983,103 @@
   .log-page .cardio-track .yearstats { gap: 8px; background: none; border: 0; }
   .log-page .cardio-track .yearstats div { background: var(--surface-2); border-radius: 14px; }
   .log-page .cardio-track .yearstats b { font-family: var(--font-ui); font-size: 20px; font-weight: 800; font-stretch: 118%; }
+
+  /* ---------- Progress (b90): a check-in a day, if you want one ---------- */
+  /* Seven tabs with Coach on: a 320px phone still gives each one 44px. */
+  .tabs { grid-auto-columns: minmax(0, 1fr); }
+  .tabs .tl { max-width: 100%; overflow: hidden; }
+  @media (max-width: 340px) {
+    .tabs { padding-left: 2px; padding-right: 2px; }
+    .tabs .ti { width: 40px; }
+    .tabs .tl { font-size: 9px; letter-spacing: .01em; }
+  }
+  .pg-page { display: flex; flex-direction: column; gap: 14px; }
+  .pg-card { display: flex; flex-direction: column; gap: 12px; padding: 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; }
+  .pg-card p { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink-2); }
+  .pg-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .pg-tiles div { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 4px; background: var(--surface-2); border-radius: 16px; min-width: 0; }
+  .pg-tiles b { font-family: var(--font-ui); font-size: 22px; font-weight: 800; font-stretch: 118%; color: var(--ink); line-height: 1; }
+  .pg-tiles span { font-family: var(--font-num); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); text-align: center; }
+  .pg-card .btn { width: 100%; }
+  .pg-month { background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; padding: 6px 14px 4px; }
+  .pg-month .eyebrow { display: block; padding: 10px 0 4px; color: var(--ink-2); }
+  .pg-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 18px; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 0; margin: 0;
+            background: none; border: 0; border-top: 1px solid var(--rule); border-radius: 0; text-align: left; color: var(--ink);
+            font-family: var(--font-ui); text-transform: none; letter-spacing: 0; }
+  .pg-month .eyebrow + .pg-row { border-top: 0; }
+  .pg-date { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .pg-date b { font-size: 16px; font-weight: 700; }
+  .pg-date small { font-family: var(--font-num); font-size: 11.5px; color: var(--ink-2); }
+  .pg-meta { display: flex; align-items: center; gap: 8px; color: var(--ink-2); }
+  .pg-meta svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; display: block; }
+  .pg-meta .off { visibility: hidden; }
+  .pg-w { font-family: var(--font-num); font-size: 13px; color: var(--ink); min-width: 62px; text-align: right; }
+  .pg-go { font-size: 24px; line-height: 1; font-weight: 600; color: var(--accent); text-align: right; }
+  .pg-row.is-new { background: var(--accent-soft); margin: 0 -8px; padding: 0 8px; width: calc(100% + 16px); border-radius: 12px; }
+  .pg-none { margin: 4px 0; font-size: 15px; color: var(--ink-2); text-align: center; }
+
+  .pg-head { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 4px; }
+  .pg-head > div { text-align: center; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .sheet-inner .pg-head h2 { font-size: 20px; }
+  .pg-head small { font-family: var(--font-num); font-size: 11.5px; color: var(--ink-2); }
+  .pg-step, .pg-x { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--accent); padding: 0; margin: 0; }
+  .pg-step svg, .pg-x svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .pg-step:disabled { color: var(--ink-3); opacity: .35; }
+  .pg-photo { width: 100%; height: min(50vh, 430px); object-fit: contain; border-radius: 18px; display: block; background: var(--surface-2); }
+  .pg-gone { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: var(--surface-2); color: var(--ink-2); font-size: 14.5px; line-height: 1.4; }
+  .pg-gone svg { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .pg-two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pg-two .btn { width: 100%; }
+  .pk-link { min-height: 44px; padding: 0 2px; margin: 0; border: 0; background: none; color: var(--accent); font-family: var(--font-ui); font-size: 15px; font-weight: 700; text-transform: none; letter-spacing: 0; text-align: left; }
+
+  .pg-when { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 15px; color: var(--ink-2); margin-top: -4px; }
+  .pg-when b { color: var(--ink); }
+  .pg-when input { flex: 1; min-width: 0; height: 48px; padding: 0 12px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); color: var(--ink); font-family: var(--font-ui); }
+  .pg-slot { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px 14px 14px; border: 1.5px dashed var(--rule); border-radius: 18px; background: var(--ground); text-align: center; }
+  .pg-slot > svg { width: 32px; height: 32px; fill: none; stroke: var(--ink-2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .pg-slot p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.4; }
+  .pg-slot p b { display: block; color: var(--ink); font-size: 16px; margin-bottom: 2px; }
+  .pg-slot .pg-two { width: 100%; }
+  .pg-slot .pg-photo { height: min(34vh, 300px); }
+  .pg-slot.has-photo { border-style: solid; padding: 10px; }
+  .pg-slot input[type=file] { display: none; }
+  .pg-lab { display: flex; flex-direction: column; gap: 6px; }
+  .pg-lab .pk-k { padding: 0; }
+  .pg-wrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+  .pg-wrow input, .pg-lab textarea { width: 100%; box-sizing: border-box; font-family: var(--font-ui); color: var(--ink); background: var(--surface);
+            border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; min-height: 50px; }
+  .pg-wrow input { --field-size: 18px; }
+  .pg-wrow span { font-family: var(--font-num); font-size: 15px; color: var(--ink-2); }
+  .pg-lab textarea { min-height: 88px; resize: none; line-height: 1.4; }
+  .pg-lab small { font-size: 13px; color: var(--ink-2); line-height: 1.4; }
+  .pg-err { margin: 0; font-size: 14.5px; color: var(--miss); font-weight: 600; }
+  .pg-said { margin: 0; font-size: 14px; line-height: 1.4; color: var(--ink-2); }
+
+  .pg-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .pg-cmp figure { margin: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .pg-cmp .pg-photo { height: min(34vh, 280px); border-radius: 14px; }
+  .pg-cmp figcaption { font-family: var(--font-num); font-size: 12.5px; color: var(--ink-2); text-align: center; }
+  .pg-pick { width: 100%; min-height: 46px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); color: var(--accent);
+             font-family: var(--font-ui); font-weight: 700; }
+  .pg-slide { position: relative; height: min(46vh, 420px); border-radius: 18px; overflow: hidden; background: var(--surface-2); }
+  .pg-slide .pg-photo { position: absolute; inset: 0; height: 100%; border-radius: 0; background: none; }
+  .pg-slide .pg-top { clip-path: inset(0 0 0 var(--cut, 50%)); }
+  .pg-slide .pg-line { position: absolute; top: 0; bottom: 0; left: var(--cut, 50%); width: 3px; margin-left: -1.5px; background: var(--surface); box-shadow: 0 0 0 1px rgba(0,0,0,.25); pointer-events: none; }
+  .pg-slide input[type=range] { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: ew-resize; }
+  .pg-slide .pg-tag { position: absolute; bottom: 8px; padding: 3px 8px; border-radius: 8px; background: rgba(0,0,0,.55); color: #fff; font-family: var(--font-num); font-size: 12px; pointer-events: none; }
+  .pg-slide .pg-tag.l { left: 8px; }
+  .pg-slide .pg-tag.r { right: 8px; }
+  .pg-gap { display: flex; justify-content: center; gap: 18px; padding: 12px; border-radius: 16px; background: var(--surface-2); flex-wrap: wrap; }
+  .pg-gap div { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  .pg-gap b { font-family: var(--font-ui); font-size: 20px; font-weight: 800; font-stretch: 118%; color: var(--ink); }
+  .pg-gap span { font-family: var(--font-num); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+
+  /* on the Log: a camera for a photo, a ring for a check-in without one */
+  .cal-cell .pg-mark { position: absolute; top: 3px; left: 4px; width: 11px; height: 11px; fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .cal-cell .pg-ring { position: absolute; top: 5px; left: 5px; width: 7px; height: 7px; border-radius: 50%; box-shadow: inset 0 0 0 1.6px var(--ink); }
+  .month.is-mini .cal-cell .pg-mark, .month.is-mini .cal-cell .pg-ring { display: none; }
+  .legend .pg-lg svg { width: 13px; height: 13px; fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .legend i.pg-ring-i { width: 7px; height: 7px; border-radius: 50%; background: none; box-shadow: inset 0 0 0 1.6px var(--ink); }
 </style>
 
 <div class="app">
@@ -4041,6 +4138,7 @@
     <button role="tab" data-tab="gym" aria-selected="false"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="tl">Gym</span></button>
     <button role="tab" data-tab="cardio" aria-selected="false"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-4 4 8 2-4h6"/></svg></span><span class="tl">Cardio</span></button>
     <button role="tab" data-tab="coach" aria-selected="false" hidden><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9z"/><path d="M8 5.5H6.5a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1H16"/><path d="M9 12h6M9 16h4"/></svg></span><span class="tl">Coach</span></button>
+    <button role="tab" data-tab="progress" aria-selected="false"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3.2l1.8-2.6h6l1.8 2.6H20v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg></span><span class="tl">Progress</span></button>
     <button role="tab" data-tab="log" aria-selected="false"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3v5M16 3v5"/></svg></span><span class="tl">Log</span></button>
   </nav>
   </div>
@@ -4326,7 +4424,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-07.89";
+  var BUILD = "2026-11-07.90";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4703,6 +4801,14 @@
   // another day was opened (the owner's video, b67).
   var logOpened = null;
   var logPeek = null;                     // the day being peeked at, before opening it
+  // The Progress tab (b90): the year it shows, and what is open over it — one
+  // check-in looked at (a day key), one being written (a draft), or two
+  // photos compared. At most one of the three at a time.
+  var progYear = new Date().getFullYear();
+  var progView = null;
+  var progEdit = null;
+  var progCmp = null;
+  var progNew = null;                     // the day just saved, lit for a moment
   var editingGoal = false;
   var db = null;
   var sampleFn = null;
@@ -5292,6 +5398,14 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-07.90", t: "Progress: photos, notes and weight", items: [
+      "A new Progress tab, just left of Log. Tap New check-in to add a photo, a note or your weight for the day. Any one of them is enough, and there’s no need to do it every day.",
+      "The tab lists the days you checked in. Tap one to see it, step to the one before or after, or edit or remove it.",
+      "Compare puts two photos side by side, or slides one over the other, with the days and pounds between them.",
+      "The weight is the same one as Body weight on the Log, so a check-in keeps your trend line going.",
+      "On the Log calendar, a camera marks a day with a progress photo, and a small ring a check-in without one. Tap the day, then See check-in.",
+      "Photos stay on this phone. They aren’t in your backup and are never sent anywhere. In the iPhone app they come with its next update; notes and weight work now.",
+      "The Privacy Policy now says how progress photos are kept: on your phone, and nowhere else." ] },
     { b: "2026-11-07.89", t: "A cleaner set pop-up", items: [
       "The −5 / +5 and −1 / +1 buttons under weight and reps are gone. Type the numbers in. The pop-up still opens on last time’s set." ] },
     { b: "2026-11-05.88", t: "See what you worked", items: [
@@ -7564,7 +7678,7 @@
   }
   function drawWeek(key) {
     var nav = document.getElementById("datenav");
-    if (nav) nav.hidden = (tab === "log" || tab === "coach");
+    if (nav) nav.hidden = (tab === "log" || tab === "coach" || tab === "progress");
     var chip = document.getElementById("dateChip");
     if (chip) chip.textContent = weekChip(key);
     var box = document.getElementById("weekStrip");
@@ -7613,6 +7727,7 @@
       else if (tab === "cardio") renderCardio(key, d);
       else if (tab === "pantry") renderPantry();
     else if (tab === "coach") renderCoach();
+      else if (tab === "progress") renderProgress();
       else renderLog();
       animateBarbells();
     } catch (e) {
@@ -12638,7 +12753,7 @@
       // A day with only a session on its clock (yoga) or only a note still had
       // something in it.
       if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length) && !ticks &&
-                 !d.workoutMs && !d.gymNote && !(d.cardio && d.cardio.length)))
+                 !d.workoutMs && !d.gymNote && !(d.cardio && d.cardio.length) && !d.prog))
         return { label: label, rows: null };
       var bits = [];
       function put(lab, txt) { bits.push([lab, txt]); }
@@ -12666,6 +12781,12 @@
         var cCal = d.cardio.reduce(function (a, c) { return a + (Number(c.cal) || 0); }, 0);
         put("Cardio", "cardio \u00b7 " + d.cardio.map(function (c) { return c.type; }).join(", ") + " \u00b7 " + cMin + " min" +
                   (cCal ? " \u00b7 " + fmt(cCal) + " kcal" : ""));
+      }
+      // A check-in from the Progress tab (b90): the peek adds See check-in.
+      if (d.prog) {
+        put("Progress", (d.prog.photo ? "Photo" : "No photo") +
+                  (typeof d.bw === "number" ? " \u00b7 " + bwShow(d.bw) + " " + bwUnit() : "") +
+                  (d.prog.note ? " \u00b7 \u201c" + d.prog.note + "\u201d" : ""));
       }
       // Named, not just counted: "3 of 4" a month later tells you nothing
       // about which one you keep forgetting.
@@ -12724,12 +12845,17 @@
         if (gymDay) nGym++;
         var bar = gymDay ? cat(rec.lifts[0].cat).color : "transparent";
         var dt = parseYmd(key);
+        var pg = rec && rec.prog;
         var aria = dt.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" }) +
           (key === TODAY ? ", today" : "") +
-          (v === "hit" ? ", target hit" : v === "miss" ? ", target missed" : key > TODAY ? "" : ", nothing judged");
+          (v === "hit" ? ", target hit" : v === "miss" ? ", target missed" : key > TODAY ? "" : ", nothing judged") +
+          (pg ? (pg.photo ? ", progress photo" : ", progress check-in") : "");
         cells += '<button class="' + cls + '" data-go="' + key + '" style="--barcolor:' + bar + '" ' +
                  'aria-label="' + esc(aria) + '" title="' + esc(dayTitle(key)) + '">' +
-                 (big ? '<span class="n">' + dnum + '</span>' : dnum) + '<span class="bar"></span></button>';
+                 (big ? '<span class="n">' + dnum + '</span>' : dnum) + '<span class="bar"></span>' +
+                 // a camera for a progress photo, a ring for a check-in without one
+                 (big && pg ? (pg.photo ? CAM_SVG.replace("<svg ", '<svg class="pg-mark" ') : '<span class="pg-ring"></span>') : '') +
+                 '</button>';
       }
       var isNow = (m === now.getMonth() && logYear === now.getFullYear());
       if (big) {
@@ -12763,6 +12889,10 @@
         cats().map(function (c) {
           return '<span><i class="line" style="background:' + c.color + '"></i>' + esc(c.short) + '</span>';
         }).join("") +
+        // only once the year has check-ins, like Checklist done
+        (progKeys(logYear).length
+          ? '<span class="pg-lg">' + CAM_SVG + 'Progress photo</span><span class="pg-lg"><i class="pg-ring-i"></i>Check-in, no photo</span>'
+          : '') +
       '</div>';
 
     var missed = judged - hits;
@@ -12808,7 +12938,8 @@
             (pp.rows
               ? pp.rows.map(function (r) {
                   return '<div class="pk-row"><span class="pk-k">' + r[0] + '</span><span class="pk-v">' +
-                    esc(r[0] === "Cardio" ? r[1].replace(/^cardio · /, "") : r[1]) + '</span></div>';
+                    esc(r[0] === "Cardio" ? r[1].replace(/^cardio · /, "") : r[1]) +
+                    (r[0] === "Progress" ? ' <button class="pk-link" id="peekProg">See check-in</button>' : '') + '</span></div>';
                 }).join("")
               : '<p class="pk-none">' + (logPeek > TODAY ? 'Hasn’t happened yet.' : 'Nothing logged.') + '</p>') +
           '</div>' +
@@ -12860,8 +12991,627 @@
         setTab("macros");
       });
       document.getElementById("peekClose").addEventListener("click", function () { logPeek = null; render(); });
+      var pgo = document.getElementById("peekProg");
+      if (pgo) pgo.addEventListener("click", function () {
+        progYear = Number(logPeek.slice(0, 4)); progView = logPeek; progEdit = progCmp = null; logPeek = null;
+        setTab("progress");
+      });
       pk.addEventListener("click", function (e) { if (e.target === pk) { logPeek = null; render(); } });
     }
+  }
+
+  // ---------- Progress (b90) ----------
+  // Asked for by Tommy (2026-11-07): a tab to the left of Log that keeps a
+  // check-in for any day you want one — a photo, a note, your weight, any one
+  // of them enough — and lets you look back and put two photos side by side.
+  //
+  // The note and the photo's name live in the log, on the day, as `prog`
+  // ({ at, note, photo }). The weight is the day's `bw`: the same number the
+  // Log's Body weight card plots, so a day never has two weights. The photo
+  // itself is far too big for the log (a few hundred KB against about 1 KB a
+  // day), so it is kept beside it on this phone — IndexedDB on the web, the
+  // app's own files in the iPhone app — and goes nowhere else: not to the
+  // relay, not into a backup, not to the Claude viewer's db.
+  var CAM_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3.2l1.8-2.6h6l1.8 2.6H20v11H4z"/><circle cx="12" cy="13.2" r="3.4"/></svg>';
+  var NOTE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h9l3 3v13H6z"/><path d="M9 11h6M9 15h4"/></svg>';
+  var LEFT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+  var RIGHT_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+  var X_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+
+  var photos = (function () {
+    var urls = {};          // id -> what an <img> shows, once loaded
+    var gone = {};          // id -> asked for, and not on this phone
+    var how = null;         // "idb" on the web, "files" in the iPhone app
+    var why = "";           // when there is nowhere: "later" (the app needs an update) or "none"
+    var dbp = null;
+
+    // In the iPhone app the photos are files of the app's own, through
+    // Capacitor's Filesystem plugin. A shell without the plugin keeps notes and
+    // weights and says photos come with the next update, rather than putting
+    // them in the WebView's storage, which iOS may clear when space runs low.
+    if (NATIVE) {
+      if (shellHas("Filesystem")) how = "files";
+      else why = "later";
+    } else {
+      try { if (window.indexedDB) how = "idb"; else why = "none"; } catch (e) { why = "none"; }
+    }
+    function fsCall(method, opts) {
+      try { return window.Capacitor.nativePromise("Filesystem", method, opts); }
+      catch (e) { return Promise.reject(e); }
+    }
+    function fsPath(id) { return "mntl-dt-photos/" + id + ".jpg"; }
+    function idb() {
+      if (dbp) return dbp;
+      dbp = new Promise(function (ok, no) {
+        var rq;
+        try { rq = indexedDB.open("mntl-dt-photos", 1); } catch (e) { no(e); return; }
+        rq.onupgradeneeded = function () { rq.result.createObjectStore("photos"); };
+        rq.onsuccess = function () { ok(rq.result); };
+        rq.onerror = function () { no(rq.error || new Error("would not open")); };
+        rq.onblocked = function () { no(new Error("blocked")); };
+      });
+      // A sandboxed copy (the artifact) can refuse IndexedDB outright.
+      dbp.catch(function (e) { how = null; why = "none"; lastError = "photos: " + (e && e.message ? e.message : String(e)); });
+      return dbp;
+    }
+    function tx(mode, fn) {
+      return idb().then(function (db) {
+        return new Promise(function (ok, no) {
+          var t = db.transaction("photos", mode), out;
+          var rq = fn(t.objectStore("photos"));
+          rq.onsuccess = function () { out = rq.result; };
+          t.oncomplete = function () { ok(out); };
+          t.onerror = t.onabort = function () { no(t.error || new Error(mode + " failed")); };
+        });
+      });
+    }
+    function asData(blob) {
+      return new Promise(function (ok, no) {
+        var r = new FileReader();
+        r.onload = function () { ok(String(r.result)); };
+        r.onerror = function () { no(r.error); };
+        r.readAsDataURL(blob);
+      });
+    }
+    return {
+      ok: function () { return !!how; },
+      why: function () { return why; },
+      // Settles whether there is somewhere to keep photos at all.
+      ready: function () {
+        return how === "idb" ? idb().then(function () { return true; }, function () { return false; }) : Promise.resolve(!!how);
+      },
+      // Keep a photo. Resolves once it is written, never before.
+      put: function (id, blob) {
+        if (!how) return Promise.reject(new Error("nowhere to keep it"));
+        var shown = null;
+        var done = how === "files"
+          ? asData(blob).then(function (u) {
+              shown = u;
+              return fsCall("writeFile", { path: fsPath(id), data: u.replace(/^data:[^,]*,/, ""), directory: "DATA", recursive: true });
+            })
+          : tx("readwrite", function (st) { return st.put(blob, id); }).then(function () { shown = URL.createObjectURL(blob); });
+        return done.then(function () {
+          urls[id] = shown;
+          delete gone[id];
+          // A website's storage can be cleared under pressure; asking costs nothing.
+          if (how === "idb" && navigator.storage && navigator.storage.persist) { try { navigator.storage.persist(); } catch (e) {} }
+        });
+      },
+      url: function (id) { return urls[id] || null; },
+      isGone: function (id) { return !!gone[id]; },
+      load: function (id) {
+        if (urls[id]) return Promise.resolve(urls[id]);
+        if (!how) { gone[id] = true; return Promise.resolve(null); }
+        var p = how === "files"
+          ? fsCall("readFile", { path: fsPath(id), directory: "DATA" }).then(function (r) {
+              return r && r.data ? "data:image/jpeg;base64," + r.data : null;
+            })
+          : tx("readonly", function (st) { return st.get(id); }).then(function (b) { return b ? URL.createObjectURL(b) : null; });
+        return p.then(function (u) {
+          if (u) urls[id] = u; else gone[id] = true;
+          return u;
+        }, function () { gone[id] = true; return null; });
+      },
+      del: function (id) {
+        if (urls[id] && urls[id].slice(0, 5) === "blob:") URL.revokeObjectURL(urls[id]);
+        delete urls[id];
+        if (!how) return Promise.resolve();
+        return how === "files"
+          ? fsCall("deleteFile", { path: fsPath(id), directory: "DATA" })
+          : tx("readwrite", function (st) { return st.delete(id); });
+      }
+    };
+  })();
+
+  // A photo taken off a check-in — replaced, taken off, or its check-in
+  // removed — is kept until the app next opens, so Undo can bring it back.
+  // Then any still on no day are deleted for good. Only names in the bin are
+  // ever deleted, so an empty or unreadable log can never take a photo with it.
+  function binPhoto(id) { if (id) { store.photoBin = store.photoBin || {}; store.photoBin[id] = Date.now(); } }
+  function unbinPhoto(id) { if (id && store.photoBin) delete store.photoBin[id]; }
+  function emptyPhotoBin() {
+    var bin = store.photoBin;
+    if (!bin || !Object.keys(bin).length) return;
+    photos.ready().then(function (ok) {
+      if (!ok) return;
+      var used = {};
+      Object.keys(store.days).forEach(function (k) { var p = store.days[k].prog; if (p && p.photo) used[p.photo] = true; });
+      Object.keys(bin).forEach(function (id) {
+        if (used[id]) { delete bin[id]; return; }
+        // Taken out of the bin in memory only: the next save keeps it, and if
+        // none comes, deleting again next time is harmless.
+        photos.del(id).then(function () { delete bin[id]; }, function () {});
+      });
+    });
+  }
+
+  // Shrunk on the phone before it is kept: 1280px on the long side is plenty
+  // to see change on a phone screen, at a few hundred KB rather than several MB.
+  function shrinkPhoto(file) {
+    return new Promise(function (ok, no) {
+      var src = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        try {
+          var w = img.naturalWidth, h = img.naturalHeight;
+          if (!w || !h) throw new Error("empty");
+          var s = Math.min(1, 1280 / Math.max(w, h)), c = document.createElement("canvas");
+          c.width = Math.round(w * s); c.height = Math.round(h * s);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          URL.revokeObjectURL(src);
+          c.toBlob(function (b) { if (b) ok(b); else no(new Error("could not encode")); }, "image/jpeg", 0.84);
+        } catch (e) { URL.revokeObjectURL(src); no(e); }
+      };
+      img.onerror = function () { URL.revokeObjectURL(src); no(new Error("could not read")); };
+      img.src = src;
+    });
+  }
+
+  // Days with a check-in, newest first; the year's only when one is given.
+  function progKeys(year) {
+    return Object.keys(store.days).filter(function (k) {
+      var p = store.days[k].prog;
+      return p && typeof p === "object" && (!year || k.slice(0, 4) === String(year));
+    }).sort().reverse();
+  }
+  function progPhotoKeys() { return progKeys().filter(function (k) { return store.days[k].prog.photo; }); }
+  function dayBw(k) { var d = store.days[k]; return d && typeof d.bw === "number" ? d.bw : null; }
+  // The trend at a day: the last weigh-in on or before it, or failing that
+  // the first after it.
+  function trendAt(k, s) {
+    s = s || bwSeries();
+    var at = null;
+    for (var i = 0; i < s.length; i++) { if (s[i].k <= k) at = s[i]; else { if (!at) at = s[i]; break; } }
+    return at;
+  }
+  function signedBw(n) { return (n > 0.04 ? "+" : n < -0.04 ? "−" : "") + bwShow(Math.abs(n)); }
+  function progLong(k) {
+    return parseYmd(k).toLocaleDateString("en-US", k.slice(0, 4) === TODAY.slice(0, 4)
+      ? { weekday: "long", month: "short", day: "numeric" } : { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  }
+  function progShort(k) {
+    return parseYmd(k).toLocaleDateString("en-US", k.slice(0, 4) === TODAY.slice(0, 4)
+      ? { weekday: "short", month: "short", day: "numeric" } : { month: "short", day: "numeric", year: "numeric" });
+  }
+  function progWhose(k) { return k === TODAY ? "today’s" : "the " + shortDate(k); }
+  function photoLine() {
+    if (photos.ok()) return "Photos stay on this phone. They aren’t in your backup and are never sent anywhere.";
+    return photos.why() === "later"
+      ? "Photos come with the next update of the iPhone app. Notes and weight work now."
+      : "Photos can’t be kept in this copy of the app. Notes and weight still work.";
+  }
+  function goneHtml() {
+    return '<div class="pg-gone">' + CAM_SVG + '<span>This photo isn’t on this phone. Photos stay on the phone they were taken on, and a backup doesn’t carry them.</span></div>';
+  }
+  function photoHtml(id, cls, alt) {
+    var u = photos.url(id);
+    if (!u && photos.isGone(id)) return goneHtml();
+    return '<img class="pg-photo' + (cls ? " " + cls : "") + '" data-photo="' + esc(id) + '" alt="' + esc(alt || "Progress photo") + '"' +
+      (u ? ' src="' + esc(u) + '"' : '') + '>';
+  }
+  // Photos load after the redraw; each finds its own <img> when it arrives.
+  function fillPhotos() {
+    view.querySelectorAll("img[data-photo]:not([src])").forEach(function (img) {
+      photos.load(img.getAttribute("data-photo")).then(function (u) {
+        if (!img.isConnected) return;
+        if (u) img.src = u;
+        else img.outerHTML = goneHtml();
+      });
+    });
+  }
+
+  // One check-in a day. New check-in opens today's; if today already has one
+  // it opens that, says so, and Change day goes to any earlier day instead.
+  function newCheckin() {
+    var w = dayBw(TODAY), p = store.days[TODAY] && store.days[TODAY].prog;
+    progView = progCmp = null;
+    progEdit = { k: TODAY, isNew: !p, note: p && p.note || "", w: w !== null ? bwShow(w) : "",
+                 photo: p && p.photo || null, blob: null, shown: null, base: p ? { note: p.note || "", photo: p.photo || null } : null,
+                 said: p ? "Today already has a check-in, so saving changes it. Change day for an earlier one." : null };
+    render();
+  }
+  function editCheckin(k) {
+    var p = store.days[k] && store.days[k].prog;
+    if (!p) return;
+    var w = dayBw(k);
+    progView = progCmp = null;
+    progEdit = { k: k, isNew: false, note: p.note || "", w: w !== null ? bwShow(w) : "", photo: p.photo || null, blob: null, shown: null,
+                 base: { note: p.note || "", photo: p.photo || null }, fixed: true };
+    render();
+  }
+  function closeProgEdit() {
+    if (progEdit && progEdit.shown) URL.revokeObjectURL(progEdit.shown);
+    progEdit = null;
+  }
+  // A new day chosen in the editor. A day that already has a check-in opens
+  // it, and says so: saving would otherwise write over it unseen. What was
+  // typed or picked here comes along; what was only loaded from the day left
+  // behind stays with that day.
+  function progMoveDay(k) {
+    var dr = progEdit;
+    if (!dr || !/^\d{4}-\d\d-\d\d$/.test(k || "") || k > TODAY) { if (dr) { dr.dayOpen = false; render(); } return; }
+    if (k === dr.k) { dr.dayOpen = false; render(); return; }
+    if (dr.base) {
+      if (dr.note === dr.base.note) dr.note = "";
+      if (dr.photo === dr.base.photo) dr.photo = null;
+    }
+    dr.k = k; dr.dayOpen = false; dr.err = null; dr.said = null; dr.base = null;
+    var p = store.days[k] && store.days[k].prog, w = dayBw(k);
+    if (p) {
+      dr.isNew = false;
+      dr.base = { note: p.note || "", photo: p.photo || null };
+      if (!dr.note) dr.note = p.note || "";
+      if (!dr.photo) dr.photo = p.photo || null;
+      dr.said = progLong(k) + " already has a check-in, so saving changes it.";
+    } else {
+      dr.isNew = true;
+    }
+    dr.w = w !== null ? bwShow(w) : "";
+    render();
+  }
+  function takePhoto(file) {
+    var dr = progEdit;
+    if (!dr || !file) return;
+    dr.busy = "Getting the photo ready…"; dr.err = null; render();
+    shrinkPhoto(file).then(function (blob) {
+      if (dr.shown) URL.revokeObjectURL(dr.shown);
+      dr.blob = blob; dr.shown = URL.createObjectURL(blob); dr.busy = null;
+      if (progEdit === dr) render();
+    }, function () {
+      dr.busy = null; dr.err = "That photo couldn’t be read. Try another one, or take a new one.";
+      if (progEdit === dr) render();
+    });
+  }
+  function progErr(msg, focusId) {
+    if (!progEdit) return;
+    progEdit.err = msg; render();
+    var f = focusId && document.getElementById(focusId);
+    if (f) f.focus();
+  }
+  function saveCheckin() {
+    var dr = progEdit;
+    if (!dr || dr.busy) return;
+    var note = String(dr.note || "").trim().slice(0, 600);
+    var raw = String(dr.w == null ? "" : dr.w).trim().replace(",", ".");
+    var had = dayBw(dr.k), lb;           // lb: undefined = as it was, null = taken off
+    if (raw === "") lb = had === null ? undefined : null;
+    else if (had !== null && raw === bwShow(had)) lb = undefined;
+    else {
+      var v = Number(raw), x = bwUnit() === "kg" ? v / LB_KG : v;
+      if (!(v > 0) || x < 50 || x > 900) { progErr("That doesn’t look like a weight.", "pgW"); return; }
+      lb = Math.round(x * 10) / 10;
+    }
+    var hasW = lb === undefined ? had !== null : lb !== null;
+    if (!dr.blob && !dr.photo && !note && !hasW) { progErr("Add a photo, a note or a weight first."); return; }
+    if (!dr.blob) { commitCheckin(dr, note, lb, dr.photo); return; }
+    var id = uid() + uid();
+    dr.busy = "Keeping the photo…"; dr.err = null; render();
+    photos.put(id, dr.blob).then(function () {
+      dr.busy = null;
+      commitCheckin(dr, note, lb, id);
+    }, function (e) {
+      dr.busy = null;
+      lastError = "photo not kept: " + (e && e.message ? e.message : String(e));
+      dr.err = "That photo couldn’t be kept on this phone — its storage may be full. Nothing was saved.";
+      if (progEdit === dr) render();
+    });
+  }
+  function commitCheckin(dr, note, lb, photoId) {
+    var k = dr.k, d = day(k);
+    var before = d.prog ? JSON.parse(JSON.stringify(d.prog)) : undefined, hadBw = d.bw;
+    var oldPhoto = before && before.photo || null;
+    var p = { at: before && before.at || Date.now() };
+    if (note) p.note = note;
+    if (photoId) p.photo = photoId;
+    d.prog = p;
+    if (lb === null) delete d.bw; else if (lb !== undefined) d.bw = lb;
+    if (oldPhoto && oldPhoto !== photoId) binPhoto(oldPhoto);
+    touch(k);
+    var ok = save();
+    if (progEdit === dr) closeProgEdit();
+    progView = null; progNew = k; progYear = Number(k.slice(0, 4));
+    render();
+    // Rule 3: the row it made is lit and brought on screen, and the bar says so.
+    var row = view.querySelector(".pg-row.is-new");
+    if (row && row.scrollIntoView) row.scrollIntoView({ block: "nearest" });
+    setTimeout(function () {
+      if (progNew !== k) return;
+      progNew = null;
+      var r = view.querySelector(".pg-row.is-new");
+      if (r) r.classList.remove("is-new");
+    }, 2600);
+    if (!ok) return;     // the save bar is up; "Saved" would be a lie
+    buzz("tap");
+    offerUndo((before ? "Changed " : "Saved ") + progWhose(k) + " check-in" + (lb === null ? " · weight taken off" : ""), function () {
+      var dd = day(k);
+      if (before) dd.prog = before; else delete dd.prog;
+      if (hadBw === undefined) delete dd.bw; else dd.bw = hadBw;
+      if (photoId && photoId !== oldPhoto) binPhoto(photoId);
+      if (oldPhoto && oldPhoto !== photoId) unbinPhoto(oldPhoto);
+      touch(k); save(); render();
+    });
+  }
+  // Remove takes the photo and the note. The weight stays: it is also the
+  // day's weigh-in on Body weight, and removing a check-in should not quietly
+  // take a point off the trend line.
+  function removeCheckin(k) {
+    var d = store.days[k], before = d && d.prog;
+    if (!before) return;
+    delete d.prog;
+    if (before.photo) binPhoto(before.photo);
+    touch(k);
+    var ok = save();
+    progView = null;
+    render();
+    if (!ok) return;
+    offerUndo("Removed " + progWhose(k) + " check-in" + (dayBw(k) !== null ? " · its weight stays" : ""), function () {
+      var dd = day(k);
+      dd.prog = before;
+      unbinPhoto(before.photo);
+      touch(k); save(); render();
+    });
+  }
+  function compareFrom(k) {
+    var ks = progPhotoKeys(), i = ks.indexOf(k);
+    if (ks.length < 2 || i === -1) return;
+    // this one against the photo before it, or after it when it is the first
+    progCmp = i < ks.length - 1 ? { a: ks[i + 1], b: k, mode: "side", cut: 50 } : { a: k, b: ks[i - 1], mode: "side", cut: 50 };
+    progView = null;
+    render();
+  }
+
+  function renderProgress() {
+    var all = progKeys(), year = progKeys(progYear), s = bwSeries();
+    var MONTHS = ["January", "February", "March", "April", "May", "June",
+                  "July", "August", "September", "October", "November", "December"];
+    var nPhotos = year.filter(function (k) { return store.days[k].prog.photo; }).length;
+    var chip = year.length
+      ? year.length + (year.length === 1 ? " check-in" : " check-ins") + (nPhotos ? " · " + nPhotos + (nPhotos === 1 ? " photo" : " photos") : "")
+      : "";
+
+    // On top: since the first check-in ever, or what the tab is for.
+    var top;
+    if (!all.length) {
+      top = '<section class="pg-card" id="pgIntro"><span class="eyebrow">Progress</span>' +
+        '<p>A photo, a note or your weight — any one of them is a check-in, kept on the day you make it. Look back to see how far you’ve come, and put two photos side by side.</p>' +
+        '<p>' + photoLine() + '</p></section>';
+    } else {
+      var first = all[all.length - 1], ph = progPhotoKeys();
+      var t0 = trendAt(first, s), t1 = s.length ? s[s.length - 1] : null;
+      var moved = t0 && t1 && t1.k > t0.k ? t1.t - t0.t : null;
+      var span = Math.round((parseYmd(TODAY) - parseYmd(first)) / 864e5);
+      top = '<section class="pg-card" id="pgSince"><span class="eyebrow">Since your first check-in · ' + esc(shortDate(first)) +
+          (first.slice(0, 4) !== TODAY.slice(0, 4) ? ", " + first.slice(0, 4) : "") + '</span>' +
+        '<div class="pg-tiles">' +
+          '<div><b>' + (moved === null ? "—" : signedBw(moved)) + '</b><span>' + bwUnit() + ' on the trend</span></div>' +
+          '<div><b>' + span + '</b><span>' + (span === 1 ? "day" : "days") + '</span></div>' +
+          '<div><b>' + ph.length + '</b><span>' + (ph.length === 1 ? "photo" : "photos") + '</span></div>' +
+        '</div>' +
+        (ph.length >= 2 ? '<button class="btn ghost" id="pgFirstLast">Compare first and latest</button>' : '') +
+      '</section>';
+    }
+
+    var months = "";
+    if (all.length) {
+      var groups = {}, order = [];
+      year.forEach(function (k) { var m = Number(k.slice(5, 7)) - 1; if (!groups[m]) { groups[m] = []; order.push(m); } groups[m].push(k); });
+      months = order.map(function (m) {
+        return '<section class="pg-month"><span class="eyebrow">' + MONTHS[m] + ' · ' + groups[m].length +
+            (groups[m].length === 1 ? ' check-in' : ' check-ins') + '</span>' +
+          groups[m].map(function (k) {
+            var p = store.days[k].prog, w = dayBw(k);
+            var say = progLong(k) + (p.photo ? ", photo" : "") + (p.note ? ", note" : "") + (w !== null ? ", " + bwShow(w) + " " + bwUnit() : "");
+            return '<button class="pg-row' + (k === progNew ? ' is-new' : '') + '" data-pgday="' + k + '" aria-label="' + esc(say) + '">' +
+              '<span class="pg-date"><b>' + esc(progShort(k)) + '</b>' + (k === TODAY ? '<small>Today</small>' : '') + '</span>' +
+              '<span class="pg-meta" aria-hidden="true">' +
+                '<span class="' + (p.photo ? '' : 'off') + '">' + CAM_SVG + '</span>' +
+                '<span class="' + (p.note ? '' : 'off') + '">' + NOTE_SVG + '</span>' +
+                '<span class="pg-w">' + (w !== null ? bwShow(w) + ' ' + bwUnit() : '—') + '</span>' +
+              '</span><span class="pg-go" aria-hidden="true">›</span></button>';
+          }).join("") + '</section>';
+      }).join("") || '<section class="pg-month"><p class="pg-none">No check-ins in ' + progYear + '.</p></section>';
+    }
+
+    view.innerHTML =
+      '<section class="pg-page">' +
+        '<div class="yearnav">' +
+          '<button id="pgPrevYear" aria-label="Previous year">' + LEFT_SVG + '</button>' +
+          '<div class="yn-mid"><span class="y">' + progYear + '</span>' + (chip ? '<span class="yn-chip">' + chip + '</span>' : '') + '</div>' +
+          '<button id="pgNextYear" aria-label="Next year">' + RIGHT_SVG + '</button>' +
+        '</div>' + top + months +
+      '</section>' + progSheet();
+
+    var ctx = document.getElementById("ctxMain");
+    if (ctx) {
+      ctx.innerHTML = '<button class="ctx-big" id="pgNew">New check-in</button>';
+      document.getElementById("pgNew").addEventListener("click", newCheckin);
+    }
+    document.getElementById("pgPrevYear").addEventListener("click", function () { progYear--; render(); });
+    document.getElementById("pgNextYear").addEventListener("click", function () { progYear++; render(); });
+    var fl = document.getElementById("pgFirstLast");
+    if (fl) fl.addEventListener("click", function () {
+      var ph = progPhotoKeys();
+      progCmp = { a: ph[ph.length - 1], b: ph[0], mode: "side", cut: 50 }; render();
+    });
+    view.querySelectorAll("[data-pgday]").forEach(function (b) {
+      b.addEventListener("click", function () { progView = b.getAttribute("data-pgday"); render(); });
+    });
+    wireProgSheet();
+    fillPhotos();
+  }
+
+  // What is open over the tab: one check-in, the editor, or Compare.
+  function progSheet() {
+    var html = "";
+    if (progEdit) html = progEditHtml(progEdit);
+    else if (progCmp) html = progCmpHtml(progCmp);
+    else if (progView && store.days[progView] && store.days[progView].prog) html = progViewHtml(progView);
+    else progView = null;
+    return html ? '<div class="sheet" id="pgSheet"><div class="sheet-inner">' + html + '</div></div>' : "";
+  }
+  function progViewHtml(k) {
+    var p = store.days[k].prog, all = progKeys(), i = all.indexOf(k), w = dayBw(k);
+    var prevW = null;
+    for (var j = i + 1; j < all.length; j++) if (dayBw(all[j]) !== null) { prevW = all[j]; break; }
+    var wLine = w === null ? "—" : '<b>' + bwShow(w) + ' ' + bwUnit() + '</b>' +
+      (prevW ? ' · ' + (Math.abs(w - dayBw(prevW)) < 0.05 ? 'same as ' : (w < dayBw(prevW) ? 'down ' : 'up ') + bwShow(Math.abs(w - dayBw(prevW))) + ' ' + bwUnit() + ' since ') + esc(shortDate(prevW)) : '');
+    return '<div class="pg-head">' +
+        '<button class="pg-step" id="pgOlder" aria-label="Earlier check-in"' + (i < all.length - 1 ? '' : ' disabled') + '>' + LEFT_SVG + '</button>' +
+        '<div><h2>' + esc(progLong(k)) + '</h2><small>Check-in ' + (all.length - i) + ' of ' + all.length + '</small></div>' +
+        '<button class="pg-step" id="pgNewer" aria-label="Later check-in"' + (i > 0 ? '' : ' disabled') + '>' + RIGHT_SVG + '</button>' +
+      '</div>' +
+      (p.photo ? photoHtml(p.photo, "", "Progress photo, " + progLong(k)) : '<div class="pg-gone">' + CAM_SVG + '<span>No photo this day.</span></div>') +
+      '<div class="pk-rows">' +
+        '<div class="pk-row"><span class="pk-k">Weight</span><span class="pk-v">' + wLine + '</span></div>' +
+        (p.note ? '<div class="pk-row"><span class="pk-k">Note</span><span class="pk-v">“' + esc(p.note) + '”</span></div>' : '') +
+      '</div>' +
+      (p.photo && progPhotoKeys().length >= 2 ? '<button class="btn pk-open" id="pgCompare">Compare with another day</button>' : '') +
+      '<div class="pg-two"><button class="btn ghost" id="pgEdit">Edit</button><button class="btn ghost" id="pgRemove">Remove</button></div>' +
+      '<button class="btn ghost" id="pgClose">Close</button>';
+  }
+  function progEditHtml(dr) {
+    var when = dr.dayOpen
+      ? '<div class="pg-when"><input type="date" id="pgDay" max="' + TODAY + '" value="' + dr.k + '" aria-label="Which day"></div>'
+      : '<div class="pg-when"><span>For <b>' + (dr.k === TODAY ? 'today, ' : '') + esc(progLong(dr.k)) + '</b></span>' +
+          (dr.fixed ? '' : '<button class="pk-link" id="pgDayBtn">Change day</button>') + '</div>';
+    var slot;
+    var inputs = '<input type="file" id="pgCam" accept="image/*" capture="environment" aria-label="Take a photo">' +
+                 '<input type="file" id="pgLib" accept="image/*" aria-label="Choose a photo">';
+    if (!photos.ok()) slot = '<div class="pg-slot"><p>' + photoLine() + '</p></div>';
+    else if (dr.busy) slot = '<div class="pg-slot"><div class="working"><i></i>' + dr.busy + '</div></div>';
+    else if (dr.shown || dr.photo) {
+      slot = '<div class="pg-slot has-photo">' +
+        (dr.shown ? '<img class="pg-photo" src="' + esc(dr.shown) + '" alt="The photo for this check-in">' : photoHtml(dr.photo, "", "The photo for this check-in")) +
+        '<div class="pg-two"><button class="btn ghost" id="pgSwap">Change photo</button><button class="btn ghost" id="pgDrop">Take it off</button></div>' +
+        inputs + '</div>';
+    } else {
+      slot = '<div class="pg-slot">' + CAM_SVG +
+        '<p><b>Add a photo</b>Optional. A note or a weight on its own is a check-in too.</p>' +
+        '<div class="pg-two"><button class="btn" id="pgShoot">Take photo</button><button class="btn ghost" id="pgPick">Choose one</button></div>' +
+        inputs + '</div>';
+    }
+    var had = dayBw(dr.k);
+    return '<div class="sh-head"><h2>' + (dr.isNew ? 'New check-in' : 'Edit check-in') + '</h2>' +
+        '<button class="pg-x" id="pgX" aria-label="Close without saving">' + X_SVG + '</button></div>' +
+      when +
+      (dr.said ? '<p class="pg-said">' + esc(dr.said) + '</p>' : '') +
+      slot +
+      '<label class="pg-lab"><span class="pk-k">Weight</span>' +
+        '<span class="pg-wrow"><input id="pgW" inputmode="decimal" autocomplete="off" value="' + esc(dr.w || "") + '" placeholder="' +
+          (bwUnit() === "kg" ? "82.5" : "182.4") + '" aria-label="Weight in ' + bwUnit() + '"><span>' + bwUnit() + '</span></span>' +
+        '<small>' + (had !== null
+          ? 'Already on Body weight for this day. It’s the same number, so changing it here changes it there.'
+          : 'Goes on Body weight on the Log too, so the trend line keeps it.') + '</small></label>' +
+      '<label class="pg-lab"><span class="pk-k">Note</span>' +
+        '<textarea id="pgNote" maxlength="600" placeholder="How you feel, what changed, what you’re trying…" aria-label="Note">' + esc(dr.note || "") + '</textarea></label>' +
+      (dr.err ? '<p class="pg-err" role="alert">' + esc(dr.err) + '</p>' : '') +
+      '<button class="btn pk-open" id="pgSave"' + (dr.busy ? ' disabled' : '') + '>Save check-in</button>';
+  }
+  function progCmpHtml(c) {
+    var ks = progPhotoKeys();
+    if (ks.indexOf(c.a) === -1 || ks.indexOf(c.b) === -1) { progCmp = null; return ""; }
+    var A = store.days[c.a], B = store.days[c.b];
+    function picker(id, sel, lab) {
+      return '<select class="pg-pick" id="' + id + '" aria-label="' + lab + '">' + ks.map(function (k) {
+        return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + esc(progShort(k)) + '</option>';
+      }).join("") + '</select>';
+    }
+    var wa = dayBw(c.a), wb = dayBw(c.b), s = bwSeries(), ta = trendAt(c.a, s), tb = trendAt(c.b, s);
+    var days = Math.round((parseYmd(c.b) - parseYmd(c.a)) / 864e5);
+    var gap = '<div class="pg-gap"><div><b>' + days + '</b><span>' + (days === 1 ? 'day apart' : 'days apart') + '</span></div>' +
+      (wa !== null && wb !== null ? '<div><b>' + signedBw(wb - wa) + ' ' + bwUnit() + '</b><span>scale</span></div>' : '') +
+      (ta && tb && tb.k > ta.k ? '<div><b>' + signedBw(tb.t - ta.t) + ' ' + bwUnit() + '</b><span>trend</span></div>' : '') + '</div>';
+    var body = c.mode === "slide"
+      ? '<div class="pg-slide" id="pgSlide" style="--cut:' + c.cut + '%">' +
+          photoHtml(A.prog.photo, "", "Earlier, " + progLong(c.a)) + photoHtml(B.prog.photo, "pg-top", "Later, " + progLong(c.b)) +
+          '<span class="pg-line"></span><span class="pg-tag l">' + esc(shortDate(c.a)) + '</span><span class="pg-tag r">' + esc(shortDate(c.b)) + '</span>' +
+          '<input type="range" id="pgCut" min="0" max="100" step="1" value="' + c.cut + '" aria-label="Slide between ' + esc(shortDate(c.a)) + ' and ' + esc(shortDate(c.b)) + '">' +
+        '</div>' +
+        '<div class="pg-two">' + picker("pgA", c.a, "Earlier photo") + picker("pgB", c.b, "Later photo") + '</div>'
+      : '<div class="pg-cmp">' +
+          '<figure>' + photoHtml(A.prog.photo, "", "Earlier, " + progLong(c.a)) + picker("pgA", c.a, "Earlier photo") +
+            '<figcaption>' + (wa !== null ? bwShow(wa) + ' ' + bwUnit() : '—') + '</figcaption></figure>' +
+          '<figure>' + photoHtml(B.prog.photo, "", "Later, " + progLong(c.b)) + picker("pgB", c.b, "Later photo") +
+            '<figcaption>' + (wb !== null ? bwShow(wb) + ' ' + bwUnit() : '—') + '</figcaption></figure>' +
+        '</div>';
+    var notes = [c.a, c.b].filter(function (k) { return store.days[k].prog.note; }).map(function (k) {
+      return '<div class="pk-row"><span class="pk-k">' + esc(shortDate(k)) + '</span><span class="pk-v">“' + esc(store.days[k].prog.note) + '”</span></div>';
+    }).join("");
+    return '<div class="sh-head"><h2>Compare</h2><button class="pg-x" id="pgX" aria-label="Close">' + X_SVG + '</button></div>' +
+      '<div class="seg two" role="group" aria-label="Compare as">' +
+        '<button data-pgmode="side" aria-pressed="' + (c.mode !== "slide") + '">Side by side</button>' +
+        '<button data-pgmode="slide" aria-pressed="' + (c.mode === "slide") + '">Slider</button></div>' +
+      body + gap + (notes ? '<div class="pk-rows">' + notes + '</div>' : '') +
+      '<button class="btn ghost" id="pgClose">Close</button>';
+  }
+  function wireProgSheet() {
+    var sh = document.getElementById("pgSheet");
+    if (!sh) return;
+    function on(id, ev, fn) { var el = document.getElementById(id); if (el) el.addEventListener(ev, fn); }
+    function shut() { closeProgEdit(); progView = null; progCmp = null; render(); }
+    sh.addEventListener("click", function (e) { if (e.target === sh) shut(); });
+    on("pgX", "click", shut);
+    on("pgClose", "click", shut);
+    // one check-in
+    on("pgOlder", "click", function () { var a = progKeys(), i = a.indexOf(progView); if (a[i + 1]) { progView = a[i + 1]; render(); } });
+    on("pgNewer", "click", function () { var a = progKeys(), i = a.indexOf(progView); if (i > 0) { progView = a[i - 1]; render(); } });
+    on("pgEdit", "click", function () { editCheckin(progView); });
+    on("pgRemove", "click", function () { removeCheckin(progView); });
+    on("pgCompare", "click", function () { compareFrom(progView); });
+    // the editor: what is typed is kept, so a redraw never loses it
+    on("pgNote", "input", function () { if (progEdit) progEdit.note = this.value; });
+    on("pgW", "input", function () { if (progEdit) progEdit.w = this.value; });
+    on("pgW", "keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); saveCheckin(); } });
+    on("pgDayBtn", "click", function () { if (progEdit) { progEdit.dayOpen = true; render(); var f = document.getElementById("pgDay"); if (f) f.focus(); } });
+    on("pgDay", "change", function () { progMoveDay(this.value); });
+    on("pgShoot", "click", function () { document.getElementById("pgCam").click(); });
+    on("pgPick", "click", function () { document.getElementById("pgLib").click(); });
+    on("pgSwap", "click", function () { document.getElementById("pgLib").click(); });
+    on("pgCam", "change", function () { if (this.files && this.files[0]) takePhoto(this.files[0]); });
+    on("pgLib", "change", function () { if (this.files && this.files[0]) takePhoto(this.files[0]); });
+    on("pgDrop", "click", function () {
+      if (!progEdit) return;
+      if (progEdit.shown) URL.revokeObjectURL(progEdit.shown);
+      progEdit.shown = null; progEdit.blob = null; progEdit.photo = null; render();
+    });
+    on("pgSave", "click", saveCheckin);
+    // Compare
+    sh.querySelectorAll("[data-pgmode]").forEach(function (b) {
+      b.addEventListener("click", function () { if (progCmp) { progCmp.mode = b.getAttribute("data-pgmode"); render(); } });
+    });
+    function pick(which, v) {
+      if (!progCmp) return;
+      progCmp[which] = v;
+      // the earlier photo stays on the left
+      if (progCmp.a > progCmp.b) { var t = progCmp.a; progCmp.a = progCmp.b; progCmp.b = t; }
+      render();
+    }
+    on("pgA", "change", function () { pick("a", this.value); });
+    on("pgB", "change", function () { pick("b", this.value); });
+    on("pgCut", "input", function () {
+      if (progCmp) progCmp.cut = Number(this.value);
+      var sl = document.getElementById("pgSlide");
+      if (sl) sl.style.setProperty("--cut", this.value + "%");
+    });
   }
 
   function esc(s) {
@@ -12879,6 +13629,9 @@
       if (logOpened !== ymd(cursor)) { logYear = cursor.getFullYear(); logMonth = cursor.getMonth(); logOpened = null; }
     }
     logPeek = null;
+    // Progress opens on what was asked for (the Log's See check-in sets it
+    // first), and leaving it closes whatever was open over it.
+    if (t !== "progress") { closeProgEdit(); progView = null; progCmp = null; }
     document.querySelectorAll(".tabs button").forEach(function (b) {
       b.setAttribute("aria-selected", String(b.dataset.tab === t));
     });
@@ -12949,9 +13702,13 @@
     // whole room was off the screen).
     function dropRoom() {
       if (!kbH || typing()) return;
-      var d = document.documentElement;
-      var showing = window.scrollY + window.innerHeight - (d.scrollHeight - kbH);
-      if (showing > 2) {
+      var d = document.documentElement, page = d.scrollHeight - kbH;
+      var showing = window.scrollY + window.innerHeight - page;
+      // A page shorter than the screen, seen from its top (an empty Progress
+      // tab, b90): the room can never scroll out of sight, and taking it all
+      // out moves nothing, so it goes rather than leaving a sliver to scroll.
+      var short = page <= window.innerHeight && window.scrollY < 1;
+      if (showing > 2 && !short) {
         // Two pixels to spare, so the page's end stays just past the screen's:
         // cut flush, a scroll position a fraction off would be clamped, fire
         // another scroll, and the room would shrink a pixel a frame — a slide.
@@ -13992,7 +14749,7 @@
   function hasSomethingToLose() {
     return Object.keys(store.days || {}).some(function (k) {
       var d = store.days[k];
-      return (d.food && d.food.length) || (d.lifts && d.lifts.length);
+      return (d.food && d.food.length) || (d.lifts && d.lifts.length) || d.prog;
     });
   }
 
@@ -14024,7 +14781,14 @@
     return cap ? w.charAt(0).toUpperCase() + w.slice(1) : w;
   }
 
+  // A backup is the log, and the log holds a photo's name, not the photo
+  // (b90). Said wherever a backup is offered, so nobody thinks it is all there.
   function backupNote() {
+    return backupWords() + (progPhotoKeys().length
+      ? " Progress photos aren’t in it: they stay on this phone, and only your notes and weights travel."
+      : "");
+  }
+  function backupWords() {
     var n = daysSinceBackup();
     if (!hasSomethingToLose())
       return "Your log lives on this device. " + saveWord(true) + " somewhere safe now " +
@@ -15444,6 +16208,10 @@
     // Said once: the first time the app opens on lists that held names it put
     // there, it says how many it took off rather than letting them vanish.
     if (movesTakenOff) notify("Took off " + movesTakenOff + " starting movements you never used");
+    // Photos taken off a check-in last time go now that Undo cannot reach
+    // them; and a copy that cannot keep photos says so as soon as it knows.
+    emptyPhotoBin();
+    photos.ready().then(function (ok) { if (!ok && tab === "progress") render(); });
     restAlertStart();
     appOpen = true;
     quickCheck();

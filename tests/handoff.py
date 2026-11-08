@@ -195,7 +195,7 @@ with sync_playwright() as pw:
     }"""
 
     # Macros three times: folded, then with each way in open.
-    tabs = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "log"]
+    tabs = ["macros", "macros:numbers", "macros:estimate", "pantry", "gym", "cardio", "coach", "progress", "log"]
     first = {"numbers": "#fCal", "estimate": "#estText"}
     small, blocked, seen, cal_cells = [], [], 0, 0
     for t in tabs:

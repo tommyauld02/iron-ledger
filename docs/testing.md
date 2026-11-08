@@ -53,6 +53,16 @@ then counted once answered, the profile's figure, and the one-time choice
 when the profile does not say. `darkcheck` opens the sheet and a locked day
 for contrast, and `keys` scrolls a locked day.
 
+**`progress` covers the Progress tab (b90).** Check-ins with a note, a weight
+or a photo; the photo shrunk and kept in IndexedDB, never in the log or a
+backup, and back after a restart; a day that already has one; Compare side by
+side and as a slider; the Log's camera, ring and peek; Remove, Undo and the
+photo bin after the next open; a photo this phone does not have; kg; the
+iPhone app with and without the Filesystem plugin, against a stand-in bridge;
+and seven tabs at 320px. It opens over `http`, because its reloads stand for
+the app being closed and opened (see *agecheck* below). The full list is in
+`docs/progress.md`.
+
 When you add a suite, end it the way the gates do. A suite that reports FAIL
 and exits 0 is a report wearing a test's clothes, and rule 1 quietly stops
 meaning anything.
@@ -111,7 +121,7 @@ no-Claude-and-no-network mode Pages actually runs in · `touch` real touch
 events via CDP
 including the press-and-hold drag · `mobile` fit and font audit across five
 iPhone sizes · plus `commit`, `noclaude`, `yourwords`, `firstrun`, `photo2`,
-`taborder`.
+`taborder` · `progress` the Progress tab, its photos and the Log's marks.
 
 **Every suite but `agecheck` and `profile` opens past the age check.** From b79 the app
 asks before anything else, which would stop every suite at the door. Each one

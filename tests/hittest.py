@@ -146,7 +146,7 @@ def sweep(p):
 
 # Macros is walked three times: folded, then with each way in open, because
 # a control that only exists after a press is the one nothing else measures.
-TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "pantry:checklist", "gym", "gym:gym", "gym:move", "gym:rest", "cardio", "coach", "log"]
+TABS = ["macros", "macros:numbers", "macros:estimate", "pantry", "pantry:checklist", "gym", "gym:gym", "gym:move", "gym:rest", "cardio", "coach", "progress", "log"]
 covered = []          # anything a tap cannot reach — this suite gates on it
 
 with sync_playwright() as pw:

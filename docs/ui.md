@@ -91,7 +91,11 @@ video's symptom on the web. It is `main`'s padding now, so the dock stays at
 the bottom of the screen. And once typing ends, `dropRoom()` shrinks the room
 to what is on screen rather than keeping all of it until it is out of sight:
 the page never moves and never gets shorter under the eye, and there is never
-more blank to scroll down into than was already showing.
+more blank to scroll down into than was already showing. A page shorter than
+the screen, seen from its top, is the one exception (b90): there the room could
+never scroll out of sight, so it kept a two-pixel sliver to scroll after every
+note typed on an empty Progress tab. Taking all of it out moves nothing there,
+so it goes. `progress` checks it under a stand-in keyboard.
 
 **A field in the dock lifts the dock (b87).** *Find in your pantry* is in the
 dock, and the dock hides while typing, so the field vanished mid-word. When the
