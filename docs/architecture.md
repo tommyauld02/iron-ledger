@@ -62,6 +62,13 @@ the date or year arrows — `store.days` keeps every day forever. A fully logged
 day costs about 1.1 KB, so a 5 MB origin holds roughly 4,700 days, about
 thirteen years. Capacity is not the constraint; the write path is.
 
+**Progress photos are kept beside the log, never in it (b90).** A photo is a
+few hundred KB against about 1 KB a day of log, so it lives in IndexedDB on
+the web and in the app's own files in the iPhone app; the log holds only its
+id, on the day's `prog`. A backup therefore carries notes and weights but no
+photos, and says so. How, and when a removed photo is really deleted, is in
+`docs/progress.md`.
+
 **On a phone there is no second copy.** `db` only exists inside the Claude
 viewer, so on the Pages build `queueSync()` returns immediately and
 localStorage is the only place the log lives. Nothing else notices if it goes.

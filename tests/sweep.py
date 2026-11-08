@@ -918,7 +918,7 @@ with sync_playwright() as pw:
     ATTR="()=>[document.documentElement.getAttribute('data-theme'), document.documentElement.getAttribute('data-accent')]"
     ACC="()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()"
     META="()=>{const m=document.querySelector('meta[name=theme-color]');return m&&m.content;}"
-    for t in ["macros","pantry","gym","cardio","log"]:
+    for t in ["macros","pantry","gym","cardio","progress","log"]:
         p.click('.tabs button[data-tab="%s"]'%t); p.wait_for_timeout(250)
         if not p.locator("#setBtn").is_visible():
             check("settings: the gear is on %s"%t, False); break
@@ -986,17 +986,17 @@ with sync_playwright() as pw:
     TABSHOWN="()=>[...document.querySelectorAll('.tabs button')].filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)"
     ROUTINE="()=>JSON.stringify(JSON.parse(localStorage.getItem('iron-ledger-v1')).routine)"
     check("coach tab: put away on a phone that never chose",
-          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","log"], str(p.evaluate(TABSHOWN)))
+          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","progress","log"], str(p.evaluate(TABSHOWN)))
     tw=p.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.getBoundingClientRect().width)")
     bw=p.evaluate("()=>{const t=document.querySelector('.tabs'),s=getComputedStyle(t);return t.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight);}")
-    check("coach tab: the five left share the whole bar, evenly",
-          len(tw)==5 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
+    check("coach tab: the six left share the whole bar, evenly",
+          len(tw)==6 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
     p.click("#setBtn"); p.wait_for_timeout(300)
     check("coach tab: Settings has the switch, on Hidden",
           p.eval_on_selector('[data-pick-coach="off"]',"e=>e.getAttribute('aria-pressed')")=="true")
     p.click('[data-pick-coach="on"]'); p.wait_for_timeout(300)
     check("coach tab: Shown puts it back at once, in its place",
-          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","coach","log"]
+          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","coach","progress","log"]
           and p.eval_on_selector('[data-pick-coach="on"]',"e=>e.getAttribute('aria-pressed')")=="true",
           str(p.evaluate(TABSHOWN)))
     check("coach tab: and the choice is saved",
@@ -3264,7 +3264,7 @@ with sync_playwright() as pw:
     # teal (or carries a teal marker — a name with its ▾ or "tap to open"), and
     # teal text is never something that cannot be pressed.
     TG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
-    TSTORE={"days":{Ts:{"updated":1,"goal":TG,"supps":{"s1":True},"gymNote":"Hotel gym",
+    TSTORE={"days":{Ts:{"updated":1,"goal":TG,"supps":{"s1":True},"gymNote":"Hotel gym","bw":181.6,"prog":{"at":1,"note":"Felt strong"},
         "food":[{"id":"m1","note":"","items":[{"id":"i1","cal":330,"pro":52,"note":"Chicken breast"},
                                                {"id":"i2","cal":215,"pro":4,"note":"White rice"}]},
                 {"id":"f1","cal":130,"pro":30,"note":"Protein coffee"}],
@@ -3305,7 +3305,7 @@ with sync_playwright() as pw:
     q.reload(); q.wait_for_timeout(900)
     acc=q.evaluate(TEALJS)
     bare_all, stray_all = [], []
-    for t in ["macros","gym","pantry","cardio","coach","log"]:
+    for t in ["macros","gym","pantry","cardio","coach","progress","log"]:
         q.click('.tabs button[data-tab="%s"]'%t); q.wait_for_timeout(400)
         if t=="macros": q.click(".meal-open"); q.wait_for_timeout(300)
         if t=="coach" and q.locator("[data-openday]").count(): q.locator("[data-openday]").first.click(); q.wait_for_timeout(300)
@@ -3356,7 +3356,7 @@ with sync_playwright() as pw:
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
     q.reload(); q.wait_for_timeout(900)
     tabs=q.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)")
-    check("cardio: a tab of its own, between Gym and Log", tabs==["macros","pantry","gym","cardio","log"], str(tabs))
+    check("cardio: a tab of its own, after Gym", tabs==["macros","pantry","gym","cardio","progress","log"], str(tabs))
     q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
     check("cardio: no rest timer here", q.evaluate("()=>document.getElementById('restbar').hidden"))
     check("cardio: an empty day says what to do", "Start a session above" in q.inner_text("#view"))
@@ -3644,10 +3644,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="See what you worked"
-          and titles[1]=="The Gym tab folds like Macros"
-          and titles[2]=="The Pantry folds like Macros"
-          and titles[3]=="The iPhone app buzzes back", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Progress: photos, notes and weight"
+          and titles[1]=="See what you worked"
+          and titles[2]=="The Gym tab folds like Macros"
+          and titles[3]=="The Pantry folds like Macros", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

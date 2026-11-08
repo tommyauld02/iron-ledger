@@ -54,6 +54,9 @@ STORE={"days":{
    for i,(n,c,pr,s) in enumerate([("Eggs",72,6,["breakfast"]),("Bacon",43,3,["breakfast"]),
      ("Chicken breast",165,31,["lunch","dinner"]),("Rice",205,4,["lunch"]),("Greek yogurt",100,17,["snacks"]),
      ("Protein bar",190,20,["snacks"]),("Steak",280,26,["dinner"])])]}
+# A dozen check-ins on Progress (b90), so its list runs past one screen too.
+for _i in range(12):
+    STORE["days"].setdefault(ago(7*_i+1), {"food":[],"goal":G})["prog"]={"at":1,"note":"Week %d"%_i}
 
 # Stamped with this build, so What's new never opens over the page. In the app
 # pass the log arrives a beat later through the bridge, and the sheet could
@@ -92,6 +95,8 @@ FIELDS=[
  ("gym: reps (set sheet)",      "gym",    ['[data-addset="0"]'], "#seR"),
  ("cardio: by hand",            "cardio", ["#cardioByHand"], "#cMin"),
  ("coach: renaming a day",      "coach",  ["[data-openday]", "[data-renameday]"], "#rtRename"),
+ ("progress: weight (sheet)",   "progress", ["#pgNew"], "#pgW"),
+ ("progress: a note (sheet)",   "progress", ["#pgNew"], "#pgNote"),
 ]
 # Every tab, folded and with each thing that opens a long box opened.
 SCREENS=[
@@ -108,6 +113,7 @@ SCREENS=[
  ("gym, locked in (recovery)","gym",   ["#lockDay"]),
  ("cardio",                  "cardio", []),
  ("coach",                   "coach",  ["[data-openday]"]),
+ ("progress",                "progress", []),
  ("log",                     "log",    []),
 ]
 PHONES=[("17 Pro", 402, 874, 336), ("SE", 320, 568, 253)]   # name, width, height, keyboard

@@ -47,6 +47,8 @@ def fixture(theme=None, accent=None):
             "gymNote": "Hotel gym, dumbbells only",
             "gym": "gA",
             "cardio": [{"id": "c1", "type": "Incline walk", "min": 30, "dist": 3.1, "cal": 265, "t": 1}],
+            # a check-in on the Progress tab: its row, its sheet, and the Log's marks
+            "prog": {"at": 1, "note": "Felt lean today"},
             "updated": 1, "goal": G}},
          "gyms": [{"id": "gA", "name": "Apartment gym", "tag": "APT"}, {"id": "g24", "name": "24 Hour Fitness", "tag": "24"}],
          "gymLast": "gA", "cardioTypes": ["Incline walk", "Bike"], "moves": None, "coachOn": True, "goal": G, "region": "United States",
@@ -158,7 +160,7 @@ def walk(p, label):
         low = p.evaluate(LOW)
         if low: found.append("what's new: %s" % low)
         p.click("#newsDone"); p.wait_for_timeout(200)
-    for tab in ["macros", "gym", "pantry", "cardio", "coach", "log"]:
+    for tab in ["macros", "gym", "pantry", "cardio", "coach", "progress", "log"]:
         p.click('.tabs button[data-tab="%s"]' % tab); p.wait_for_timeout(350)
         if tab == "coach" and p.locator("[data-openday]").count():
             p.locator("[data-openday]").first.click(); p.wait_for_timeout(300)
@@ -166,6 +168,21 @@ def walk(p, label):
             p.locator(".meal-open").first.click(); p.wait_for_timeout(300)
         low = p.evaluate(LOW)
         if low: found.append("%s: %s" % (tab, low))
+        if tab == "progress":
+            # one check-in and the editor only exist after a press (b90)
+            if not p.locator("[data-pgday]").count():
+                found.append("progress: no check-in on screen to open")
+            else:
+                p.locator("[data-pgday]").first.click(); p.wait_for_timeout(300)
+                low = p.evaluate(LOW)
+                if low: found.append("progress (a check-in): %s" % low)
+                p.click("#pgClose"); p.wait_for_timeout(200)
+            p.click("#pgNew"); p.wait_for_timeout(300)
+            if not p.locator("#pgSheet .pg-said").count():
+                found.append("progress: the editor's already-has-one line is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("progress (new check-in): %s" % low)
+            p.click("#pgX"); p.wait_for_timeout(200)
         if tab == "pantry":
             # the sections have looks of their own: the tabs, a chosen one,
             # the meals named under a food, and Meals itself
