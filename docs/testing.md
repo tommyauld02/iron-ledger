@@ -58,7 +58,8 @@ or a photo; the photo shrunk and kept in IndexedDB, never in the log or a
 backup, and back after a restart; a day that already has one; Compare side by
 side and as a slider; the Log's camera, ring and peek; Remove, Undo and the
 photo bin after the next open; a photo this phone does not have; kg; the
-iPhone app with and without the Filesystem plugin, against a stand-in bridge;
+iPhone app with and without the Filesystem plugin, against a stand-in bridge
+that refuses a missing file as the real plugin does;
 and seven tabs at 320px. It opens over `http`, because its reloads stand for
 the app being closed and opened (see *agecheck* below). The full list is in
 `docs/progress.md`.

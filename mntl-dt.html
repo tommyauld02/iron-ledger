@@ -4424,7 +4424,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-07.90";
+  var BUILD = "2026-11-08.91";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5398,6 +5398,9 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-08.91", t: "Progress photos in the iPhone app", items: [
+      "In the iPhone app only: the Progress tab now keeps a photo with each check-in, as it already does on the web. It comes with the app’s new version, from TestFlight or the App Store.",
+      "The photos stay in the app’s own files on your phone and are never sent anywhere. As on the web, your backup carries notes and weights, not photos." ] },
     { b: "2026-11-07.90", t: "Progress: photos, notes and weight", items: [
       "A new Progress tab, just left of Log. Tap New check-in to add a photo, a note or your weight for the day. Any one of them is enough, and there’s no need to do it every day.",
       "The tab lists the days you checked in. Tap one to see it, step to the one before or after, or edit or remove it.",
@@ -13116,8 +13119,13 @@
         if (urls[id] && urls[id].slice(0, 5) === "blob:") URL.revokeObjectURL(urls[id]);
         delete urls[id];
         if (!how) return Promise.resolve();
+        // A file already gone counts as deleted, as a missing key does in
+        // IndexedDB. The plugin refuses it (OS-PLUG-FILE-0008, "file does not
+        // exist"), and that would keep its name in the bin for good.
         return how === "files"
-          ? fsCall("deleteFile", { path: fsPath(id), directory: "DATA" })
+          ? fsCall("deleteFile", { path: fsPath(id), directory: "DATA" }).catch(function (e) {
+              if (!(e && e.code === "OS-PLUG-FILE-0008")) throw e;
+            })
           : tx("readwrite", function (st) { return st.delete(id); });
       }
     };

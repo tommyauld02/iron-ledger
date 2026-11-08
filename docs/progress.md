@@ -85,16 +85,26 @@ another phone, a check-in whose photo is not there says *This photo isn't on
 this phone* rather than showing a broken image or vanishing (rule 7). A
 separate way to save the photos themselves is left for later.
 
-**In the iPhone app, photos wait for the Filesystem plugin.** The WebView's
+**In the iPhone app, photos are files, from shell 1.3 (b91).** The WebView's
 own storage is website data to iOS, which may clear it when space runs low,
 the reason the log moved to native storage (`docs/architecture.md`). So in
-the app photos are files, through `@capacitor/filesystem`, and a shell without
-that plugin (`shellHas("Filesystem")` false) keeps notes and weights and says
-photos come with the next update of the app, rather than putting them
-somewhere they could be lost. Adding the plugin is a store build
-(`docs/ios.md`). So is changing the camera's permission wording in
-`Info.plist`, which today says pictures "are not kept" and must change before
-photos are offered there.
+the app photos are files, through `@capacitor/filesystem` 8.1.5, added in
+shell 1.3: `DATA`, which is the app's Documents folder on iOS. iOS never
+clears that folder to make room, and the phone's own backup includes it, as
+it does the log. A shell without the plugin (1.2 and older,
+`shellHas("Filesystem")` false) keeps notes and weights and says photos come
+with the next update of the app, rather than putting them somewhere they could
+be lost. The camera's permission wording in `Info.plist` changed with it: it
+used to say pictures "are not kept", and now says barcodes and labels are read
+and not kept, and progress photos are kept on the phone and never sent
+anywhere. *Choose one* needs no permission of its own (`docs/ios.md`).
+
+**A file already gone counts as deleted.** The plugin refuses to delete a file
+that is not there (`OS-PLUG-FILE-0008`), where IndexedDB quietly deletes a
+missing key. That refusal would keep the name in the photo bin for good: the
+bin lets a name go only once its delete succeeds, and an open that empties the
+bin but saves nothing leaves the stored bin naming files already deleted. So
+`photos.del` takes that one refusal as done, and any other still fails.
 
 **Seven tabs on a 320px phone.** With Coach switched on there are seven tabs,
 and a 320px phone gave each one 43px. Below 341px the tab bar's side padding
@@ -109,6 +119,7 @@ still there after a restart; a day that already has one; Change day and its
 limit; stepping; Compare both ways and from both places; the Log's marks,
 legend and peek; Remove, Undo and the bin after the next open; a photo this
 phone does not have; kg; the iPhone app with and without the plugin, against
-a stand-in bridge; and seven tabs at 320px. `darkcheck` opens a check-in and
+a stand-in bridge that refuses a missing file as the real plugin does, and a
+file already gone leaving the bin; and seven tabs at 320px. `darkcheck` opens a check-in and
 the editor for contrast, `keys` types into the editor's two fields, and
 `mobile`, `hittest` and `handoff` walk the tab.

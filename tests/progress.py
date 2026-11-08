@@ -21,7 +21,8 @@ showing which days have one. This suite plays all of it as a phone would:
 - the Log: a camera on a photo day, a ring on one without, the legend, and the
   peek's Progress line opening the check-in
 - the iPhone app: a shell without the Filesystem plugin keeps notes and weight
-  and says photos come with the update; with it, photos are the app's files
+  and says photos come with the update; with it, photos are the app's files,
+  and a file already gone (the plugin refuses that delete) still leaves the bin
 - every control 44px, every field 16px, and seven tabs on a 320px phone
 
 Exits non-zero on any failure or page error: it is a gate.
@@ -409,11 +410,17 @@ with sync_playwright() as pw:
             if method == "set": phone_store["prefs"][k] = opts.get("value", ""); return {}
             if method == "remove": phone_store["prefs"].pop(k, None); return {}
         if plugin == "Filesystem":
+            # As @capacitor/filesystem 8.1.5 answers on iOS: a file that is not
+            # there is refused with OS-PLUG-FILE-0008, deleting one included.
             path = opts.get("path", "")
+            gone = {"error": "'%s' failed because file at '%s' does not exist." % (method, path),
+                    "code": "OS-PLUG-FILE-0008"}
             if method == "writeFile": phone_store["files"][path] = opts.get("data", ""); return {}
             if method == "readFile":
-                return {"data": phone_store["files"][path]} if path in phone_store["files"] else {"error": "File does not exist"}
-            if method == "deleteFile": phone_store["files"].pop(path, None); return {}
+                return {"data": phone_store["files"][path]} if path in phone_store["files"] else gone
+            if method == "deleteFile":
+                if path not in phone_store["files"]: return gone
+                del phone_store["files"][path]; return {}
         if plugin in ("Haptics", "LocalNotifications"):
             return {"display": "granted"}
         return {"error": plugin + "." + method + " is not implemented"}
@@ -422,7 +429,8 @@ with sync_playwright() as pw:
       window.Capacitor = { isNativePlatform: () => true, getPlatform: () => 'ios',
         isPluginAvailable: (n) => has.indexOf(n) !== -1,
         nativePromise: (plugin, method, opts) => window.__native(plugin, method, opts || {})
-          .then(r => { if (r && r.error) throw new Error(r.error); return r; }) }; })();"""
+          .then(r => { if (r && r.error) { const e = new Error(r.error); if (r.code) e.code = r.code; throw e; }
+                       return r; }) }; })();"""
 
     def app(plugins):
         ctx = b.new_context(viewport={"width": 402, "height": 874}, has_touch=True, is_mobile=True)
@@ -470,6 +478,24 @@ with sync_playwright() as pw:
     ctx, p, errs = app(["Preferences", "Haptics", "LocalNotifications", "Filesystem"])
     p.wait_for_timeout(500)
     check("app: a removed photo's file is deleted on the next open", path not in phone_store["files"])
+    allerrs += errs; ctx.close()
+    # Nothing was saved on that open, so the stored bin still names the photo,
+    # and the next open asks to delete a file that is already gone. The plugin
+    # refuses that; the bin must let the name go all the same.
+    before = json.loads(phone_store["prefs"].get("CapacitorStorage." + KEY) or "{}")
+    check("app: (the stored bin still names the deleted photo)", apid in (before.get("photoBin") or {}),
+          str(before.get("photoBin")))
+    phone_store["calls"].clear()
+    ctx, p, errs = app(["Preferences", "Haptics", "LocalNotifications", "Filesystem"])
+    p.wait_for_timeout(500)
+    tab(p, "progress"); p.click("#pgNew"); p.wait_for_timeout(300)
+    p.fill("#pgNote", "After the bin"); save(p)
+    kept = json.loads(phone_store["prefs"].get("CapacitorStorage." + KEY) or "{}")
+    check("app: a photo file already gone leaves the bin at the next save",
+          any(c[:2] == ("Filesystem", "deleteFile") for c in phone_store["calls"])
+          and apid not in (kept.get("photoBin") or {})
+          and kept.get("days", {}).get(Ts, {}).get("prog", {}).get("note") == "After the bin",
+          str(kept.get("photoBin")))
     allerrs += errs; ctx.close()
 
     # ---------- 15. seven tabs on a 320px phone ----------

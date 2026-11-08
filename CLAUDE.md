@@ -160,7 +160,7 @@ Everything else:
 - **Cardio tab and cardio goals** → `docs/cardio.md`
 - **Progress tab** — check-ins (photo, note, weight), photos kept beside the
   log and never in it or a backup, the photo bin, Compare, the Log's camera
-  and ring, photos in the iPhone app waiting on the Filesystem plugin →
+  and ring, photos in the iPhone app as files from shell 1.3 →
   `docs/progress.md`
 - **Testing in detail** — what each suite covers and the lessons behind them →
   `docs/testing.md`
