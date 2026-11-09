@@ -58,7 +58,8 @@ or a photo; the photo shrunk and kept in IndexedDB, never in the log or a
 backup, and back after a restart; a day that already has one; Compare side by
 side and as a slider; the Log's camera, ring and peek; Remove, Undo and the
 photo bin after the next open; a photo this phone does not have; kg; the
-iPhone app with and without the Filesystem plugin, against a stand-in bridge;
+iPhone app with and without the Filesystem plugin, against a stand-in bridge
+that refuses a missing file as the real plugin does;
 and seven tabs at 320px. It opens over `http`, because its reloads stand for
 the app being closed and opened (see *agecheck* below). The full list is in
 `docs/progress.md`.
@@ -92,7 +93,9 @@ the pantry first, Claude only when the relay is out of reach · `native` the
 iPhone app's log in native storage, against a stand-in Capacitor bridge whose
 storage outlives the browser: a restart with the WebView wiped, a failed
 write and its retry, a log that cannot be read, taps before it is read, no
-service worker in the app · `live` the iPhone app's live updates against a
+service worker in the app, and the privacy manifest: bundled by Xcode, its
+reasons, and every reasoned API in the shell's and installed plugins' Swift
+declared · `live` the iPhone app's live updates against a
 stand-in updater and manifest: what is taken and when, the shell-version and
 downgrade guards, a build that failed to start, an updater that never
 answers, the manifest Pages publishes, and that the shell's version was raised

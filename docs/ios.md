@@ -12,7 +12,8 @@ nothing here is iPhone-only except the `ios/` folder itself.
 ```
 package.json            Capacitor 8.5.3, @capacitor/preferences 8.0.1,
                         @capacitor/haptics 8.0.2, @capacitor/local-notifications
-                        8.3.1 and @capgo/capacitor-updater 8.52.1, pinned exactly
+                        8.3.1, @capacitor/filesystem 8.1.5 and
+                        @capgo/capacitor-updater 8.52.1, pinned exactly
 capacitor.config.json   app id, the name under the icon, webDir, the updater's settings
 tools/make-www.mjs      assembles www/ from mntl-dt.html, fonts/, icons/, vendor/,
                         and the live-update manifest Pages publishes
@@ -47,9 +48,41 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
   community SQLite plugin brings SQLCipher with it. The live-update plugin
   only hashes files (SHA-256, with Apple's own CryptoKit); its optional
   encrypted bundles are not used.
-- **The camera** is asked for with words saying what it is for: barcodes and
-  labels, read on the phone. iOS stops an app that opens the camera without
-  them.
+- **The camera** is asked for with words saying what it is for: pictures of
+  barcodes and labels, read on the phone and not kept or sent anywhere, and
+  progress photos, kept on the phone and never sent anywhere. iOS stops an
+  app that opens the camera without them. Until shell 1.3 the words said the
+  pictures were not kept, which progress photos made untrue, so they changed
+  with the photos. Changing them again is a store build.
+- **No photo library permission.** *Choose one* on the Progress tab is a plain
+  file input. iOS answers it with its own photo picker (PHPicker), which runs
+  outside the app and hands over only the photo picked, so there is nothing
+  to ask and no `NSPhotoLibraryUsageDescription`. Nothing in the app reaches
+  the library itself: the plugins link no Photos framework. Saving a photo
+  *into* the library would need `NSPhotoLibraryAddUsageDescription`, and a
+  store build.
+- **The privacy manifest** (`ios/App/App/PrivacyInfo.xcprivacy`, from shell
+  1.3) gives Apple a reason for each "required reason" API the app's code
+  uses. App Store Connect refuses an upload that uses one without a reason
+  (ITMS-91053). Shells 1.0 to 1.2 went up without one. Three are used, none
+  to identify anyone:
+  - **UserDefaults, CA92.1** (the app's own settings): the log through
+    `@capacitor/preferences`, the quick action in `SceneDelegate.swift`, the
+    updater's own state.
+  - **File timestamps, C617.1** (files in the app's own container): the
+    filesystem library, and the updater tidying its downloaded builds.
+  - **Disk space, E174.1** (room to write files): the updater checks free
+    space before it downloads a build.
+
+  It also declares what the App Privacy answers in App Store Connect say: the
+  words typed into *Ask an agent* (Other User Content), for app
+  functionality, not linked to the person, no tracking. If those answers
+  change, this file changes with them, in a store build. `tests/native.py`
+  checks that Xcode bundles the file, that it says the above, and that every
+  such API in the shell's and the plugins' own Swift is declared. It reads
+  the plugins from `node_modules`, so that last check covers them only where
+  `npm install` has run, not in CI's verify job. Adding a plugin means
+  running `native` locally first.
 - **The launch screen** is a plain background in the phone's light or dark,
   not Capacitor's logo.
 - **`capacitor://localhost`** is the app's address on iPhone (Capacitor's
@@ -84,6 +117,20 @@ native storage*). In short: `@capacitor/preferences` (UserDefaults on iOS)
 under the same key, `iron-ledger-v1`, with `save()` and `saveError` keeping
 their promise that a failed write never looks like a successful one.
 `tests/native.py` proves it with a stand-in for Capacitor's bridge.
+
+## Progress photos are files (shell 1.3)
+
+`@capacitor/filesystem` keeps each progress photo as a file,
+`mntl-dt-photos/<id>.jpg` under `DATA`, which is the app's Documents folder on
+iOS. iOS never clears that folder to make room, unlike website data, and the
+phone's own backup includes it. The page calls the plugin's `writeFile`,
+`readFile` and `deleteFile` through `Capacitor.nativePromise`, base64 both
+ways (no `encoding` option), after `shellHas("Filesystem")`, so a 1.2 shell is
+never asked. The plugin brings one native library, `ion-ios-filesystem`
+(Foundation only), which Swift Package Manager fetches on the first build. The
+why, and how a missing file is handled, are in `docs/progress.md` (*In the
+iPhone app, photos are files*). `tests/progress.py` checks it with a stand-in
+for the plugin.
 
 ## How an update reaches phones
 
@@ -166,6 +213,11 @@ the shell has changed while the version has not. So after changing the shell:
    ```bash
    python tools/shell-version.py --record
    ```
+   It refuses a version already recorded with a different shell. If that
+   version has never been built for TestFlight, delete its line in
+   `ios/shell-versions.json` and record again (shell 1.3 was recorded twice
+   this way, before and after its privacy manifest). Once a version has been
+   built, raise it instead.
 3. Commit both, merge, and run *Build for TestFlight*.
 
 ### Store builds from GitHub: Build for TestFlight
@@ -302,6 +354,11 @@ These are the things only the iPhone can answer:
 10. Log a food and a set, delete one: you feel a tap, then a stronger one.
 11. Hold the icon. Each of the four quick actions lands in the right place, from
     a closed app and from one already running.
+12. Progress → *New check-in* → *Take photo*, then *Save*. (iOS shows the
+    camera's words only when it first asks; a phone that already allowed the
+    camera for barcodes is not asked again.) Change day to an earlier one and
+    use *Choose one* (no permission is asked). Swipe the app away, open it:
+    both photos show. Restart the phone: still there.
 
 Anything that looks wrong: a screenshot and the build number from the
 header (`b77`) is enough to start from.
