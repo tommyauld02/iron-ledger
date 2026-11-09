@@ -37,3 +37,35 @@ goal's own periods against a dashed goal line, grey under it and green on it
 (never teal, which means *tap*), with an even number of tiles. It draws
 nothing until something has been logged. Calendar colours are untouched, and a
 day's title names its cardio.
+
+**Steps are the goal's fifth choice (b92).** Asked for by the owner, who counts
+steps rather than minutes, as an alternative to minutes rather than a goal of
+its own: Minutes, Distance, Calories and Sessions stay exactly as they were for
+everyone who uses them, and Steps sits beside them in `CARDIO_KINDS`, by the
+day, week or month (10,000, 70,000 and 300,000 to start; the source is beside
+`CARDIO_GOAL_START`). Five buttons go three over two (`.seg.five`), on the
+Cardio tab and in Settings → You. A day's steps are the day's own number,
+`d.steps` with `d.stepsAt`, not any session's, because a phone counts them all
+day; so the lap has one stretch a day rather than one a session
+(`cardioPeriodVals()`), and `cardioTotals()` adds `steps` and `stepDays`.
+Steps are not turned into minutes or miles: that would mean guessing a
+stride, the confident wrong number. While the goal counts steps, the lap has
+*Enter today's steps* (*Change…* once there are some), a sheet with one box.
+The number typed **replaces** the day's, since it is what the phone or watch
+shows for the whole day, and the sheet says so; Save says *Steps for today:
+6,240* (and *(was …)* when it replaced one) with Undo, and *Take off today's
+steps* is there once there are some, with Undo too. "8,432" is 8432: a comma
+in a step count is never a decimal point (`stepsFrom()`, and `pfCardioV()` in
+the profile, where `num1()` would read it as one). The box shows only while the
+goal counts steps, but steps can still be typed once the day's cardio is
+finished, because they keep coming until midnight. A day's steps stay in the
+log whatever the goal counts later; a day's title names them, the week strip
+marks and counts days with steps while the goal counts them, and the Log's
+tracker becomes *Steps · last 8 …* with the year's steps in its tiles. As with
+the other four, past periods are drawn against the goal in force now, not one
+stamped on each day. Steps travel in a backup, since they are part of the day.
+
+Steps come from typing for now. Reading them from Apple Health, where the
+iPhone's Fitness app keeps them, needs the iPhone app's shell (a read-only
+HealthKit permission, so a store build); no browser can read Health, so the
+web app keeps typing.

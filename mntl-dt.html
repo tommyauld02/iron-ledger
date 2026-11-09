@@ -2998,6 +2998,12 @@
   /* minutes · miles · calories: three short numbers side by side */
   .trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .seg.four { grid-template-columns: repeat(2, 1fr); }
+  /* Five choices (the cardio goal's, b92): three over two, every button full
+     width of its share, so none sits alone on a row. */
+  .seg.five { grid-template-columns: repeat(6, 1fr); }
+  .seg.five > button:nth-child(-n+3) { grid-column: span 2; }
+  .seg.five > button:nth-child(n+4) { grid-column: span 3; }
+  .cardio-goal .cg-steps { margin-top: 4px; }
   .c-acts { display: flex; gap: 2px; }
   #cDrop {
     height: 46px;
@@ -3652,6 +3658,8 @@
     font-family: var(--font-ui); font-size: 38px; font-weight: 800; font-stretch: 125%; line-height: 1; color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
+  /* a month of steps runs to seven figures: smaller, so it stays inside the lap */
+  .cardio-goal .cg-num.is-long b { font-size: 30px; }
   .cardio-goal .cg-left { margin: 2px 0 0; text-align: center; font-size: 15px; font-weight: 700; color: var(--ink); }
   .cardio-goal .cg-left.is-met { color: var(--hit); }
   .cg-legend { margin: 0; text-align: center; font-family: var(--font-num); font-size: 11.5px; color: var(--ink-3); }
@@ -4424,7 +4432,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-08.91";
+  var BUILD = "2026-11-09.92";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -4911,6 +4919,7 @@
   var cardioEditing = null;       // the id of a session being changed
   var cardioLastType = null;      // the add form opens on the type last used
   var cardioByHand = false;       // the by-hand sheet is open
+  var stepsTyping = false;        // the steps sheet is open
   // null, "share" or "load" — which routine-sharing panel is open on Coach
   var suppEditing = null;   // which checklist item is being renamed
   var liftEditing = null;   // which movement on the day is having its name changed
@@ -5312,12 +5321,27 @@
   // counted or how often goes to that pair's starting number: minutes do not
   // convert to miles, and re-reading 150 a week as 150 a day would be the
   // unit picker's trap in another form.
-  var CARDIO_KINDS = [["min", "Minutes"], ["dist", "Distance"], ["cal", "Calories"], ["sessions", "Sessions"]];
+  // Steps (b92) is the fifth, asked for by the owner, who counts steps rather
+  // than minutes: one of the goal's choices, not a goal of its own, so the
+  // others stay exactly as they were. A day's steps are the day's own number
+  // (d.steps), not a session's, because a phone counts them all day.
+  var CARDIO_KINDS = [["min", "Minutes"], ["dist", "Distance"], ["cal", "Calories"], ["sessions", "Sessions"], ["steps", "Steps"]];
   var CARDIO_PERIODS = [["day", "Daily"], ["week", "Weekly"], ["month", "Monthly"]];
+  // Steps start at 10,000 a day, the usual default on step counters; a 2022
+  // meta-analysis of 15 cohorts (Paluch et al., Lancet Public Health 7:e219)
+  // found the benefit still growing up to about 8,000–10,000 a day for adults
+  // under 60. A week is seven of those days, a month thirty.
   var CARDIO_GOAL_START = {
     min: { day: 30, week: 150, month: 600 }, dist: { day: 2, week: 10, month: 40 },
-    cal: { day: 300, week: 1500, month: 6000 }, sessions: { day: 1, week: 3, month: 12 }
+    cal: { day: 300, week: 1500, month: 6000 }, sessions: { day: 1, week: 3, month: 12 },
+    steps: { day: 10000, week: 70000, month: 300000 }
   };
+  // A step count as typed: "8,432" and "8 432" are 8432. A comma here is never
+  // a decimal point, since nobody walks part of a step.
+  function stepsFrom(v) {
+    var s = String(v == null ? "" : v).replace(/[,\s]/g, "");
+    return s === "" ? null : Number(s);
+  }
   function cardioGoal() {
     var g = store.cardioGoal || {};
     var kind = CARDIO_GOAL_START[g.kind] ? g.kind : "min";
@@ -5338,13 +5362,15 @@
   }
   // Totals over the period a day falls in: the day, its week or its month.
   function cardioTotals(key, period) {
-    var t = { min: 0, sessions: 0, dist: 0, cal: 0 }, s0 = parseYmd(periodStart(key, period));
+    var t = { min: 0, sessions: 0, dist: 0, cal: 0, steps: 0, stepDays: 0 }, s0 = parseYmd(periodStart(key, period));
     var n = period === "day" ? 1 : period === "week" ? 7 : new Date(s0.getFullYear(), s0.getMonth() + 1, 0).getDate();
     for (var i = 0; i < n; i++) {
       var dt = new Date(s0); dt.setDate(s0.getDate() + i);
-      ((store.days[ymd(dt)] || {}).cardio || []).forEach(function (c) {
+      var dd = store.days[ymd(dt)] || {};
+      (dd.cardio || []).forEach(function (c) {
         t.min += Number(c.min) || 0; t.sessions++; t.dist += Number(c.dist) || 0; t.cal += Number(c.cal) || 0;
       });
+      if (Number(dd.steps) > 0) { t.steps += Number(dd.steps); t.stepDays++; }
     }
     return t;
   }
@@ -5354,7 +5380,8 @@
       (Number(c.cal) ? " · " + fmt(c.cal) + " kcal" : "");
   }
   function goalWord(kind, n) {
-    return kind === "min" ? "min" : kind === "dist" ? "mi" : kind === "cal" ? "kcal" : (n === 1 ? "session" : "sessions");
+    return kind === "min" ? "min" : kind === "dist" ? "mi" : kind === "cal" ? "kcal" :
+      kind === "steps" ? (n === 1 ? "step" : "steps") : (n === 1 ? "session" : "sessions");
   }
   function goalNum(kind, n) { return kind === "dist" ? fmtDist(n) : fmt(n); }
   function periodWord(period) { return period === "day" ? "a day" : period === "month" ? "a month" : "a week"; }
@@ -5398,6 +5425,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-09.92", t: "Steps, as a cardio goal", items: [
+      "Your cardio goal can now count steps. On the Cardio tab tap Goal · Edit, or go to Settings → You, and pick Steps, by the day, the week or the month. Minutes, distance, calories and sessions are all still there.",
+      "Counting steps, the lap has a button to type in the number your phone or watch shows. It replaces what was there rather than adding to it, and Undo takes it back.",
+      "The Log shows your steps against the goal for the last eight days, weeks or months, and tapping a day shows its steps." ] },
     { b: "2026-11-08.91", t: "Progress photos in the iPhone app", items: [
       "In the iPhone app only: the Progress tab now keeps a photo with each check-in, as it already does on the web. It comes with the app’s new version, from TestFlight or the App Store.",
       "The photos stay in the app’s own files on your phone and are never sent anywhere. As on the web, your backup carries notes and weights, not photos." ] },
@@ -7642,6 +7673,8 @@
       }
     } else if (tab === "cardio") {
       if (d && d.cardio && d.cardio.length) return { cls: "m-on", say: ", cardio logged" };
+      // While the goal counts steps, a day with steps is a day toward it.
+      if (d && Number(d.steps) > 0 && cardioGoal().kind === "steps") return { cls: "m-on", say: ", steps logged" };
     } else {
       var v = verdict(k);
       if (v === "hit") return { cls: "m-hit", say: ", target hit" };
@@ -7654,15 +7687,18 @@
     if (key !== TODAY) return "";
     var start = parseYmd(weekStart(key)), n = 0, i, k, d;
     if (tab === "gym" || tab === "cardio") {
+      var stepsGoal = tab === "cardio" && cardioGoal().kind === "steps";
       for (i = 0; i < 7; i++) {
         k = ymd(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
         d = store.days[k];
         if (!d) continue;
-        if (tab === "gym" ? ((d.lifts && d.lifts.length) || d.workoutMs) : (d.cardio && d.cardio.length)) n++;
+        if (tab === "gym" ? ((d.lifts && d.lifts.length) || d.workoutMs)
+            : stepsGoal ? Number(d.steps) > 0 : (d.cardio && d.cardio.length)) n++;
       }
       if (!n) return "";
       return tab === "gym" ? n + (n === 1 ? " session this week" : " sessions this week")
-                           : n + (n === 1 ? " cardio day this week" : " cardio days this week");
+           : stepsGoal ? n + (n === 1 ? " day of steps this week" : " days of steps this week")
+                       : n + (n === 1 ? " cardio day this week" : " cardio days this week");
     }
     if (tab !== "macros") return "";
     n = onTargetStreak();
@@ -8496,7 +8532,16 @@
   var pf = null, pfMode = "", pfStep = 1, pfThen = null;   // pf: what is on screen, until Save
   function profile() { return store.profile || (store.profile = {}); }
   function num1(v) { var s = String(v == null ? "" : v).trim().replace(",", "."); return s === "" ? null : Number(s); }
-  function cardioUnitName(kind) { return kind === "min" ? "Minutes" : kind === "dist" ? "Miles" : kind === "cal" ? "Calories" : "Sessions"; }
+  function cardioUnitName(kind) {
+    return kind === "min" ? "Minutes" : kind === "dist" ? "Miles" : kind === "cal" ? "Calories" : kind === "steps" ? "Steps" : "Sessions";
+  }
+  // The cardio goal's box: steps are whole, and "10,000" is ten thousand,
+  // never the decimal comma num1() reads.
+  function pfCardioV() {
+    if (pf.cKind !== "steps") return num1(pf.cV);
+    var n = stepsFrom(pf.cV);
+    return n === null ? null : Math.round(n);
+  }
 
   // mode "setup": once, after the age check, About you then Your goals.
   // mode "edit": from Settings, both on one page.
@@ -8613,7 +8658,7 @@
       '<p class="set-hint">Counted on the Gym tab: each day with a workout logged, Sunday to Saturday.</p>' +
     '</div>';
     h += '<div class="pf-grp"><span class="eyebrow" id="pfCardioK">Cardio</span>' +
-      pfSeg("pfkind", CARDIO_KINDS, pf.cKind, "pfCardioK", "four") +
+      pfSeg("pfkind", CARDIO_KINDS, pf.cKind, "pfCardioK", "five") +
       '<div class="pair">' +
         '<div class="field"><label for="pfPeriod">How often</label><select id="pfPeriod" data-pf="cPeriod">' +
           CARDIO_PERIODS.map(function (p) { return '<option value="' + p[0] + '"' + (pf.cPeriod === p[0] ? ' selected' : '') + '>' + p[1] + '</option>'; }).join("") +
@@ -8699,7 +8744,7 @@
       if (pf.waterOn && !(num1(pf.water) > 0)) return "Water needs a daily goal, or switch it to Hidden.";
       var g = num1(pf.gym);
       if (g !== null && !(g >= 1 && g <= 7 && g === Math.round(g))) return "Workouts a week is a number from 1 to 7, or leave it empty.";
-      if (!(num1(pf.cV) > 0)) return "Cardio needs a goal.";
+      if (!(pfCardioV() > 0)) return "Cardio needs a goal.";
       var bg = num1(pf.bwGoal);
       if (bg !== null && !((pf.unit === "kg" ? bg / LB_KG : bg) >= 50 && (pf.unit === "kg" ? bg / LB_KG : bg) <= 900))
         return "That goal weight doesn’t look right. Check it, or leave it empty.";
@@ -8769,8 +8814,8 @@
     var gy = num1(pf.gym);
     if (gy) store.gymGoal = gy; else delete store.gymGoal;
     var cg = cardioGoal();
-    if (cg.kind !== pf.cKind || cg.period !== pf.cPeriod || cg.v !== num1(pf.cV))
-      store.cardioGoal = { kind: pf.cKind, period: pf.cPeriod, v: num1(pf.cV) };
+    if (cg.kind !== pf.cKind || cg.period !== pf.cPeriod || cg.v !== pfCardioV())
+      store.cardioGoal = { kind: pf.cKind, period: pf.cPeriod, v: pfCardioV() };
     var bg = num1(pf.bwGoal);
     if (bg) store.bwGoal = Math.round((pf.unit === "kg" ? bg / LB_KG : bg) * 10) / 10; else delete store.bwGoal;
 
@@ -9857,6 +9902,19 @@
   function cardioCount(c, kind) {
     return kind === "sessions" ? 1 : kind === "dist" ? Number(c.dist) || 0 : kind === "cal" ? Number(c.cal) || 0 : Number(c.min) || 0;
   }
+  // The stretches of the lap: one a session, or for steps one a day, since
+  // steps are the day's own count and not any session's.
+  function cardioPeriodVals(key, period, kind) {
+    if (kind !== "steps") return cardioPeriodSessions(key, period).map(function (c) { return cardioCount(c, kind); });
+    var out = [], s0 = parseYmd(periodStart(key, period));
+    var n = period === "day" ? 1 : period === "week" ? 7 : new Date(s0.getFullYear(), s0.getMonth() + 1, 0).getDate();
+    for (var i = 0; i < n; i++) {
+      var dt = new Date(s0); dt.setDate(s0.getDate() + i);
+      var st = Number((store.days[ymd(dt)] || {}).steps) || 0;
+      if (st > 0) out.push(st);
+    }
+    return out;
+  }
   // How a session compares with the last one of its kind. Up is green; down is
   // grey, never red — a shorter walk is not a failure.
   function cardioVs(now, then, unit, isDist) {
@@ -9881,6 +9939,11 @@
     var mine = periodStart(key, g.period) === periodStart(TODAY, g.period);
     if (cardioEditing && !list.some(function (c) { return c.id === cardioEditing; })) cardioEditing = null;
     if (done) { cardioPicking = false; cardioByHand = false; }
+    // Steps keep coming all day, so they can still be typed in once the
+    // sessions are finished; the box shows only while the goal counts them.
+    var isSteps = g.kind === "steps", daySteps = Number(d.steps) || 0;
+    if (!isSteps) stepsTyping = false;
+    var dayName = key === TODAY ? "today" : shortDate(key);
 
     function typeOpts(chosen) {
       return types.map(function (t) {
@@ -9895,7 +9958,8 @@
     // ---- Cardio complete ----
     var dayMin = 0, dayDist = 0, dayCal = 0;
     list.forEach(function (c) { dayMin += Number(c.min) || 0; dayDist += Number(c.dist) || 0; dayCal += Number(c.cal) || 0; });
-    var stats = [[list.length, list.length === 1 ? 'session' : 'sessions'], [dayMin ? fmt(dayMin) : '—', 'minutes'],
+    var stats = [isSteps ? [daySteps ? fmt(daySteps) : '—', daySteps === 1 ? 'step' : 'steps']
+                         : [list.length, list.length === 1 ? 'session' : 'sessions'], [dayMin ? fmt(dayMin) : '—', 'minutes'],
                  [dayDist ? fmtDist(dayDist) : '—', 'miles'], [dayCal ? fmt(dayCal) : '—', 'kcal']];
     var doneCard = done
       ? '<section class="daydone">' +
@@ -9912,7 +9976,8 @@
     // ---- the goal: a track ----
     var weekLabel = periodLabel(key, g.period);
     function goalLabel(kind, period) {
-      return (kind === "min" ? "Minutes" : kind === "dist" ? "Miles" : kind === "cal" ? "Calories" : "Sessions") + " " + periodWord(period);
+      return (kind === "min" ? "Minutes" : kind === "dist" ? "Miles" : kind === "cal" ? "Calories" :
+              kind === "steps" ? "Steps" : "Sessions") + " " + periodWord(period);
     }
     function liveVal() {
       var dd = day(key);
@@ -9920,7 +9985,7 @@
       return g.kind === "sessions" ? 1 : cardioMs(dd) / 60000;
     }
     function track() {
-      return trackSegments(cardioPeriodSessions(key, g.period).map(function (c) { return cardioCount(c, g.kind); }), g.v, liveVal());
+      return trackSegments(cardioPeriodVals(key, g.period, g.kind), g.v, liveVal());
     }
     function statusHtml() {
       var lv = liveVal(), run = lv && g.kind === "min" ? ' · ' + Math.floor(lv) + ' running now' : '';
@@ -9934,7 +9999,7 @@
       ? '<div class="cardio-goal cg-editing" id="cgEdit">' +
           '<div class="cg-top"><span class="eyebrow">Cardio goal</span></div>' +
           '<span class="cg-q">What to count</span>' +
-          '<div class="seg four" id="cgKind" role="group" aria-label="What the goal counts">' +
+          '<div class="seg five" id="cgKind" role="group" aria-label="What the goal counts">' +
             CARDIO_KINDS.map(function (o) {
               return '<button data-cgkind="' + o[0] + '" aria-pressed="' + (o[0] === g.kind) + '">' + o[1] + '</button>';
             }).join("") + '</div>' +
@@ -9954,11 +10019,21 @@
             '<button class="cg-edit" id="cgOpen">Goal · Edit</button></div>' +
           '<div class="cg-trackbox" role="img" aria-label="' + esc(trackLabel) + '">' +
             '<div id="cgTrack">' + trackSvg(tr) + '</div>' +
-            '<div class="cg-num"><b>' + goalNum(g.kind, have) + '</b> <span>of ' + goalNum(g.kind, g.v) + ' ' + goalWord(g.kind, g.v) + '</span></div>' +
+            '<div class="cg-num' + (goalNum(g.kind, have).length > 6 ? ' is-long' : '') + '"><b>' + goalNum(g.kind, have) + '</b> <span>of ' +
+              goalNum(g.kind, g.v) + ' ' + goalWord(g.kind, g.v) + '</span></div>' +
           '</div>' +
           '<p class="cg-left' + (met ? ' is-met' : '') + '" id="cgLeft">' + statusHtml() + '</p>' +
-          '<p class="cg-legend">' + wk.sessions + (wk.sessions === 1 ? ' session' : ' sessions') + ' so far' +
-            (wk.sessions ? ', one segment each' : '') + ' · the goal is one lap</p>' +
+          '<p class="cg-legend">' + (isSteps
+            ? (g.period === "day" ? (daySteps ? 'Steps typed in' : 'No steps typed in yet')
+                                  : wk.stepDays + (wk.stepDays === 1 ? ' day' : ' days') + ' of steps so far' +
+                                    (wk.stepDays ? ', one segment each' : ''))
+            : wk.sessions + (wk.sessions === 1 ? ' session' : ' sessions') + ' so far' + (wk.sessions ? ', one segment each' : '')) +
+            ' · the goal is one lap</p>' +
+          (isSteps
+            ? '<button class="btn ghost cg-steps" id="stepsOpen">' +
+                (daySteps ? 'Change ' + (key === TODAY ? 'today’s' : shortDate(key) + '’s') + ' steps'
+                          : 'Enter ' + (key === TODAY ? 'today’s steps' : 'steps for ' + shortDate(key))) + '</button>'
+            : '') +
         '</div>';
 
     // ---- today's sessions ----
@@ -10035,6 +10110,24 @@
           '</section>' +
         '</div></div>'
       : '';
+    // The day's steps, as the phone or watch shows them: a whole day's count,
+    // so a new number replaces the old rather than adding to it.
+    var stepsSheet = stepsTyping && isSteps
+      ? '<div class="sheet" id="stepsSheet"><div class="sheet-inner">' +
+          '<div class="sh-head"><h2>' + (key === TODAY ? 'Today’s steps' : 'Steps · ' + shortDate(key)) + '</h2>' + closeX("stepsClose") + '</div>' +
+          '<section class="entry" id="stepsAdd">' +
+            '<div class="field"><label for="stepsIn">' + (key === TODAY ? 'Steps so far today' : 'Steps that day') + '</label>' +
+              '<input id="stepsIn" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="8,000" value="' +
+                (daySteps ? daySteps : '') + '"></div>' +
+            '<p class="est-note">The number your phone or watch shows for ' + (key === TODAY ? 'today' : 'that day') +
+              '. It replaces what’s here — it doesn’t add to it.</p>' +
+            '<p class="est-note" id="stepsHint" hidden style="color:var(--miss)"></p>' +
+            '<div class="sheet-actions"><button class="btn" id="stepsSave">Save steps</button>' +
+              '<button class="btn ghost" id="stepsCancel">Cancel</button></div>' +
+            (daySteps ? '<button class="btn ghost" id="stepsClear">Take off ' + (key === TODAY ? 'today’s' : 'these') + ' steps</button>' : '') +
+          '</section>' +
+        '</div></div>'
+      : '';
 
     view.innerHTML =
       '<section class="cardio-page">' +
@@ -10046,7 +10139,7 @@
         (done ? '' : '<button class="btn ghost cardio-hand" id="cardioByHand">Log a session by hand</button>') +
         (!done && (list.length || running)
           ? '<button class="btn cardio-finish" id="cardioFinish">Finish cardio</button>' : '') +
-      '</section>' + byHand + picker;
+      '</section>' + byHand + picker + stepsSheet;
 
     // ---- the bottom bar: Start, the running clock, or nothing once finished ----
     document.getElementById("ctxMain").innerHTML = done ? ''
@@ -10177,7 +10270,7 @@
       });
       cgVal.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("cgSave").click(); });
       document.getElementById("cgSave").addEventListener("click", function () {
-        var v = Number(cgVal.value);
+        var v = kind === "steps" ? stepsFrom(cgVal.value) : Number(cgVal.value);
         v = kind === "dist" ? Math.round(v * 10) / 10 : Math.round(v);
         if (!(v > 0)) {
           var h = document.getElementById("cgHint");
@@ -10193,6 +10286,51 @@
         });
       });
       document.getElementById("cgCancel").addEventListener("click", function () { cardioGoalEditing = false; render(); });
+    }
+
+    // ---- steps: typed in, a day at a time ----
+    var stOpen = document.getElementById("stepsOpen");
+    if (stOpen) stOpen.addEventListener("click", function () {
+      stepsTyping = true; cardioByHand = false; cardioPicking = false; render();
+      var f = document.getElementById("stepsIn");
+      if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
+    });
+    var stIn = document.getElementById("stepsIn");
+    if (stIn) {
+      function offSteps() { stepsTyping = false; }
+      document.getElementById("stepsClose").addEventListener("click", function () { offSteps(); render(); });
+      document.getElementById("stepsCancel").addEventListener("click", function () { offSteps(); render(); });
+      sheetClose("stepsSheet", offSteps);
+      stIn.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("stepsSave").click(); });
+      // Undo puts back exactly what was there: a number and when it was typed,
+      // or nothing at all.
+      var stWas = d.steps, stWasAt = d.stepsAt;
+      function stBack() {
+        var dd = day(key);
+        if (stWas === undefined) { delete dd.steps; delete dd.stepsAt; }
+        else { dd.steps = stWas; if (stWasAt === undefined) delete dd.stepsAt; else dd.stepsAt = stWasAt; }
+        redo();
+      }
+      document.getElementById("stepsSave").addEventListener("click", function () {
+        var n = stepsFrom(stIn.value), h = document.getElementById("stepsHint");
+        // Said in place rather than redrawn, so what is typed stays.
+        if (!(n > 0) || n !== Math.round(n)) {
+          h.textContent = "Type the steps as a whole number, like 8432."; h.hidden = false; stIn.focus(); return;
+        }
+        var before = Number(d.steps) || 0;
+        d.steps = n; d.stepsAt = Date.now();
+        stepsTyping = false;
+        redo();
+        offerUndo("Steps for " + dayName + ": " + fmt(n) + (before && before !== n ? " (was " + fmt(before) + ")" : ""), stBack);
+      });
+      var stClear = document.getElementById("stepsClear");
+      if (stClear) stClear.addEventListener("click", function () {
+        var gone = Number(d.steps) || 0;
+        delete d.steps; delete d.stepsAt;
+        stepsTyping = false;
+        redo();
+        offerUndo("Took off " + fmt(gone) + " steps for " + dayName, stBack);
+      });
     }
 
     view.querySelectorAll("[data-cedit]").forEach(function (b) {
@@ -10313,10 +10451,14 @@
   // The Log tab's view of it: the last eight weeks against the goal, and the
   // year's tiles. Nothing at all until something has been logged.
   function cardioTrackerHtml() {
-    var any = Object.keys(store.days).some(function (k) { return (store.days[k].cardio || []).length; });
+    var g = cardioGoal(), isSteps = g.kind === "steps";
+    // Steps count only while the goal counts them; otherwise sessions do.
+    var any = Object.keys(store.days).some(function (k) {
+      return isSteps ? Number(store.days[k].steps) > 0 : (store.days[k].cardio || []).length;
+    });
     if (!any) return '';
     // Eight of whatever the goal counts by: days, weeks or months.
-    var g = cardioGoal(), weeks = [], s0 = parseYmd(periodStart(TODAY, g.period));
+    var weeks = [], s0 = parseYmd(periodStart(TODAY, g.period));
     for (var i = 7; i >= 0; i--) {
       var w = new Date(s0);
       if (g.period === "month") w = new Date(s0.getFullYear(), s0.getMonth() - i, 1);
@@ -10343,8 +10485,20 @@
     if (dist) tiles.push([fmtDist(dist), "Miles in " + logYear]);
     if (cals) tiles.push([fmt(cals), "kcal in " + logYear]);
     if (tiles.length % 2) tiles.push([fmtDurShort(mins * 60000), "Time in " + logYear]);
-    return '<section class="cardio-track" aria-label="Cardio, the last eight ' + plural + '">' +
-      '<span class="eyebrow">Cardio \u00b7 last 8 ' + plural + '</span>' +
+    // Counting steps, the tiles are the year's steps instead: four, so even.
+    if (isSteps) {
+      var sDays = 0, sAll = 0;
+      Object.keys(store.days).forEach(function (k) {
+        var st = Number(store.days[k].steps) || 0;
+        if (k.slice(0, 4) === String(logYear) && st > 0) { sDays++; sAll += st; }
+      });
+      tiles = [[sDays, "Days of steps"], [weeks.filter(function (x) { return x.v >= g.v; }).length + " of 8",
+                plural.charAt(0).toUpperCase() + plural.slice(1) + " on goal"],
+               [sDays ? fmt(sAll / sDays) : "\u2014", "Avg a day"], [fmt(sAll), "Steps in " + logYear]];
+    }
+    var title = isSteps ? "Steps" : "Cardio";
+    return '<section class="cardio-track" aria-label="' + title + ', the last eight ' + plural + '">' +
+      '<span class="eyebrow">' + title + ' \u00b7 last 8 ' + plural + '</span>' +
       '<div class="ct-chart"><div class="ct-goal" style="bottom:' + Math.round(g.v / top * 100) + '%"></div>' +
         weeks.map(function (x) {
           return '<div class="ct-bar' + (x.v >= g.v ? ' is-met' : '') + '" style="height:' + Math.round(x.v / top * 100) +
@@ -12756,7 +12910,7 @@
       // A day with only a session on its clock (yoga) or only a note still had
       // something in it.
       if (!d || ((!d.food || !d.food.length) && (!d.lifts || !d.lifts.length) && !ticks &&
-                 !d.workoutMs && !d.gymNote && !(d.cardio && d.cardio.length) && !d.prog))
+                 !d.workoutMs && !d.gymNote && !(d.cardio && d.cardio.length) && !d.prog && !(Number(d.steps) > 0)))
         return { label: label, rows: null };
       var bits = [];
       function put(lab, txt) { bits.push([lab, txt]); }
@@ -12785,6 +12939,8 @@
         put("Cardio", "cardio \u00b7 " + d.cardio.map(function (c) { return c.type; }).join(", ") + " \u00b7 " + cMin + " min" +
                   (cCal ? " \u00b7 " + fmt(cCal) + " kcal" : ""));
       }
+      // Kept whatever the goal counts now: a day's steps are its own record.
+      if (Number(d.steps) > 0) put("Steps", fmt(d.steps) + (Number(d.steps) === 1 ? " step" : " steps"));
       // A check-in from the Progress tab (b90): the peek adds See check-in.
       if (d.prog) {
         put("Progress", (d.prog.photo ? "Photo" : "No photo") +
@@ -15059,7 +15215,7 @@
     document.getElementById("setWhoGoals").textContent = [
       fmt(gg.cal.v) + " kcal", fmt(gg.pro.v) + " g protein",
       gy > 0 ? gy + (gy === 1 ? " workout" : " workouts") + " a week" : "",
-      goalNum(cg.kind, cg.v) + " " + goalWord(cg.kind, cg.v) + " cardio " + periodWord(cg.period),
+      goalNum(cg.kind, cg.v) + " " + goalWord(cg.kind, cg.v) + (cg.kind === "steps" ? " " : " cardio ") + periodWord(cg.period),
       waterOn() ? waterShow(waterGoalMl()) + " " + waterUnit() + " water" : "",
       Number(store.bwGoal) > 0 ? "goal weight " + bwShow(store.bwGoal) + " " + bwUnit() : ""
     ].filter(Boolean).join(" · ");
