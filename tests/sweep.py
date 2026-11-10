@@ -3730,10 +3730,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Steps from Apple Health"
-          and titles[1]=="Steps, as a cardio goal"
-          and titles[2]=="Progress photos in the iPhone app"
-          and titles[3]=="Progress: photos, notes and weight", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Gold plates"
+          and titles[1]=="Steps from Apple Health"
+          and titles[2]=="Steps, as a cardio goal"
+          and titles[3]=="Progress photos in the iPhone app", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
@@ -3758,6 +3758,100 @@ with sync_playwright() as pw:
     check("news: a tap on the dimmed page closes it too", not q.is_visible("#newsSheet"))
     opened(LBSTORE)
     check("news: a phone opening the app for the first time is not told what changed", not q.is_visible("#newsSheet"))
+    c.close()
+
+    # ---------- GOLD MEANS YOU EARNED IT (b94) ----------
+    # Asked for by the owner: wins were quiet. The plates turn gold once an
+    # "at least" protein goal is reached with the bar still steady, the note
+    # under them is the same gold, and a streak of three days or more is gold
+    # with a flame. Gold is never drawn for anything else, so each state that
+    # must NOT be gold is checked beside the one that must.
+    GG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    def gday(cal, pro, goal=GG, more=None):
+        return {"food":[{"id":"g1","cal":cal,"pro":pro,"note":"Chicken"}]+(more or []),"updated":1,"goal":goal}
+    def gstore(today, back=0, goal=GG):
+        days={Ts: today}
+        for i in range(1, back+1): days[(T-datetime.timedelta(days=i)).isoformat()]=gday(1800,160)
+        return dict(LBSTORE, goal=goal, days=days, build=BUILDNOW)
+    GOLD="""()=>{const bb=document.querySelector('.today-card .barbell'), pl=bb.querySelector('.bb-plate i'),
+      v=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+      rgb=h=>'rgb('+[1,3,5].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')',
+      img=pl?getComputedStyle(pl).backgroundImage:'';
+      return {won:bb.classList.contains('is-won'), gold:img.includes(rgb(v('--gold'))), iron:img.includes(rgb(v('--plate'))),
+        note:!!document.querySelector('.hit-note'), card:document.querySelector('.today-card').classList.contains('is-won'),
+        fresh:bb.getAttribute('data-newwin'), aria:bb.getAttribute('aria-label')}; }"""
+    CHIP="""()=>{const c=document.getElementById('dateChip'), v=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+      rgb=h=>'rgb('+[1,3,5].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
+      return {say:c.textContent, earned:c.classList.contains('is-earned'), flame:c.querySelectorAll('svg').length,
+        gold:getComputedStyle(c).color===rgb(v('--gold-ink'))}; }"""
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("gold: "+str(e)))
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
+    opened(gstore(gday(1200,100)))
+    g=q.evaluate(GOLD)
+    check("gold: short of protein, the plates are iron and nothing is gold",
+          not g["won"] and g["iron"] and not g["gold"] and not g["note"] and not g["card"], str(g))
+    # the win, made the way a person makes it: one more food, by hand
+    way(q, "numbers")
+    q.fill("#fCal","300"); q.fill("#fPro","60"); q.fill("#fNote","Shake"); q.click("#addFood"); q.wait_for_timeout(250)
+    g=q.evaluate(GOLD)
+    check("gold: protein hit with the bar steady turns the plates gold, and the card and note with them",
+          g["won"] and g["gold"] and not g["iron"] and g["note"] and g["card"], str(g))
+    check("gold: the turn plays on the draw that crossed the line",
+          g["fresh"]=="1" and q.locator(".today-card .bb-plate i em").count()>0
+          and q.get_attribute(".hit-note","data-new")=="1", str(g))
+    check("gold: and the picture says so in words", "plates are gold" in g["aria"], g["aria"])
+    # the bar can be off the top of the screen when the winning food goes in
+    check("gold: the confirmation under the ledger says it too, where the eye is",
+          "Protein goal hit" in q.inner_text(".added-flash") and q.locator(".added-flash .af-won").count()==1,
+          q.inner_text(".added-flash"))
+    q.wait_for_timeout(2600)
+    check("gold: once it has turned, none of the iron is left showing",
+          q.evaluate("()=>[...document.querySelectorAll('.today-card .bb-plate i em')].every(e=>getComputedStyle(e).opacity==='0')"))
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    check("gold: the Pantry's bar for the day is gold too",
+          q.evaluate("()=>document.querySelector('.pan-bar .barbell').classList.contains('is-won')"))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    g=q.evaluate(GOLD)
+    check("gold: coming back to a day already won does not play it again",
+          g["won"] and g["fresh"]=="0" and q.locator(".today-card .bb-plate i em").count()==0
+          and q.get_attribute(".hit-note","data-new")=="0", str(g))
+    q.reload(); q.wait_for_timeout(900)
+    g=q.evaluate(GOLD)
+    check("gold: nor does opening the app on one", g["won"] and g["gold"] and g["fresh"]=="0", str(g))
+    opened(gstore(gday(2300,160)))
+    g=q.evaluate(GOLD)
+    check("gold: protein hit but over on calories is not a win: iron plates, no note",
+          not g["won"] and g["iron"] and not g["gold"] and not g["note"] and not g["card"], str(g))
+    opened(gstore(gday(1800,160, more=[{"id":"g2","note":"Soup","pending":True}])))
+    g=q.evaluate(GOLD)
+    check("gold: a day with a food still waiting for numbers has won nothing yet",
+          not g["won"] and not g["gold"] and not g["note"], str(g))
+    ATMOST={"cal":{"dir":"-","v":2000},"pro":{"dir":"-","v":150}}
+    opened(gstore(gday(1800,100, goal=ATMOST), goal=ATMOST))
+    g=q.evaluate(GOLD)
+    check("gold: an 'at most' protein goal is never gold", not g["won"] and not g["gold"] and not g["note"], str(g))
+    opened(gstore(gday(1200,100), back=3))
+    ch=q.evaluate(CHIP)
+    check("gold: three days on target in a row is a gold streak with a flame",
+          ch["say"]=="3-day streak" and ch["earned"] and ch["flame"]==1 and ch["gold"], str(ch))
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(300)
+    ch=q.evaluate(CHIP)
+    check("gold: the chip is gold on Macros only", not ch["earned"] and ch["flame"]==0 and not ch["gold"], str(ch))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
+    check("gold: the gold chip fits a 320px phone", q.evaluate("()=>document.documentElement.scrollWidth")<=320,
+          str(q.evaluate("()=>document.documentElement.scrollWidth")))
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    opened(gstore(gday(1200,100), back=2))
+    ch=q.evaluate(CHIP)
+    check("gold: two days is a streak, and not yet gold",
+          ch["say"]=="2-day streak" and not ch["earned"] and ch["flame"]==0 and not ch["gold"], str(ch))
+    way(q, "numbers")
+    q.fill("#fCal","100"); q.fill("#fPro","10"); q.fill("#fNote","Apple"); q.click("#addFood"); q.wait_for_timeout(250)
+    check("gold: a food that does not win the day gets the plain confirmation",
+          q.locator(".added-flash").count()==1 and q.locator(".added-flash .af-won").count()==0, q.inner_text(".added-flash"))
     c.close()
 
     def fresh(store, label):
