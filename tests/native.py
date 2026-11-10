@@ -26,6 +26,15 @@ It checks that:
 - the privacy manifest (shell 1.3): Xcode bundles it, it gives Apple's reasons
   and App Privacy's answers, and every "required reason" API in the shell's
   Swift, and the plugins' where node_modules is installed, is declared
+- steps from Apple Health (shell 1.4), with a stand-in for HealthSteps: the
+  web and a 1.3 shell keep typing and are never asked; the card, Not now and
+  Undo; Connect reads the tracker's range and fills days as Health's; a typed
+  day is never written over; Health's count is followed on coming back, at
+  most once a minute; a read never redraws over something half typed; Use
+  Apple Health's and Stop, with Undo; a failed read changes nothing; a
+  restored backup still wins a Health-filled day, and never brings the
+  phone's answer; nothing from Health says where the switch is; and the
+  shell asks to read steps only, says why, and is signed with HealthKit
 
 What it cannot show: that UserDefaults survives a phone restart. That is
 Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
@@ -566,6 +575,269 @@ with sync_playwright() as pw:
     p.wait_for_timeout(300)
     check("nothing gets past a screen that holds the app", active_tab(p) == "macros" and QUICK not in native["prefs"], active_tab(p))
     allerrs += errs; ctx.close()
+
+    # ---- 12. steps from Apple Health (shell 1.4) ------------------------------
+    # The shell's own HealthSteps plugin, stood in for here in Python so what
+    # Health holds survives a restart like the log does. It answers status,
+    # connect and days the way HealthStepsPlugin.swift does: days only within
+    # from..to, and only days with steps.
+    HEALTH = {"days": {}, "fail": None, "calls": []}
+    def health_bridge(plugin, method, opts):
+        if plugin != "HealthSteps":
+            return bridge(plugin, method, opts)
+        HEALTH["calls"].append((method, dict(opts)))
+        if method == "status": return {"available": True, "asked": False}
+        if method == "connect": return {"asked": True}
+        if method == "days":
+            if HEALTH["fail"] == "not_asked": return {"error": "Apple Health has not been asked yet", "code": "not_asked"}
+            if HEALTH["fail"]: return {"error": HEALTH["fail"]}
+            return {"days": {k: v for k, v in HEALTH["days"].items() if opts["from"] <= k <= opts["to"]}}
+        return {"error": method + " is not a HealthSteps method"}
+    SHELL = """(() => {
+      const plugins = %s;
+      window.Capacitor = {
+        isNativePlatform: () => true, getPlatform: () => 'ios',
+        isPluginAvailable: (n) => plugins.includes(n),
+        nativePromise: (plugin, method, opts) => window.__native(plugin, method, opts || {})
+          .then(r => { if (r && r.error) throw Object.assign(new Error(r.error), { code: r.code }); return r; })
+      };
+    })();"""
+    def open_shell(b, plugins, width=402):
+        ctx = b.new_context(viewport={"width": width, "height": 874}, has_touch=True, is_mobile=True)
+        ctx.expose_function("__native", health_bridge)
+        ctx.add_init_script(SHELL % json.dumps(plugins))
+        p = ctx.new_page(); errs = []
+        p.on("pageerror", lambda e: errs.append(str(e)))
+        p.clock.install()
+        p.goto(BASE); p.wait_for_timeout(900)
+        for t in ("Got it", "Start"):
+            try: p.click("text=" + t, timeout=500)
+            except Exception: pass
+        p.click('.tabs button[data-tab="cardio"]'); p.wait_for_timeout(300)
+        return ctx, p, errs
+    TD = datetime.date.today()
+    def ago(n): return (TD - datetime.timedelta(days=n)).isoformat()
+    def steps_log():
+        f = fixture("Oats")
+        f["cardioGoal"] = {"kind": "steps", "period": "week", "v": 70000}
+        f["days"][ago(1)] = {"food": [], "lifts": [], "updated": 7, "steps": 7400, "stepsAt": 1}   # typed in b92
+        return f
+    def saved(): return json.loads(on_phone())
+    def sday(k): return saved()["days"].get(k, {})
+    def days_calls(): return [c for c in HEALTH["calls"] if c[0] == "days"]
+    def later(p, secs=61):
+        # Health is read at most once a minute, and again on coming back.
+        p.clock.fast_forward(secs * 1000)
+        p.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))"); p.wait_for_timeout(300)
+    def sizes(p, sel):
+        return p.evaluate("(s) => [...document.querySelectorAll(s)].map(b => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; })", sel)
+    PH = ["Preferences", "HealthSteps"]
+
+    # the web, and a 1.3 shell, keep typing
+    ctx = b.new_context(viewport=PHONE, has_touch=True, is_mobile=True)
+    ctx.add_init_script("localStorage.setItem(%r, %s)" % (KEY, json.dumps(json.dumps(steps_log()))))
+    p = ctx.new_page(); errs = []
+    p.on("pageerror", lambda e: errs.append(str(e)))
+    p.goto(BASE); p.wait_for_timeout(900)
+    p.click('.tabs button[data-tab="cardio"]'); p.wait_for_timeout(300)
+    check("health: the web offers no Apple Health, and still types steps",
+          p.locator("#hsCard").count() == 0 and p.locator("#stepsOpen").count() == 1)
+    p.click("#stepsOpen"); p.wait_for_timeout(250)
+    check("health: the web's steps box has no Apple Health buttons",
+          p.locator("#hsFill, #hsStop, #stepsHealth").count() == 0)
+    allerrs += errs; ctx.close()
+
+    native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(steps_log())}
+    HEALTH["calls"] = []
+    ctx, p, errs = open_shell(b, ["Preferences", "Filesystem"])
+    check("health: a 1.3 shell offers no Apple Health and is never asked",
+          p.locator("#hsCard").count() == 0 and not HEALTH["calls"] and p.locator("#stepsOpen").count() == 1,
+          str(HEALTH["calls"][:2]))
+    allerrs += errs; ctx.close()
+
+    # shell 1.4: the card, and Not now
+    ctx, p, errs = open_shell(b, PH)
+    check("health: a 1.4 shell offers the card while the goal counts steps",
+          p.locator("#hsCard").is_visible() and "Connect Apple Health" in p.inner_text("#hsCard"))
+    check("health: nothing is read before the person says yes", not days_calls(), str(HEALTH["calls"]))
+    sz = sizes(p, "#hsCard button")
+    check("health: the card's buttons are at least 44px", len(sz) == 2 and all(w >= 44 and h >= 44 for w, h in sz), str(sz))
+    p.click("#hsLater"); p.wait_for_timeout(250)
+    check("health: Not now puts the card away, says so, and is kept",
+          p.locator("#hsCard").count() == 0 and "Not now" in bar(p) and saved().get("healthSteps", {}).get("on") is False, bar(p))
+    p.click("#undoBtn"); p.wait_for_timeout(250)
+    check("health: Undo brings the card back", p.locator("#hsCard").count() == 1 and "healthSteps" not in saved())
+    p.click("#hsLater"); p.wait_for_timeout(250)
+    allerrs += errs; ctx.close()
+    ctx, p, errs = open_shell(b, PH)
+    check("health: after Not now, a restart shows no card", p.locator("#hsCard").count() == 0)
+    p.click("#stepsOpen"); p.wait_for_timeout(250)
+    check("health: the steps box still offers Apple Health", p.locator("#hsFill").is_visible())
+    allerrs += errs; ctx.close()
+    for w in (320,):
+        native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(steps_log())}
+        ctx, p, errs = open_shell(b, PH, width=w)
+        sz = sizes(p, "#hsCard button")
+        check("health: at %dpx the card's buttons stay 44px and on screen" % w,
+              len(sz) == 2 and all(h >= 44 and 44 <= wd <= w for wd, h in sz)
+              and p.evaluate("() => document.documentElement.scrollWidth <= innerWidth"), str(sz))
+        allerrs += errs; ctx.close()
+
+    # Connect: the first read
+    native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(steps_log())}
+    HEALTH["calls"] = []
+    HEALTH["days"] = {ago(0): 6000, ago(1): 6517, ago(2): 7034, ago(10): 9000, ago(80): 5000}
+    ctx, p, errs = open_shell(b, PH)
+    p.click("#hsConnect"); p.wait_for_timeout(500)
+    dc = days_calls()
+    ws = TD - datetime.timedelta(days=(TD.weekday() + 1) % 7)            # Sunday-first week
+    check("health: Connect asks iOS once, then reads eight weeks up to today",
+          [c[0] for c in HEALTH["calls"]].count("connect") == 1 and len(dc) == 1
+          and dc[0][1] == {"from": (ws - datetime.timedelta(days=49)).isoformat(), "to": TD.isoformat()}, str(dc))
+    log = saved()
+    check("health: today's steps fill in, marked as Apple Health's",
+          log["days"][T].get("steps") == 6000 and log["days"][T].get("stepsBy") == "health", str(log["days"][T]))
+    check("health: a typed day is never written over", log["days"][ago(1)].get("steps") == 7400
+          and "stepsBy" not in log["days"][ago(1)], str(log["days"][ago(1)]))
+    check("health: earlier days fill in too, and nothing outside the range",
+          sday(ago(2)).get("steps") == 7034 and sday(ago(10)).get("steps") == 9000 and ago(80) not in log["days"])
+    check("health: filling never touches a day's updated, so a restore still wins",
+          log["days"][T]["updated"] == 1 and log["days"][ago(2)]["updated"] == 0, str(log["days"][T]))
+    check("health: it says what it did, and the card is gone",
+          bar(p) == "Apple Health filled in steps for 3 days" and p.locator("#hsCard").count() == 0
+          and log.get("healthSteps", {}).get("on") is True, bar(p))
+    check("health: the lap says where today's steps came from",
+          "Today’s steps come from Apple Health" in p.inner_text(".cardio-goal"), p.inner_text(".cardio-goal")[-160:])
+
+    # Health keeps counting; a typed number still stands
+    HEALTH["days"][ago(0)] = 6800; HEALTH["days"][ago(1)] = 8000
+    n0 = len(days_calls())
+    p.evaluate("() => document.dispatchEvent(new Event('visibilitychange'))"); p.wait_for_timeout(300)
+    check("health: coming back within a minute does not read again", len(days_calls()) == n0)
+    later(p)
+    check("health: coming back later follows Health's count, typed days aside",
+          sday(T).get("steps") == 6800 and sday(ago(1)).get("steps") == 7400, str(sday(T)))
+    wk = sum(v.get("steps", 0) for k, v in saved()["days"].items() if ws.isoformat() <= k <= T)
+    check("health: and the lap adds it into the week", p.inner_text(".cardio-goal .cg-num b") == "{:,}".format(wk),
+          "%s vs %s" % (p.inner_text(".cardio-goal .cg-num"), wk))
+
+    # The steps box on a Health day
+    p.click("#stepsOpen"); p.wait_for_timeout(250)
+    check("health: a Health day's box starts empty and says Health's number",
+          p.input_value("#stepsIn") == "" and "Apple Health says 6,800" in p.inner_text("#stepsSheet")
+          and p.locator("#stepsClear").count() == 0, p.inner_text("#stepsSheet"))
+    # A read that lands while something is half typed waits.
+    p.fill("#stepsIn", "12"); HEALTH["days"][ago(0)] = 6900
+    later(p)
+    check("health: a read never redraws over a half-typed number",
+          p.locator("#stepsSheet").is_visible() and p.input_value("#stepsIn") == "12" and sday(T).get("steps") == 6900)
+    p.fill("#stepsIn", "9,100"); p.click("#stepsSave"); p.wait_for_timeout(250)
+    check("health: typing replaces it, says so, and is the person's own",
+          sday(T).get("steps") == 9100 and "stepsBy" not in sday(T)
+          and "Steps for today: 9,100 (was 6,900)" in bar(p), bar(p))
+    HEALTH["days"][ago(0)] = 7000
+    later(p)
+    check("health: Apple Health leaves a typed day alone", sday(T).get("steps") == 9100)
+    check("health: and the lap says why", "You typed today’s steps" in p.inner_text(".cardio-goal"))
+    p.click("#stepsOpen"); p.wait_for_timeout(250)
+    check("health: the box offers Health's own number back", p.locator("#stepsHealth").is_visible()
+          and "7,000" in p.inner_text("#stepsHealth"), p.inner_text("#stepsSheet"))
+    p.click("#stepsHealth"); p.wait_for_timeout(250)
+    check("health: Use Apple Health's puts it back, and says so",
+          sday(T).get("steps") == 7000 and sday(T).get("stepsBy") == "health"
+          and "7,000 from Apple Health (was 9,100)" in bar(p), bar(p))
+    p.click("#undoBtn"); p.wait_for_timeout(250)
+    check("health: Undo puts the typed number back as typed", sday(T).get("steps") == 9100 and "stepsBy" not in sday(T))
+
+    # A locked phone: nothing changes, nothing breaks
+    HEALTH["fail"] = "locked"; HEALTH["days"][ago(2)] = 7777
+    later(p)
+    check("health: a read that fails changes nothing", sday(ago(2)).get("steps") == 7034 and not errs, str(errs[:1]))
+    HEALTH["fail"] = None
+
+    # A backup brings back the day's food, never the phone's Health answer
+    backup = {"days": {ago(2): {"food": [{"id": "fb", "cal": 300, "pro": 20, "note": "Restored"}], "lifts": [], "updated": 5}},
+              "healthSteps": {"on": False, "at": 1}, "moves": {}, "goal": G, "pantry": [], "v": 1}
+    p.click("#backupBtn"); p.wait_for_timeout(300)
+    p.evaluate("t => { document.getElementById('backupText').value = t; }", json.dumps(backup))
+    p.click("#restoreBtn"); p.wait_for_timeout(500)
+    check("health: a restored day comes back over one Health filled",
+          (sday(ago(2)).get("food") or [{}])[0].get("note") == "Restored", str(sday(ago(2)))[:120])
+    check("health: and the phone's own answer stays", saved().get("healthSteps", {}).get("on") is True)
+    later(p)
+    check("health: then its steps fill in again", sday(ago(2)).get("steps") == 7777 and sday(ago(2)).get("stepsBy") == "health")
+
+    # Stop, and Undo
+    if p.locator("#sheet").is_visible(): p.click("#closeSheet"); p.wait_for_timeout(200)
+    p.click("#stepsOpen"); p.wait_for_timeout(250)
+    p.click("#hsStop"); p.wait_for_timeout(250)
+    check("health: Stop says so and is kept; the numbers so far stay",
+          saved()["healthSteps"]["on"] is False and "Apple Health steps off" in bar(p) and sday(ago(2)).get("steps") == 7777, bar(p))
+    n0 = len(days_calls()); HEALTH["days"][ago(2)] = 8888
+    later(p)
+    check("health: once stopped, Health is not read", len(days_calls()) == n0 and sday(ago(2)).get("steps") == 7777)
+    p.click("#stepsOpen"); p.wait_for_timeout(250)
+    check("health: once stopped, the box offers it again", p.locator("#hsFill").is_visible() and p.locator("#hsStop").count() == 0)
+    p.click("#stepsCancel"); p.wait_for_timeout(200)
+    allerrs += errs; ctx.close()
+
+    # Connected, a restart reads on opening and shows no card
+    log = saved(); log["healthSteps"] = {"on": True, "at": 1}
+    native["prefs"]["CapacitorStorage." + KEY] = json.dumps(log)
+    n0 = len(days_calls())
+    ctx, p, errs = open_shell(b, PH)
+    check("health: connected, the app reads Health on opening, with no card",
+          len(days_calls()) == n0 + 1 and p.locator("#hsCard").count() == 0 and sday(ago(2)).get("steps") == 8888)
+    p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(300)
+    allerrs += errs; ctx.close()
+
+    # A log that says yes, on a phone iOS never asked (brought over in a
+    # backup of the phone itself): the card asks again.
+    log = saved(); log["healthSteps"] = {"on": True, "at": 1}
+    native["prefs"]["CapacitorStorage." + KEY] = json.dumps(log)
+    HEALTH["fail"] = "not_asked"
+    ctx, p, errs = open_shell(b, PH)
+    p.wait_for_timeout(300)
+    check("health: a phone iOS never asked gets the card again",
+          p.locator("#hsCard").is_visible() and "healthSteps" not in saved())
+    HEALTH["fail"] = None
+    allerrs += errs; ctx.close()
+
+    # Health with nothing in it (or a no): the lap says where the switch is
+    native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(steps_log())}
+    HEALTH["days"] = {}
+    ctx, p, errs = open_shell(b, PH)
+    p.click("#hsConnect"); p.wait_for_timeout(500)
+    check("health: nothing from Health says so, and where to look",
+          bar(p) == "No steps from Apple Health yet" and "Data Access & Devices" in p.inner_text(".cardio-goal"), bar(p))
+    allerrs += errs; ctx.close()
+
+    # the shell itself: read only, steps only, and honest about it
+    info = plistlib.load(open(os.path.join(APP, "Info.plist"), "rb"))
+    why = info.get("NSHealthShareUsageDescription", "")
+    check("health: the shell says why it reads Health, and that it never writes",
+          "step" in why and "never writes" in why and "NSHealthUpdateUsageDescription" not in info, why)
+    ent = plistlib.load(open(os.path.join(APP, "App.entitlements"), "rb"))
+    check("health: the shell has the HealthKit entitlement, and no clinical records",
+          ent == {"com.apple.developer.healthkit": True, "com.apple.developer.healthkit.access": []}, str(ent))
+    check("health: both configurations sign with it",
+          pbx.count("CODE_SIGN_ENTITLEMENTS = App/App.entitlements;") == 2)
+    src_phase = re.search(r"/\* Sources \*/ = \{\s*isa = PBXSourcesBuildPhase;.*?files = \((.*?)\);", pbx, re.S).group(1)
+    check("health: Xcode compiles the plugin and the view controller that registers it",
+          "HealthStepsPlugin.swift in Sources" in src_phase and "MainViewController.swift in Sources" in src_phase)
+    hs = io.open(os.path.join(APP, "HealthStepsPlugin.swift"), encoding="utf-8").read()
+    mvc = io.open(os.path.join(APP, "MainViewController.swift"), encoding="utf-8").read()
+    check("health: the plugin is the one the page asks for, and it is registered",
+          'jsName = "HealthSteps"' in hs and "registerPluginInstance(HealthStepsPlugin())" in mvc
+          and "MainViewController()" in swift and 'customClass="MainViewController"' in
+          io.open(os.path.join(APP, "Base.lproj", "Main.storyboard"), encoding="utf-8").read())
+    check("health: it asks to read steps and to share nothing",
+          "requestAuthorization(toShare: [], read: [steps])" in hs
+          and set(re.findall(r"HKQuantityType\(\.(\w+)\)", hs)) == {"stepCount"}
+          and not re.search(r"\.save\(|HKWorkoutType|HKCategoryType|toShare: \[[^\]]", hs))
+    pol = io.open(os.path.join(ROOT, "privacy.html"), encoding="utf-8").read()
+    check("health: the Privacy Policy says what is read and that it stays on the phone",
+          "reads your daily step count" in pol and "does not connect to Apple Health" not in pol)
 
     check("no page errors", not allerrs, str(allerrs[:3]))
     b.close()

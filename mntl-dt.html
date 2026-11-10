@@ -3663,6 +3663,20 @@
   .cardio-goal .cg-left { margin: 2px 0 0; text-align: center; font-size: 15px; font-weight: 700; color: var(--ink); }
   .cardio-goal .cg-left.is-met { color: var(--hit); }
   .cg-legend { margin: 0; text-align: center; font-family: var(--font-num); font-size: 11.5px; color: var(--ink-3); }
+  /* where a day's steps came from, under the steps button (shell 1.4) */
+  .cg-src { margin: 2px 0 0; text-align: center; font-size: 12px; line-height: 1.45; color: var(--ink-3); }
+  /* Steps from Apple Health: the one-time card under the lap */
+  .hs-card {
+    display: flex; flex-direction: column; gap: 8px; padding: 14px;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 22px;
+  }
+  .hs-card h3 { margin: 0; font-size: 17px; font-weight: 700; }
+  .hs-card p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+  .hs-card p.sub { font-size: 12.5px; color: var(--ink-3); }
+  .hs-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+  .hs-acts .btn { min-height: 48px; padding: 0 14px; }
+  .hs-acts .btn:first-child { flex: 1 1 auto; }
+  .hs-acts .btn.ghost { flex: 0 0 auto; }
   .cg-editing { gap: 8px; }
   .cg-q { font-size: 13px; font-weight: 600; color: var(--ink-2); }
   .cg-editing .cg-val { --field-size: 24px; height: 56px; font-weight: 700; }
@@ -4432,7 +4446,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-09.92";
+  var BUILD = "2026-11-09.93";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5425,6 +5439,12 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-09.93", t: "Steps from Apple Health", items: [
+      "In the iPhone app only: while your cardio goal counts steps, the Cardio tab offers to connect Apple Health. Say yes and each day\u2019s steps fill in by themselves. It needs the app\u2019s new version, 1.4, from TestFlight or the App Store.",
+      "The app reads your step count and nothing else. It never writes to Health, and the numbers stay on your phone.",
+      "A number you type in is never replaced. To go back to Apple Health\u2019s, open the steps box and tap Use Apple Health\u2019s. Stop filling in from Apple Health is there too.",
+      "On the web, and in older versions of the iPhone app, you type your steps in as before.",
+      "The Privacy Policy now says how steps from Apple Health are kept: on your phone, and nowhere else." ] },
     { b: "2026-11-09.92", t: "Steps, as a cardio goal", items: [
       "Your cardio goal can now count steps. On the Cardio tab tap Goal · Edit, or go to Settings → You, and pick Steps, by the day, the week or the month. Minutes, distance, calories and sessions are all still there.",
       "Counting steps, the lap has a button to type in the number your phone or watch shows. It replaces what was there rather than adding to it, and Undo takes it back.",
@@ -9927,6 +9947,142 @@
                     : '<i class="vs">↓ ' + n + ' ' + unit + '</i>';
   }
 
+  // ---- steps from Apple Health (shell 1.4) ----
+  // In the iPhone app from shell 1.4, a day's steps can come from Apple
+  // Health, where the iPhone (and a watch) count them, through the shell's
+  // own HealthSteps plugin. Read only: the app reads the step count and
+  // nothing else, never writes to Health, and sends nothing anywhere. The
+  // web, which cannot reach Health, and older shells keep typing them (b92).
+  //
+  // A day filled from Health says so (d.stepsBy = "health") and follows
+  // Health as its count grows. A typed day has no stepsBy, which is how every
+  // day from b92 looks too, and is never written over: what the person typed
+  // stands until they choose Health's number in the steps box. Filling a day
+  // never touches its `updated`, so a backup restored later still wins for
+  // that day's food and sets (mergeInto), and the steps fill in again.
+  //
+  // store.healthSteps is this phone's answer: absent until the card is
+  // answered, {on: true, at} once connected, {on: false, at} after Not now or
+  // Stop. A backup never brings it (mergeInto leaves it alone), because a
+  // new phone has not been asked.
+  //
+  // iOS never says whether reading was allowed: a no reads exactly like a
+  // day with no steps. So when Health gives nothing at all, the lap says
+  // where the switch is instead of claiming either.
+  var healthSteps = (function () {
+    var has = shellHas("HealthSteps");
+    var avail = null;              // false only on a device without Health
+    var busy = null, lastRead = 0, lastOk = 0;
+    var seen = {};                 // day -> Health's count at the last read
+    var gotAny = false;            // the last read found steps on some day
+    var READ_EVERY = 60000;        // Health is read at most once a minute
+    function call(method, opts) {
+      try { return window.Capacitor.nativePromise("HealthSteps", method, opts || {}); }
+      catch (e) { return Promise.reject(e); }
+    }
+    function on() { return has && !!(store.healthSteps && store.healthSteps.on); }
+    if (has) call("status").then(function (r) {
+      avail = !!(r && r.available);
+      if (!avail) quietRedraw();
+    }, function () {});
+    // Eight of the goal's periods, as the Log's tracker draws them, and the
+    // period of the day on show; never more than 400 days, never past today.
+    function span() {
+      var g = cardioGoal(), s0 = parseYmd(periodStart(TODAY, g.period)), from;
+      if (g.period === "month") from = new Date(s0.getFullYear(), s0.getMonth() - 7, 1);
+      else { from = new Date(s0); from.setDate(s0.getDate() - (g.period === "week" ? 49 : 7)); }
+      var k = ymd(from), shown = periodStart(ymd(cursor), g.period);
+      if (shown < k) k = shown;
+      var floor = parseYmd(TODAY); floor.setDate(floor.getDate() - 399);
+      if (k < ymd(floor)) k = ymd(floor);
+      return { from: k, to: TODAY };
+    }
+    function fill(got, r) {
+      var filled = 0, now = Date.now();
+      seen = {}; gotAny = false;
+      Object.keys(got).forEach(function (k) {
+        var n = Math.round(Number(got[k]));
+        if (!(n > 0) || !/^\d{4}-\d\d-\d\d$/.test(k) || k < r.from || k > r.to) return;
+        seen[k] = n; gotAny = true;
+        var d = store.days[k];
+        if (d && Number(d.steps) > 0 && d.stepsBy !== "health") return;      // typed: left be
+        if (d && d.stepsBy === "health" && Number(d.steps) === n) return;
+        d = day(k);
+        d.steps = n; d.stepsAt = now; d.stepsBy = "health";
+        filled++;
+      });
+      if (filled) { save(); quietRedraw(); }
+      return { filled: filled, any: gotAny };
+    }
+    // Only once the app is open (never behind the age check), only while the
+    // goal counts steps, and at most once a minute unless asked.
+    function read(force) {
+      if (!on() || !appOpen || cardioGoal().kind !== "steps") return Promise.resolve(null);
+      if (busy) return busy;
+      if (!force && Date.now() - lastRead < READ_EVERY) return Promise.resolve(null);
+      lastRead = Date.now();
+      var r = span();
+      busy = call("days", { from: r.from, to: r.to }).then(function (out) {
+        busy = null; lastOk = Date.now();
+        if (!on()) return null;                  // stopped while it was reading
+        return fill((out && out.days) || {}, r);
+      }, function (e) {
+        // Locked phone, or Health busy: nothing changes, and the next look
+        // tries again. Said only in the error log, since nobody asked.
+        busy = null;
+        lastError = "health: " + (e && e.message ? e.message : String(e));
+        // This phone was never asked, though the log says yes: a log brought
+        // to a new phone in its own backup. The card asks again.
+        if (e && e.code === "not_asked") { delete store.healthSteps; save(); quietRedraw(); }
+        return null;
+      });
+      return busy;
+    }
+    function plural(n, one, many) { return fmt(n) + " " + (n === 1 ? one : many); }
+    // iOS's own sheet asks to read steps; then the first read says what it did.
+    function connect() {
+      return call("connect").then(function () {
+        store.healthSteps = { on: true, at: Date.now() };
+        save(); render();
+        // Short enough for the bar on a small phone. A typed day keeps its
+        // number and the lap says so on that day.
+        return read(true).then(function (res) {
+          if (!res) notify("Steps fill in when Apple Health can be read");
+          else if (res.filled) notify("Apple Health filled in steps for " + plural(res.filled, "day", "days"));
+          else if (res.any) notify("Apple Health is on · your typed steps stay");
+          else notify("No steps from Apple Health yet");
+          render();
+        });
+      }, function (e) {
+        lastError = "health: " + (e && e.message ? e.message : String(e));
+        render();
+        notify("Couldn’t reach Apple Health · type your steps in for now");
+      });
+    }
+    return {
+      on: on,
+      // the one-time card: the shell can, Health is there, nothing answered yet
+      offer: function () { return has && avail !== false && !store.healthSteps; },
+      // the steps box's way back in, after Not now or Stop
+      can: function () { return has && avail !== false; },
+      seen: function (k) { return seen[k] || 0; },
+      // a read went through and Health had no steps on any day
+      empty: function () { return on() && lastOk > 0 && !gotAny; },
+      read: read,
+      connect: connect
+    };
+  })();
+  // Health's numbers arrive by themselves, so the screen is redrawn only when
+  // nothing is half typed or open: a sheet, a field, the goal or a session
+  // being edited. Otherwise they show at the next redraw.
+  function quietRedraw() {
+    if (!appOpen) return;
+    var a = document.activeElement;
+    if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    if (document.querySelector("#view .sheet") || cardioGoalEditing || cardioEditing) return;
+    if (tab === "cardio" || tab === "log") render(); else drawWeek(ymd(cursor));
+  }
+
   function renderCardio(key, d) {
     var list = d.cardio || [];
     var done = !!d.cardioDone;
@@ -9943,6 +10099,10 @@
     // sessions are finished; the box shows only while the goal counts them.
     var isSteps = g.kind === "steps", daySteps = Number(d.steps) || 0;
     if (!isSteps) stepsTyping = false;
+    // Apple Health (shell 1.4): a day it filled says so; a typed day is left be.
+    var hsOn = healthSteps.on(), fromHealth = hsOn && d.stepsBy === "health" && daySteps > 0;
+    var hsSeen = healthSteps.seen(key);
+    if (isSteps) healthSteps.read();
     var dayName = key === TODAY ? "today" : shortDate(key);
 
     function typeOpts(chosen) {
@@ -10024,7 +10184,8 @@
           '</div>' +
           '<p class="cg-left' + (met ? ' is-met' : '') + '" id="cgLeft">' + statusHtml() + '</p>' +
           '<p class="cg-legend">' + (isSteps
-            ? (g.period === "day" ? (daySteps ? 'Steps typed in' : 'No steps typed in yet')
+            ? (g.period === "day" ? (daySteps ? (fromHealth ? 'From Apple Health' : 'Steps typed in')
+                                              : (hsOn ? 'No steps from Apple Health yet' : 'No steps typed in yet'))
                                   : wk.stepDays + (wk.stepDays === 1 ? ' day' : ' days') + ' of steps so far' +
                                     (wk.stepDays ? ', one segment each' : ''))
             : wk.sessions + (wk.sessions === 1 ? ' session' : ' sessions') + ' so far' + (wk.sessions ? ', one segment each' : '')) +
@@ -10032,9 +10193,27 @@
           (isSteps
             ? '<button class="btn ghost cg-steps" id="stepsOpen">' +
                 (daySteps ? 'Change ' + (key === TODAY ? 'today’s' : shortDate(key) + '’s') + ' steps'
-                          : 'Enter ' + (key === TODAY ? 'today’s steps' : 'steps for ' + shortDate(key))) + '</button>'
+                          : 'Enter ' + (key === TODAY ? 'today’s steps' : 'steps for ' + shortDate(key))) + '</button>' +
+              (!hsOn ? ''
+                : fromHealth ? '<p class="cg-src">' + (key === TODAY ? 'Today’s steps come from Apple Health · ' +
+                                 new Date(d.stepsAt || Date.now()).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase()
+                               : 'These steps came from Apple Health') + '</p>'
+                : daySteps ? '<p class="cg-src">You typed ' + (key === TODAY ? 'today’s' : 'these') + ' steps, so Apple Health leaves them be.</p>'
+                : healthSteps.empty() ? '<p class="cg-src">Nothing from Apple Health yet. If steps never come, check Settings → Health → ' +
+                                        'Data Access &amp; Devices → MNTL D&amp;T.</p>'
+                : '')
             : '') +
         '</div>';
+    // Once, while the goal counts steps in an iPhone app that can read Health.
+    var hsCard = isSteps && !cardioGoalEditing && healthSteps.offer()
+      ? '<section class="hs-card" id="hsCard" aria-labelledby="hsTitle">' +
+          '<h3 id="hsTitle">Steps from Apple Health</h3>' +
+          '<p>Your iPhone already counts your steps. Connect Apple Health and each day’s steps fill in by themselves.</p>' +
+          '<p class="sub">The app only reads your step count. It never writes to Health, and the numbers stay on this phone.</p>' +
+          '<div class="hs-acts"><button class="btn" id="hsConnect">Connect Apple Health</button>' +
+            '<button class="btn ghost" id="hsLater">Not now</button></div>' +
+        '</section>'
+      : '';
 
     // ---- today's sessions ----
     var cards = list.map(function (c) {
@@ -10116,22 +10295,35 @@
       ? '<div class="sheet" id="stepsSheet"><div class="sheet-inner">' +
           '<div class="sh-head"><h2>' + (key === TODAY ? 'Today’s steps' : 'Steps · ' + shortDate(key)) + '</h2>' + closeX("stepsClose") + '</div>' +
           '<section class="entry" id="stepsAdd">' +
-            '<div class="field"><label for="stepsIn">' + (key === TODAY ? 'Steps so far today' : 'Steps that day') + '</label>' +
-              '<input id="stepsIn" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="8,000" value="' +
-                (daySteps ? daySteps : '') + '"></div>' +
-            '<p class="est-note">The number your phone or watch shows for ' + (key === TODAY ? 'today' : 'that day') +
-              '. It replaces what’s here — it doesn’t add to it.</p>' +
+            '<div class="field"><label for="stepsIn">' + (fromHealth ? 'Your own number instead'
+                                                        : key === TODAY ? 'Steps so far today' : 'Steps that day') + '</label>' +
+              '<input id="stepsIn" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="' +
+                (fromHealth ? '' : '8,000') + '" value="' + (daySteps && !fromHealth ? daySteps : '') + '"></div>' +
+            // A Health day's box starts empty, so Save never quietly freezes
+            // Health's own number as a typed one.
+            (fromHealth
+              ? '<p class="est-note">Apple Health says ' + fmt(daySteps) + (key === TODAY ? ' so far today' : ' for that day') +
+                  '. Type a number only to use yours instead. After that, Apple Health leaves ' +
+                  (key === TODAY ? 'today' : 'that day') + ' alone.</p>'
+              : '<p class="est-note">The number your phone or watch shows for ' + (key === TODAY ? 'today' : 'that day') +
+                  '. It replaces what’s here — it doesn’t add to it.' +
+                  (hsOn ? ' Apple Health won’t change a number you type.' : '') + '</p>') +
             '<p class="est-note" id="stepsHint" hidden style="color:var(--miss)"></p>' +
             '<div class="sheet-actions"><button class="btn" id="stepsSave">Save steps</button>' +
               '<button class="btn ghost" id="stepsCancel">Cancel</button></div>' +
-            (daySteps ? '<button class="btn ghost" id="stepsClear">Take off ' + (key === TODAY ? 'today’s' : 'these') + ' steps</button>' : '') +
+            (hsOn && daySteps && !fromHealth && hsSeen
+              ? '<button class="btn ghost" id="stepsHealth">Use Apple Health’s ' + fmt(hsSeen) + ' instead</button>'
+              : daySteps && !fromHealth
+                ? '<button class="btn ghost" id="stepsClear">Take off ' + (key === TODAY ? 'today’s' : 'these') + ' steps</button>' : '') +
+            (hsOn ? '<button class="btn ghost" id="hsStop">Stop filling in from Apple Health</button>'
+                  : healthSteps.can() ? '<button class="btn ghost" id="hsFill">Fill in from Apple Health</button>' : '') +
           '</section>' +
         '</div></div>'
       : '';
 
     view.innerHTML =
       '<section class="cardio-page">' +
-        doneCard + goalHtml +
+        doneCard + hsCard + goalHtml +
         '<div class="sec-title"><h2>' + (key === TODAY ? 'Today’s cardio' : 'Cardio · ' + shortDate(key)) + '</h2>' +
           (dayMin ? '<span>' + fmt(dayMin) + ' min ' + (key === TODAY ? 'today' : 'that day') + '</span>' : '') + '</div>' +
         (cards ? '<section class="cardio-list">' + cards + '</section>'
@@ -10288,6 +10480,22 @@
       document.getElementById("cgCancel").addEventListener("click", function () { cardioGoalEditing = false; render(); });
     }
 
+    // ---- steps from Apple Health: the one-time card ----
+    var hsGo = document.getElementById("hsConnect");
+    if (hsGo) hsGo.addEventListener("click", function () {
+      // iOS's sheet covers the app; the button says it is waiting meanwhile.
+      hsGo.disabled = true; hsGo.textContent = "Opening Apple Health…";
+      healthSteps.connect();
+    });
+    var hsNo = document.getElementById("hsLater");
+    if (hsNo) hsNo.addEventListener("click", function () {
+      store.healthSteps = { on: false, at: Date.now() };
+      save(); render();
+      offerUndo("Not now · Fill in from Apple Health stays in the steps box", function () {
+        delete store.healthSteps; save(); render();
+      });
+    });
+
     // ---- steps: typed in, a day at a time ----
     var stOpen = document.getElementById("stepsOpen");
     if (stOpen) stOpen.addEventListener("click", function () {
@@ -10302,13 +10510,17 @@
       document.getElementById("stepsCancel").addEventListener("click", function () { offSteps(); render(); });
       sheetClose("stepsSheet", offSteps);
       stIn.addEventListener("keydown", function (e) { if (e.key === "Enter") document.getElementById("stepsSave").click(); });
-      // Undo puts back exactly what was there: a number and when it was typed,
-      // or nothing at all.
-      var stWas = d.steps, stWasAt = d.stepsAt;
+      // Undo puts back exactly what was there: a number, when it came and
+      // where from (typed, or Apple Health), or nothing at all.
+      var stWas = d.steps, stWasAt = d.stepsAt, stWasBy = d.stepsBy;
       function stBack() {
         var dd = day(key);
-        if (stWas === undefined) { delete dd.steps; delete dd.stepsAt; }
-        else { dd.steps = stWas; if (stWasAt === undefined) delete dd.stepsAt; else dd.stepsAt = stWasAt; }
+        if (stWas === undefined) { delete dd.steps; delete dd.stepsAt; delete dd.stepsBy; }
+        else {
+          dd.steps = stWas;
+          if (stWasAt === undefined) delete dd.stepsAt; else dd.stepsAt = stWasAt;
+          if (stWasBy === undefined) delete dd.stepsBy; else dd.stepsBy = stWasBy;
+        }
         redo();
       }
       document.getElementById("stepsSave").addEventListener("click", function () {
@@ -10318,7 +10530,7 @@
           h.textContent = "Type the steps as a whole number, like 8432."; h.hidden = false; stIn.focus(); return;
         }
         var before = Number(d.steps) || 0;
-        d.steps = n; d.stepsAt = Date.now();
+        d.steps = n; d.stepsAt = Date.now(); delete d.stepsBy;   // typed: Apple Health leaves it be
         stepsTyping = false;
         redo();
         offerUndo("Steps for " + dayName + ": " + fmt(n) + (before && before !== n ? " (was " + fmt(before) + ")" : ""), stBack);
@@ -10326,10 +10538,35 @@
       var stClear = document.getElementById("stepsClear");
       if (stClear) stClear.addEventListener("click", function () {
         var gone = Number(d.steps) || 0;
-        delete d.steps; delete d.stepsAt;
+        delete d.steps; delete d.stepsAt; delete d.stepsBy;
         stepsTyping = false;
         redo();
         offerUndo("Took off " + fmt(gone) + " steps for " + dayName, stBack);
+      });
+      // Back to Health's count for a day that was typed.
+      var stHealth = document.getElementById("stepsHealth");
+      if (stHealth) stHealth.addEventListener("click", function () {
+        var typed = Number(d.steps) || 0, n = healthSteps.seen(key);
+        if (!(n > 0)) return;
+        d.steps = n; d.stepsAt = Date.now(); d.stepsBy = "health";
+        stepsTyping = false;
+        redo();
+        offerUndo("Steps for " + dayName + ": " + fmt(n) + " from Apple Health (was " + fmt(typed) + ")", stBack);
+      });
+      var hsStop = document.getElementById("hsStop");
+      if (hsStop) hsStop.addEventListener("click", function () {
+        var was = store.healthSteps;
+        store.healthSteps = { on: false, at: Date.now() };
+        stepsTyping = false;
+        save(); render();
+        offerUndo("Apple Health steps off · the numbers so far stay", function () {
+          store.healthSteps = was; save(); render(); healthSteps.read(true);
+        });
+      });
+      var hsFill = document.getElementById("hsFill");
+      if (hsFill) hsFill.addEventListener("click", function () {
+        stepsTyping = false; render();
+        healthSteps.connect();
       });
     }
 
@@ -12940,7 +13177,8 @@
                   (cCal ? " \u00b7 " + fmt(cCal) + " kcal" : ""));
       }
       // Kept whatever the goal counts now: a day's steps are its own record.
-      if (Number(d.steps) > 0) put("Steps", fmt(d.steps) + (Number(d.steps) === 1 ? " step" : " steps"));
+      if (Number(d.steps) > 0) put("Steps", fmt(d.steps) + (Number(d.steps) === 1 ? " step" : " steps") +
+                                   (d.stepsBy === "health" ? " · Apple Health" : ""));
       // A check-in from the Progress tab (b90): the peek adds See check-in.
       if (d.prog) {
         put("Progress", (d.prog.photo ? "Photo" : "No photo") +
@@ -14715,6 +14953,7 @@
 
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) checkDayRollover();
+    if (!document.hidden) healthSteps.read();     // steps walked while the app was away
   });
   window.addEventListener("focus", checkDayRollover);
   window.addEventListener("pageshow", checkDayRollover);
@@ -16379,6 +16618,7 @@
     restAlertStart();
     appOpen = true;
     quickCheck();
+    healthSteps.read();
   }
 })();
 </script>

@@ -65,7 +65,53 @@ tracker becomes *Steps · last 8 …* with the year's steps in its tiles. As wit
 the other four, past periods are drawn against the goal in force now, not one
 stamped on each day. Steps travel in a backup, since they are part of the day.
 
-Steps come from typing for now. Reading them from Apple Health, where the
-iPhone's Fitness app keeps them, needs the iPhone app's shell (a read-only
-HealthKit permission, so a store build); no browser can read Health, so the
-web app keeps typing.
+**Steps from Apple Health fill in by themselves in the iPhone app (b93,
+shell 1.4).** No browser can read Health, so the web app, and phones still on
+shell 1.3 or older, keep typing; the page asks `shellHas("HealthSteps")`
+first, so an older shell is never asked. Steps only: the owner was asked
+whether workouts from Fitness or Strava should come in as cardio sessions too
+and chose steps only for now (2026-11-09); that would be another shell, with
+its own permission.
+
+- **Asked once, while the goal counts steps.** A card above the lap, *Steps
+  from Apple Health*, says what is read and that nothing is written or sent,
+  with *Connect Apple Health* and *Not now*. Connect shows iOS's own sheet
+  (read steps, share nothing), then reads and says *Apple Health filled in
+  steps for 3 days*. Not now, with Undo, puts the card away for good, and the
+  steps box keeps *Fill in from Apple Health* for later. The answer is
+  `store.healthSteps` (`{on, at}`), this phone's own: a backup never brings it,
+  since a new phone has not been asked.
+- **What is read.** Each day's total as Health adds it up (an iPhone and a
+  watch counting the same walk count it once, as the Health app shows),
+  from the start of the eight periods the Log's tracker draws (and the period
+  of the day on show) to today, at most 400 days. Health is read on opening,
+  on coming back to the app and when the Cardio tab is drawn, at most once a
+  minute, and only while the goal counts steps.
+- **A typed number is never written over.** A day Health filled carries
+  `d.stepsBy = "health"` and follows Health as its count grows. A day without
+  it was typed (every b92 day looks like that) and stays as typed. The lap
+  says which: *Today's steps come from Apple Health · 9:41 pm*, or *You typed
+  today's steps, so Apple Health leaves them be*. In the steps box a Health
+  day's box starts empty, saying *Apple Health says 6,800 so far today*, so
+  Save never freezes Health's own number as a typed one; typing one replaces
+  it, with Undo. A typed day offers *Use Apple Health's 7,000 instead*, with
+  Undo, in place of *Take off*. *Stop filling in from Apple Health*, with
+  Undo, stops the reading; the numbers so far stay.
+- **Filling a day never touches its `updated`**, so a backup restored later
+  still wins for that day's food and sets in `mergeInto`, and its steps fill
+  in again on the next read.
+- **Nothing is redrawn over something half typed.** A read that lands while a
+  sheet is open, a field has focus, or the goal or a session is being edited
+  changes the log and waits for the next redraw.
+- **iOS never says whether reading was allowed.** A no reads exactly like a
+  phone with no steps in Health. So when a read finds no steps on any day, the
+  lap says *Nothing from Apple Health yet. If steps never come, check Settings
+  → Health → Data Access & Devices → MNTL D&T*, rather than claiming either.
+  A failed read (the phone locked, Health busy) changes nothing and is tried
+  at the next look. A log that says yes on a phone iOS never asked (the log
+  came over in the phone's own backup) gets the card again.
+
+The shell's side, and what the store build needs, is in `docs/ios.md` (*Steps
+from Apple Health*). `tests/native.py` checks all of the above with a stand-in
+for the plugin, and `tests/darkcheck.py` the card and the lap's line in both
+themes.
