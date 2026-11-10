@@ -364,6 +364,22 @@ with sync_playwright() as pw:
     check("Save: an unchanged weight logs nothing new", s["days"][T].get("bw") == 182)
     p.click('[data-tab="gym"]'); p.wait_for_timeout(300)
     check("Gym: the new goal at once", text(p, "#gymGoal") == "This week: 2 of 4 workouts · 2 to go", text(p, "#gymGoal"))
+    # steps (b92): a fifth thing the cardio goal can count, for those who
+    # count steps rather than minutes
+    p.click("#setBtn"); p.wait_for_timeout(300); p.click("#setProfile"); p.wait_for_timeout(300)
+    check("cardio: Steps is a fifth choice beside the four",
+          p.eval_on_selector_all("[data-pfkind]", "e=>e.map(x=>x.textContent)") == ["Minutes", "Distance", "Calories", "Sessions", "Steps"])
+    p.click('[data-pfkind="steps"]'); p.wait_for_timeout(100)
+    check("cardio: a week of steps starts at 70,000", p.input_value("#pfCv") == "70000" and text(p, 'label[for="pfCv"]').lower() == "steps",
+          p.input_value("#pfCv"))
+    targets(p, "#profCard [data-pfkind]", "the five cardio choices")
+    p.fill("#pfCv", "12,000"); p.click("#pfSave"); p.wait_for_timeout(400)
+    check("cardio: a steps goal typed with a comma is twelve thousand",
+          saved(p).get("cardioGoal") == {"kind": "steps", "period": "week", "v": 12000}, saved(p).get("cardioGoal"))
+    p.click("#setBtn"); p.wait_for_timeout(300)
+    check("Settings, You: a steps goal reads as steps", "12,000 steps a week" in text(p, "#setWhoGoals")
+          and "cardio" not in text(p, "#setWhoGoals"), text(p, "#setWhoGoals"))
+    p.click("#setDone"); p.wait_for_timeout(200)
     # the target editor and its calculator read the same profile and keep it
     p.click('[data-tab="macros"]'); p.wait_for_timeout(300)
     if shown(p, "#dismissWelcome"):

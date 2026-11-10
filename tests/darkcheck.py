@@ -255,6 +255,17 @@ def walk(p, label):
             low = p.evaluate(LOW)
             if low: found.append("cardio (finished): %s" % low)
             p.click("#cardioUnlock"); p.wait_for_timeout(200)
+            # counting steps (b92): the steps box, and the lap with steps on it
+            p.click("#cgOpen"); p.wait_for_timeout(250); p.click('[data-cgkind="steps"]'); p.click("#cgSave"); p.wait_for_timeout(300)
+            p.click("#stepsOpen"); p.wait_for_timeout(250)
+            if not p.locator("#stepsIn").count():
+                found.append("cardio: the steps box is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("cardio (typing steps): %s" % low)
+            p.fill("#stepsIn", "6240"); p.click("#stepsSave"); p.wait_for_timeout(300)
+            low = p.evaluate(LOW)
+            if low: found.append("cardio (counting steps): %s" % low)
+            p.click("#cgOpen"); p.wait_for_timeout(250); p.click('[data-cgkind="min"]'); p.click("#cgSave"); p.wait_for_timeout(300)
         if tab == "log" and not p.locator(".cardio-track").count():
             found.append("log: the cardio tracker is not on screen")
         if tab == "log" and not p.locator("#bwCard svg polyline").count():

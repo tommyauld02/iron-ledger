@@ -3436,7 +3436,7 @@ with sync_playwright() as pw:
           " ".join(q.inner_text(".cardio-goal .cg-num").split())=="75 of 150 min" and "3 sessions so far" in q.inner_text(".cg-legend"), q.inner_text(".cardio-goal"))
     q.click("#cgOpen"); q.wait_for_timeout(250)
     check("cardio: the goal can count minutes, distance, calories or sessions, by the day, week or month",
-          q.eval_on_selector_all("[data-cgkind]","e=>e.map(x=>x.textContent)")==["Minutes","Distance","Calories","Sessions"]
+          q.eval_on_selector_all("[data-cgkind]","e=>e.map(x=>x.textContent)")==["Minutes","Distance","Calories","Sessions","Steps"]
           and q.eval_on_selector_all("[data-cgperiod]","e=>e.map(x=>x.textContent)")==["Daily","Weekly","Monthly"])
     q.click('[data-cgkind="cal"]'); q.click('[data-cgperiod="day"]'); q.wait_for_timeout(100)
     check("cardio: a new pairing starts on its own number, not this one re-read",
@@ -3454,6 +3454,85 @@ with sync_playwright() as pw:
           " ".join(q.inner_text(".cardio-goal .cg-num").split())=="3.1 of 3 mi" and q.inner_text(".cg-left").startswith("✓ Goal met")
           and q.eval_on_selector(".cg-left","e=>e.classList.contains('is-met')"), q.inner_text(".cardio-goal"))
     q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgkind="min"]'); q.click('[data-cgperiod="week"]'); q.click("#cgSave"); q.wait_for_timeout(300)
+
+    # steps (b92): asked for by the owner, who counts steps rather than
+    # minutes. A fifth thing the goal can count, typed in a day at a time,
+    # each day's number replacing the last rather than adding to it.
+    check("steps: no steps box while the goal counts minutes", q.locator("#stepsOpen").count()==0)
+    q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgkind="steps"]'); q.click('[data-cgperiod="day"]'); q.wait_for_timeout(100)
+    check("steps: a steps goal starts at 10,000 a day",
+          q.input_value("#cgVal")=="10000" and q.inner_text("#cgValLab").upper()=="STEPS A DAY", q.input_value("#cgVal"))
+    q.fill("#cgVal","10,000"); q.click("#cgSave"); q.wait_for_timeout(300)
+    check("steps: a goal typed with a comma is ten thousand, and it says so",
+          q.evaluate(CSAYS)=="Cardio goal: 10,000 steps a day"
+          and q.evaluate(CST)["cardioGoal"]=={"kind":"steps","period":"day","v":10000}, q.evaluate(CSAYS))
+    check("steps: the lap counts steps, not the sessions logged, and offers to type them in",
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="0 of 10,000 steps" and q.inner_text("#stepsOpen")=="Enter today’s steps"
+          and "No steps typed in yet" in q.inner_text(".cg-legend"), q.inner_text(".cardio-goal"))
+    q.click("#stepsOpen"); q.wait_for_timeout(250)
+    fields=q.eval_on_selector_all("#stepsSheet input, #stepsSheet button",
+          "e=>e.filter(x=>x.getClientRects().length).map(x=>[x.id,Math.round(x.getBoundingClientRect().height),Math.round(x.getBoundingClientRect().width),x.tagName=='BUTTON'?16:parseFloat(getComputedStyle(x).fontSize)])")
+    check("steps: every control in the steps box clears 44px and the field does not zoom",
+          len(fields)>=4 and all(h>=MIN_TAP and w>=MIN_TAP and f>=16 for _,h,w,f in fields), str(fields))
+    check("steps: the box says a number replaces the day's rather than adding to it",
+          "replaces what’s here" in q.inner_text("#stepsAdd") and q.locator("#stepsClear").count()==0)
+    q.fill("#stepsIn","lots"); q.click("#stepsSave"); q.wait_for_timeout(200)
+    check("steps: a number that isn't one is refused, says why, and keeps what was typed",
+          q.inner_text("#stepsHint").startswith("Type the steps") and q.input_value("#stepsIn")=="lots"
+          and "steps" not in q.evaluate(CST)["days"][Ts])
+    q.fill("#stepsIn","6,240"); q.click("#stepsSave"); q.wait_for_timeout(300)
+    st=q.evaluate(CST)["days"][Ts]
+    check("steps: Save keeps the day's steps and says so, with Undo",
+          st.get("steps")==6240 and st.get("stepsAt",0)>0 and q.evaluate(CSAYS)=="Steps for today: 6,240"
+          and q.locator("#undoBtn").is_visible() and q.locator("#stepsAdd").count()==0, q.evaluate(CSAYS))
+    check("steps: and the lap shows them against the goal",
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="6,240 of 10,000 steps" and q.inner_text("#cgLeft")=="3,760 steps to go"
+          and q.inner_text("#stepsOpen")=="Change today’s steps", q.inner_text(".cardio-goal"))
+    check("steps: the week strip counts the days with steps",
+          "1 day of steps this week" in q.inner_text("#datenav"), q.inner_text("#datenav"))
+    q.click("#stepsOpen"); q.wait_for_timeout(250)
+    check("steps: the box opens on the day's number, with a way to take it off",
+          q.input_value("#stepsIn")=="6240" and q.locator("#stepsClear").count()==1)
+    q.fill("#stepsIn","11284"); q.click("#stepsSave"); q.wait_for_timeout(300)
+    check("steps: a new number replaces the old, says what it was, and the lap closes green",
+          q.evaluate(CST)["days"][Ts]["steps"]==11284 and q.evaluate(CSAYS)=="Steps for today: 11,284 (was 6,240)"
+          and q.inner_text("#cgLeft").startswith("✓ Goal met") and q.eval_on_selector(".trk","e=>e.classList.contains('is-met')"),
+          q.evaluate(CSAYS))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("steps: undo puts the old number back", q.evaluate(CST)["days"][Ts]["steps"]==6240)
+    q.click("#stepsOpen"); q.wait_for_timeout(250); q.click("#stepsClear"); q.wait_for_timeout(300)
+    check("steps: taking the day's steps off offers undo",
+          "steps" not in q.evaluate(CST)["days"][Ts] and q.evaluate(CSAYS)=="Took off 6,240 steps for today", q.evaluate(CSAYS))
+    q.click("#undoBtn"); q.wait_for_timeout(300)
+    check("steps: and undo brings them back", q.evaluate(CST)["days"][Ts].get("steps")==6240)
+    # another day of the same week: each day keeps its own, and a week's goal
+    # is one lap made of them
+    ws=T-datetime.timedelta(days=(T.weekday()+1)%7); other=(ws if ws!=T else ws+datetime.timedelta(days=1)).isoformat()
+    q.evaluate("k=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); s.days[k]={food:[],updated:Date.now(),steps:4000}; localStorage.setItem('iron-ledger-v1',JSON.stringify(s));}", other)
+    q.reload(); q.wait_for_timeout(900); q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
+    check("steps: a daily goal counts the day on show only",
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="6,240 of 10,000 steps")
+    q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgperiod="week"]'); q.wait_for_timeout(100)
+    check("steps: a week of steps starts at 70,000", q.input_value("#cgVal")=="70000")
+    q.click("#cgSave"); q.wait_for_timeout(300)
+    check("steps: a weekly goal adds the week's days, one stretch of the lap each",
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="10,240 of 70,000 steps"
+          and "2 days of steps so far, one segment each" in q.inner_text(".cg-legend")
+          and q.locator(".trk-seg").count()==2, q.inner_text(".cardio-goal"))
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(500)
+    track=q.inner_text(".cardio-track") if q.locator(".cardio-track").count() else ""
+    check("steps: the Log draws the last eight weeks of steps against the goal",
+          "STEPS · LAST 8 WEEKS" in track.upper() and "70,000 steps a week" in track and "STEPS IN" in track.upper()
+          and q.locator(".ct-bar").count()==8, track[:120])
+    tt=q.eval_on_selector('[data-go="%s"]' % Ts, "e=>e.title")
+    check("log: a day's title names its steps", "6,240 steps" in tt, tt)
+    q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
+    q.click("#cgOpen"); q.wait_for_timeout(250); q.click('[data-cgkind="min"]'); q.wait_for_timeout(100)
+    check("steps: going back to minutes starts minutes on their own number", q.input_value("#cgVal")=="150")
+    q.click("#cgSave"); q.wait_for_timeout(300)
+    check("steps: counting minutes again hides the steps box and leaves the day's steps alone",
+          q.locator("#stepsOpen").count()==0 and q.evaluate(CST)["days"][Ts].get("steps")==6240
+          and " ".join(q.inner_text(".cardio-goal .cg-num").split())=="75 of 150 min")
 
     # finished
     q.click("#cardioFinish"); q.wait_for_timeout(300)
@@ -3499,6 +3578,7 @@ with sync_playwright() as pw:
     check("cardio: a restore brings back the sessions, the types and the goal",
           len(after["days"][Ts].get("cardio",[]))==3 and after.get("cardioTypes")==["Incline walk","Bike"]
           and after.get("cardioGoal",{}).get("kind")=="min")
+    check("steps: and the days' steps travel with it", after["days"][Ts].get("steps")==6240 and after["days"][other].get("steps")==4000)
     c.close()
 
     # ---------- THE FOOD FINDER ----------
@@ -3650,10 +3730,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Progress photos in the iPhone app"
-          and titles[1]=="Progress: photos, notes and weight"
-          and titles[2]=="A cleaner set pop-up"
-          and titles[3]=="See what you worked", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Steps, as a cardio goal"
+          and titles[1]=="Progress photos in the iPhone app"
+          and titles[2]=="Progress: photos, notes and weight"
+          and titles[3]=="A cleaner set pop-up", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
