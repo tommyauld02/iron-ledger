@@ -59,9 +59,13 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
   with the photos. Changing them again is a store build.
 - **Apple Health is read only, and steps only** (shell 1.4). The app asks
   to read the step count and to share nothing, so iOS shows a read-only
-  request and there is no `NSHealthUpdateUsageDescription`. The words in
-  `NSHealthShareUsageDescription` say what is read, that nothing is written,
-  and that the numbers stay on the phone. `App.entitlements` turns on
+  request. The words in `NSHealthShareUsageDescription` say what is read,
+  that nothing is written, and that the numbers stay on the phone.
+  `NSHealthUpdateUsageDescription` is there too, though nothing is written
+  and iOS never shows it: App Store Connect refuses any app with the
+  HealthKit entitlement that lacks it ("Missing purpose string in
+  Info.plist"), which is how *Build for TestFlight* #11 failed at export.
+  Its words say the app never writes to Health and only reads steps. `App.entitlements` turns on
   HealthKit with an empty `healthkit.access` list (no clinical records).
   Reading anything else, such as workouts, would change the permission and
   so be a store build.
@@ -72,6 +76,13 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
   the library itself: the plugins link no Photos framework. Saving a photo
   *into* the library would need `NSPhotoLibraryAddUsageDescription`, and a
   store build.
+- **Every purpose string Apple's upload asks for is checked before the
+  upload asks.** A missing one is only found at the end of a TestFlight run,
+  after the archive is built. `tests/native.py` reads what the shell's Swift,
+  the plugins' (where `node_modules` is installed), the entitlements and the
+  page use (HealthKit, the camera, and a row for each other protected API)
+  and fails if `Info.plist` lacks the key that needs. Adding a permission
+  means adding its row.
 - **The privacy manifest** (`ios/App/App/PrivacyInfo.xcprivacy`, from shell
   1.3) gives Apple a reason for each "required reason" API the app's code
   uses. App Store Connect refuses an upload that uses one without a reason
@@ -263,8 +274,9 @@ the shell has changed while the version has not. So after changing the shell:
    It refuses a version already recorded with a different shell. If that
    version has never been built for TestFlight, delete its line in
    `ios/shell-versions.json` and record again (shell 1.3 was recorded twice
-   this way, before and after its privacy manifest). Once a version has been
-   built, raise it instead.
+   this way, before and after its privacy manifest; 1.4 too, after *Build for
+   TestFlight* #11 was refused at export, before anything reached App Store
+   Connect). Once a version has been built, raise it instead.
 3. Commit both, merge, and run *Build for TestFlight*.
 
 ### Store builds from GitHub: Build for TestFlight
