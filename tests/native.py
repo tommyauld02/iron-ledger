@@ -100,6 +100,11 @@ def bridge(plugin, method, opts):
 def on_phone():
     return native["prefs"].get("CapacitorStorage." + KEY) or ""
 
+def ent_hk(app):
+    """The shell is signed with HealthKit, which needs both Health purpose strings."""
+    p = os.path.join(app, "App.entitlements")
+    return os.path.exists(p) and plistlib.load(open(p, "rb")).get("com.apple.developer.healthkit") is True
+
 # Capacitor's iOS bridge, as far as the app uses it: isNativePlatform() and
 # nativePromise(). The real one posts to WKWebView and runs plugin calls one
 # after another; this one hands each call to bridge() above, in order.
@@ -816,7 +821,52 @@ with sync_playwright() as pw:
     info = plistlib.load(open(os.path.join(APP, "Info.plist"), "rb"))
     why = info.get("NSHealthShareUsageDescription", "")
     check("health: the shell says why it reads Health, and that it never writes",
-          "step" in why and "never writes" in why and "NSHealthUpdateUsageDescription" not in info, why)
+          "step" in why and "never writes" in why, why)
+    # Apple's upload wants the writing purpose string too, for any app with
+    # the HealthKit entitlement, even one that never writes (Build for
+    # TestFlight #11 was refused for it). Its words say so; iOS never shows
+    # them, since nothing asks to write.
+    upd = info.get("NSHealthUpdateUsageDescription", "")
+    check("health: the writing purpose string Apple requires is there, and says nothing is written",
+          "never writes" in upd and "step" in upd, upd)
+
+    # Every purpose string Apple's upload asks for, before the upload asks.
+    # App Store Connect refuses a build ("Missing purpose string in
+    # Info.plist") whose code or entitlements reach protected data without
+    # the matching key, and that is only found at the end of a TestFlight run.
+    # So: what the shell's Swift, the plugins' (where node_modules is
+    # installed), the entitlements and the page use, each against the keys it
+    # needs. A new permission adds a row here.
+    NEEDS = [
+        (r"import HealthKit|\bHK(HealthStore|QuantityType)\b", ["NSHealthShareUsageDescription", "NSHealthUpdateUsageDescription"]),
+        (r"AVCaptureDevice|getUserMedia\(\{\s*video", ["NSCameraUsageDescription"]),
+        (r"getUserMedia\(\{[^}]*audio|requestRecordPermission|AVAudioRecorder", ["NSMicrophoneUsageDescription"]),
+        (r"\bPHPhotoLibrary\b|\bPHAsset\b", ["NSPhotoLibraryUsageDescription"]),
+        (r"\bCLLocationManager\b", ["NSLocationWhenInUseUsageDescription"]),
+        (r"\bCNContactStore\b", ["NSContactsUsageDescription"]),
+        (r"\bCMPedometer\b|\bCMMotionActivityManager\b", ["NSMotionUsageDescription"]),
+        (r"\bCBCentralManager\b|\bCBPeripheralManager\b", ["NSBluetoothAlwaysUsageDescription"]),
+        (r"\bEKEventStore\b", ["NSCalendarsFullAccessUsageDescription"]),
+        (r"\bLAContext\b", ["NSFaceIDUsageDescription"]),
+        (r"\bATTrackingManager\b", ["NSUserTrackingUsageDescription"]),
+    ]
+    srcs = {"mntl-dt.html": io.open(os.path.join(ROOT, "mntl-dt.html"), encoding="utf-8").read()}
+    for r0 in roots:
+        for dp, _, fs in os.walk(r0):
+            if os.sep + "Tests" in dp or os.sep + "public" in dp: continue
+            for f in fs:
+                if f.endswith((".swift", ".m", ".h")):
+                    srcs[os.path.relpath(os.path.join(dp, f), ROOT)] = io.open(os.path.join(dp, f), encoding="utf-8", errors="replace").read()
+    srcs["App.entitlements"] = "import HealthKit" if ent_hk(APP) else ""
+    needed = {}
+    for rx, keys in NEEDS:
+        for name, src in srcs.items():
+            if re.search(rx, src):
+                for k in keys: needed.setdefault(k, name)
+    missing = sorted(k for k in needed if not str(info.get(k, "")).strip())
+    check("every purpose string Apple's upload asks for is in Info.plist",
+          not missing and "NSHealthUpdateUsageDescription" in needed and "NSCameraUsageDescription" in needed,
+          ("missing %s (for %s)" % (missing, [needed[k] for k in missing])) if missing else "needs " + ", ".join(sorted(needed)))
     ent = plistlib.load(open(os.path.join(APP, "App.entitlements"), "rb"))
     check("health: the shell has the HealthKit entitlement, and no clinical records",
           ent == {"com.apple.developer.healthkit": True, "com.apple.developer.healthkit.access": []}, str(ent))
