@@ -108,7 +108,9 @@ Each time you want the current build on the phone:
    ```
 8. At the top of the window, pick your iPhone from the device menu (next to
    the ▶ button), then press **▶**. The first build fetches Capacitor itself,
-   which takes a few minutes.
+   which takes a few minutes. The version it fetches is pinned in
+   `project.xcworkspace/xcshareddata/swiftpm/Package.resolved`, which is
+   committed so every Mac builds against the same Capacitor.
 9. If the phone says *Untrusted Developer*: **Settings → General → VPN &
    Device Management**, tap your Apple ID, then **Trust**. Press ▶ again.
 
