@@ -171,6 +171,44 @@ the picker shows each accent as it would look in the current theme; `sweep`
 applies every accent in both themes and fails if a swatch and what it applies
 ever disagree.
 
+**Gold means you earned it (b94).** Asked for by the owner after a review
+found that wins were quiet: beating the protein goal changed almost nothing on
+screen. It is the third colour rule, beside teal for tap and green and red for
+hit and missed, and it has one meaning, so nothing you can tap is gold and no
+accent is. Three things are gold, and only these:
+
+- **The plates**, once an "at least" protein goal is reached *with the bar
+  still steady*, and nothing waiting for numbers (`barWon()`). Over on calories
+  is not a win. That also keeps gold off a bar that is yellow for being a
+  little over, since `--warn` is a yellow too and the two must never sit on one
+  bar saying different things. Every bar drawn for the day agrees: Macros, the
+  Pantry's, and *Your bar after this*.
+- **The note under the bar** (`.hit-note`), which was green until b94. It only
+  ever shows when the plates are gold, so it is the same condition and the same
+  gold, with a star where the tick was. The protein figure and the card's edge
+  go gold with it.
+- **A streak of three days or more**, on the Macros chip, with a flame.
+
+The bar can be off the top of the screen when the food that wins the day goes
+in from *Log numbers* lower down, so the *Added* confirmation under the ledger
+says it as well, in gold, where the eye already is (`lastAdded.won`).
+
+The turn to gold plays once, on the draw that crosses the line: the iron lifts
+off each plate from the collar outward after the last new plate lands, the note
+stamps in, and the iPhone app gives the success buzz. `barPrevWon` remembers
+what each bar last drew and for which day, so arriving at a day already won, or
+opening the app on one, plays nothing. Reduce Motion keeps the gold and drops
+the movement. A kettlebell can still be yellow beside gold plates (carbs a
+little over on a day protein is hit); the owner has been shown that and not yet
+said whether the warning should move to orange.
+
+`sweep` checks each state that must be gold beside the ones that must not
+(short, over on calories, a food waiting, an "at most" goal, a two-day streak).
+`darkcheck` measures every pairing gold is used in, holds the plates to 3:1 on
+the card as a picture, and has a pass of its own that puts the won day on
+screen, because the main fixture is short of protein on purpose. It was proven
+by weakening the gold words and watching it fail in light.
+
 **Teal means you can tap it; grey is only a label.** Asked for by the owner,
 who could not tell which small words were buttons: an audit found twenty kinds
 of text-only control (Edit splits, + Note, Remove, Meals ▾, Take out, ✕…) in

@@ -72,6 +72,14 @@
     --bar: #7C8782;
     --plate-ghost: #7C8782;
     --plate-off: #D3DAD6;
+    /* Gold means you earned it (b94): the plates once protein is hit with the
+       bar still steady, the note under them, a streak of three days or more.
+       Nothing else is gold, and no accent is, so it never means "tap". */
+    --gold: #C4820E;
+    --gold-hub: #E8B23A;
+    --gold-ink: #7A5200;
+    --gold-soft: #FBEFD0;
+    --on-gold: #2A1D00;
     --kb-empty: #F7F9F8;
     --lane: #E3E8E5;
     --seg: #6B7773;
@@ -113,6 +121,7 @@
       --bar: #7A8682;
       --plate-ghost: #6A7772;
       --plate-off: #323C39;
+    --gold: #F2B63A; --gold-hub: #C08A14; --gold-ink: #F4C95A; --gold-soft: #3A2E10; --on-gold: #2A1D00;
       --kb-empty: #141A18;
       --lane: #252D2B;
       --seg: #B7C2BD;
@@ -151,6 +160,7 @@
     --bar: #7A8682;
     --plate-ghost: #6A7772;
     --plate-off: #323C39;
+    --gold: #F2B63A; --gold-hub: #C08A14; --gold-ink: #F4C95A; --gold-soft: #3A2E10; --on-gold: #2A1D00;
     --kb-empty: #141A18;
     --lane: #252D2B;
     --seg: #B7C2BD;
@@ -1043,6 +1053,9 @@
     font-size: 11px;
     margin-top: 2px;
   }
+  /* the food that won the day: said here too, in gold (b94) */
+  .added-flash .af-won { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--gold-ink); font-weight: 600; }
+  .added-flash .af-won svg { width: 12px; height: 12px; flex: none; fill: var(--gold); stroke: none; }
 
   .src-tag {
     font-family: var(--font-num);
@@ -3147,6 +3160,12 @@
   .datelabel .dow { display: none; }
   .date-chip { font-family: var(--font-num); font-size: 11.5px; color: var(--ink-2); white-space: nowrap; }
   .date-chip:empty { display: none; }
+  /* a streak of three days or more is earned: gold, with a flame (b94) */
+  .date-chip.is-earned {
+    display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; border-radius: 999px;
+    background: var(--gold-soft); color: var(--gold-ink); font-weight: 600;
+  }
+  .date-chip.is-earned svg { width: 12px; height: 12px; flex: none; fill: var(--gold); stroke: none; }
   .datelabel button.today {
     position: relative;
     margin: 0; min-height: 22px; padding: 0 2px;
@@ -3323,6 +3342,19 @@
     box-shadow: 0 0 0 1px var(--surface);
   }
   .bb-ghost { box-sizing: border-box; border: 1.3px dashed var(--plate-ghost); border-radius: 3px; }
+  /* Protein hit with the bar steady: the plates are gold (b94). The iron
+     they were lies over each one only while it turns, and is never seen
+     where nothing animates. */
+  .bb-plate i { position: relative; }
+  .barbell.is-won .bb-plate i {
+    background: linear-gradient(to bottom, var(--gold) 0 43%, var(--gold-hub) 43% 57%, var(--gold) 57% 100%);
+  }
+  .bb-plate i em {
+    position: absolute; inset: 0; border-radius: inherit; opacity: 0; pointer-events: none;
+    background: linear-gradient(to bottom, var(--plate) 0 43%, var(--plate-hub) 43% 57%, var(--plate) 57% 100%);
+  }
+  .today-card.is-won { border-color: var(--gold); }
+  .tc-n b.is-won, .tc-s.is-won { color: var(--gold-ink); }
 
   /* carbs and fat, as kettlebells */
   .kbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
@@ -3351,13 +3383,16 @@
 
   .hit-note {
     display: flex; align-items: center; gap: 12px; min-height: 52px; margin-top: 12px; padding: 8px 12px;
-    border-radius: 14px; background: var(--hit-bg); color: var(--ink);
+    border-radius: 14px; background: var(--gold-soft); color: var(--ink);
   }
-  .hit-tick { width: 30px; height: 30px; flex: none; border-radius: 50%; background: var(--hit); position: relative; }
-  .hit-tick::after {
-    content: ""; position: absolute; left: 9px; top: 9px; width: 11px; height: 6px;
-    border-left: 2.6px solid var(--on-hit); border-bottom: 2.6px solid var(--on-hit); transform: rotate(-45deg);
+  /* The note was green until b94. It only ever shows when the plates are
+     gold, so it is the same gold: a star where the tick was. */
+  .hit-tick { width: 30px; height: 30px; flex: none; border-radius: 50%; background: var(--gold); display: grid; place-items: center; }
+  .hit-tick svg { width: 16px; height: 16px; fill: var(--on-gold); stroke: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .hit-note[data-new="1"] { animation: goldStamp .5s cubic-bezier(.2, 1.5, .4, 1) .9s backwards; }
   }
+  @keyframes goldStamp { from { transform: scale(1.12) rotate(-2deg); opacity: 0; } }
   .hit-note > span { display: flex; flex-direction: column; gap: 2px; }
   .hit-note b { font-size: 15px; }
   .hit-note span span { font-size: 13px; color: var(--ink-2); }
@@ -4446,7 +4481,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-09.93";
+  var BUILD = "2026-11-10.94";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5439,6 +5474,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-10.94", t: "Gold plates", items: [
+      "Hit your protein goal with your calories still on target, and the plates on your barbell turn gold. The note under the bar is gold too, with a star.",
+      "A streak of three days or more now shows in gold with a flame, at the top of Macros.",
+      "Gold has one meaning in the app: you earned it. Nothing you tap is ever gold." ] },
     { b: "2026-11-09.93", t: "Steps from Apple Health", items: [
       "In the iPhone app only: while your cardio goal counts steps, the Cardio tab offers to connect Apple Health. Say yes and each day\u2019s steps fill in by themselves. It needs the app\u2019s new version, 1.4, from TestFlight or the App Store.",
       "The app reads your step count and nothing else. It never writes to Health, and the numbers stay on your phone.",
@@ -7739,7 +7778,12 @@
     var nav = document.getElementById("datenav");
     if (nav) nav.hidden = (tab === "log" || tab === "coach" || tab === "progress");
     var chip = document.getElementById("dateChip");
-    if (chip) chip.textContent = weekChip(key);
+    if (chip) {
+      // Three days on target in a row is earned: gold, with a flame (b94).
+      var chipSay = weekChip(key), earned = !!chipSay && tab === "macros" && key === TODAY && onTargetStreak() >= 3;
+      chip.classList.toggle("is-earned", earned);
+      chip.innerHTML = (earned ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3 0-3-1-6 2-10z"/></svg>' : '') + esc(chipSay);
+    }
     var box = document.getElementById("weekStrip");
     if (!box) return;
     var start = parseYmd(weekStart(key)), html = "";
@@ -8944,8 +8988,24 @@
   // The load each bar last drew, so only plates that are new slide on. Kept
   // here, never in the store: it is a picture of the last draw, not data.
   var barPrev = {}, barPrevFill = {};
-  function barbellHtml(ctx, cal, gc, pro, gp) {
+  // Gold means you earned it (b94): an "at least" protein goal reached while
+  // the bar is still steady. Over on calories is not a win, which also keeps
+  // gold off a bar that is yellow for being a little over. `hold` is foods
+  // still waiting for numbers: a day that is not added up has won nothing yet.
+  function barWon(cal, gc, pro, gp, hold) {
+    return !hold && !!gp && gp.dir === "+" && gp.v > 0 && pro >= gp.v && barState(cal, gc).state === "ok";
+  }
+  // What each bar last drew of that, and for which day, so the turn to gold
+  // plays once: when this day crosses the line, never on arriving at a day
+  // that already had. barNewWin is read by whoever drew the bar.
+  var barPrevWon = {}, barNewWin = {};
+  function barbellHtml(ctx, cal, gc, pro, gp, opt) {
     var b = barState(cal, gc);
+    opt = opt || {};
+    var won = barWon(cal, gc, pro, gp, opt.hold), was = barPrevWon[ctx];
+    var newWin = won && !!was && was.day === opt.day && !was.won;
+    barPrevWon[ctx] = { day: opt.day, won: won };
+    barNewWin[ctx] = newWin;
     var VW = 340, VH = 132, cx = 170, H = 163, SH = 74, COL = 79, START = 84.5, GAP = 1.2;
     var k = b.droop / (H * H), cy = 66 - b.droop * 0.3;
     function Y(d) { return cy + k * d * d; }
@@ -8979,7 +9039,8 @@
     [-1, 1].forEach(function (side) {
       laid.forEach(function (pl, i) {
         plates += '<span class="bb-plate" style="' + box(side, pl) + '"><i data-fresh="' + (i >= firstNew ? 1 : 0) +
-          '" data-side="' + side + '" data-order="' + Math.max(0, i - firstNew) + '"></i></span>';
+          '" data-side="' + side + '" data-order="' + Math.max(0, i - firstNew) + '" data-at="' + i + '">' +
+          (newWin ? '<em></em>' : '') + '</i></span>';
       });
       lay(proteinLoad(gp.v)).forEach(function (pl) { ghosts += '<span class="bb-ghost" style="' + box(side, pl) + '"></span>'; });
     });
@@ -8988,8 +9049,10 @@
     var fillCls = b.state === "ok" ? "is-ok" : b.state === "warn" ? "is-warn" : "is-bad";
     var side = now.reduce(function (t, w) { return t + w; }, 0);
     var aria = "Calories " + fmt(cal) + " of " + fmt(gc.v) + (b.over > 0 && !b.up ? ", " + fmt(b.over) + " over" : "") +
-      ". Protein " + fmt(pro) + " of " + fmt(gp.v) + " grams: " + side + " pounds of plates a side.";
-    return '<div class="barbell" role="img" aria-label="' + esc(aria) + '" data-state="' + b.state + '" data-fill="' + (b.fill * 100).toFixed(2) + '">' +
+      ". Protein " + fmt(pro) + " of " + fmt(gp.v) + " grams: " + side + " pounds of plates a side." +
+      (won ? " Protein goal hit: the plates are gold." : "");
+    return '<div class="barbell' + (won ? ' is-won' : '') + '" role="img" aria-label="' + esc(aria) + '" data-state="' + b.state +
+      '" data-won="' + (won ? 1 : 0) + '" data-newwin="' + (newWin ? 1 : 0) + '" data-fill="' + (b.fill * 100).toFixed(2) + '">' +
       '<div class="bb-dip"><div class="bb-sway"><div class="bb-buzz">' + ghosts +
         '<svg viewBox="0 0 340 132" aria-hidden="true">' +
           '<path class="bb-track" d="' + seg(-1, 0, H) + '"/><path class="bb-track" d="' + seg(1, 0, H) + '"/>' +
@@ -9037,6 +9100,17 @@
       });
       if (fresh.length) bb.querySelector(".bb-dip").animate([{ transform: "translateY(0)" }, { transform: "translateY(3px)" },
         { transform: "translateY(-1px)" }, { transform: "translateY(0)" }], { duration: 340, delay: last + 360, easing: "ease-out" });
+      // The turn to gold, once the last plate has landed: the iron lifts off
+      // each plate from the collar outward, with a glint as it goes.
+      if (bb.getAttribute("data-newwin") === "1") {
+        var base = (fresh.length ? last + 620 : 120);
+        bb.querySelectorAll(".bb-plate i").forEach(function (el) {
+          var wait = base + (Number(el.getAttribute("data-at")) || 0) * 70, iron = el.querySelector("em");
+          if (iron) iron.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 360, delay: wait, easing: "ease-out", fill: "backwards" });
+          el.animate([{ filter: "brightness(1)" }, { filter: "brightness(1.5)", offset: 0.45 }, { filter: "brightness(1)" }],
+            { duration: 520, delay: wait, easing: "ease-out" });
+        });
+      }
     });
   }
 
@@ -9309,15 +9383,24 @@
               '<span class="kb-v">' + fmt(cfNow ? cfNow.carb : 0) + ' g · ' + fmt(cfNow ? cfNow.fat : 0) + ' g</span>' +
               '<span class="kb-s">No target yet · tap to set one</span></span></button></div>'
         : '';
-    var hitNote = proHit && g.pro.dir === "+" && bs.state === "ok" && logged && !pend
-      ? '<div class="hit-note"><span class="hit-tick" aria-hidden="true"></span><span><b>Protein goal hit</b>' +
+    // Drawn before the note, which stamps in only when this draw is the one
+    // that crossed the line. The note and the gold plates are one condition.
+    var wonNow = barWon(t.cal, g.cal, t.pro, g.pro, pend);
+    var barHtml = barbellHtml("macros", t.cal, g.cal, t.pro, g.pro, { hold: pend, day: key });
+    // The bar may be off the top of the screen when the food that wins the
+    // day goes in from a box lower down, so the confirmation under the ledger
+    // says it too, where the eye already is. Rule 3: a win nobody sees is no win.
+    if (barNewWin.macros) { buzz("up"); if (lastAdded) lastAdded.won = key; }
+    var hitNote = wonNow
+      ? '<div class="hit-note" data-new="' + (barNewWin.macros ? 1 : 0) + '"><span class="hit-tick" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span><span><b>Protein goal hit</b>' +
           (key === TODAY && g.cal.dir === "-"
             ? '<span>Stay under ' + fmt(g.cal.v) + ' kcal and today makes it a ' + (onTargetStreak() + 1) + '-day streak.</span>' : '') +
         '</span></div>'
       : '';
     var dirSign = function (x) { return x.dir === "+" ? "+" : "\u2212"; };
     var todayCard =
-      '<section class="today-card" aria-label="' + (key === TODAY ? 'Today' : 'This day') + ' at a glance">' +
+      '<section class="today-card' + (wonNow ? ' is-won' : '') + '" aria-label="' + (key === TODAY ? 'Today' : 'This day') + ' at a glance">' +
         '<div class="tc-head"><span class="tc-k">' + (key === TODAY ? 'Today' : esc(cursor.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))) + '</span>' +
           '<button class="tc-edit" id="openGoal" aria-expanded="' + editingGoal + '">' + dirSign(g.cal) + fmt(g.cal.v) + ' kcal \u00b7 ' +
             dirSign(g.pro) + fmt(g.pro.v) + ' g \u00b7 Edit</button></div>' +
@@ -9326,10 +9409,10 @@
             '<span class="tc-n"><b class="' + calCls.trim() + '">' + calBig + '</b><span class="' + calCls.trim() + '">' + calWord + '</span></span>' +
             '<span class="tc-s">' + fmt(t.cal) + ' of ' + fmt(g.cal.v) + ' kcal</span></div>' +
           '<div class="tc-fig"><span class="tc-l"><i class="ic-plate" aria-hidden="true"></i>Protein \u00b7 plates</span>' +
-            '<span class="tc-n"><b>' + fmt(t.pro) + '</b><span>g</span></span>' +
-            '<span class="tc-s' + (proHit && g.pro.dir === "+" ? ' is-hit' : '') + '">' + proSub + '</span></div>' +
+            '<span class="tc-n"><b' + (wonNow ? ' class="is-won"' : '') + '>' + fmt(t.pro) + '</b><span>g</span></span>' +
+            '<span class="tc-s' + (wonNow ? ' is-won' : proHit && g.pro.dir === "+" ? ' is-hit' : '') + '">' + proSub + '</span></div>' +
         '</div>' +
-        barbellHtml("macros", t.cal, g.cal, t.pro, g.pro) +
+        barHtml +
         '<p class="tc-say" role="status"><i class="tc-dot' + (pend || !logged ? '' : sayCls || ' is-ok') + '" aria-hidden="true"></i>' +
           '<span class="' + sayCls.trim() + '">' + calSay + '</span></p>' +
         '<p class="tc-legend">Dashed = your ' + fmt(g.pro.v) + ' g goal \u00b7 1 g protein = 1 lb of plates</p>' +
@@ -9374,7 +9457,10 @@
         ((lastAdded && Date.now() - lastAdded.at < 8000)
           ? '<p class="added-flash">✓ Added ' + esc(lastAdded.label) + ' · ' +
               fmt(lastAdded.cal) + ' kcal · ' + fmt(lastAdded.pro) + ' g' +
-              '<span>Day now ' + fmt(t.cal) + ' kcal · ' + fmt(t.pro) + ' g protein</span></p>'
+              '<span>Day now ' + fmt(t.cal) + ' kcal · ' + fmt(t.pro) + ' g protein</span>' +
+              (wonNow && lastAdded.won === key
+                ? '<b class="af-won"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>Protein goal hit \u00b7 your plates are gold</b>'
+                : '') + '</p>'
           : '') +
         // Said whether or not a box is open: it is about the day, not a form.
         (pendingCount(d)
@@ -12397,7 +12483,7 @@
     var pkey = ymd(cursor), pday = store.days[pkey], pt = pday && pday.food ? totals(pday) : { cal: 0, pro: 0 }, pg = goalFor(pkey);
     var pcf = cfOn() && pday && pday.food && pday.food.length ? cfTotals(pday) : null;
     var barCard = '<section class="pan-bar">' +
-        '<div class="pb-bar">' + barbellHtml("pantry", pt.cal, pg.cal, pt.pro, pg.pro) + '</div>' +
+        '<div class="pb-bar">' + barbellHtml("pantry", pt.cal, pg.cal, pt.pro, pg.pro, { hold: pday ? pendingCount(pday) : 0, day: pkey }) + '</div>' +
         '<div class="pb-text"><span class="tc-k">' + (pkey === TODAY ? 'Today’s bar'
             : esc(cursor.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + ' — adding here') + '</span>' +
           '<span class="pb-v"><b>' + fmt(pt.cal) + '</b> / ' + fmt(pg.cal.v) + ' kcal</span>' +

@@ -129,7 +129,9 @@ PAIRS = """() => {
   const ratio = (a,b) => { const x=lum(a), y=lum(b); return (Math.max(x,y)+.05)/(Math.min(x,y)+.05); };
   const t = { accent: v('--accent'), soft: v('--accent-soft'), on: v('--on-accent'),
               surface: v('--surface'), surface2: v('--surface-2'), ground: v('--ground'),
-              ink: v('--ink'), ink2: v('--ink-2') };
+              ink: v('--ink'), ink2: v('--ink-2'),
+              gold: v('--gold'), goldInk: v('--gold-ink'), goldSoft: v('--gold-soft'), onGold: v('--on-gold'),
+              hitBg: v('--hit-bg') };
   const out = {
     'accent on surface': ratio(t.accent, t.surface),
     'accent on surface-2': ratio(t.accent, t.surface2),
@@ -137,12 +139,25 @@ PAIRS = """() => {
     'button text on accent': ratio(t.on, t.accent),
     'accent on soft': ratio(t.accent, t.soft),
     'ink on soft': ratio(t.ink, t.soft),
-    'ink-2 on soft': ratio(t.ink2, t.soft)
+    'ink-2 on soft': ratio(t.ink2, t.soft),
+    // gold means you earned it (b94): the streak chip is gold words on the
+    // gold tint over the ground, the note is ink on the tint, the star sits
+    // on the gold itself, and a won protein figure is gold on the card
+    'gold words on surface': ratio(t.goldInk, t.surface),
+    'gold words on gold tint': ratio(t.goldInk, t.goldSoft),
+    'ink on gold tint': ratio(t.ink, t.goldSoft),
+    'ink-2 on gold tint': ratio(t.ink2, t.goldSoft),
+    'star on gold': ratio(t.onGold, t.gold),
+    // the winning food's confirmation: gold words on the green "Added" tint
+    'gold words on hit tint': ratio(t.goldInk, t.hitBg)
   };
   const bad = Object.keys(out).filter(k => out[k] < 4.5).map(k => k+' '+out[k].toFixed(2));
   // a ticked row has to look different from an unticked one
   const sep = ratio(t.soft, t.surface);
   if (sep < 1.12) bad.push('soft tint indistinguishable from surface '+sep.toFixed(2));
+  // gold plates are a picture, not words: 3:1 against the card they sit on
+  const plate = ratio(t.gold, t.surface);
+  if (plate < 3) bad.push('gold plates on surface '+plate.toFixed(2)+' need 3');
   return { accent: t.accent, bad: bad };
 }"""
 
@@ -550,6 +565,50 @@ with sync_playwright() as pw:
                   "; ".join(pairs["bad"] + found) if (pairs["bad"] or found) else "clean"))
             if errs: FAILS.append("%s/%s: page errors %s" % (accent, theme, str(errs[:2])[:80]))
             ctx.close()
+
+    # ---- pass 2b: gold, which only a won day paints (b94) ----
+    # The main fixture is short of protein on purpose, so its Macros card is
+    # the everyday one. This is the same day with the protein in and three
+    # days on target behind it: gold plates, the gold note, the gold figure
+    # and the gold streak chip. The pass fails if any of them is not painted,
+    # so it cannot turn into a measurement of nothing.
+    for theme in ["light", "dark"]:
+        ctx = b.new_context(viewport={"width": 393, "height": 852}, has_touch=True, is_mobile=True,
+                            color_scheme=("dark" if theme == "light" else "light"))
+        ctx.add_init_script("delete window.claude;")
+        fakeai.phone(ctx, reply=dark_reply)
+        p = ctx.new_page(); errs = []
+        p.on("pageerror", lambda e: errs.append(str(e)))
+        p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(400)
+        s = fixture(theme)
+        s["build"] = p.evaluate("()=>document.documentElement.innerHTML.match(/var BUILD = \"([^\"]+)\"/)[1]")
+        s["days"][T]["food"].append({"id": "gold", "cal": 300, "pro": 60, "note": "Shake"})
+        for i in (1, 2, 3):
+            k = (datetime.date.today() - datetime.timedelta(days=i)).isoformat()
+            day = s["days"].setdefault(k, {"updated": 1, "goal": G})
+            day["food"] = [{"id": "w%d" % i, "cal": 1800, "pro": 160, "note": "Whole day"}]
+        p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", s)
+        p.reload(); p.wait_for_timeout(800)
+        try: p.click("#dismissWelcome", timeout=1500)
+        except Exception: pass
+        found = []
+        painted = p.evaluate("""()=>({
+          'gold plates': document.querySelectorAll('.today-card .barbell.is-won .bb-plate').length,
+          'gold note': document.querySelectorAll('.today-card .hit-note').length,
+          'gold protein figure': document.querySelectorAll('.today-card .tc-n b.is-won').length,
+          'gold streak chip': document.querySelectorAll('#dateChip.is-earned svg').length})""")
+        for k, n in painted.items():
+            if not n: found.append("gold: the %s is not on screen" % k)
+        low = p.evaluate(LOW)
+        if low: found.append("gold (macros): %s" % low)
+        p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(350)
+        if not p.locator(".pan-bar .barbell.is-won").count(): found.append("gold: the Pantry's bar is not gold")
+        low = p.evaluate(LOW)
+        if low: found.append("gold (pantry): %s" % low)
+        print("gold   %-5s            %s" % (theme, "; ".join(found) if found else "clean"))
+        FAILS.extend("gold/%s: %s" % (theme, x) for x in found)
+        if errs: FAILS.append("gold/%s: page errors %s" % (theme, str(errs[:2])[:80]))
+        ctx.close()
 
     # ---- pass 3: Apple Health steps, iPhone app only (shell 1.4) ----
     # The card, the lap's "where these came from" line and the steps box exist
