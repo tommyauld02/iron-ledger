@@ -15,7 +15,7 @@ import fakeai
 import answered   # every page has said 18 or older: tests/answered.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
-import os, time, datetime
+import os, time, datetime, json
 
 d = os.getcwd().replace("\\", "/"); d = "/" + d if d[1:2] == ":" else d
 T = datetime.date.today().isoformat()
@@ -549,6 +549,60 @@ with sync_playwright() as pw:
             print("chosen %-5s %-9s %s  %s" % (theme, accent, pairs["accent"],
                   "; ".join(pairs["bad"] + found) if (pairs["bad"] or found) else "clean"))
             if errs: FAILS.append("%s/%s: page errors %s" % (accent, theme, str(errs[:2])[:80]))
+            ctx.close()
+
+    # ---- pass 3: Apple Health steps, iPhone app only (shell 1.4) ----
+    # The card, the lap's "where these came from" line and the steps box exist
+    # only in a shell with the HealthSteps plugin, so a stand-in for the shell
+    # holds the log and answers for Health. `empty` is Health with no steps,
+    # which draws the line saying where the switch is.
+    SHELL = """(() => {
+      const prefs = { 'CapacitorStorage.iron-ledger-v1': %s }, steps = %s;
+      window.Capacitor = {
+        isNativePlatform: () => true, getPlatform: () => 'ios',
+        isPluginAvailable: (n) => n === 'Preferences' || n === 'HealthSteps',
+        nativePromise: (plugin, method, o) => {
+          o = o || {};
+          if (plugin === 'Preferences') {
+            if (method === 'set') prefs['CapacitorStorage.' + o.key] = o.value;
+            return Promise.resolve(method === 'get' ? { value: prefs['CapacitorStorage.' + o.key] || null } : {});
+          }
+          if (method === 'status') return Promise.resolve({ available: true, asked: false });
+          if (method === 'days') return Promise.resolve({ days: steps });
+          return Promise.resolve({});
+        }
+      };
+    })();"""
+    for scheme in ["light", "dark"]:
+        for empty in (False, True):
+            ctx = b.new_context(viewport={"width": 393, "height": 852}, has_touch=True,
+                                is_mobile=True, color_scheme=scheme)
+            ctx.add_init_script("delete window.claude;")
+            log = fixture(); log["cardioGoal"] = {"kind": "steps", "period": "week", "v": 70000}
+            ctx.add_init_script(SHELL % (json.dumps(json.dumps(log)), json.dumps({} if empty else {T: 6240})))
+            p = ctx.new_page(); errs = []
+            p.on("pageerror", lambda e: errs.append(str(e)))
+            p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(900)
+            for sel in ("#newsDone", "#dismissWelcome"):
+                try: p.click(sel, timeout=600)
+                except Exception: pass
+            p.click('.tabs button[data-tab="cardio"]'); p.wait_for_timeout(300)
+            found = []
+            if not empty:
+                if not p.locator("#hsCard").count(): found.append("the Apple Health card is not on screen")
+                low = p.evaluate(LOW)
+                if low: found.append("the Apple Health card: %s" % low)
+            p.click("#hsConnect"); p.wait_for_timeout(500)
+            if not p.locator(".cg-src").count(): found.append("the lap's Apple Health line is not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("the lap, connected%s: %s" % (" and empty" if empty else "", low))
+            if not empty:
+                p.click("#stepsOpen"); p.wait_for_timeout(250)
+                low = p.evaluate(LOW)
+                if low: found.append("the steps box on an Apple Health day: %s" % low)
+            print("health %-5s %-9s %s" % (scheme, "empty" if empty else "steps", "; ".join(found) if found else "clean"))
+            FAILS.extend("health %s: %s" % (scheme, x) for x in found)
+            if errs: FAILS.append("health %s: page errors %s" % (scheme, str(errs[:2])[:80]))
             ctx.close()
     b.close()
 

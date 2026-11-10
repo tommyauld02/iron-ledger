@@ -8,7 +8,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
-        window?.rootViewController = CAPBridgeViewController()
+        window?.rootViewController = MainViewController()   // Capacitor's, plus the app's own plugins
         window?.makeKeyAndVisible()
 
         if let item = connectionOptions.shortcutItem { noteQuickAction(item) }

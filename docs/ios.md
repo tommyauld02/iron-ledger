@@ -18,6 +18,9 @@ capacitor.config.json   app id, the name under the icon, webDir, the updater's s
 tools/make-www.mjs      assembles www/ from mntl-dt.html, fonts/, icons/, vendor/,
                         and the live-update manifest Pages publishes
 tools/shell-version.py  the shell's version and its ledger, ios/shell-versions.json
+ios/App/App/HealthStepsPlugin.swift   steps from Apple Health, read only (shell 1.4)
+ios/App/App/MainViewController.swift  Capacitor's view controller, registering it
+ios/App/App/App.entitlements          the HealthKit capability (shell 1.4)
 www/                    generated, never committed (the same rule as dist/)
 ios/App/                the Xcode project; Swift Package Manager, no CocoaPods
 ios/App/App/public/     Capacitor's copy of www/, generated, never committed
@@ -54,6 +57,14 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
   app that opens the camera without them. Until shell 1.3 the words said the
   pictures were not kept, which progress photos made untrue, so they changed
   with the photos. Changing them again is a store build.
+- **Apple Health is read only, and steps only** (shell 1.4). The app asks
+  to read the step count and to share nothing, so iOS shows a read-only
+  request and there is no `NSHealthUpdateUsageDescription`. The words in
+  `NSHealthShareUsageDescription` say what is read, that nothing is written,
+  and that the numbers stay on the phone. `App.entitlements` turns on
+  HealthKit with an empty `healthkit.access` list (no clinical records).
+  Reading anything else, such as workouts, would change the permission and
+  so be a store build.
 - **No photo library permission.** *Choose one* on the Progress tab is a plain
   file input. iOS answers it with its own photo picker (PHPicker), which runs
   outside the app and hands over only the photo picked, so there is nothing
@@ -77,7 +88,11 @@ made by `tools/make-icons.py` with the others. Never hand-draw it.
   It also declares what the App Privacy answers in App Store Connect say: the
   words typed into *Ask an agent* (Other User Content), for app
   functionality, not linked to the person, no tracking. If those answers
-  change, this file changes with them, in a store build. `tests/native.py`
+  change, this file changes with them, in a store build. Steps from Apple
+  Health (shell 1.4) add nothing here: Apple counts data as collected only
+  when it leaves the phone for the developer or a partner, and the steps
+  never do (only *Send a copy*, which the person sends themselves). HealthKit
+  is not a "required reason" API either. `tests/native.py`
   checks that Xcode bundles the file, that it says the above, and that every
   such API in the shell's and the plugins' own Swift is declared. It reads
   the plugins from `node_modules`, so that last check covers them only where
@@ -131,6 +146,38 @@ never asked. The plugin brings one native library, `ion-ios-filesystem`
 why, and how a missing file is handled, are in `docs/progress.md` (*In the
 iPhone app, photos are files*). `tests/progress.py` checks it with a stand-in
 for the plugin.
+
+## Steps from Apple Health (shell 1.4)
+
+`HealthStepsPlugin.swift` is a plugin of the app's own, not an npm package,
+so nothing new is downloaded and nothing third-party touches Health. It is
+registered by `MainViewController.swift`, a `CAPBridgeViewController` that
+`SceneDelegate.swift` and `Main.storyboard` now make, in
+`capacitorDidLoad()`, before the page loads, so `shellHas("HealthSteps")` sees
+it from the first line. The page calls it as `HealthSteps`:
+
+- `status()`: `{available, asked}`. Whether this device has Health, and
+  whether the question has been put already. Not the answer: iOS never tells
+  an app whether reading was allowed.
+- `connect()`: iOS's own sheet, read steps and share nothing. After the first
+  time iOS answers at once, and the switch lives in Settings → Health → Data
+  Access & Devices.
+- `days({from, to})`: `{days: {"2026-11-09": 6240, …}}`, each day's total from
+  an `HKStatisticsCollectionQuery` (`cumulativeSum`, one day at a time, the
+  phone's own midnight), days with no steps left out, at most 400 days.
+  A locked phone rejects with `locked`; the page tries again later.
+
+How the page uses it is in `docs/cardio.md` (*Steps from Apple Health*).
+
+**Signing.** `App.entitlements` is set as `CODE_SIGN_ENTITLEMENTS` in both
+configurations. Automatic signing (Xcode, and *Build for TestFlight* with its
+Admin API key) is expected to turn HealthKit on for the `app.mntldt` App ID
+when it makes the profile; shell 1.4 is the first build to need it, so watch
+that run. If an upload fails with a profile that lacks
+`com.apple.developer.healthkit`, tick **HealthKit** for `app.mntldt` at
+developer.apple.com → Certificates, Identifiers & Profiles → Identifiers, and
+run the workflow again. App Review for a HealthKit app reads the privacy
+policy, which says what is read (`privacy.html`, *Apple Health*).
 
 ## How an update reaches phones
 
@@ -359,6 +406,11 @@ These are the things only the iPhone can answer:
     camera for barcodes is not asked again.) Change day to an earlier one and
     use *Choose one* (no permission is asked). Swipe the app away, open it:
     both photos show. Restart the phone: still there.
+13. Settings → You → the cardio goal counts Steps. Cardio → *Connect Apple
+    Health*: iOS asks to read Steps only. Allow it. Today's steps match the
+    Health app's, and earlier days fill in. Walk a little, swipe the app away
+    and open it: the number has grown. Type a different number for today:
+    it stays, and the box offers Apple Health's back.
 
 Anything that looks wrong: a screenshot and the build number from the
 header (`b77`) is enough to start from.

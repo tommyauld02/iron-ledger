@@ -157,7 +157,8 @@ Everything else:
   `docs/gym.md`
 - **Targets** — compare with last time, special day, notes, the set to beat,
   five pounds a rep, gyms, last time set by set → `docs/gym.md`
-- **Cardio tab and cardio goals** → `docs/cardio.md`
+- **Cardio tab and cardio goals**, steps typed in or from Apple Health →
+  `docs/cardio.md`
 - **Progress tab** — check-ins (photo, note, weight), photos kept beside the
   log and never in it or a backup, the photo bin, Compare, the Log's camera
   and ring, photos in the iPhone app as files from shell 1.3 →
@@ -168,7 +169,8 @@ Everything else:
   never through `mergeInto` → `docs/sharing-a-routine.md`
 - **The iPhone app** — the Capacitor shell, the log in native storage, the
   bundle ID, running it from Xcode, live updates, TestFlight from GitHub, the
-  shell's version and what needs a store build → `docs/ios.md`; how the log is kept
+  shell's version and what needs a store build, steps from Apple Health
+  (shell 1.4) → `docs/ios.md`; how the log is kept
   there → `docs/architecture.md` (*In the iPhone app the log lives in native
   storage*)
 - **Known and deliberate** — what is left as it is on purpose, including

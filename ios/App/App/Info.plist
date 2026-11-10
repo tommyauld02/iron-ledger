@@ -59,6 +59,8 @@
 	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>MNTL D&amp;T uses the camera to scan barcodes, read nutrition labels and take progress photos. Pictures of barcodes and labels are read on your phone and are not kept or sent anywhere. Progress photos you add are kept on your phone and never sent anywhere.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>MNTL D&amp;T reads your daily step count from Apple Health to fill in your steps on the Cardio tab. It reads steps only, never writes to Health, and the numbers stay on your phone.</string>
 	<key>UIApplicationShortcutItems</key>
 	<array>
 		<dict>
