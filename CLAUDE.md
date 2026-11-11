@@ -141,6 +141,10 @@ Everything else:
 - **Look and touch** — the dock, long press, sheets, Settings, theme and
   accent, teal means you can tap it, contrast, `darkcheck`'s fixture →
   `docs/ui.md`
+- **Gold, and the daily line** — gold means you earned it; one line at the
+  top of Macros, Gym or Cardio about a goal that keeps being missed or a good
+  week, with *Got it* → `docs/ui.md` (*Gold means you earned it*, *The daily
+  line*)
 - **Logging food** — the three ways in, the words box, folded boxes and
   pop-ups, grams and units, meals → `docs/food.md`
 - **The food finder** — the free AI that answers what the pantry doesn't know,
