@@ -3858,15 +3858,28 @@ with sync_playwright() as pw:
     # Asked for by the owner, who turned down a box of pantry buttons as
     # clutter and asked for words instead: a goal that keeps being missed, or
     # a week that went well, in one line at the top of the tab it is about.
+    # His lines were examples ("implement more that are in line with what the
+    # goal is"), so each tab also speaks to the other goals it holds.
     # Every line that must show is checked beside a log that must stay quiet,
     # because a reminder that fires on nothing is worse than none.
-    DOW=(T.weekday()+1)%7                                   # Sunday is 0, as the app counts
-    WK0=T-datetime.timedelta(days=DOW)                      # this week's Sunday
+    #
+    # The clock is held at noon on a Wednesday. Which lines are due depends on
+    # the day of the week (a streak of seven lands on a Sunday, three days of
+    # nothing logged on a Wednesday), and a suite that passes on Tuesdays only
+    # is the stale-build lesson in another form.
+    NOON=datetime.datetime(2026,11,11,12,0,0); LT=NOON.date(); LTs=LT.isoformat()
+    DOW=(LT.weekday()+1)%7                                  # Sunday is 0, as the app counts
+    WK0=LT-datetime.timedelta(days=DOW); WKs=WK0.isoformat()  # this week's Sunday
     LAST=[(WK0-datetime.timedelta(days=7-i)).isoformat() for i in range(7)]
-    def back(i): return (T-datetime.timedelta(days=i)).isoformat()
+    PREV=[(WK0-datetime.timedelta(days=14-i)).isoformat() for i in range(7)]
+    def back(i): return (LT-datetime.timedelta(days=i)).isoformat()
     def fd(cal, pro, **kw):
         dd={"food":[{"id":"x","cal":cal,"pro":pro,"note":"Whole day"}],"updated":1,"goal":GG}; dd.update(kw); return dd
-    def dstore(days, **kw): return dict(LBSTORE, goal=GG, days=days, build=BUILDNOW, **kw)
+    # today has a breakfast in it unless a check is about a day with nothing logged
+    def dstore(days, today=True, **kw):
+        days=dict(days)
+        if today: days.setdefault(LTs, fd(500,40))
+        return dict(LBSTORE, goal=GG, days=days, build=BUILDNOW, **kw)
     LINE="""()=>{const l=document.querySelector('.dayline'); if(!l) return null;
       const v=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
         rgb=h=>'rgb('+[1,3,5].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
@@ -3876,20 +3889,28 @@ with sync_playwright() as pw:
         gold:getComputedStyle(l.querySelector('.dl-text span')).color===rgb(v('--gold-ink'))}; }"""
     def on(tabname):
         q.click('.tabs button[data-tab="%s"]' % tabname); q.wait_for_timeout(300); return q.evaluate(LINE)
+    def says(ln, kind, head, sub=None):
+        return bool(ln) and ln["kind"]==kind and ln["head"]==head and ln["n"]==1 and ln["first"] \
+            and (sub is None or ln["sub"]==sub) and (kind=="miss" or (ln["sub"]=="Keep it up!" and ln["star"]==1 and ln["gold"]))
+    # a line put away yesterday: the tab is free to speak today, and says what is left
+    def put_away(store, *ids):
+        store=dict(store); store["lineGot"]=dict((i, back(1)) for i in ids); return store
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("line: "+str(e)))
+    q.clock.set_fixed_time(NOON)
     q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
+    check("line: the suite's Wednesday is the app's today",
+          q.evaluate("()=>{const n=new Date();return n.getFullYear()+'-'+(n.getMonth()+1)+'-'+n.getDate()}")=="2026-11-11")
     opened(dstore({}))
     check("line: a log with nothing in it says nothing, on any tab",
           on("macros") is None and on("gym") is None and on("cardio") is None)
 
-    # protein, missed five days running
+    # ---- Macros: protein, missed five days running ----
     opened(dstore({back(i): fd(1800,120) for i in range(1,6)}))
     ln=on("macros")
     check("line: protein missed five days running is said at the top of Macros, in his words",
-          ln and ln["kind"]=="miss" and ln["head"]=="Protein goal missed 5 days running."
-          and ln["sub"]=="Be sure to get in more protein-dense foods today." and ln["n"]==1 and ln["first"] and not ln["star"], str(ln))
+          says(ln,"miss","Protein goal missed 5 days running.","Be sure to get in more protein-dense foods today.") and not ln["star"], str(ln))
     gb=q.locator(".dl-got").bounding_box()
     check("line: Got it is a proper target", gb and gb["height"]>=MIN_TAP and gb["width"]>=MIN_TAP, str(gb))
     q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200)
@@ -3903,98 +3924,163 @@ with sync_playwright() as pw:
     q.click(".dl-got"); q.wait_for_timeout(300)
     got=q.evaluate(LBST).get("lineGot") or {}
     check("line: Got it puts it away, and the log remembers which line",
-          q.evaluate(LINE) is None and got=={"macros/pro-run:"+Ts: Ts}, str(got))
+          q.evaluate(LINE) is None and got=={"macros/pro-run:"+LTs: LTs}, str(got))
     q.reload(); q.wait_for_timeout(900)
     check("line: and it stays away when the app is opened again", q.evaluate(LINE) is None)
     opened(dstore({back(1): fd(1800,120), back(2): fd(1800,120)}))
-    ln=on("macros")
-    check("line: two days is not a run", ln is None or "running" not in ln["head"], str(ln))
+    check("line: two days is not a run, and two days this week is not last week", on("macros") is None, str(q.evaluate(LINE)))
     opened(dstore({back(1): fd(1800,120), back(2): fd(1800,120), back(4): fd(1800,120), back(5): fd(1800,120)}))
     ln=on("macros")
-    check("line: a day nobody logged is not a missed day, and ends the run", ln is None or "running" not in ln["head"], str(ln))
+    check("line: a day nobody logged ends the run; the two that fell in last week are said as that",
+          says(ln,"miss","Protein goal missed 2 days last week.","Be sure to get in more protein-dense foods this week."), str(ln))
 
-    # calories, missed last week
+    # ---- Macros: calories, missed last week ----
     week=dict((k, fd(1800,160)) for k in LAST); week[LAST[2]]=fd(2400,160); week[LAST[3]]=fd(2500,160)
     opened(dstore(week))
-    ln=on("macros")
     check("line: calories missed twice last week is said, with how many",
-          ln and ln["kind"]=="miss" and ln["head"]=="Calorie goal missed 2 days last week."
-          and ln["sub"]=="Keep an eye on the bar this week.", str(ln))
+          says(on("macros"),"miss","Calorie goal missed 2 days last week.","Keep an eye on the bar this week."), str(q.evaluate(LINE)))
     opened(dstore({LAST[2]: fd(2400,160)}))
     check("line: one missed day is not worth a line", on("macros") is None, str(q.evaluate(LINE)))
 
-    # a good week
-    opened(dstore(dict((k, fd(1800,160)) for k in LAST)))
-    ln=on("macros")
+    # ---- Macros: nothing logged for days ----
+    opened(dstore({back(4): fd(1800,160), back(5): fd(1800,160)}, today=False))
+    check("line: three days with nothing logged is said, to someone who was logging before",
+          says(on("macros"),"miss","Nothing logged for 3 days.","Log today and pick it back up."), str(q.evaluate(LINE)))
+    opened(dstore({back(3): fd(1800,160)}, today=False))
+    check("line: two days of nothing is only a weekend", on("macros") is None, str(q.evaluate(LINE)))
+    opened(dstore({back(4): fd(1800,160)}))
+    check("line: and logging anything today answers it", on("macros") is None, str(q.evaluate(LINE)))
+    opened(dstore({}, today=False))
+    check("line: a brand new log is not told it has stopped logging", on("macros") is None, str(q.evaluate(LINE)))
+
+    # ---- Macros: water and the daily checklist, for anyone using them ----
+    def drank(ml): return {"food":[],"updated":1,"goal":GG,"water":ml}
+    wd=dict((k, drank(2000)) for k in LAST[:3]); wd[LAST[3]]=drank(500); wd[LAST[4]]=drank(600)
+    opened(dstore(wd, waterOn=True))
+    check("line: a water goal missed four days of seven is said",
+          says(on("macros"),"miss","Water goal missed 4 of 7 days last week.","Keep a bottle close this week."), str(q.evaluate(LINE)))
+    opened(dstore(dict((k, drank(2000)) for k in LAST), waterOn=True))
+    check("line: and seven of seven is gold", says(on("macros"),"win","Water goal hit 7 of 7 days last week."), str(q.evaluate(LINE)))
+    opened(dstore({}, waterOn=True))
+    check("line: water switched on but never tapped in has not been missed", on("macros") is None, str(q.evaluate(LINE)))
+    opened(dstore(wd))
+    check("line: and with water hidden, nothing is said about it", on("macros") is None, str(q.evaluate(LINE)))
+    SUPPS=[{"id":"s1","name":"Creatine","dose":"5 g"},{"id":"s2","name":"Zinc","dose":"50 mg"}]
+    def ticked(*ids): return {"food":[],"updated":1,"goal":GG,"supps":dict((i,True) for i in ids)}
+    td=dict((k, ticked("s1","s2")) for k in LAST[:3]); td[LAST[3]]=ticked("s1")
+    opened(dstore(td, supps=SUPPS))
+    check("line: a checklist finished three days of seven is said, and half a list is not finished",
+          says(on("macros"),"miss","Daily checklist finished 3 of 7 days last week.","Tick it off each day this week."), str(q.evaluate(LINE)))
+    opened(dstore(dict((k, ticked("s1","s2")) for k in LAST), supps=SUPPS))
+    check("line: every day ticked off is gold", says(on("macros"),"win","Daily checklist finished 7 of 7 days last week."), str(q.evaluate(LINE)))
+
+    # ---- Macros: the good ones ----
+    goodweek=dict((k, fd(1800,160)) for k in LAST)
+    opened(dstore(goodweek))
     check("line: seven of seven on target gets a gold line and Keep it up!",
-          ln and ln["kind"]=="win" and ln["head"]=="7 of 7 days on target last week." and ln["sub"]=="Keep it up!"
-          and ln["star"]==1 and ln["gold"], str(ln))
+          says(on("macros"),"win","7 of 7 days on target last week."), str(q.evaluate(LINE)))
     opened(dstore(dict((k, fd(1800,160)) for k in LAST[:4])))
     check("line: four good days is not yet a good week", on("macros") is None, str(q.evaluate(LINE)))
+    onemiss=dict(goodweek); onemiss[LAST[1]]=fd(1800,120)
+    opened(dstore(onemiss))
+    check("line: calories kept all week is still worth saying when protein slipped once",
+          says(on("macros"),"win","Calorie goal hit 7 of 7 days last week."), str(q.evaluate(LINE)))
+    opened(dstore({back(i): fd(1800,160) for i in range(1,8)}))
+    check("line: a streak reaching seven is said on the day it does",
+          says(on("macros"),"win","7 days on target in a row."), str(q.evaluate(LINE)))
+    opened(dstore({back(i): fd(1800,160) for i in range(1,7)}))
+    check("line: six in a row is not a round number", on("macros") is None, str(q.evaluate(LINE)))
+    up=dict(goodweek); up.update((k, fd(1800,170)) for k in LAST); up.update((k, fd(1800,152)) for k in PREV)
+    opened(put_away(dstore(up), "macros/win-week:"+WKs))
+    check("line: more protein than the week before is said, with both numbers",
+          says(on("macros"),"win","You averaged 170 g of protein a day last week, up 18 g on the week before."), str(q.evaluate(LINE)))
 
-    # one a day: the reminder first, and the next thing tomorrow, not the same thing
+    # ---- one a day: the reminder first, then the next thing, and good news takes turns ----
     both=dict(week); both.update({back(i): fd(1800,120) for i in range(1,4)})
     opened(dstore(both))
     ln=on("macros")
     check("line: with two things to say, what keeps being missed comes first, alone",
-          ln and ln["head"]=="Protein goal missed 3 days running." and ln["n"]==1, str(ln))
+          says(ln,"miss","Protein goal missed 3 days running."), str(ln))
     q.click(".dl-got"); q.wait_for_timeout(300)
     check("line: one a day: Got it does not bring the second straight after", q.evaluate(LINE) is None, str(q.evaluate(LINE)))
-    st=q.evaluate(LBST); st["lineGot"]={"macros/pro-run:"+Ts: back(1)}       # as if that Got it was yesterday's
-    opened(st)
-    ln=on("macros")
+    opened(put_away(dstore(both), "macros/pro-run:"+LTs))
     check("line: the day after, it is the next thing, not the one already put away",
-          ln and ln["head"]=="Calorie goal missed 2 days last week.", str(ln))
+          says(on("macros"),"miss","Calorie goal missed 2 days last week."), str(q.evaluate(LINE)))
+    opened(dstore(up))
+    first=on("macros")["head"]
+    q.clock.set_fixed_time(NOON+datetime.timedelta(days=1)); q.reload(); q.wait_for_timeout(900)
+    second=on("macros")["head"]
+    check("line: two good things take turns, a different one each day, with no Got it needed",
+          {first, second}=={"7 of 7 days on target last week.","You averaged 170 g of protein a day last week, up 18 g on the week before."},
+          str([first, second]))
+    q.clock.set_fixed_time(NOON); q.reload(); q.wait_for_timeout(900)
 
-    # the gym: last week against the planned week
-    def lifted(): return {"food":[],"updated":1,"goal":GG,"lifts":[{"id":"l","cat":"back","movement":"Barbell Row","sets":[{"w":135,"r":10}]}]}
+    # ---- Gym: last week against the planned week, or the workouts-a-week goal ----
+    def lifted(w=135): return {"food":[],"updated":1,"goal":GG,"lifts":[{"id":"l","cat":"back","movement":"Barbell Row","sets":[{"w":w,"r":10}]}]}
     PLAN=[None,"back","legs",None,"push",None,None]
     opened(dstore({LAST[1]: lifted(), back(20): lifted()}, week=PLAN))
-    ln=on("gym")
     check("line: fewer gym days than planned is said on Gym, with both numbers",
-          ln and ln["kind"]=="miss" and ln["head"]=="Last week: 1 of your 3 planned gym days."
-          and ln["sub"]=="Make sure you’re ready for the gym this week." and ln["first"], str(ln))
+          says(on("gym"),"miss","Last week: 1 of your 3 planned gym days.","Make sure you’re ready for the gym this week."), str(q.evaluate(LINE)))
     check("line: and Macros does not carry the gym's line", on("macros") is None)
-    opened(dstore({LAST[1]: lifted(), LAST[2]: lifted(), LAST[4]: lifted()}, week=PLAN))
-    ln=on("gym")
-    check("line: every planned gym day done is a gold line",
-          ln and ln["kind"]=="win" and ln["head"]=="3 of 3 planned gym days last week." and ln["sub"]=="Keep it up!", str(ln))
-    opened(dstore({LAST[1]: lifted()}))
-    check("line: with no planned week there is nothing to have missed", on("gym") is None, str(q.evaluate(LINE)))
+    three={LAST[1]: lifted(), LAST[2]: lifted(), LAST[4]: lifted()}
+    opened(dstore(three, week=PLAN))
+    check("line: every planned gym day done is a gold line", says(on("gym"),"win","3 of 3 planned gym days last week."), str(q.evaluate(LINE)))
     opened(dstore({}, week=PLAN))
     check("line: a plan nobody has trained to yet has not been missed", on("gym") is None, str(q.evaluate(LINE)))
     run=dstore({LAST[1]: lifted(), back(20): lifted()}, week=PLAN)
-    run["days"][Ts]={"food":[],"updated":1,"goal":GG,"workoutStart":int(datetime.datetime.now().timestamp()*1000)-60000}
+    run["days"][LTs]={"food":[],"updated":1,"goal":GG,"workoutStart":int(NOON.timestamp()*1000)-60000}
     opened(run)
     check("line: nothing is said over a workout clock that is running", on("gym") is None, str(q.evaluate(LINE)))
+    opened(dstore({LAST[1]: lifted(), LAST[4]: lifted(), back(20): lifted()}, gymGoal=3))
+    check("line: with no planned week, the workouts-a-week goal is the schedule",
+          says(on("gym"),"miss","Last week: 2 of your 3 workouts.","Make sure you’re ready for the gym this week."), str(q.evaluate(LINE)))
+    opened(dstore(three, gymGoal=3))
+    check("line: and meeting it is gold", says(on("gym"),"win","3 of 3 workouts last week."), str(q.evaluate(LINE)))
+    twice=dict(three); twice.update({PREV[1]: lifted(), PREV[2]: lifted(), PREV[4]: lifted()})
+    opened(put_away(dstore(twice, week=PLAN), "gym/week:"+WKs))
+    check("line: a plan met two weeks in a row is said as a run", says(on("gym"),"win","Gym plan met 2 weeks running."), str(q.evaluate(LINE)))
+    opened(dstore({back(9): lifted()}))
+    check("line: with no plan and no goal, nine days away from the gym is said",
+          says(on("gym"),"miss","It has been 9 days since your last workout.","Make time for the gym this week."), str(q.evaluate(LINE)))
+    opened(dstore({back(3): lifted()}))
+    check("line: three days away is only a rest", on("gym") is None, str(q.evaluate(LINE)))
+    opened(dstore({LAST[5]: lifted(135), PREV[5]: lifted(100)}))
+    check("line: more weight moved than the week before is said, with how much",
+          says(on("gym"),"win","You moved 1,350 lb last week, up 350 lb on the week before."), str(q.evaluate(LINE)))
+    most={LAST[5]: lifted(135)}; most.update(((LT-datetime.timedelta(days=7*n+DOW+2)).isoformat(), lifted(100)) for n in (2,3,4))
+    opened(dstore(most))
+    check("line: the most moved in any week so far is said as that",
+          says(on("gym"),"win","You moved 1,350 lb last week, your most in a week yet."), str(q.evaluate(LINE)))
 
-    # cardio: steps by the day, then minutes by the week
+    # ---- Cardio: by whatever the goal counts ----
     def stepped(n): return {"food":[],"updated":1,"goal":GG,"steps":n}
     SG={"kind":"steps","period":"day","v":8000}
     sd=dict((k, stepped(9000)) for k in LAST[:4]); sd[LAST[4]]=stepped(3000); sd[LAST[5]]=stepped(5000)   # the seventh has none
     opened(dstore(sd, cardioGoal=SG))
-    ln=on("cardio")
     check("line: a daily steps goal missed three days of seven is said on Cardio, in his words",
-          ln and ln["kind"]=="miss" and ln["head"]=="Steps goal missed 3 of 7 days last week."
-          and ln["sub"]=="Make sure to get your steps in this week.", str(ln))
+          says(on("cardio"),"miss","Steps goal missed 3 of 7 days last week.","Make sure to get your steps in this week."), str(q.evaluate(LINE)))
     opened(dstore(dict((k, stepped(9000)) for k in LAST), cardioGoal=SG))
-    ln=on("cardio")
-    check("line: seven of seven is the gold one",
-          ln and ln["kind"]=="win" and ln["head"]=="Steps goal hit 7 of 7 days last week." and ln["sub"]=="Keep it up!", str(ln))
+    check("line: seven of seven is the gold one", says(on("cardio"),"win","Steps goal hit 7 of 7 days last week."), str(q.evaluate(LINE)))
     opened(dstore({}, cardioGoal=SG))
     check("line: a steps goal nobody has counted toward says nothing", on("cardio") is None, str(q.evaluate(LINE)))
+    walked=dict((k, stepped(9000)) for k in LAST); walked.update((k, stepped(8500)) for k in PREV)
+    opened(put_away(dstore(walked, cardioGoal=SG), "cardio/week:"+WKs))
+    check("line: more steps than the week before is said, with how many",
+          says(on("cardio"),"win","You walked 3,500 more steps last week than the week before."), str(q.evaluate(LINE)))
     def rode(m): return {"food":[],"updated":1,"goal":GG,"cardio":[{"id":"c","type":"Bike","min":m,"t":1}]}
     opened(dstore({LAST[1]: rode(50), LAST[3]: rode(30)}))
-    ln=on("cardio")
     check("line: a weekly minutes goal that fell short says how far it got",
-          ln and ln["kind"]=="miss" and ln["head"]=="Last week: 80 of 150 min of cardio."
-          and ln["sub"]=="Make sure to get your cardio in this week.", str(ln))
+          says(on("cardio"),"miss","Last week: 80 of 150 min of cardio.","Make sure to get your cardio in this week."), str(q.evaluate(LINE)))
     opened(dstore({LAST[1]: rode(90), LAST[3]: rode(70)}))
-    ln=on("cardio")
-    check("line: and one that was met is gold",
-          ln and ln["kind"]=="win" and ln["head"]=="Cardio goal hit last week: 160 of 150 min of cardio.", str(ln))
+    check("line: and one that was met is gold", says(on("cardio"),"win","Cardio goal hit last week: 160 of 150 min of cardio."), str(q.evaluate(LINE)))
+    ridden={LAST[1]: rode(90), LAST[3]: rode(70), PREV[1]: rode(150)}
+    opened(put_away(dstore(ridden), "cardio/week:"+WKs, "cardio/up:"+WKs))
+    check("line: a weekly goal met two weeks in a row is said as a run", says(on("cardio"),"win","Cardio goal hit 2 weeks running."), str(q.evaluate(LINE)))
+    opened(put_away(dstore(ridden), "cardio/week:"+WKs, "cardio/weeks:"+WKs))
+    check("line: and more minutes than the week before, with how many",
+          says(on("cardio"),"win","You did 10 more min of cardio last week than the week before."), str(q.evaluate(LINE)))
 
-    # Settings: Daily line, Hidden
+    # ---- Settings: Daily line, Hidden ----
     opened(dstore({back(i): fd(1800,120) for i in range(1,6)}))
     on("macros"); q.click("#setBtn"); q.wait_for_timeout(300)
     hb=q.locator('[data-pick-line="off"]').bounding_box()
@@ -4003,8 +4089,7 @@ with sync_playwright() as pw:
     check("line: Hidden takes it off the screen at once, and the log keeps the choice",
           q.evaluate(LINE) is None and q.evaluate(LBST).get("lineOff") is True, str(q.evaluate(LINE)))
     q.click("#setBtn"); q.wait_for_timeout(300); q.click('[data-pick-line="on"]'); q.wait_for_timeout(250); q.click("#setDone"); q.wait_for_timeout(250)
-    ln=q.evaluate(LINE)
-    check("line: Shown brings it back", ln and ln["head"]=="Protein goal missed 5 days running.", str(ln))
+    check("line: Shown brings it back", says(q.evaluate(LINE),"miss","Protein goal missed 5 days running."), str(q.evaluate(LINE)))
     c.close()
 
     def fresh(store, label):

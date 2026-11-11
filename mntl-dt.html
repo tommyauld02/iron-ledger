@@ -4509,7 +4509,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-10.95";
+  var BUILD = "2026-11-11.95";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5502,9 +5502,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
-    { b: "2026-11-10.95", t: "A line about your week", items: [
+    { b: "2026-11-11.95", t: "A line about your week", items: [
       "When a goal keeps being missed, the top of that tab now says so in one line: protein missed several days running, calories missed last week, fewer gym days than you planned, or your steps or cardio goal missed.",
-      "A good week gets a line too, in gold: 7 of 7 days on target, every planned gym day, your steps goal hit. Keep it up!",
+      "A good week gets a line too, in gold: 7 of 7 days on target, every planned gym day, your steps goal hit, more weight moved than the week before. Keep it up!",
+      "It speaks to the other goals you use as well: water, the daily checklist, workouts a week, and days gone by with nothing logged.",
       "Tap Got it and the line goes. There is never more than one on a tab, and most days there is none.",
       "It reads only the log on your phone. To turn it off: Settings, Daily line, Hidden." ] },
     { b: "2026-11-10.94", t: "Gold plates", items: [
@@ -7817,10 +7818,10 @@
   //
   // Plain functions with no drawing in them, so the suites can read them.
   function lineOn() { return store.lineOff !== true; }
-  // The seven days of the week before the one a day is in, Sunday first.
-  function lastWeekKeys(key) {
-    var s0 = parseYmd(weekStart(key)), out = [];
-    for (var i = 7; i >= 1; i--) { var dt = new Date(s0); dt.setDate(s0.getDate() - i); out.push(ymd(dt)); }
+  // The seven days of a week gone by, Sunday first: last week, or n weeks back.
+  function lastWeekKeys(key, n) {
+    var s0 = parseYmd(weekStart(key)), out = [], off = 7 * (n || 1);
+    for (var i = 0; i < 7; i++) { var dt = new Date(s0); dt.setDate(s0.getDate() - off + i); out.push(ymd(dt)); }
     return out;
   }
   // A day's food against the goal stamped on it, or null when there is
@@ -7830,27 +7831,44 @@
     var d = store.days[k];
     if (!d || !d.food || !d.food.length || pendingCount(d)) return null;
     var g = goalFor(k), t = totals(d);
-    return { cal: meets(g.cal, t.cal), pro: meets(g.pro, t.pro) };
+    return { cal: meets(g.cal, t.cal), pro: meets(g.pro, t.pro), grams: t.pro };
   }
   function gymDay(k) {
     var d = store.days[k];
     return !!d && !!((d.lifts && d.lifts.length) || d.workoutMs);
   }
-  // Everything worth saying on a tab today, most useful first: what keeps
-  // being missed, then what went well. Ids carry the day, week or month a
-  // line is about, so Got it puts away that line and not the next one.
+  function dayLb(k) {
+    var d = store.days[k], v = 0;
+    (d && d.lifts ? d.lifts : []).forEach(function (l) { v += volume(l).vol; });
+    return v;
+  }
+  // Everything worth saying on a tab today. What keeps being missed comes
+  // first, in order of use; then what went well. Ids carry the day, week or
+  // month a line is about, so Got it puts away that line and not the next.
+  // The owner's examples were examples: "implement more that are in line with
+  // what the goal is", so each tab also speaks to the other goals it holds.
   function lineCandidates(which, today) {
-    var out = [], wk = weekStart(today), last = lastWeekKeys(today), i;
-    function miss(id, head, sub) { out.push({ id: which + "/" + id, kind: "miss", head: head, sub: sub }); }
-    function win(id, head) { out.push({ id: which + "/" + id, kind: "win", head: head, sub: "Keep it up!" }); }
+    var misses = [], wins = [], wk = weekStart(today), last = lastWeekKeys(today), prev = lastWeekKeys(today, 2), i;
+    function miss(id, head, sub) { misses.push({ id: which + "/" + id, kind: "miss", head: head, sub: sub }); }
+    function win(id, head) { wins.push({ id: which + "/" + id, kind: "win", head: head, sub: "Keep it up!" }); }
     function days(n) { return n + (n === 1 ? " day" : " days"); }
+    function count(keys, test) { var n = 0; keys.forEach(function (k) { if (test(k)) n++; }); return n; }
 
     if (which === "macros") {
-      var g = normGoal(store.goal), run = 0, c = parseYmd(today);
+      var g = normGoal(store.goal), run = 0, c = parseYmd(today), m;
+      var hasFood = function (k) { var d = store.days[k]; return !!(d && d.food && d.food.length); };
+      // Nothing logged at all for several days, by someone who was logging
+      // before. Logging anything today answers it.
+      if (!hasFood(today)) {
+        var gap = 0;
+        for (;;) { c.setDate(c.getDate() - 1); if (hasFood(ymd(c)) || gap > 60) break; gap++; }
+        if (gap >= 3 && gap <= 60) miss("gap:" + today, "Nothing logged for " + gap + " days.", "Log today and pick it back up.");
+      }
       // protein missed several days running, counted back from yesterday
+      c = parseYmd(today);
       for (;;) {
         c.setDate(c.getDate() - 1);
-        var m = dayMacro(ymd(c));
+        m = dayMacro(ymd(c));
         if (!m || m.pro) break;
         run++;
         if (run > 366) break;
@@ -7862,26 +7880,84 @@
       else if (proMiss >= 2) miss("pro-week:" + wk, "Protein goal missed " + days(proMiss) + " last week.", proSay + "this week.");
       if (calMiss >= 2) miss("cal-week:" + wk, "Calorie goal missed " + days(calMiss) + " last week.",
         g.cal.dir === "+" ? "Make sure to eat up to your target this week." : "Keep an eye on the bar this week.");
+      // water and the daily checklist, for anyone using them: a week with
+      // none of either recorded is not a week of misses
+      if (waterOn()) {
+        var wGoal = waterGoalMl();
+        var wAny = count(last, function (k) { return Number((store.days[k] || {}).water) > 0; });
+        var wHit = count(last, function (k) { return (Number((store.days[k] || {}).water) || 0) >= wGoal - 1; });
+        if (wAny && 7 - wHit >= 3) miss("water:" + wk, "Water goal missed " + (7 - wHit) + " of 7 days last week.", "Keep a bottle close this week.");
+        else if (wHit >= 6) win("water:" + wk, "Water goal hit " + wHit + " of 7 days last week.");
+      }
+      if (supps().length) {
+        var sAny = count(last, function (k) { return !!store.days[k] && suppTaken(store.days[k]) > 0; });
+        var sAll = count(last, function (k) { return !!store.days[k] && suppsAllIn(store.days[k]); });
+        if (sAny && 7 - sAll >= 3) miss("list:" + wk, "Daily checklist finished " + sAll + " of 7 days last week.", "Tick it off each day this week.");
+        else if (sAll >= 6) win("list:" + wk, "Daily checklist finished " + sAll + " of 7 days last week.");
+      }
       // a good week needs most of a week logged, or one good day would be "1 of 1"
+      var all = function (what) { return logged === 7 ? what + " 7 of 7 days last week." : what + " all " + logged + " days you logged last week."; };
       if (logged >= 5 && !calMiss && !proMiss) {
         win("win-week:" + wk, logged === 7 ? "7 of 7 days on target last week." : "All " + logged + " days you logged last week were on target.");
-      } else if (logged >= 5 && !proMiss) {
-        win("pro-win:" + wk, logged === 7 ? "Protein goal hit 7 of 7 days last week." : "Protein goal hit all " + logged + " days you logged last week.");
+      } else if (logged >= 5 && !proMiss) win("pro-win:" + wk, all("Protein goal hit"));
+      else if (logged >= 5 && !calMiss) win("cal-win:" + wk, all("Calorie goal hit"));
+      // a streak reaching a round number, said on the day it does
+      var st = onTargetStreak(today);
+      if ([7, 14, 21, 30, 60, 90, 180, 365].indexOf(st) > -1) win("streak:" + st + ":" + today, st + " days on target in a row.");
+      // more protein than the week before, for someone trying to eat more of it
+      var avg = function (keys) {
+        var n = 0, t = 0;
+        keys.forEach(function (k) { var x = dayMacro(k); if (x) { n++; t += x.grams; } });
+        return n >= 4 ? t / n : null;
+      };
+      var aNow = avg(last), aWas = avg(prev);
+      if (g.pro.dir === "+" && aNow != null && aWas != null && aNow - aWas >= 5) {
+        win("pro-up:" + wk, "You averaged " + fmt(Math.round(aNow)) + " g of protein a day last week, up " + Math.round(aNow - aWas) + " g on the week before.");
       }
     }
 
     if (which === "gym") {
-      var planned = 0, done = 0;
+      var planned = 0;
       for (i = 0; i < 7; i++) { var pl = plannedFor(i); if (pl && pl.c) planned++; }
-      last.forEach(function (k) { if (gymDay(k)) done++; });
+      // The planned week is the schedule; with none, the workouts-a-week goal
+      // from Settings is. Never both: that would be one week said twice.
+      var target = planned || (Number(store.gymGoal) > 0 ? Number(store.gymGoal) : 0);
+      var what = planned ? "planned gym days" : (target === 1 ? "workout" : "workouts");
+      var done = count(last, gymDay);
       // Someone who set a plan this week and has never trained with the app
       // has not missed anything yet.
       var trained = Object.keys(store.days).some(function (k) { return k <= last[6] && gymDay(k); });
-      if (planned && trained) {
-        if (done < planned) miss("week:" + wk, "Last week: " + done + " of your " + planned + " planned gym days.",
-          "Make sure you\u2019re ready for the gym this week.");
-        else win("week:" + wk, done === planned ? planned + " of " + planned + " planned gym days last week."
-          : done + " gym days last week, with " + planned + " planned.");
+      var short = !!target && trained && done < target;
+      if (short) miss("week:" + wk, "Last week: " + done + " of your " + target + " " + what + ".",
+        "Make sure you’re ready for the gym this week.");
+      else if (target && trained) {
+        win("week:" + wk, done === target ? target + " of " + target + " " + what + " last week."
+          : done + " gym days last week, with " + target + (planned ? " planned." : " as your goal."));
+        var gw = 1;
+        while (gw < 52 && count(lastWeekKeys(today, gw + 1), gymDay) >= target) gw++;
+        if (gw >= 2) win("weeks:" + wk, (planned ? "Gym plan met " : "Gym goal met ") + gw + " weeks running.");
+      }
+      // A week or more away from the gym, for someone with no plan or goal
+      // to miss: with either, the week's own line already covers it.
+      if (!target && trained && !gymDay(today)) {
+        var lastGym = Object.keys(store.days).filter(function (k) { return k < today && gymDay(k); }).sort().pop();
+        var idle = Math.round((parseYmd(today) - parseYmd(lastGym)) / 864e5);
+        if (idle >= 7) miss("idle:" + wk, "It has been " + idle + " days since your last workout.", "Make time for the gym this week.");
+      }
+      // weight moved: the most in any week so far, or more than the week before
+      var lbNow = 0, lbWas = 0;
+      last.forEach(function (k) { lbNow += dayLb(k); });
+      prev.forEach(function (k) { lbWas += dayLb(k); });
+      if (lbNow > 0) {
+        var byWeek = {}, best = 0, weeksBefore = 0;
+        Object.keys(store.days).forEach(function (k) {
+          if (k >= last[0]) return;
+          var v = dayLb(k);
+          if (v > 0) { var w = weekStart(k); byWeek[w] = (byWeek[w] || 0) + v; }
+        });
+        Object.keys(byWeek).forEach(function (w) { weeksBefore++; if (byWeek[w] > best) best = byWeek[w]; });
+        if (weeksBefore >= 3 && lbNow > best) win("best:" + wk, "You moved " + fmt(Math.round(lbNow)) + " lb last week, your most in a week yet.");
+        else if (lbWas > 0 && lbNow > lbWas) win("up:" + wk, "You moved " + fmt(Math.round(lbNow)) + " lb last week, up " + fmt(Math.round(lbNow - lbWas)) + " lb on the week before.");
       }
     }
 
@@ -7898,6 +7974,7 @@
           return k <= endKey && (steps ? Number(d.steps) > 0 : !!(d.cardio && d.cardio.length));
         });
       };
+      var weekOf = function (keys) { return cardioTotals(keys[0], "week")[cg.kind]; };
       if (cg.period === "day") {
         var hit = 0, any = 0;
         last.forEach(function (k) { var v = cardioTotals(k, "day")[cg.kind]; if (v > 0) any++; if (v >= cg.v) hit++; });
@@ -7906,10 +7983,15 @@
           else win("week:" + wk, name + " goal hit " + hit + " of 7 days last week.");
         }
       } else if (cg.period === "week") {
-        var haveW = cardioTotals(last[0], "week")[cg.kind];
+        var haveW = weekOf(last);
         if (usedBy(last[6])) {
           if (haveW < cg.v) miss("week:" + wk, "Last week: " + of(haveW) + ".", getIn + "this week.");
-          else win("week:" + wk, name + " goal hit last week: " + of(haveW) + ".");
+          else {
+            win("week:" + wk, name + " goal hit last week: " + of(haveW) + ".");
+            var cw = 1;
+            while (cw < 52 && weekOf(lastWeekKeys(today, cw + 1)) >= cg.v) cw++;
+            if (cw >= 2) win("weeks:" + wk, name + " goal hit " + cw + " weeks running.");
+          }
         }
       } else {
         var m0 = parseYmd(today.slice(0, 8) + "01"); m0.setDate(0);          // the last day of last month
@@ -7919,20 +8001,33 @@
           else win("month:" + today.slice(0, 7), name + " goal hit last month: " + of(haveM) + ".");
         }
       }
+      // more than the week before, whatever the goal counts
+      if (cg.period !== "month") {
+        var more = weekOf(last) - weekOf(prev);
+        if (weekOf(prev) > 0 && more > 0) {
+          win("up:" + wk, steps ? "You walked " + fmt(more) + " more steps last week than the week before."
+            : cg.kind === "min" ? "You did " + fmt(more) + " more min of cardio last week than the week before."
+            : cg.kind === "dist" ? "You covered " + fmtDist(more) + " more mi last week than the week before."
+            : cg.kind === "cal" ? "You burned " + fmt(more) + " more kcal in cardio last week than the week before."
+            : "You did " + more + " more cardio " + (more === 1 ? "session" : "sessions") + " last week than the week before.");
+        }
+      }
     }
-    return out;
+    return misses.concat(wins);
   }
   // The one line a tab shows today, or null. One a day per tab: Got it puts
   // the tab's line away until tomorrow, and that line away for the day, week
-  // or month it is about, so the next day brings the next thing, not the same.
+  // or month it is about. A reminder holds its place until it is answered;
+  // good news takes turns, so a good week is a different line each day.
   function dailyLine(which, today) {
     if (!lineOn()) return null;
     var got = store.lineGot || {};
     var saidToday = Object.keys(got).some(function (id) { return got[id] === today && id.indexOf(which + "/") === 0; });
     if (saidToday) return null;
-    var list = lineCandidates(which, today);
-    for (var i = 0; i < list.length; i++) if (!got[list[i].id]) return list[i];
-    return null;
+    var list = lineCandidates(which, today).filter(function (x) { return !got[x.id]; });
+    if (!list.length) return null;
+    if (list[0].kind === "miss") return list[0];
+    return list[Math.round(parseYmd(today).getTime() / 864e5) % list.length];
   }
   function gotLine(id) {
     if (!store.lineGot || typeof store.lineGot !== "object") store.lineGot = {};

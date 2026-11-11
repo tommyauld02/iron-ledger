@@ -221,23 +221,44 @@ strip (`.dayline`) at the top of the tab it is about. A reminder carries the
 calendar's red as a dot; a good week is gold with a star, because it was
 earned. Most days there is none.
 
-What each tab can say, most useful first (`lineCandidates()`):
+His lines were examples. Asked whether to stop at them, he said to *"implement
+more that are in line with what the goal is"*, so each tab also speaks to the
+other goals it holds. What each can say (`lineCandidates()`), reminders first
+and in this order, then the good ones:
 
-- **Macros.** Protein missed three or more days running, counted back from
-  yesterday (`pro-run`); failing that, protein missed two or more days last
-  week (`pro-week`); calories missed two or more days last week (`cal-week`).
-  Then the good ones: every logged day last week on target (`win-week`), or
-  protein hit on all of them (`pro-win`). Both need five days logged, or one
-  good day would read as "1 of 1".
-- **Gym.** Last week's gym days against the planned week (`store.week`): fewer
-  is the reminder, as many or more is the gold one. No plan, or a plan nobody
-  has trained to yet, says nothing.
+- **Macros, reminders.** Nothing logged for three days or more, to someone who
+  was logging before and has nothing in today yet (`gap`). Protein missed three
+  or more days running, counted back from yesterday (`pro-run`); failing that,
+  protein missed two or more days last week (`pro-week`). Calories missed two
+  or more days last week (`cal-week`). With water shown, the water goal missed
+  three or more days of last week's seven (`water`). With a daily checklist,
+  finished on four or fewer of them (`list`).
+- **Macros, good ones.** Every logged day last week on target (`win-week`), or
+  protein hit on all of them (`pro-win`), or calories (`cal-win`); each needs
+  five days logged, or one good day would read as "1 of 1". Water or the
+  checklist on six or seven days. The on-target streak reaching 7, 14, 21, 30,
+  60, 90, 180 or 365, on the day it does (`streak`). Protein up five grams a
+  day or more on the week before, for an "at least" goal, with four days
+  logged in each week (`pro-up`).
+- **Gym.** Last week's gym days against the planned week (`store.week`); with
+  no planned week, against the workouts-a-week goal (`store.gymGoal`). Never
+  both, which would be one week said twice. Fewer is the reminder; as many or
+  more is gold, and two or more weeks of it in a row is a line of its own
+  (`weeks`). With neither a plan nor a goal, seven days or more since the last
+  workout (`idle`). Then weight moved: last week the most of any week, once
+  there are three earlier weeks to beat (`best`), or more than the week before
+  (`up`). A plan nobody has trained to yet says nothing.
 - **Cardio.** By the goal's own period. A daily goal (steps, usually) counts
   last week's days: two or more missed is the reminder, six or seven hit is
-  gold. A weekly goal compares last week's total, a monthly one last month's.
-  A goal nobody has counted toward says nothing. The cardio goal is not
-  stamped on a day the way the food goal is, so last week is judged against
-  the goal as it stands now.
+  gold. A weekly goal compares last week's total, and two or more weeks met in
+  a row is a line of its own; a monthly one compares last month's. More than
+  the week before, in whatever the goal counts, is a good one too (`up`). A
+  goal nobody has counted toward says nothing. The cardio goal is not stamped
+  on a day the way the food goal is, so last week is judged against the goal
+  as it stands now.
+
+Water and the checklist stay quiet in a week with none of either recorded:
+switched on and never used is not a week of misses.
 
 **A day nobody logged is not a missed day.** `dayMacro()` returns null for a day
 with no food or with a food still waiting for numbers; it ends a run and is
@@ -248,7 +269,9 @@ than none.
 day, week or month it is about (`macros/cal-week:2026-11-08`). *Got it* writes
 that id and today's date into `store.lineGot`: the tab stays quiet for the rest
 of the day, and that line stays away for its own period, so tomorrow brings the
-next thing. Ids older than 62 days are dropped, since no line alive could still
+next thing. A reminder holds its place until it is answered. Good news takes
+turns by the day (`dailyLine()` picks by the day's number), so a good week is a
+different line each morning with no *Got it* needed. Ids older than 62 days are dropped, since no line alive could still
 carry one. `lineGot` does not travel in a restore (it is what this phone has
 said); `lineOff` does. Settings has *Daily line: Hidden / Shown*.
 
@@ -257,7 +280,10 @@ running. It is drawn by `drawDayLine()` into the top of `#view` after the tab
 has drawn itself, so no tab's own render knows about it. It reads only the log
 on the phone: nothing is sent, and no AI is asked.
 
-`sweep` checks every line beside a log that must stay quiet (two days, one
+`sweep` holds the clock at noon on a Wednesday for these, because which lines
+are due depends on the day of the week: a streak of seven lands on a Sunday,
+three days of nothing logged on a Wednesday, and a suite that passes on
+Tuesdays only is the stale-build lesson in another form. It checks every line beside a log that must stay quiet (two days, one
 missed day, four good days, no plan, a plan never trained to, a goal never
 counted toward, a running clock, a day gone by), and that the day after a *Got
 it* brings the next line and not the same one. `darkcheck`'s gold pass puts both
