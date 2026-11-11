@@ -3356,6 +3356,28 @@
   .today-card.is-won { border-color: var(--gold); }
   .tc-n b.is-won, .tc-s.is-won { color: var(--gold-ink); }
 
+  /* ---------- the daily line (b95) ----------
+     One slim strip at the top of Macros, Gym or Cardio: a goal that keeps
+     being missed, or a week that went well. Words and Got it, nothing else,
+     because the owner turned down a box of buttons here as clutter. A miss
+     carries the calendar's red as a dot; a win is gold, since it was earned. */
+  .dayline {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center;
+    padding: 6px 4px 6px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--rule);
+  }
+  .dayline.is-win { border-color: var(--gold); }
+  .dl-mark { width: 9px; height: 9px; border-radius: 50%; background: var(--miss); }
+  .dayline.is-win .dl-mark { width: 16px; height: 16px; border-radius: 0; background: none; display: grid; }
+  .dl-mark svg { width: 16px; height: 16px; fill: var(--gold); stroke: none; }
+  .dl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 4px 0; }
+  .dl-text b { font-size: 14.5px; line-height: 1.25; }
+  .dl-text span { font-size: 13.5px; line-height: 1.3; color: var(--ink-2); }
+  .dayline.is-win .dl-text span { color: var(--gold-ink); font-weight: 600; }
+  .dl-got {
+    min-width: 44px; min-height: 44px; padding: 0 10px; border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: 14px; font-weight: 700; color: var(--accent); white-space: nowrap;
+  }
+
   /* carbs and fat, as kettlebells */
   .kbs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
   .kb {
@@ -4341,6 +4363,12 @@
       <div class="seg two" id="setCf" role="group" aria-label="Carbs and fat"></div>
       <p class="set-hint" id="setCfHint"></p>
     </div>
+    <!-- The daily line: a goal that keeps being missed, or a good week (b95). -->
+    <div class="set-group">
+      <span class="eyebrow">Daily line</span>
+      <div class="seg two" id="setLine" role="group" aria-label="Daily line"></div>
+      <p class="set-hint" id="setLineHint"></p>
+    </div>
     <!-- Water: a line on Macros to tap a glass in at a time. -->
     <div class="set-group">
       <span class="eyebrow">Water</span>
@@ -4481,7 +4509,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-10.94";
+  var BUILD = "2026-11-10.95";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5474,6 +5502,11 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-10.95", t: "A line about your week", items: [
+      "When a goal keeps being missed, the top of that tab now says so in one line: protein missed several days running, calories missed last week, fewer gym days than you planned, or your steps or cardio goal missed.",
+      "A good week gets a line too, in gold: 7 of 7 days on target, every planned gym day, your steps goal hit. Keep it up!",
+      "Tap Got it and the line goes. There is never more than one on a tab, and most days there is none.",
+      "It reads only the log on your phone. To turn it off: Settings, Daily line, Hidden." ] },
     { b: "2026-11-10.94", t: "Gold plates", items: [
       "Hit your protein goal with your calories still on target, and the plates on your barbell turn gold. The note under the bar is gold too, with a star.",
       "A streak of three days or more now shows in gold with a flame, at the top of Macros.",
@@ -7774,6 +7807,162 @@
       if (n > 3660) return n;
     }
   }
+  // ---------- the daily line (b95) ----------
+  // Asked for by the owner, in his words: "your protein goals have not been
+  // hit for the past 5 days, be sure to get in more protein dense foods",
+  // "your weekly schedule wasn't hit last week", "calorie goal was missed 2
+  // days last week", and for a good week, "7 out of 7 days cardio were hit
+  // last week, keep it up!". One line at the top of the tab it is about, with
+  // Got it. It reads only the log on the phone: nothing is sent, no AI.
+  //
+  // Plain functions with no drawing in them, so the suites can read them.
+  function lineOn() { return store.lineOff !== true; }
+  // The seven days of the week before the one a day is in, Sunday first.
+  function lastWeekKeys(key) {
+    var s0 = parseYmd(weekStart(key)), out = [];
+    for (var i = 7; i >= 1; i--) { var dt = new Date(s0); dt.setDate(s0.getDate() - i); out.push(ymd(dt)); }
+    return out;
+  }
+  // A day's food against the goal stamped on it, or null when there is
+  // nothing to judge: no food, or a food still waiting for numbers. A day
+  // nobody logged is not a missed day, and is never counted as one.
+  function dayMacro(k) {
+    var d = store.days[k];
+    if (!d || !d.food || !d.food.length || pendingCount(d)) return null;
+    var g = goalFor(k), t = totals(d);
+    return { cal: meets(g.cal, t.cal), pro: meets(g.pro, t.pro) };
+  }
+  function gymDay(k) {
+    var d = store.days[k];
+    return !!d && !!((d.lifts && d.lifts.length) || d.workoutMs);
+  }
+  // Everything worth saying on a tab today, most useful first: what keeps
+  // being missed, then what went well. Ids carry the day, week or month a
+  // line is about, so Got it puts away that line and not the next one.
+  function lineCandidates(which, today) {
+    var out = [], wk = weekStart(today), last = lastWeekKeys(today), i;
+    function miss(id, head, sub) { out.push({ id: which + "/" + id, kind: "miss", head: head, sub: sub }); }
+    function win(id, head) { out.push({ id: which + "/" + id, kind: "win", head: head, sub: "Keep it up!" }); }
+    function days(n) { return n + (n === 1 ? " day" : " days"); }
+
+    if (which === "macros") {
+      var g = normGoal(store.goal), run = 0, c = parseYmd(today);
+      // protein missed several days running, counted back from yesterday
+      for (;;) {
+        c.setDate(c.getDate() - 1);
+        var m = dayMacro(ymd(c));
+        if (!m || m.pro) break;
+        run++;
+        if (run > 366) break;
+      }
+      var logged = 0, calMiss = 0, proMiss = 0;
+      last.forEach(function (k) { var x = dayMacro(k); if (!x) return; logged++; if (!x.cal) calMiss++; if (!x.pro) proMiss++; });
+      var proSay = g.pro.dir === "+" ? "Be sure to get in more protein-dense foods " : "Keep an eye on your protein ";
+      if (run >= 3) miss("pro-run:" + today, "Protein goal missed " + run + " days running.", proSay + "today.");
+      else if (proMiss >= 2) miss("pro-week:" + wk, "Protein goal missed " + days(proMiss) + " last week.", proSay + "this week.");
+      if (calMiss >= 2) miss("cal-week:" + wk, "Calorie goal missed " + days(calMiss) + " last week.",
+        g.cal.dir === "+" ? "Make sure to eat up to your target this week." : "Keep an eye on the bar this week.");
+      // a good week needs most of a week logged, or one good day would be "1 of 1"
+      if (logged >= 5 && !calMiss && !proMiss) {
+        win("win-week:" + wk, logged === 7 ? "7 of 7 days on target last week." : "All " + logged + " days you logged last week were on target.");
+      } else if (logged >= 5 && !proMiss) {
+        win("pro-win:" + wk, logged === 7 ? "Protein goal hit 7 of 7 days last week." : "Protein goal hit all " + logged + " days you logged last week.");
+      }
+    }
+
+    if (which === "gym") {
+      var planned = 0, done = 0;
+      for (i = 0; i < 7; i++) { var pl = plannedFor(i); if (pl && pl.c) planned++; }
+      last.forEach(function (k) { if (gymDay(k)) done++; });
+      // Someone who set a plan this week and has never trained with the app
+      // has not missed anything yet.
+      var trained = Object.keys(store.days).some(function (k) { return k <= last[6] && gymDay(k); });
+      if (planned && trained) {
+        if (done < planned) miss("week:" + wk, "Last week: " + done + " of your " + planned + " planned gym days.",
+          "Make sure you\u2019re ready for the gym this week.");
+        else win("week:" + wk, done === planned ? planned + " of " + planned + " planned gym days last week."
+          : done + " gym days last week, with " + planned + " planned.");
+      }
+    }
+
+    if (which === "cardio") {
+      var cg = cardioGoal(), steps = cg.kind === "steps", name = steps ? "Steps" : "Cardio";
+      var getIn = steps ? "Make sure to get your steps in " : "Make sure to get your cardio in ";
+      var of = function (have) {
+        return goalNum(cg.kind, have) + " of " + goalNum(cg.kind, cg.v) + " " + goalWord(cg.kind, cg.v) + (steps || cg.kind === "sessions" ? "" : " of cardio");
+      };
+      // Used at all before this period began: a goal nobody has started on has not been missed.
+      var usedBy = function (endKey) {
+        return Object.keys(store.days).some(function (k) {
+          var d = store.days[k];
+          return k <= endKey && (steps ? Number(d.steps) > 0 : !!(d.cardio && d.cardio.length));
+        });
+      };
+      if (cg.period === "day") {
+        var hit = 0, any = 0;
+        last.forEach(function (k) { var v = cardioTotals(k, "day")[cg.kind]; if (v > 0) any++; if (v >= cg.v) hit++; });
+        if (any) {
+          if (7 - hit >= 2) miss("week:" + wk, name + " goal missed " + (7 - hit) + " of 7 days last week.", getIn + "this week.");
+          else win("week:" + wk, name + " goal hit " + hit + " of 7 days last week.");
+        }
+      } else if (cg.period === "week") {
+        var haveW = cardioTotals(last[0], "week")[cg.kind];
+        if (usedBy(last[6])) {
+          if (haveW < cg.v) miss("week:" + wk, "Last week: " + of(haveW) + ".", getIn + "this week.");
+          else win("week:" + wk, name + " goal hit last week: " + of(haveW) + ".");
+        }
+      } else {
+        var m0 = parseYmd(today.slice(0, 8) + "01"); m0.setDate(0);          // the last day of last month
+        var lastMonthEnd = ymd(m0), haveM = cardioTotals(lastMonthEnd, "month")[cg.kind];
+        if (usedBy(lastMonthEnd)) {
+          if (haveM < cg.v) miss("month:" + today.slice(0, 7), "Last month: " + of(haveM) + ".", getIn + "this month.");
+          else win("month:" + today.slice(0, 7), name + " goal hit last month: " + of(haveM) + ".");
+        }
+      }
+    }
+    return out;
+  }
+  // The one line a tab shows today, or null. One a day per tab: Got it puts
+  // the tab's line away until tomorrow, and that line away for the day, week
+  // or month it is about, so the next day brings the next thing, not the same.
+  function dailyLine(which, today) {
+    if (!lineOn()) return null;
+    var got = store.lineGot || {};
+    var saidToday = Object.keys(got).some(function (id) { return got[id] === today && id.indexOf(which + "/") === 0; });
+    if (saidToday) return null;
+    var list = lineCandidates(which, today);
+    for (var i = 0; i < list.length; i++) if (!got[list[i].id]) return list[i];
+    return null;
+  }
+  function gotLine(id) {
+    if (!store.lineGot || typeof store.lineGot !== "object") store.lineGot = {};
+    store.lineGot[id] = TODAY;
+    // Nothing here is history: forget what was put away long enough ago that
+    // no line still alive could carry its id (a month's line lives a month).
+    var cut = parseYmd(TODAY); cut.setDate(cut.getDate() - 62);
+    var cutKey = ymd(cut);
+    Object.keys(store.lineGot).forEach(function (k) { if (store.lineGot[k] < cutKey) delete store.lineGot[k]; });
+    save();
+    render();
+  }
+  // Drawn into the top of the screen after the tab has drawn itself. Today
+  // only, and never over a clock that is running: nobody wants to be told
+  // about last week mid-set.
+  function drawDayLine(key, d) {
+    if (key !== TODAY || (tab !== "macros" && tab !== "gym" && tab !== "cardio")) return;
+    if (tab === "gym" && d && d.workoutStart) return;
+    if (tab === "cardio" && d && d.cardioStart) return;
+    var ln = dailyLine(tab, TODAY);
+    if (!ln) return;
+    view.insertAdjacentHTML("afterbegin",
+      '<section class="dayline is-' + ln.kind + '" aria-label="' + (ln.kind === "win" ? 'A good week' : 'A reminder') + '">' +
+        '<i class="dl-mark" aria-hidden="true">' + (ln.kind === "win"
+          ? '<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>' : '') + '</i>' +
+        '<span class="dl-text"><b>' + esc(ln.head) + '</b><span>' + esc(ln.sub) + '</span></span>' +
+        '<button class="dl-got" data-gotline="' + esc(ln.id) + '">Got it</button>' +
+      '</section>');
+  }
+
   function drawWeek(key) {
     var nav = document.getElementById("datenav");
     if (nav) nav.hidden = (tab === "log" || tab === "coach" || tab === "progress");
@@ -7833,6 +8022,7 @@
       else if (tab === "progress") renderProgress();
       else renderLog();
       animateBarbells();
+      drawDayLine(key, d);
     } catch (e) {
       lastError = (e && e.message ? e.message : String(e)) + " · in " + tab;
       if (window.console && console.error) console.error("render failed in " + tab + ":", e);
@@ -14702,6 +14892,11 @@
   });
 
   // Delegated once, on a container that is never replaced.
+  // The daily line's Got it (b95): the strip goes, which is the say-so.
+  view.addEventListener("click", function (e) {
+    var gl = e.target.closest && e.target.closest("[data-gotline]");
+    if (gl) gotLine(gl.getAttribute("data-gotline"));
+  });
   view.addEventListener("click", function (e) {
     var a = findAction(e.target);
     if (!a) return;
@@ -15573,6 +15768,12 @@
     document.getElementById("setCf").innerHTML = [["off", "Hidden"], ["on", "Shown"]].map(function (o) {
       return '<button data-pick-cf="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === cfOn() ? "true" : "false") + '">' + o[1] + '</button>';
     }).join("");
+    document.getElementById("setLine").innerHTML = [["off", "Hidden"], ["on", "Shown"]].map(function (o) {
+      return '<button data-pick-line="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === lineOn() ? "true" : "false") + '">' + o[1] + '</button>';
+    }).join("");
+    document.getElementById("setLineHint").textContent = lineOn()
+      ? "One line at the top of Macros, Gym or Cardio when there is something to say about your week: a goal that keeps being missed, or a week that went well. Got it puts it away."
+      : "Hidden: the app says nothing about missed goals or good weeks.";
     document.getElementById("setWater").innerHTML = [["off", "Hidden"], ["on", "Shown"]].map(function (o) {
       return '<button data-pick-water="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === waterOn() ? "true" : "false") + '">' + o[1] + '</button>';
     }).join("");
@@ -15663,6 +15864,13 @@
       var want = aib.dataset.pickAi === "on";
       if (want && !aiOn()) showAiSheet();
       else if (!want && aiOn()) { withdrawAi(); drawSettings(); }
+      return;
+    }
+    var lnb = e.target.closest("[data-pick-line]");
+    if (lnb) {
+      // Kept as "off" so a log from before b95 reads as shown without a field.
+      store.lineOff = lnb.dataset.pickLine !== "on";
+      save(); drawSettings(); render();
       return;
     }
     if (cfb || wb || wu) {
@@ -16469,6 +16677,9 @@
     if (typeof incoming.coachOn === "boolean") store.coachOn = incoming.coachOn;
     if (incoming.logOpen) store.logOpen = incoming.logOpen;
     if (typeof incoming.cfOn === "boolean") store.cfOn = incoming.cfOn;
+    // Whether the daily line is shown travels; which lines were put away does
+    // not, since that is about what this phone has already said.
+    if (typeof incoming.lineOff === "boolean") store.lineOff = incoming.lineOff;
     if (typeof incoming.waterOn === "boolean") store.waterOn = incoming.waterOn;
     if (incoming.waterUnit) store.waterUnit = incoming.waterUnit;
     if (Number(incoming.waterGoalMl) > 0) store.waterGoalMl = incoming.waterGoalMl;

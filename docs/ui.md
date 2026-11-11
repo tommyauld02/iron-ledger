@@ -175,7 +175,8 @@ ever disagree.
 found that wins were quiet: beating the protein goal changed almost nothing on
 screen. It is the third colour rule, beside teal for tap and green and red for
 hit and missed, and it has one meaning, so nothing you can tap is gold and no
-accent is. Three things are gold, and only these:
+accent is. Three things are gold, and a good week's daily line (below, b95)
+makes four. Only these:
 
 - **The plates**, once an "at least" protein goal is reached *with the bar
   still steady*, and nothing waiting for numbers (`barWon()`). Over on calories
@@ -208,6 +209,59 @@ said whether the warning should move to orange.
 the card as a picture, and has a pass of its own that puts the won day on
 screen, because the main fixture is short of protein on purpose. It was proven
 by weakening the gold words and watching it fail in light.
+
+**The daily line (b95): one line about your week, and Got it.** Asked for by
+the owner in his own words: *"your protein goals have not been hit for the past
+5 days, be sure to get in more protein dense foods"*, *"your weekly schedule
+wasn't hit last week"*, *"calorie goal was missed 2 days last week"*, and for a
+good week, *"7 out of 7 days cardio were hit last week, keep it up!"*. He had
+just turned down a box of pantry foods with + buttons under the barbell as
+unnecessary clutter, so this is words and one button, never controls: a slim
+strip (`.dayline`) at the top of the tab it is about. A reminder carries the
+calendar's red as a dot; a good week is gold with a star, because it was
+earned. Most days there is none.
+
+What each tab can say, most useful first (`lineCandidates()`):
+
+- **Macros.** Protein missed three or more days running, counted back from
+  yesterday (`pro-run`); failing that, protein missed two or more days last
+  week (`pro-week`); calories missed two or more days last week (`cal-week`).
+  Then the good ones: every logged day last week on target (`win-week`), or
+  protein hit on all of them (`pro-win`). Both need five days logged, or one
+  good day would read as "1 of 1".
+- **Gym.** Last week's gym days against the planned week (`store.week`): fewer
+  is the reminder, as many or more is the gold one. No plan, or a plan nobody
+  has trained to yet, says nothing.
+- **Cardio.** By the goal's own period. A daily goal (steps, usually) counts
+  last week's days: two or more missed is the reminder, six or seven hit is
+  gold. A weekly goal compares last week's total, a monthly one last month's.
+  A goal nobody has counted toward says nothing. The cardio goal is not
+  stamped on a day the way the food goal is, so last week is judged against
+  the goal as it stands now.
+
+**A day nobody logged is not a missed day.** `dayMacro()` returns null for a day
+with no food or with a food still waiting for numbers; it ends a run and is
+left out of last week's count. A reminder that fires on an empty log is worse
+than none.
+
+**One a day per tab, and never the same one twice.** A line's id carries the
+day, week or month it is about (`macros/cal-week:2026-11-08`). *Got it* writes
+that id and today's date into `store.lineGot`: the tab stays quiet for the rest
+of the day, and that line stays away for its own period, so tomorrow brings the
+next thing. Ids older than 62 days are dropped, since no line alive could still
+carry one. `lineGot` does not travel in a restore (it is what this phone has
+said); `lineOff` does. Settings has *Daily line: Hidden / Shown*.
+
+It shows on today only, and never over a workout or cardio clock that is
+running. It is drawn by `drawDayLine()` into the top of `#view` after the tab
+has drawn itself, so no tab's own render knows about it. It reads only the log
+on the phone: nothing is sent, and no AI is asked.
+
+`sweep` checks every line beside a log that must stay quiet (two days, one
+missed day, four good days, no plan, a plan never trained to, a goal never
+counted toward, a running clock, a day gone by), and that the day after a *Got
+it* brings the next line and not the same one. `darkcheck`'s gold pass puts both
+looks on screen.
 
 **Teal means you can tap it; grey is only a label.** Asked for by the owner,
 who could not tell which small words were buttons: an audit found twenty kinds

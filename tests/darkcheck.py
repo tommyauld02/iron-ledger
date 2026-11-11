@@ -583,10 +583,16 @@ with sync_playwright() as pw:
         s = fixture(theme)
         s["build"] = p.evaluate("()=>document.documentElement.innerHTML.match(/var BUILD = \"([^\"]+)\"/)[1]")
         s["days"][T]["food"].append({"id": "gold", "cal": 300, "pro": 60, "note": "Shake"})
-        for i in (1, 2, 3):
-            k = (datetime.date.today() - datetime.timedelta(days=i)).isoformat()
+        # every day of last week on target as well: the daily line's gold one
+        # (b95) on Macros. And one short ride last week against the weekly
+        # minutes goal: its red one on Cardio. Both looks of the line.
+        today = datetime.date.today()
+        sunday = today - datetime.timedelta(days=(today.weekday() + 1) % 7)
+        lastweek = [(sunday - datetime.timedelta(days=i)).isoformat() for i in range(1, 8)]
+        for k in [(today - datetime.timedelta(days=i)).isoformat() for i in (1, 2, 3)] + lastweek:
             day = s["days"].setdefault(k, {"updated": 1, "goal": G})
-            day["food"] = [{"id": "w%d" % i, "cal": 1800, "pro": 160, "note": "Whole day"}]
+            day["food"] = [{"id": "w" + k, "cal": 1800, "pro": 160, "note": "Whole day"}]
+        s["days"][lastweek[2]]["cardio"] = [{"id": "lw", "type": "Bike", "min": 30, "t": 1}]
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", s)
         p.reload(); p.wait_for_timeout(800)
         try: p.click("#dismissWelcome", timeout=1500)
@@ -596,7 +602,8 @@ with sync_playwright() as pw:
           'gold plates': document.querySelectorAll('.today-card .barbell.is-won .bb-plate').length,
           'gold note': document.querySelectorAll('.today-card .hit-note').length,
           'gold protein figure': document.querySelectorAll('.today-card .tc-n b.is-won').length,
-          'gold streak chip': document.querySelectorAll('#dateChip.is-earned svg').length})""")
+          'gold streak chip': document.querySelectorAll('#dateChip.is-earned svg').length,
+          'daily line, a good week': document.querySelectorAll('.dayline.is-win .dl-got').length})""")
         for k, n in painted.items():
             if not n: found.append("gold: the %s is not on screen" % k)
         low = p.evaluate(LOW)
@@ -605,6 +612,10 @@ with sync_playwright() as pw:
         if not p.locator(".pan-bar .barbell.is-won").count(): found.append("gold: the Pantry's bar is not gold")
         low = p.evaluate(LOW)
         if low: found.append("gold (pantry): %s" % low)
+        p.click('.tabs button[data-tab="cardio"]'); p.wait_for_timeout(350)
+        if not p.locator(".dayline.is-miss .dl-got").count(): found.append("daily line: the reminder is not on screen")
+        low = p.evaluate(LOW)
+        if low: found.append("daily line (cardio): %s" % low)
         print("gold   %-5s            %s" % (theme, "; ".join(found) if found else "clean"))
         FAILS.extend("gold/%s: %s" % (theme, x) for x in found)
         if errs: FAILS.append("gold/%s: page errors %s" % (theme, str(errs[:2])[:80]))
