@@ -3735,10 +3735,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="A new look: Chalk and Iron"
-          and titles[1]=="A line about your week"
-          and titles[2]=="Gold plates"
-          and titles[3]=="Steps from Apple Health", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The stage and the sheet"
+          and titles[1]=="A new look: Chalk and Iron"
+          and titles[2]=="A line about your week"
+          and titles[3]=="Gold plates", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
@@ -4096,6 +4096,86 @@ with sync_playwright() as pw:
           q.evaluate(LINE) is None and q.evaluate(LBST).get("lineOff") is True, str(q.evaluate(LINE)))
     q.click("#setBtn"); q.wait_for_timeout(300); q.click('[data-pick-line="on"]'); q.wait_for_timeout(250); q.click("#setDone"); q.wait_for_timeout(250)
     check("line: Shown brings it back", says(q.evaluate(LINE),"miss","Protein goal missed 5 days running."), str(q.evaluate(LINE)))
+    c.close()
+
+    # ---------- THE STAGE AND THE SHEET (b97) ----------
+    # Step 2 of the Chalk and Iron look. The header and the tab's picture are
+    # one stage that scrolls away with the page, and a slim bar takes its
+    # place at the top, so the barbell is in view when a food goes in from
+    # lower down (before this it was off the top of the screen, and the turn
+    # to gold played to nobody). Nothing is hidden by it: the header's controls
+    # are reached by scrolling up, which is how these checks reach them too.
+    SG2={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
+    def sday(n):
+        return {"food":[{"id":"s%d"%i,"cal":100,"pro":10,"note":"Food %d"%i} for i in range(n)],"updated":1,"goal":SG2}
+    MINI="""()=>{const w=document.getElementById('stageMiniWrap'), b=document.getElementById('stageMini'), r=b.getBoundingClientRect();
+      return {stage:document.documentElement.getAttribute('data-stage'), show:w.classList.contains('show'),
+        seen:getComputedStyle(b).visibility==='visible', say:b.textContent.replace(/\s+/g,' ').trim(), h:Math.round(r.height), top:Math.round(r.top),
+        bar:b.querySelectorAll('.barbell').length, won:b.querySelectorAll('.barbell.is-won').length, label:b.getAttribute('aria-label')||'',
+        head:getComputedStyle(document.querySelector('.topbar')).position, y:Math.round(scrollY), tall:document.documentElement.scrollHeight}; }"""
+    def down(px=700):
+        q.evaluate("y=>window.scrollTo(0,y)", px); q.wait_for_timeout(450); return q.evaluate(MINI)
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True, reduced_motion="reduce")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("stage: "+str(e)))
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
+    opened(dict(LBSTORE, goal=SG2, days={Ts: sday(12)}, build=BUILDNOW))
+    m=q.evaluate(MINI)
+    check("stage: at the top of Macros there is the stage and no slim bar",
+          m["stage"]=="hero" and not m["show"] and not m["seen"] and m["head"]=="relative", str(m))
+    tall=m["tall"]
+    m=down()
+    check("stage: scrolled, a slim bar takes its place, with the barbell and the day's numbers",
+          m["show"] and m["seen"] and m["top"]==0 and m["bar"]==1 and "800 left" in m["say"] and "120 g" in m["say"], str(m))
+    check("stage: the slim bar is a proper target, and says what a tap does", m["h"]>=MIN_TAP and m["label"].startswith("Back to the top of Macros"), str(m))
+    check("stage: showing it moves nothing: the page is exactly as tall as it was", m["tall"]==tall, "%s then %s" % (tall, m["tall"]))
+    # a food logged from lower down: the bar that could not be seen before
+    way(q, "numbers"); q.fill("#fCal","300"); q.fill("#fPro","40"); q.fill("#fNote","Shake"); q.click("#addFood"); q.wait_for_timeout(500)
+    m=q.evaluate(MINI)
+    check("stage: a food logged from lower down shows in the slim bar, which turns gold with the plates",
+          m["show"] and "500 left" in m["say"] and "160 g" in m["say"] and m["won"]==1, str(m))
+    q.click("#stageMini"); q.wait_for_timeout(500)
+    m=q.evaluate(MINI)
+    check("stage: a tap on the slim bar goes back to the top, and the bar goes", m["y"]==0 and not m["show"] and not m["seen"], str(m))
+    down()
+    q.click("#prevDay"); q.wait_for_timeout(400)
+    check("stage: the header's controls are still reached from anywhere, by going up to them",
+          q.evaluate("()=>document.getElementById('todayBtn').hidden")==False)
+    q.click("#todayBtn"); q.wait_for_timeout(300)
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(200); m=down()
+    check("stage: the slim bar fits a 320px phone", m["show"] and q.evaluate("()=>document.documentElement.scrollWidth")<=320, str(m))
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    # Gym: the clock in the slim bar is the workout's own
+    gday=sday(1); gday["workoutStart"]=int(datetime.datetime.now().timestamp()*1000)-65000
+    gday["lifts"]=[{"id":"g%d"%i,"cat":"back","movement":"Move %d"%i,"sets":[{"w":100,"r":10}]} for i in range(4)]
+    opened(dict(LBSTORE, goal=SG2, days={Ts: gday}, build=BUILDNOW))
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    m=q.evaluate(MINI)
+    check("stage: Gym's clock card is its stage", m["stage"]=="hero" and not m["show"], str(m))
+    m=down(900)
+    check("stage: scrolled, Gym's slim bar carries the running clock and what has been done",
+          m["show"] and m["bar"]==0 and "4 movements" in m["say"] and "4 sets" in m["say"] and re.search(r"1:\d\d", m["say"]) is not None, str(m))
+    q.wait_for_timeout(1300)
+    check("stage: and that clock keeps time with the workout's own",
+          q.evaluate("()=>document.getElementById('stageClock').textContent===document.getElementById('workoutClock').textContent"),
+          q.evaluate("()=>document.getElementById('stageClock').textContent+' / '+document.getElementById('workoutClock').textContent"))
+    # Cardio: the goal
+    cday=sday(1); cday["cardio"]=[{"id":"c%d"%i,"type":"Bike","min":10,"t":i} for i in range(6)]
+    opened(dict(LBSTORE, goal=SG2, days={Ts: cday}, build=BUILDNOW, cardioTypes=["Bike"]))
+    q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
+    m=down(900)
+    check("stage: Cardio's slim bar says where the goal stands", m["stage"]=="hero" and m["show"] and "60 of 150 min" in m["say"], str(m))
+    # the tabs with no picture scroll the same way, with a plain bar
+    pan=[{"id":"p%d"%i,"name":"Food %d"%i,"serveQty":1,"serveUnit":"serving","serveG":None,"sCal":100,"sPro":10,"aliases":[]} for i in range(14)]
+    opened(dict(LBSTORE, goal=SG2, days={Ts: sday(3)}, build=BUILDNOW, pantry=pan))
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    m=q.evaluate(MINI)
+    check("stage: Pantry has no picture to join the header, and scrolls the same way", m["stage"]=="plain" and m["head"]=="relative" and not m["show"], str(m))
+    m=down(500)
+    check("stage: its slim bar carries the day's bar too", m["show"] and m["bar"]==1 and "1,700 left" in m["say"] and "30 g" in m["say"], str(m))
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    m=down(500)
+    check("stage: the Log's says the year", m["stage"]=="plain" and m["show"] and str(T.year) in m["say"], str(m))
     c.close()
 
     def fresh(store, label):

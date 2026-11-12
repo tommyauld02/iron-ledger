@@ -179,7 +179,8 @@ with sync_playwright() as pw:
         // being unreachable, which is asserted separately further down.
         // The top bar is sticky too: content scrolled up under it is behind it
         // by design, the same as under the dock (hittest has the same rule).
-        const underDock = !!(hit && hit.closest && hit.closest('.dock, .topbar'));
+        // From b97 the slim bar that replaces the scrolled-away header counts too.
+        const underDock = !!(hit && hit.closest && hit.closest('.dock, .topbar, .stage-mini'));
         const reachable = !inView || underDock ||
                           (!!hit && (hit === el || el.contains(hit) || hit.contains(el)));
         out.push({

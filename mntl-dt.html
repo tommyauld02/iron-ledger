@@ -4358,15 +4358,25 @@
      whole stage back. docs/ui.md, *The stage and the sheet*.
      ================================================================ */
   :root { --sheet-bg: var(--ground); --sheet-rule: var(--rule); }   /* the page's own, for the floor to draw the sheet's lip with */
-  :root[data-stage="1"] .topbar { position: relative; }
-  :root[data-stage="1"] main { padding-top: 0; }
-  :root[data-stage="1"] main > .dayline { margin: 0 -16px; border: 0; border-radius: 0; padding: 2px 20px 8px 30px; }
-  :root[data-stage="1"] main > .dayline + .today-card { margin-top: -18px; }
-  :root[data-stage="1"] main > .today-card {
+  /* Every tab scrolls the same way: the header goes with the page. A tab
+     with a picture (data-stage="hero") joins it to the header as one stage. */
+  :root[data-stage] .topbar { position: relative; }
+  :root[data-stage="hero"] main { padding-top: 0; }
+  :root[data-stage="hero"] main > .dayline { margin: 0 -16px; border: 0; border-radius: 0; padding: 2px 20px 8px 30px; }
+  :root[data-stage="hero"] main > .dayline + .today-card,
+  :root[data-stage="hero"] main > .dayline + .gym-top,
+  :root[data-stage="hero"] main > .dayline + .cardio-page { margin-top: -18px; }
+  :root[data-stage="hero"] main > .today-card,
+  :root[data-stage="hero"] main > .gym-top > .session-card,
+  :root[data-stage="hero"] main > .cardio-page > .cardio-goal {
     position: relative; margin: 0 -16px -6px; border: 0; border-radius: 0; padding: 2px 32px 42px;
   }
+  :root[data-stage="hero"] main > .gym-top > .session-card,
+  :root[data-stage="hero"] main > .cardio-page > .cardio-goal { padding: 6px 30px 42px; }
   /* the sheet's lip: the top edge of the lists, drawn over the foot of the stage */
-  :root[data-stage="1"] main > .today-card::after {
+  :root[data-stage="hero"] main > .today-card::after,
+  :root[data-stage="hero"] main > .gym-top > .session-card::after,
+  :root[data-stage="hero"] main > .cardio-page > .cardio-goal::after {
     content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 27px; border-radius: 26px 26px 0 0;
     background: linear-gradient(var(--sheet-rule), var(--sheet-rule)) center 10px / 40px 4px no-repeat, var(--sheet-bg);
   }
@@ -4382,6 +4392,7 @@
   }
   .stage-mini-wrap.show .stage-mini { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2, .9, .3, 1), visibility 0s; }
   html.kb-open .stage-mini { visibility: hidden; }
+  .stage-mini.no-pic { grid-template-columns: minmax(0, 1fr) 30px; }
   .sm-bar .barbell { width: 100%; margin: 0; }
   .sm-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
   .sm-text b { font-family: var(--font-sten); font-weight: 800; font-size: 17px; letter-spacing: .08em; text-transform: uppercase; line-height: 1; }
@@ -4744,7 +4755,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-11.96";
+  var BUILD = "2026-11-12.97";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5737,6 +5748,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-12.97", t: "The stage and the sheet", items: [
+      "The top of each tab is now one black stage, and your lists are a sheet that slides over it.",
+      "Scroll down and a slim bar takes the stage\u2019s place at the top: a small barbell with your calories and protein on Macros and Pantry, the workout clock on Gym, your goal on Cardio. Log a food from lower down and you can watch its plates load.",
+      "The date and the week now scroll with the page. Scroll up, or tap the slim bar, to reach them." ] },
     { b: "2026-11-11.96", t: "A new look: Chalk and Iron", items: [
       "The app has a new look, taken from the gym itself: a black rubber floor behind the barbell, the workout clock and the track, tall placard numbers, and stencilled labels.",
       "The tabs are a weight stack now, with a pin in the one you are on. The week is seven small plates.",
@@ -8304,29 +8319,54 @@
   // with the bar hung under it: showing it moves nothing, which matters in an
   // app whose hardest bugs were a page that changed height under the thumb.
   var stageRaf = 0;
-  function stageHero() { return tab === "macros" ? document.querySelector("#view > .today-card") : null; }
+  var STAGE_HERO = { macros: "#view > .today-card", gym: "#view > .gym-top > .session-card", cardio: "#view > .cardio-page > .cardio-goal" };
+  var STAGE_NAME = { macros: "Macros", pantry: "Pantry", gym: "Gym", cardio: "Cardio", coach: "Coach", progress: "Progress", log: "Log" };
+  function stageHero() { return STAGE_HERO[tab] ? document.querySelector(STAGE_HERO[tab]) : null; }
   function drawStage(key, d) {
     var wrap = document.getElementById("stageMiniWrap"), btn = document.getElementById("stageMini");
     var hero = stageHero(), root = document.documentElement;
     if (!wrap || !btn) return;
-    if (!hero) { root.removeAttribute("data-stage"); wrap.hidden = true; wrap.classList.remove("show"); return; }
-    root.setAttribute("data-stage", "1");
+    // Every tab scrolls the same way; "hero" joins the tab's picture to the header.
+    root.setAttribute("data-stage", hero ? "hero" : "plain");
     wrap.hidden = false;
-    var g = goalFor(key), t = totals(d), pend = pendingCount(d), bs = barState(t.cal, g.cal);
-    var won = barWon(t.cal, g.cal, t.pro, g.pro, pend);
-    var calSay = g.cal.dir === "+" ? (t.cal >= g.cal.v ? fmt(t.cal) + " kcal" : fmt(g.cal.v - t.cal) + " to go")
-      : bs.over > 0 ? fmt(bs.over) + " over" : fmt(-bs.over) + " left";
-    btn.setAttribute("aria-label", "Back to the top. " + calSay + ", " + fmt(t.pro) + " grams of protein");
-    btn.innerHTML = '<span class="sm-bar" aria-hidden="true">' + barbellHtml("mini", t.cal, g.cal, t.pro, g.pro, { hold: pend, day: key }) + '</span>' +
-      '<span class="sm-text" aria-hidden="true"><b>Macros</b><span>' + calSay + ' \u00b7 <span class="' + (won ? 'is-won' : '') + '">' + fmt(t.pro) + ' g' + (won ? ' \u2605' : '') + '</span></span></span>' +
+    var pic = "", say = "", aria = "";
+    if (tab === "macros" || tab === "pantry") {
+      // the day's bar, small: the same numbers the card shows
+      var g = goalFor(key), t = totals(d), pend = pendingCount(d), bs = barState(t.cal, g.cal);
+      var won = barWon(t.cal, g.cal, t.pro, g.pro, pend);
+      var calSay = g.cal.dir === "+" ? (t.cal >= g.cal.v ? fmt(t.cal) + " kcal" : fmt(g.cal.v - t.cal) + " to go")
+        : bs.over > 0 ? fmt(bs.over) + " over" : fmt(-bs.over) + " left";
+      pic = barbellHtml("mini", t.cal, g.cal, t.pro, g.pro, { hold: pend, day: key });
+      say = calSay + ' \u00b7 <span class="' + (won ? 'is-won' : '') + '">' + fmt(t.pro) + ' g' + (won ? ' \u2605' : '') + '</span>';
+      aria = calSay + ", " + fmt(t.pro) + " grams of protein";
+    } else if (tab === "gym") {
+      var n = (d.lifts || []).length, sets = 0;
+      (d.lifts || []).forEach(function (l) { sets += (l.sets || []).length; });
+      var did = n ? n + (n === 1 ? " movement" : " movements") + " \u00b7 " + sets + (sets === 1 ? " set" : " sets") : "No movements yet";
+      // the running clock is kept in step by the workout's own ticker
+      say = (d.workoutStart ? '<span id="stageClock">' + fmtDur(workoutMs(d)) + '</span> \u00b7 ' : '') + did;
+      aria = did;
+    } else if (tab === "cardio") {
+      var cgn = hero && hero.querySelector(".cg-num");
+      say = aria = cgn ? esc(cgn.textContent.replace(/\s+/g, " ").trim()) : "";
+    } else if (tab === "log" || tab === "progress") {
+      var yr = document.querySelector("#view .yearnav .y, #view .pg-head h2");
+      say = aria = yr ? esc(yr.textContent.replace(/\s+/g, " ").trim()) : "";
+    }
+    btn.classList.toggle("no-pic", !pic);
+    btn.setAttribute("aria-label", "Back to the top of " + STAGE_NAME[tab] + (aria ? ". " + aria.replace(/<[^>]*>/g, "") : ""));
+    btn.innerHTML = (pic ? '<span class="sm-bar" aria-hidden="true">' + pic + '</span>' : '') +
+      '<span class="sm-text" aria-hidden="true"><b>' + STAGE_NAME[tab] + '</b>' + (say ? '<span>' + say + '</span>' : '') + '</span>' +
       '<span class="sm-up" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></span>';
     syncStage();
   }
-  // Shown once the stage's foot is nearly off the top of the screen.
+  // Shown once the stage has all but left the top of the screen: the foot of
+  // the picture where a tab has one, the foot of the header where it has not.
   function syncStage() {
-    var wrap = document.getElementById("stageMiniWrap"), hero = stageHero();
-    if (!wrap) return;
-    wrap.classList.toggle("show", !!hero && !wrap.hidden && hero.getBoundingClientRect().bottom < 64);
+    var wrap = document.getElementById("stageMiniWrap"), hero = stageHero(), bar = document.querySelector(".topbar");
+    if (!wrap || !bar) return;
+    var edge = hero ? hero.getBoundingClientRect().bottom - 64 : bar.getBoundingClientRect().bottom - 8;
+    wrap.classList.toggle("show", !wrap.hidden && edge < 0);
   }
   window.addEventListener("scroll", function () {
     if (stageRaf) return;
@@ -12344,6 +12384,8 @@
           clearInterval(workoutTick); workoutTick = null; render(); return;
         }
         el.textContent = fmtDur(run);
+        var stageClock = document.getElementById("stageClock");
+        if (stageClock) stageClock.textContent = fmtDur(run);
       }, 1000);
     }
 
