@@ -36,6 +36,12 @@
 @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;src:url(fonts/IBMPlexMono-500-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
 @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/IBMPlexMono-600-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
 @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/IBMPlexMono-600-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Big Shoulders Display';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/BigShoulders-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Big Shoulders Display';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/BigShoulders-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Big Shoulders Stencil Display';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/BigShouldersStencil-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Big Shoulders Stencil Display';font-style:normal;font-weight:100 900;font-display:swap;src:url(fonts/BigShouldersStencil-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Caveat Brush';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/CaveatBrush-latin.woff2) format('woff2');unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Caveat Brush';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/CaveatBrush-latin-ext.woff2) format('woff2');unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF}
 </style>
 <style>
   :root {
@@ -4159,6 +4165,187 @@
   .month.is-mini .cal-cell .pg-mark, .month.is-mini .cal-cell .pg-ring { display: none; }
   .legend .pg-lg svg { width: 13px; height: 13px; fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   .legend i.pg-ring-i { width: 7px; height: 7px; border-radius: 50%; background: none; box-shadow: inset 0 0 0 1.6px var(--ink); }
+
+  /* ================================================================
+     CHALK AND IRON, step 1 (b96): the look, with nothing moved.
+     Asked for by the owner as an "upgrade" to the look the app has had
+     since the beginning. The pieces come from a gym: a black rubber floor
+     behind the pictures, placard lettering, stencilled labels, a weight
+     stack for the tabs, one line written in chalk. Every control is where
+     it was; steps 2 to 4 move things, this one only dresses them.
+     docs/ui.md, *Chalk and Iron*.
+     ================================================================ */
+  :root {
+    --font-big: 'Big Shoulders Display', 'Arial Narrow', 'Archivo', sans-serif;
+    --font-sten: 'Big Shoulders Stencil Display', 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+    --font-chalk: 'Caveat Brush', 'Bradley Hand', 'Segoe Print', cursive;
+    --floor: #0A0C0B; --slab: #171B19; --slab-2: #262C29; --floor-line: #343C38;
+    --chalk: #F2F1EC; --chalk-dim: #A3ABA6; --steel: #8A9490;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --floor: #050706; --slab: #111514; --slab-2: #1C2220; --floor-line: #2A322F; }
+  }
+  :root[data-theme="dark"] { --floor: #050706; --slab: #111514; --slab-2: #1C2220; --floor-line: #2A322F; }
+
+  /* The floor. Whatever stands on it reads the app's dark palette, which
+     darkcheck has measured for years, over a ground that is darker still,
+     so every pairing only gains contrast. It is the same in light and dark:
+     a rubber floor does not change with the lights. */
+  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs {
+    --ground: #0E1211;
+    --surface: #171D1B;
+    --surface-2: #1F2725;
+    --ink: #ECF1EE;
+    --ink-2: #A9B5B0;
+    --ink-3: #8C9893;
+    --rule: #2A3431;
+    --rule-hard: #6D7A76;
+    --accent: #56B9A9;
+    --accent-soft: #17342F;
+    --cat-a: #6FA3D4;
+    --cat-b: #D08A65;
+    --cat-c: #A3BC5E;
+    --danger: #E0796B;
+    --hit: #8FC46A;
+    --hit-bg: #1E2C18;
+    --miss: #E0796B;
+    --miss-bg: #2F1D1A;
+    --on-miss: #1B0E0C;
+    --on-accent: #0B1614;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px -12px rgba(0, 0, 0, .7);
+    --warn: #E5C04F;
+    --warn-fill: #E5C04F;
+    --on-hit: #0B1614;
+    --plate: #D2DAD6;
+    --plate-hub: #A3AEA9;
+    --bar: #7A8682;
+    --plate-ghost: #6A7772;
+    --plate-off: #323C39;
+    --gold: #F2B63A; --gold-hub: #C08A14; --gold-ink: #F4C95A; --gold-soft: #3A2E10; --on-gold: #2A1D00;
+    --kb-empty: #141A18;
+    --lane: #252D2B;
+    --seg: #B7C2BD;
+    --live: #6F7B77;
+    --scrim: rgba(0, 0, 0, .58);
+    --ground: var(--floor); --surface: var(--floor); --surface-2: var(--slab); --rule: var(--floor-line);
+    --ink: var(--chalk); --ink-2: var(--chalk-dim);
+    color: var(--ink);
+  }
+  :root[data-accent="blue"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #7DB0E8; --accent-soft: #1A3150; --on-accent: #0B1614; }
+  :root[data-accent="violet"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #B69CEB; --accent-soft: #33284F; --on-accent: #0B1614; }
+  :root[data-accent="orange"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #EE9B5C; --accent-soft: #3F2918; --on-accent: #0B1614; }
+  :root[data-accent="graphite"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #C4CDC9; --accent-soft: #2A3230; --on-accent: #0B1614; }
+  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline {
+    background-color: var(--floor);
+    background-image: radial-gradient(rgba(255,255,255,.085) 1px, transparent 1.3px), radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px);
+    background-size: 13px 13px, 21px 21px; background-position: 0 0, 6px 11px;
+    border-color: var(--floor-line);
+  }
+  .topbar { border-bottom: 0; }
+
+  /* a painted floor line under the wordmark, worn where it has been walked on */
+  .datenav::before {
+    content: ""; height: 4px; border-radius: 1px; opacity: .92;
+    background: repeating-linear-gradient(90deg, var(--chalk) 0 54px, rgba(242,241,236,.35) 54px 60px, var(--chalk) 60px 131px, transparent 131px 135px);
+  }
+
+  /* ---- lettering: placard numerals, stencilled labels ---- */
+  .datelabel .full, .h-food, .sec-title h2, .lift-head h3, .sheet-inner h2, .pan-head h2, .way-head b, .yearnav .y {
+    font-family: var(--font-big); font-weight: 900; font-stretch: normal; text-transform: uppercase; letter-spacing: .02em; line-height: 1;
+  }
+  .datelabel .full { font-size: 24px; }
+  .datenav { gap: 6px; }
+  .h-food { font-size: 25px; }
+  .sec-title h2 { font-size: 23px; }
+  .lift-head h3 { font-size: 22px; }
+  .sheet-inner h2 { font-family: var(--font-sten); font-size: 28px; letter-spacing: .05em; }
+  .pan-head h2 { font-size: 34px; }
+  .tc-n b, .wo-clock, .cg-num b, .yc-rate b, .year-card .yearstats b, .pg-tiles b, .cc-stats b, .rest-clock, .log-page .bw-now b {
+    font-family: var(--font-big); font-weight: 900; font-stretch: normal; letter-spacing: 0;
+  }
+  .tc-n b { font-size: clamp(44px, 14.5vw, 58px); line-height: .95; }
+  .tc-fig { gap: 3px; }
+  /* The taller numerals are paid for in the card's own spacing, and the
+     slabs are kept short, so the ledger's first rows sit as far above the
+     bottom bar as they did before b96. On GitHub's Linux the second row's
+     middle landed under the bar and the touch suite could not drag onto it:
+     a thumb could not have either. */
+  .today-card { padding: 11px 16px 13px; }
+  .tc-figs { margin-top: 4px; }
+  .barbell { margin-top: 6px; }
+  .tc-say { margin-top: 4px; }
+  .wo-clock { font-size: clamp(40px, 13vw, 56px); line-height: .9; }
+  .cg-num b { font-size: 46px; line-height: .9; }
+  .yc-rate b { font-size: 68px; line-height: .86; }
+  .eyebrow, .tc-k, .tc-l, .kb-k, .wo-label {
+    font-family: var(--font-sten); font-weight: 800; font-size: 13.5px; letter-spacing: .1em;
+  }
+  .btn, .wo-start {
+    font-family: var(--font-big); font-weight: 800; font-stretch: normal; font-size: 19px; letter-spacing: .06em; text-transform: uppercase;
+    border-radius: 8px;
+  }
+  .today-card, .card, .year-card, .pg-card, .pan-bar, .session-card, .week-card, .split-card, .cardio-goal, .dayline { border-radius: 14px; }
+
+  /* ---- the week: seven small plates ---- */
+  .week-day, .week-day[aria-pressed="true"] { border-color: transparent; background: none; }
+  .week-day .wn {
+    width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; box-sizing: border-box;
+    border: 2px dashed var(--floor-line); font-family: var(--font-big); font-weight: 800; font-size: 17px;
+  }
+  .week-day:not(.is-future) .wn { border-style: solid; border-color: var(--steel); }
+  .week-day[aria-pressed="true"] .wn { background: var(--chalk); border-color: var(--chalk); color: var(--floor); }
+  .week-day { gap: 3px; height: 56px; }
+
+  /* ---- the daily line, written on the floor in chalk ---- */
+  .dayline .dl-text b { font-family: var(--font-chalk); font-weight: 400; font-size: 21px; line-height: 1.1; }
+  .dayline.is-win .dl-text span { color: var(--gold-ink); }
+
+  /* ---- the tabs: a weight stack. A slab a tab, and a pin in the one you are on ---- */
+  .tabs { background: var(--floor); border-top: 0; padding: 5px 8px max(env(safe-area-inset-bottom), 6px); gap: 4px; }
+  .tabs button {
+    position: relative; justify-content: flex-end; gap: 2px; min-height: 56px; padding: 0 0 4px;
+    border: 1px solid var(--floor-line); border-radius: 7px; background: linear-gradient(var(--slab-2), var(--slab)); color: var(--chalk-dim);
+  }
+  .tabs button::before {
+    content: ""; position: absolute; top: 5px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+    background: #000; box-shadow: inset 0 1px 2px rgba(255,255,255,.18);
+  }
+  .tabs .ti, .tabs button[aria-selected="true"] .ti { width: auto; height: 19px; background: none; }
+  .tabs .ti svg { width: 18px; height: 18px; }
+  .tabs .tl { font-family: var(--font-sten); font-weight: 800; font-size: 11.5px; letter-spacing: .06em; }
+  .tabs button[aria-selected="true"] { color: var(--chalk); border-color: var(--steel); }
+  .tabs button[aria-selected="true"]::after {
+    content: ""; position: absolute; top: 1px; left: 50%; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.75) 0 14%, var(--accent) 15% 62%, rgba(0,0,0,.35) 63% 100%), var(--accent);
+    box-shadow: 0 0 0 3px rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.7);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .tabs button[aria-selected="true"]::after { animation: pinIn .34s cubic-bezier(.3, 1.6, .5, 1); }
+  }
+  @keyframes pinIn { from { transform: translateY(-12px) scale(.6); opacity: 0; } }
+  @media (max-width: 340px) {
+    /* seven slabs on a 320px phone each keep 44px: no gap between them there */
+    .tabs { gap: 0; padding-left: 2px; padding-right: 2px; }
+    .tabs .tl { font-size: 9px; letter-spacing: .01em; }
+  }
+
+  /* the same numerals where a more particular rule had already set them */
+  .session-card .workout .wo-clock, #ctxMain .ctx-run .wo-clock, .cardio-goal .cg-num b,
+  .year-card .yearstats b, .log-page .cardio-track .yearstats b, .cc-head h3, .month h4 {
+    font-family: var(--font-big); font-weight: 900; font-stretch: normal; letter-spacing: .01em;
+  }
+  .session-card .workout .wo-clock { font-size: clamp(44px, 14vw, 60px); line-height: .9; }
+  #ctxMain .ctx-run .wo-clock { font-size: 30px; }
+  .cardio-goal .cg-num b { font-size: 52px; line-height: .9; }
+  .year-card .yearstats b, .log-page .cardio-track .yearstats b, .cc-stats b { font-size: 30px; }
+  .cc-head h3 { font-size: 24px; text-transform: uppercase; }
+  .month h4 { font-size: 26px; }
+  /* the bar above the tabs: the same buttons, in placard lettering */
+  .w3 span, .ctx-big, .cmp-new, #ctxMain .ctx-run .cr-stop, #ctxMain .ctx-run .cr-discard {
+    font-family: var(--font-big); font-weight: 800; font-stretch: normal; font-size: 18px; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .w3 span { font-size: 16px; letter-spacing: .03em; white-space: nowrap; }
+  .w3, .ctx-big, .composer, .cmp-new, #ctxMain .ctx-run { border-radius: 12px; }
 </style>
 
 <div class="app">
@@ -4509,7 +4696,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-11.95";
+  var BUILD = "2026-11-11.96";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5502,6 +5689,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-11.96", t: "A new look: Chalk and Iron", items: [
+      "The app has a new look, taken from the gym itself: a black rubber floor behind the barbell, the workout clock and the track, tall placard numbers, and stencilled labels.",
+      "The tabs are a weight stack now, with a pin in the one you are on. The week is seven small plates.",
+      "Nothing has moved. Every button is where it was, and everything works as before. This is the first of four steps." ] },
     { b: "2026-11-11.95", t: "A line about your week", items: [
       "When a goal keeps being missed, the top of that tab now says so in one line: protein missed several days running, calories missed last week, fewer gym days than you planned, or your steps or cardio goal missed.",
       "A good week gets a line too, in gold: 7 of 7 days on target, every planned gym day, your steps goal hit, more weight moved than the week before. Keep it up!",

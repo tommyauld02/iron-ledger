@@ -7,9 +7,18 @@ redesign's display numbers are set at 800 and 125%, and a browser can fake a
 weight but never a width, so the axis has to be in the file. IBM Plex Mono is
 static, 400/500/600, one file per weight.
 
+The Chalk and Iron look (b96) adds three display faces, used large and never
+for running text: Big Shoulders Display for the placard numerals, Big Shoulders
+Stencil Display for stencilled labels, both variable on weight, and Caveat
+Brush, static, for the one line written in chalk.
+
 It writes the woff2 files under the names the service worker already lists,
 writes fonts/fonts.css, and prints the same @font-face block that sits at the
 top of mntl-dt.html. sweep fails if the two ever differ.
+
+A family whose files are already in fonts/ is left alone, bytes and
+@font-face lines both, so adding a face does not churn the ones the app has
+shipped for months. Pass --refresh to fetch everything again.
 """
 import os
 import re
@@ -45,7 +54,72 @@ def field(block, name):
     return m.group(1).strip() if m else ""
 
 
+REFRESH = "--refresh" in sys.argv
+
+# (family as the API names it, the query after it, file stem, the font-weight to declare)
+DISPLAY = [
+    ("Big Shoulders Display", "Big+Shoulders+Display:wght@100..900", "BigShoulders", "100 900"),
+    ("Big Shoulders Stencil Display", "Big+Shoulders+Stencil+Display:wght@100..900", "BigShouldersStencil", "100 900"),
+    ("Caveat Brush", "Caveat+Brush", "CaveatBrush", "400"),
+]
+
+
+def kept(family, names):
+    """The @font-face lines already in fonts.css for a family whose files are all here."""
+    if REFRESH or not all(os.path.exists(os.path.join(OUT, n)) for n in names):
+        return None
+    try:
+        with open(os.path.join(OUT, "fonts.css"), encoding="utf-8") as f:
+            lines = [l.strip() for l in f if ("font-family:'%s';" % family) in l]
+    except OSError:
+        return None
+    return lines if len(lines) == len(names) else None
+
+
+def display(family, query, stem, weight):
+    names = ["%s-%s.woff2" % (stem, s) for s in SUBSETS]
+    have = kept(family, names)
+    if have:
+        return have
+    css = get(API + query + "&display=swap").decode("utf-8")
+    got = {}
+    for subset, block in faces(css):
+        if subset in SUBSETS and subset not in got:
+            got[subset] = block
+    if set(got) != set(SUBSETS):
+        sys.exit("%s: expected %s, got %s" % (family, SUBSETS, sorted(got)))
+    out = []
+    for subset in SUBSETS:
+        block = got[subset]
+        url = re.search(r"url\(([^)]+\.woff2)\)", block).group(1)
+        name = "%s-%s.woff2" % (stem, subset)
+        data = get(url)
+        with open(os.path.join(OUT, name), "wb") as f:
+            f.write(data)
+        print("  %-36s %6.1f KB" % (name, len(data) / 1024), file=sys.stderr)
+        out.append("@font-face{font-family:'%s';font-style:normal;font-weight:%s;font-display:swap;"
+                   "src:url(fonts/%s) format('woff2');unicode-range:%s}" % (family, weight, name, field(block, "unicode-range")))
+    return out
+
+
+def shipped():
+    """Archivo and IBM Plex Mono as they already are, when nothing is being refreshed."""
+    a = kept("Archivo", ["Archivo-%s.woff2" % s for s in SUBSETS])
+    m = kept("IBM Plex Mono", ["IBMPlexMono-%d-%s.woff2" % (w, s) for w in (400, 500, 600) for s in SUBSETS])
+    return (a + m) if a and m else None
+
+
 def build():
+    extra = []
+    for fam in DISPLAY:
+        extra += display(*fam)
+    old = shipped()
+    if old:
+        text = "\n".join(old + extra) + "\n"
+        with open(os.path.join(OUT, "fonts.css"), "w", encoding="utf-8", newline="\n") as f:
+            f.write(text)
+        sys.stdout.write(text)
+        return
     blocks = []
 
     # Archivo: one variable file per subset, both axes.
@@ -89,7 +163,7 @@ def build():
                         "font-display:swap;src:url(fonts/%s) format('woff2');unicode-range:%s}"
                         % (weight, name, field(block, "unicode-range")))
 
-    text = "\n".join(archivo + mono) + "\n"
+    text = "\n".join(archivo + mono + extra) + "\n"
     with open(os.path.join(OUT, "fonts.css"), "w", encoding="utf-8", newline="\n") as f:
         f.write(text)
     sys.stdout.write(text)

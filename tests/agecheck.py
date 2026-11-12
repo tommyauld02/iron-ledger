@@ -143,7 +143,9 @@ def open_phone(b, url=BASE, stored=None, relay=False, size=PHONE, asked=None, sc
 
 
 def text(p, sel):
-    return p.evaluate("s => { const e = document.querySelector(s); return e ? e.innerText : '' }", sel)
+    # the words as written: since b96 headings and buttons are drawn in capitals
+    # by CSS, which is lettering and not wording, so it is set aside while reading
+    return p.evaluate("s => { const e = document.querySelector(s); if (!e) return ''; const st=document.createElement('style');st.textContent='*{text-transform:none!important}';document.head.appendChild(st); const t = e.innerText; st.remove(); return t }", sel)
 def shown(p, sel):
     return p.evaluate("s => { const e = document.querySelector(s); return !!e && e.getClientRects().length > 0 }", sel)
 def saved(p):

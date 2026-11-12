@@ -42,6 +42,12 @@ const SHELL = [
   "./fonts/IBMPlexMono-400-latin-ext.woff2",
   "./fonts/IBMPlexMono-500-latin-ext.woff2",
   "./fonts/IBMPlexMono-600-latin-ext.woff2",
+  "./fonts/BigShoulders-latin.woff2",
+  "./fonts/BigShoulders-latin-ext.woff2",
+  "./fonts/BigShouldersStencil-latin.woff2",
+  "./fonts/BigShouldersStencil-latin-ext.woff2",
+  "./fonts/CaveatBrush-latin.woff2",
+  "./fonts/CaveatBrush-latin-ext.woff2",
 ];
 
 self.addEventListener("install", (e) => {

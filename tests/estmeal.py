@@ -34,7 +34,7 @@ with sync_playwright() as pw:
 
     reset()
     check("folded until asked for, behind the bottom bar's Ask an agent",
-          "Ask an agent" in p.inner_text('[data-logway="estimate"]')
+          "Ask an agent" in p.text_content('[data-logway="estimate"]')
           and p.locator("#estText").count()==0)
     p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
     check("Ask an agent opens straight on the words box, with no tabs or table",

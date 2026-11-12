@@ -237,7 +237,12 @@ numbers are set at 800 and 125%, and a browser can fake a weight but never a
 width. Do not re-add per-weight Archivo files. IBM Plex Mono is static, one
 per weight. Latin and latin-ext only. `tools/make-fonts.py` regenerates
 `fonts/` and prints the `@font-face` block that sits at the top of
-`mntl-dt.html`; never hand-edit either.
+`mntl-dt.html`; never hand-edit either. The Chalk and Iron look (b96,
+`docs/ui.md`) adds three display faces the same way: Big Shoulders Display and
+Big Shoulders Stencil Display, variable on weight, and Caveat Brush, static.
+The tool leaves a family alone when its files are already in `fonts/`, so
+adding a face does not re-download the ones the app has shipped; `--refresh`
+fetches everything again. The service worker's list has to name every file.
 
 **Dates re-check on wake.** iOS suspends a home-screen app rather than closing
 it, so `TODAY` computed once at load meant food logged after midnight landed on
