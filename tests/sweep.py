@@ -988,7 +988,8 @@ with sync_playwright() as pw:
     check("coach tab: put away on a phone that never chose",
           p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","progress","log"], str(p.evaluate(TABSHOWN)))
     tw=p.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.getBoundingClientRect().width)")
-    bw=p.evaluate("()=>{const t=document.querySelector('.tabs'),s=getComputedStyle(t);return t.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight);}")
+    # the slabs of the weight stack (b96) have a gap between them, which is part of the bar
+    bw=p.evaluate("()=>{const t=document.querySelector('.tabs'),s=getComputedStyle(t),n=[...t.children].filter(b=>b.getClientRects().length).length;return t.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight)-(parseFloat(s.columnGap)||0)*(n-1);}")
     check("coach tab: the six left share the whole bar, evenly",
           len(tw)==6 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
     p.click("#setBtn"); p.wait_for_timeout(300)
@@ -2975,7 +2976,8 @@ with sync_playwright() as pw:
     check("ways: both start folded, and neither form is on the page",
           q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]]
           and q.locator("#fCal").count()==0 and q.locator("#runEst").count()==0, str(q.evaluate(WAYS)))
-    W3="()=>[...document.querySelectorAll('#ctxMain .w3')].map(x=>x.innerText.trim())"
+    # the words as written: since b96 they are drawn in capitals, which is lettering, not wording
+    W3="()=>[...document.querySelectorAll('#ctxMain .w3')].map(x=>x.textContent.trim())"
     check("ways: three buttons, each saying what it is for, in the order pencil, #, barcode",
           q.evaluate(W3)==["Log numbers","Ask an agent","Scan"]
           and q.get_attribute("[data-scanway]","aria-label")=="Scan a barcode", str(q.evaluate(W3)))
@@ -3285,21 +3287,24 @@ with sync_playwright() as pw:
         "coachOn":True,"goal":TG,"region":"United States","v":1,"seen":True}
     TEALJS=r"""()=>{const t=document.createElement('i');t.style.color='var(--accent)';document.body.appendChild(t);
       const acc=getComputedStyle(t).color;t.remove();return acc;}"""
-    BARE=r"""(acc)=>{const out=[];
+    # Since b96 the black floor carries its own accent (the dark palette's, so
+    # it reads on black), so "the tap colour" is asked of each control where
+    # it stands, not once of the page.
+    BARE=r"""(acc)=>{const out=[];const accOf=el=>{const t=document.createElement('i');t.style.cssText='color:var(--accent);display:none';el.appendChild(t);const c=getComputedStyle(t).color;t.remove();return c;};
       document.querySelectorAll('main button, main [role=button]').forEach(el=>{
         const r=el.getBoundingClientRect(),s=getComputedStyle(el);
         if(!r.width||!r.height||s.display==='none'||s.visibility==='hidden'||el.classList.contains('cal-cell')) return;
         const filled=s.backgroundColor!=='rgba(0, 0, 0, 0)'&&s.backgroundColor!=='transparent';
         const border=parseFloat(s.borderTopWidth)+parseFloat(s.borderLeftWidth)>0&&s.borderTopColor!=='rgba(0, 0, 0, 0)'&&s.borderStyle!=='none';
         if(filled||border) return;
-        const marked=s.color===acc||[...el.querySelectorAll('*')].some(c=>getComputedStyle(c).color===acc&&c.textContent.trim());
+        const a=accOf(el);const marked=s.color===a||[...el.querySelectorAll('*')].some(c=>getComputedStyle(c).color===a&&c.textContent.trim());
         out.push([(el.innerText||el.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim().slice(0,24),marked]);});
       return out;}"""
-    STRAY=r"""(acc)=>{const out=[];
+    STRAY=r"""(acc)=>{const out=[];const accOf=el=>{const t=document.createElement('i');t.style.cssText='color:var(--accent);display:none';el.appendChild(t);const c=getComputedStyle(t).color;t.remove();return c;};
       document.querySelectorAll('.topbar *, main *').forEach(el=>{
         if(![...el.childNodes].some(n=>n.nodeType===3&&n.nodeValue.trim())) return;
         const s=getComputedStyle(el),r=el.getBoundingClientRect();
-        if(!r.width||s.display==='none'||s.visibility==='hidden'||s.color!==acc) return;
+        if(!r.width||s.display==='none'||s.visibility==='hidden'||s.color!==accOf(el)) return;
         if(el.closest('button,a,label,select,input,textarea,[role=button],[data-tab]')) return;
         out.push(el.textContent.trim().replace(/\s+/g,' ').slice(0,30));});
       return out;}"""
@@ -3467,7 +3472,7 @@ with sync_playwright() as pw:
           q.evaluate(CSAYS)=="Cardio goal: 10,000 steps a day"
           and q.evaluate(CST)["cardioGoal"]=={"kind":"steps","period":"day","v":10000}, q.evaluate(CSAYS))
     check("steps: the lap counts steps, not the sessions logged, and offers to type them in",
-          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="0 of 10,000 steps" and q.inner_text("#stepsOpen")=="Enter today’s steps"
+          " ".join(q.inner_text(".cardio-goal .cg-num").split())=="0 of 10,000 steps" and q.text_content("#stepsOpen").strip()=="Enter today’s steps"
           and "No steps typed in yet" in q.inner_text(".cg-legend"), q.inner_text(".cardio-goal"))
     q.click("#stepsOpen"); q.wait_for_timeout(250)
     fields=q.eval_on_selector_all("#stepsSheet input, #stepsSheet button",
@@ -3487,7 +3492,7 @@ with sync_playwright() as pw:
           and q.locator("#undoBtn").is_visible() and q.locator("#stepsAdd").count()==0, q.evaluate(CSAYS))
     check("steps: and the lap shows them against the goal",
           " ".join(q.inner_text(".cardio-goal .cg-num").split())=="6,240 of 10,000 steps" and q.inner_text("#cgLeft")=="3,760 steps to go"
-          and q.inner_text("#stepsOpen")=="Change today’s steps", q.inner_text(".cardio-goal"))
+          and q.text_content("#stepsOpen").strip()=="Change today’s steps", q.inner_text(".cardio-goal"))
     check("steps: the week strip counts the days with steps",
           "1 day of steps this week" in q.inner_text("#datenav"), q.inner_text("#datenav"))
     q.click("#stepsOpen"); q.wait_for_timeout(250)
@@ -3773,14 +3778,15 @@ with sync_playwright() as pw:
         days={Ts: today}
         for i in range(1, back+1): days[(T-datetime.timedelta(days=i)).isoformat()]=gday(1800,160)
         return dict(LBSTORE, goal=goal, days=days, build=BUILDNOW)
+    # the colours are asked of the bar itself: on the floor (b96) it has the dark palette's gold and iron
     GOLD="""()=>{const bb=document.querySelector('.today-card .barbell'), pl=bb.querySelector('.bb-plate i'),
-      v=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+      v=n=>getComputedStyle(bb).getPropertyValue(n).trim(),
       rgb=h=>'rgb('+[1,3,5].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')',
       img=pl?getComputedStyle(pl).backgroundImage:'';
       return {won:bb.classList.contains('is-won'), gold:img.includes(rgb(v('--gold'))), iron:img.includes(rgb(v('--plate'))),
         note:!!document.querySelector('.hit-note'), card:document.querySelector('.today-card').classList.contains('is-won'),
         fresh:bb.getAttribute('data-newwin'), aria:bb.getAttribute('aria-label')}; }"""
-    CHIP="""()=>{const c=document.getElementById('dateChip'), v=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+    CHIP="""()=>{const c=document.getElementById('dateChip'), v=n=>getComputedStyle(c).getPropertyValue(n).trim(),
       rgb=h=>'rgb('+[1,3,5].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
       return {say:c.textContent, earned:c.classList.contains('is-earned'), flame:c.querySelectorAll('svg').length,
         gold:getComputedStyle(c).color===rgb(v('--gold-ink'))}; }"""
@@ -3881,7 +3887,7 @@ with sync_playwright() as pw:
         if today: days.setdefault(LTs, fd(500,40))
         return dict(LBSTORE, goal=GG, days=days, build=BUILDNOW, **kw)
     LINE="""()=>{const l=document.querySelector('.dayline'); if(!l) return null;
-      const v=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+      const v=n=>getComputedStyle(l).getPropertyValue(n).trim(),
         rgb=h=>'rgb('+[1,3,5].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
       return {kind:l.classList.contains('is-win')?'win':'miss', head:l.querySelector('b').textContent,
         sub:l.querySelector('.dl-text span').textContent, n:document.querySelectorAll('.dayline').length,

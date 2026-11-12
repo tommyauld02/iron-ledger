@@ -74,7 +74,9 @@ def check(n, ok, det=""): res.append(("PASS" if ok else "FAIL", n, det))
 SAYS = "()=>document.getElementById('undobar').hidden?'':document.getElementById('undoLabel').textContent"
 LOG = "()=>JSON.parse(localStorage.getItem('%s'))" % KEY
 RAW = "()=>localStorage.getItem('%s')" % KEY
-SHEET = "()=>{const s=document.getElementById('pgSheet');return s?s.innerText:''}"
+# The words as written. Since b96 headings and buttons are drawn in capitals by
+# CSS, which is lettering and not wording, so it is set aside while reading.
+SHEET = "()=>{const s=document.getElementById('pgSheet');if(!s)return '';const st=document.createElement('style');st.textContent='*{text-transform:none!important}';document.head.appendChild(st);const t=s.innerText;st.remove();return t}"
 TABSHOWN = "()=>[...document.querySelectorAll('.tabs button')].filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)"
 # what IndexedDB holds for a photo: its type and its size once decoded
 IDB = """async (id)=>{const db=await new Promise((ok,no)=>{const r=indexedDB.open('mntl-dt-photos',1);
@@ -164,7 +166,7 @@ with sync_playwright() as pw:
     check("tab: with nothing yet, it says what a check-in is",
           p.locator("#pgIntro").is_visible() and "any one of them is a check-in" in p.locator("#pgIntro").inner_text())
     check("tab: and where photos stay", "Photos stay on this phone" in p.locator("#pgIntro").inner_text())
-    check("tab: New check-in is the bar above the tabs", p.locator("#ctxMain #pgNew").inner_text().strip() == "New check-in")
+    check("tab: New check-in is the bar above the tabs", p.locator("#ctxMain #pgNew").text_content().strip() == "New check-in")
     tab(p, "macros")
     check("tab: the date strip is back on Macros", not p.evaluate("document.getElementById('datenav').hidden"))
 

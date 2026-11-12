@@ -171,6 +171,59 @@ the picker shows each accent as it would look in the current theme; `sweep`
 applies every accent in both themes and fails if a swatch and what it applies
 ever disagree.
 
+**Chalk and Iron (b96): a new look, in four steps.** Asked for by the owner,
+who had only ever seen the look the app was born with and wanted "an upgrade":
+"more artistic", something "that refers to the gym". The first concept put a
+home screen of doors in front of the tabs; he turned it down, because hiding
+features behind a tap makes them harder to find, not more inviting. What he
+kept from it: a dark stage with a light sheet, one action button, and Pantry
+inside Macros. His two conditions for the look itself: **every feature and
+every setting carries over** ("everything before were all added with
+intention"), and **there is room for what comes later** (friends, a shared
+cookbook, a leaderboard) without another redesign. The pieces come from a gym:
+a black rubber floor, placard lettering, stencilled labels, a weight stack, a
+plate, one line in chalk.
+
+It is built in four steps so that only one thing is in question at a time:
+1. **The look, with nothing moved (b96).** This step.
+2. The stage and the sheet: lists slide over the picture, which shrinks to a
+   bar and stays.
+3. The plate: one action button in place of the three-button bar.
+4. Pantry moves inside Food.
+
+**Step 1 is one block of CSS** at the end of the main `<style>`, headed
+*CHALK AND IRON, step 1*. No markup and no behaviour changed, which is the
+point of the step: a control that is where it was cannot be lost.
+
+- **The floor is a scope, not a theme.** `.topbar`, `.today-card`,
+  `.session-card`, `.cardio-goal`, `.year-card`, `.pan-bar`, `.dayline` and
+  `.tabs` redeclare the palette with the dark theme's values over `--floor`,
+  a ground darker than any the dark theme uses. Those pairings have been
+  measured by `darkcheck` for years and only gain contrast on a darker
+  ground. Each accent has a rule of its own for the floor, because an accent
+  block sets its colours on `:root` and the scope would otherwise keep teal.
+  The floor is the same in light and dark: a rubber floor does not change
+  with the lights. **Anything new that stands on the floor must be added to
+  the scope's selector list**, or it will draw dark ink on black.
+- **A colour is asked of the thing, not of the page.** On the floor
+  `--accent`, `--gold` and `--plate` are not what `:root` says. `sweep`'s
+  teal walk and its gold checks resolve the token on the element they are
+  judging, since b96.
+- **Three display faces**, used large and never for running text: Big
+  Shoulders Display for numerals and headings, Big Shoulders Stencil Display
+  for labels, Caveat Brush for the daily line and nothing else
+  (`docs/architecture.md`, *Fonts are self-hosted*).
+- **Capitals are lettering, not wording.** Headings and buttons are
+  upper-cased by CSS, so the words in the source and in `textContent` are as
+  they were written. A check that reads a button's words uses `text_content`;
+  `inner_text` returns what is drawn.
+- **The tabs are a weight stack**: a slab a tab, a hole in each, and a pin in
+  the one you are on (`::after` on the selected tab, which drops in; no
+  script). The slabs have a gap, which is part of the bar when it is measured.
+  Seven tabs still fit a 320px phone.
+- **The week is seven small plates**, the number in a ring; the mark under it
+  is unchanged.
+
 **Gold means you earned it (b94).** Asked for by the owner after a review
 found that wins were quiet: beating the protein goal changed almost nothing on
 screen. It is the third colour rule, beside teal for tap and green and red for

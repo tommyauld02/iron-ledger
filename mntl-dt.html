@@ -4253,7 +4253,8 @@
   .datelabel .full, .h-food, .sec-title h2, .lift-head h3, .sheet-inner h2, .pan-head h2, .way-head b, .yearnav .y {
     font-family: var(--font-big); font-weight: 900; font-stretch: normal; text-transform: uppercase; letter-spacing: .02em; line-height: 1;
   }
-  .datelabel .full { font-size: 27px; }
+  .datelabel .full { font-size: 24px; }
+  .datenav { gap: 6px; }
   .h-food { font-size: 25px; }
   .sec-title h2 { font-size: 23px; }
   .lift-head h3 { font-size: 22px; }
@@ -4262,8 +4263,8 @@
   .tc-n b, .wo-clock, .cg-num b, .yc-rate b, .year-card .yearstats b, .pg-tiles b, .cc-stats b, .rest-clock, .log-page .bw-now b {
     font-family: var(--font-big); font-weight: 900; font-stretch: normal; letter-spacing: 0;
   }
-  .tc-n b { font-size: clamp(52px, 17vw, 72px); line-height: 1; }
-  .tc-fig { gap: 5px; }
+  .tc-n b { font-size: clamp(44px, 14.5vw, 58px); line-height: .95; }
+  .tc-fig { gap: 3px; }
   .wo-clock { font-size: clamp(40px, 13vw, 56px); line-height: .9; }
   .cg-num b { font-size: 46px; line-height: .9; }
   .yc-rate b { font-size: 68px; line-height: .86; }
@@ -4284,28 +4285,28 @@
   }
   .week-day:not(.is-future) .wn { border-style: solid; border-color: var(--steel); }
   .week-day[aria-pressed="true"] .wn { background: var(--chalk); border-color: var(--chalk); color: var(--floor); }
-  .week-day { gap: 3px; }
+  .week-day { gap: 3px; height: 56px; }
 
   /* ---- the daily line, written on the floor in chalk ---- */
   .dayline .dl-text b { font-family: var(--font-chalk); font-weight: 400; font-size: 21px; line-height: 1.1; }
   .dayline.is-win .dl-text span { color: var(--gold-ink); }
 
   /* ---- the tabs: a weight stack. A slab a tab, and a pin in the one you are on ---- */
-  .tabs { background: var(--floor); border-top: 0; padding: 8px 8px max(env(safe-area-inset-bottom), 10px); gap: 4px; }
+  .tabs { background: var(--floor); border-top: 0; padding: 6px 8px max(env(safe-area-inset-bottom), 8px); gap: 4px; }
   .tabs button {
-    position: relative; justify-content: flex-end; gap: 2px; min-height: 66px; padding: 0 0 6px;
+    position: relative; justify-content: flex-end; gap: 2px; min-height: 60px; padding: 0 0 5px;
     border: 1px solid var(--floor-line); border-radius: 7px; background: linear-gradient(var(--slab-2), var(--slab)); color: var(--chalk-dim);
   }
   .tabs button::before {
-    content: ""; position: absolute; top: 6px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
+    content: ""; position: absolute; top: 5px; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%;
     background: #000; box-shadow: inset 0 1px 2px rgba(255,255,255,.18);
   }
-  .tabs .ti, .tabs button[aria-selected="true"] .ti { width: auto; height: 22px; background: none; }
-  .tabs .ti svg { width: 20px; height: 20px; }
+  .tabs .ti, .tabs button[aria-selected="true"] .ti { width: auto; height: 19px; background: none; }
+  .tabs .ti svg { width: 18px; height: 18px; }
   .tabs .tl { font-family: var(--font-sten); font-weight: 800; font-size: 11.5px; letter-spacing: .06em; }
   .tabs button[aria-selected="true"] { color: var(--chalk); border-color: var(--steel); }
   .tabs button[aria-selected="true"]::after {
-    content: ""; position: absolute; top: 2px; left: 50%; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%;
+    content: ""; position: absolute; top: 1px; left: 50%; width: 20px; height: 20px; margin-left: -10px; border-radius: 50%;
     background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.75) 0 14%, var(--accent) 15% 62%, rgba(0,0,0,.35) 63% 100%), var(--accent);
     box-shadow: 0 0 0 3px rgba(255,255,255,.12), 0 2px 6px rgba(0,0,0,.7);
   }
@@ -4314,7 +4315,8 @@
   }
   @keyframes pinIn { from { transform: translateY(-12px) scale(.6); opacity: 0; } }
   @media (max-width: 340px) {
-    .tabs { gap: 2px; padding-left: 2px; padding-right: 2px; }
+    /* seven slabs on a 320px phone each keep 44px: no gap between them there */
+    .tabs { gap: 0; padding-left: 2px; padding-right: 2px; }
     .tabs .tl { font-size: 9px; letter-spacing: .01em; }
   }
 

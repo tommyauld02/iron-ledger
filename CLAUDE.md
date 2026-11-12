@@ -75,7 +75,8 @@ vendor/usda/        grocery brands for barcodes (tools/make-brands.py),
                     generated — never hand-edit
 relay/              the food finder's relay, a Cloudflare Worker (README.md)
 vendor/zxing/       the barcode reader (zxing-wasm 3.1.4), downloaded, not written
-fonts/              self-hosted Archivo + IBM Plex Mono (see Fonts below)
+fonts/              self-hosted Archivo + IBM Plex Mono, and the three display
+                    faces of the Chalk and Iron look (see Fonts below)
 icons/              generated — run tools/make-icons.py, never hand-draw
 ios/                the iPhone app's Capacitor shell (docs/ios.md); its web
                     files are copied from mntl-dt.html by tools/make-www.mjs
@@ -141,6 +142,9 @@ Everything else:
 - **Look and touch** — the dock, long press, sheets, Settings, theme and
   accent, teal means you can tap it, contrast, `darkcheck`'s fixture →
   `docs/ui.md`
+- **Chalk and Iron** — the new look (b96), built in four steps; the black
+  floor is a scope with its own palette; every feature and setting carries
+  over → `docs/ui.md` (*Chalk and Iron*)
 - **Gold, and the daily line** — gold means you earned it; one line at the
   top of Macros, Gym or Cardio about a goal that keeps being missed or a good
   week, with *Got it* → `docs/ui.md` (*Gold means you earned it*, *The daily
