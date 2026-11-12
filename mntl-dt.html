@@ -4191,7 +4191,7 @@
      darkcheck has measured for years, over a ground that is darker still,
      so every pairing only gains contrast. It is the same in light and dark:
      a rubber floor does not change with the lights. */
-  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs {
+  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs {
     --ground: #0E1211;
     --surface: #171D1B;
     --surface-2: #1F2725;
@@ -4231,11 +4231,11 @@
     --ink: var(--chalk); --ink-2: var(--chalk-dim);
     color: var(--ink);
   }
-  :root[data-accent="blue"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #7DB0E8; --accent-soft: #1A3150; --on-accent: #0B1614; }
-  :root[data-accent="violet"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #B69CEB; --accent-soft: #33284F; --on-accent: #0B1614; }
-  :root[data-accent="orange"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #EE9B5C; --accent-soft: #3F2918; --on-accent: #0B1614; }
-  :root[data-accent="graphite"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .tabs) { --accent: #C4CDC9; --accent-soft: #2A3230; --on-accent: #0B1614; }
-  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline {
+  :root[data-accent="blue"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #7DB0E8; --accent-soft: #1A3150; --on-accent: #0B1614; }
+  :root[data-accent="violet"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #B69CEB; --accent-soft: #33284F; --on-accent: #0B1614; }
+  :root[data-accent="orange"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #EE9B5C; --accent-soft: #3F2918; --on-accent: #0B1614; }
+  :root[data-accent="graphite"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #C4CDC9; --accent-soft: #2A3230; --on-accent: #0B1614; }
+  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini {
     background-color: var(--floor);
     background-image: radial-gradient(rgba(255,255,255,.085) 1px, transparent 1.3px), radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px);
     background-size: 13px 13px, 21px 21px; background-position: 0 0, 6px 11px;
@@ -4256,6 +4256,7 @@
   .datelabel .full { font-size: 24px; }
   .datenav { gap: 6px; }
   .h-food { font-size: 25px; }
+  .t-head .h-food { font-family: var(--font-big); font-weight: 900; font-stretch: normal; text-transform: uppercase; letter-spacing: .02em; line-height: 1; font-size: 25px; }
   .sec-title h2 { font-size: 23px; }
   .lift-head h3 { font-size: 22px; }
   .sheet-inner h2 { font-family: var(--font-sten); font-size: 28px; letter-spacing: .05em; }
@@ -4346,6 +4347,49 @@
   }
   .w3 span { font-size: 16px; letter-spacing: .03em; white-space: nowrap; }
   .w3, .ctx-big, .composer, .cmp-new, #ctxMain .ctx-run { border-radius: 12px; }
+
+  /* ================================================================
+     CHALK AND IRON, step 2 (b97): the stage and the sheet.
+     The header and the tab's picture are one black stage, and the lists
+     are a sheet that slides over it. The stage scrolls away like the rest
+     of the page, and a slim bar takes its place at the top, so the barbell
+     is still in view when a food goes in from lower down. Nothing is
+     hidden by it: scrolling to the top (or a tap on the bar) brings the
+     whole stage back. docs/ui.md, *The stage and the sheet*.
+     ================================================================ */
+  :root { --sheet-bg: var(--ground); --sheet-rule: var(--rule); }   /* the page's own, for the floor to draw the sheet's lip with */
+  :root[data-stage="1"] .topbar { position: relative; }
+  :root[data-stage="1"] main { padding-top: 0; }
+  :root[data-stage="1"] main > .dayline { margin: 0 -16px; border: 0; border-radius: 0; padding: 2px 20px 8px 30px; }
+  :root[data-stage="1"] main > .dayline + .today-card { margin-top: -18px; }
+  :root[data-stage="1"] main > .today-card {
+    position: relative; margin: 0 -16px -6px; border: 0; border-radius: 0; padding: 2px 32px 42px;
+  }
+  /* the sheet's lip: the top edge of the lists, drawn over the foot of the stage */
+  :root[data-stage="1"] main > .today-card::after {
+    content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 27px; border-radius: 26px 26px 0 0;
+    background: linear-gradient(var(--sheet-rule), var(--sheet-rule)) center 10px / 40px 4px no-repeat, var(--sheet-bg);
+  }
+  /* the stage, small */
+  .stage-mini-wrap { position: sticky; top: 0; z-index: 19; height: 0; }
+  .stage-mini {
+    position: absolute; left: 0; right: 0; top: 0; box-sizing: border-box; width: 100%; min-height: 54px; margin: 0;
+    padding: calc(env(safe-area-inset-top) + 6px) 12px 8px 16px;
+    display: grid; grid-template-columns: 96px minmax(0, 1fr) 30px; gap: 12px; align-items: center;
+    border: 0; border-bottom: 1px solid var(--floor-line); border-radius: 0 0 16px 16px; text-align: left; font: inherit; cursor: pointer;
+    transform: translateY(-105%); visibility: hidden;
+    transition: transform .28s cubic-bezier(.2, .9, .3, 1), visibility 0s .28s;
+  }
+  .stage-mini-wrap.show .stage-mini { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2, .9, .3, 1), visibility 0s; }
+  html.kb-open .stage-mini { visibility: hidden; }
+  .sm-bar .barbell { width: 100%; margin: 0; }
+  .sm-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+  .sm-text b { font-family: var(--font-sten); font-weight: 800; font-size: 17px; letter-spacing: .08em; text-transform: uppercase; line-height: 1; }
+  .sm-text span { font-family: var(--font-num); font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sm-text .is-won { color: var(--gold-ink); }
+  .sm-up { width: 30px; height: 30px; display: grid; place-items: center; color: var(--accent); }
+  .sm-up svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  @media (prefers-reduced-motion: reduce) { .stage-mini, .stage-mini-wrap.show .stage-mini { transition: none; } }
 </style>
 
 <div class="app">
@@ -4371,6 +4415,10 @@
       <div class="week" id="weekStrip" role="group" aria-label="This week"></div>
     </div>
   </header>
+
+  <!-- The stage, small (b97): once the black floor has scrolled away, a slim
+       bar keeps the picture and the numbers at the top. A tap goes back up. -->
+  <div class="stage-mini-wrap" id="stageMiniWrap" hidden><button class="stage-mini" id="stageMini" type="button"></button></div>
 
   <main id="view"></main>
 
@@ -8249,6 +8297,47 @@
       '</section>');
   }
 
+  // ---------- the stage, small (b97) ----------
+  // The header and the tab's picture scroll away as one black stage, and this
+  // slim bar takes their place at the top, so the barbell is still in view
+  // when a food goes in from lower down. It is a zero-height sticky element
+  // with the bar hung under it: showing it moves nothing, which matters in an
+  // app whose hardest bugs were a page that changed height under the thumb.
+  var stageRaf = 0;
+  function stageHero() { return tab === "macros" ? document.querySelector("#view > .today-card") : null; }
+  function drawStage(key, d) {
+    var wrap = document.getElementById("stageMiniWrap"), btn = document.getElementById("stageMini");
+    var hero = stageHero(), root = document.documentElement;
+    if (!wrap || !btn) return;
+    if (!hero) { root.removeAttribute("data-stage"); wrap.hidden = true; wrap.classList.remove("show"); return; }
+    root.setAttribute("data-stage", "1");
+    wrap.hidden = false;
+    var g = goalFor(key), t = totals(d), pend = pendingCount(d), bs = barState(t.cal, g.cal);
+    var won = barWon(t.cal, g.cal, t.pro, g.pro, pend);
+    var calSay = g.cal.dir === "+" ? (t.cal >= g.cal.v ? fmt(t.cal) + " kcal" : fmt(g.cal.v - t.cal) + " to go")
+      : bs.over > 0 ? fmt(bs.over) + " over" : fmt(-bs.over) + " left";
+    btn.setAttribute("aria-label", "Back to the top. " + calSay + ", " + fmt(t.pro) + " grams of protein");
+    btn.innerHTML = '<span class="sm-bar" aria-hidden="true">' + barbellHtml("mini", t.cal, g.cal, t.pro, g.pro, { hold: pend, day: key }) + '</span>' +
+      '<span class="sm-text" aria-hidden="true"><b>Macros</b><span>' + calSay + ' \u00b7 <span class="' + (won ? 'is-won' : '') + '">' + fmt(t.pro) + ' g' + (won ? ' \u2605' : '') + '</span></span></span>' +
+      '<span class="sm-up" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></span>';
+    syncStage();
+  }
+  // Shown once the stage's foot is nearly off the top of the screen.
+  function syncStage() {
+    var wrap = document.getElementById("stageMiniWrap"), hero = stageHero();
+    if (!wrap) return;
+    wrap.classList.toggle("show", !!hero && !wrap.hidden && hero.getBoundingClientRect().bottom < 64);
+  }
+  window.addEventListener("scroll", function () {
+    if (stageRaf) return;
+    stageRaf = requestAnimationFrame(function () { stageRaf = 0; syncStage(); });
+  }, { passive: true });
+  document.getElementById("stageMini").addEventListener("click", function () {
+    var still = false;
+    try { still = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) {}
+    window.scrollTo({ top: 0, behavior: still ? "auto" : "smooth" });
+  });
+
   function drawWeek(key) {
     var nav = document.getElementById("datenav");
     if (nav) nav.hidden = (tab === "log" || tab === "coach" || tab === "progress");
@@ -8307,6 +8396,7 @@
     else if (tab === "coach") renderCoach();
       else if (tab === "progress") renderProgress();
       else renderLog();
+      drawStage(key, d);
       animateBarbells();
       drawDayLine(key, d);
     } catch (e) {
