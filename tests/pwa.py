@@ -9,6 +9,7 @@ one until you are offline, so every check here runs with offline=True.
 """
 import fakeai
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, threading, functools
@@ -18,8 +19,7 @@ import os, io, re, threading, functools
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
     # the words box sits folded behind Ask an agent until asked for
-    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "estimate")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 res = []
@@ -99,7 +99,7 @@ with sync_playwright() as pw:
     }""")
     p.reload(); p.wait_for_timeout(800)
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
-    p.click('[data-scanway]'); p.wait_for_timeout(400)      # Scan, in the bottom bar
+    logways.scan(p, 400)      # Scan, in the bottom bar
     if p.locator("#scanBrands").count():
         p.click("#scanBrands")
         try: p.wait_for_selector("#scanType", timeout=40000)
@@ -161,7 +161,7 @@ with sync_playwright() as pw:
     # here used to outlast only by luck (darkcheck lost its card to it on
     # 2026-10-17). So type once the answer is on the sheet: a message drawn,
     # and no camera view still waiting for its stream.
-    p.click('[data-scanway]')
+    logways.scan(p)
     if p.locator("#scanType").count():
         try: p.wait_for_function("""()=>{const m=document.getElementById('scanMsg'), v=document.getElementById('scanVideo');
             return !!(m && m.textContent.trim()) && (!v || !!v.srcObject);}""", timeout=10000)

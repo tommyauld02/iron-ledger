@@ -36,6 +36,7 @@ It checks that:
 What it cannot show: that the person is 18. The check is self-declared — a
 child can type another year. It records an answer; it is not proof of age.
 """
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools, sys
@@ -236,7 +237,7 @@ def ask_agent(p, words="6 oz sirloin"):
     if shown(p, "#discardEst"):                          # a review open from the last one
         p.click("#discardEst"); p.wait_for_timeout(250)
     if not shown(p, "#estText"):
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+        logways.press(p, "estimate")
     p.fill("#estText", words)
     p.click("#runEst"); p.wait_for_timeout(500)
 

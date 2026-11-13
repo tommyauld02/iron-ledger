@@ -17,6 +17,7 @@ Four things nothing else covers:
    other suite exercises together.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools
@@ -46,8 +47,7 @@ def rm_pan(pg, i=0):
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
     # the words box sits folded behind Ask an agent until asked for
-    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "estimate")
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 d = ROOT.replace("\\", "/"); d = "/" + d if d[1:2] == ":" else d
@@ -204,8 +204,7 @@ with sync_playwright() as pw:
         if ":" in t:
             box = t.split(":")[1]
             # already open, a press would fold it
-            if p.locator('[data-logway="%s"][aria-expanded="false"]' % box).count():
-                p.click('[data-logway="%s"]' % box); p.wait_for_timeout(350)
+            logways.open_way(p, box, 350)
             check("%s opens, so it is measured" % t, p.locator(first[t.split(":", 1)[1]]).count() == 1)
         for el in p.evaluate(MEASURE):
             seen += 1
@@ -259,7 +258,7 @@ with sync_playwright() as pw:
 
     # writes must persist with everything cut
     n_before = p.evaluate("() => (JSON.parse(localStorage.getItem('iron-ledger-v1')).days['%s'].food || []).length" % Ts)
-    p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
+    logways.press(p, "numbers")
     p.fill("#fCal", "300"); p.fill("#fPro", "25"); p.fill("#fNote", "offline entry")
     p.click("#addFood"); p.wait_for_timeout(700)
     n_after = p.evaluate("() => (JSON.parse(localStorage.getItem('iron-ledger-v1')).days['%s'].food || []).length" % Ts)
@@ -604,8 +603,7 @@ with sync_playwright() as pw:
     except Exception:
         pass
 
-    if p.locator('[data-logway="numbers"][aria-expanded="false"]').count():
-        p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "numbers")
     p.fill("#fCal", "999"); p.fill("#fPro", "99"); p.fill("#fNote", "CANARY")
     p.click("#addFood"); p.wait_for_timeout(700)
     check("a failed write says so", not p.evaluate("() => document.getElementById('savebar').hidden"))
@@ -625,8 +623,7 @@ with sync_playwright() as pw:
 
     # and it has to get out of the way once writing works again
     p.evaluate("() => { for (let i = 0; i < 400; i++) localStorage.removeItem('f' + i); }")
-    if p.locator('[data-logway="numbers"][aria-expanded="false"]').count():
-        p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "numbers")
     p.fill("#fCal", "100"); p.fill("#fPro", "10"); p.fill("#fNote", "after space freed")
     p.click("#addFood"); p.wait_for_timeout(700)
     check("the warning clears once writes work",
@@ -691,8 +688,8 @@ with sync_playwright() as pw:
 
     EDITORS = [
         ("meal name",      ['.tabs button[data-tab="macros"]', "[data-openmeal]", "[data-renamemeal]"], "#mealName"),
-        ("log numbers",    ['.tabs button[data-tab="macros"]', '[data-logway="numbers"]'], "#fCal"),
-        ("ask an agent",   ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], "#estText"),
+        ("log numbers",    ['.tabs button[data-tab="macros"]', '#plate', '[data-logway="numbers"]'], "#fCal"),
+        ("ask an agent",   ['.tabs button[data-tab="macros"]', '#plate', '[data-logway="estimate"]'], "#estText"),
         ("rename a day",   ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-renameday]"], "#rtRename"),
         ("add a movement", ['.tabs button[data-tab="coach"]', "[data-openday]", "[data-newmove]"], "#rtNewMove"),
         ("add a day",      ['.tabs button[data-tab="coach"]', "#addDay"], "#rtNewDay"),
@@ -726,9 +723,9 @@ with sync_playwright() as pw:
         # open in it: the same two fields, as pop-ups.
         ("log numbers, as a pop-up",
                            ["#setBtn", '[data-pick-logopen="popup"]', "#setDone",
-                            '.tabs button[data-tab="macros"]', '[data-logway="numbers"]'], "#fCal"),
+                            '.tabs button[data-tab="macros"]', '#plate', '[data-logway="numbers"]'], "#fCal"),
         ("ask an agent, as a pop-up",
-                           ['.tabs button[data-tab="macros"]', '[data-logway="estimate"]'], "#estText"),
+                           ['.tabs button[data-tab="macros"]', '#plate', '[data-logway="estimate"]'], "#estText"),
         ("the movement, from the set sheet",
                            ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-addset]", "#seMoveBtn"], "#seMove"),
     ]

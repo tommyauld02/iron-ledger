@@ -3774,11 +3774,7 @@
   #cardioAdd, #cardioPick { border: 0; padding: 0; background: none; }
   #cNew, #cPickNew { height: 48px; }
 
-  /* the bottom bar on Cardio */
-  .ctx-big {
-    width: 100%; height: 56px; border-radius: 28px; background: var(--accent); color: var(--on-accent);
-    font-size: 17px; font-weight: 800; font-stretch: 112%;
-  }
+  /* the bottom bar on Cardio: a running session (Start is the plate, b98) */
   #ctxMain .ctx-run {
     display: flex; align-items: center; gap: 8px; min-height: 56px; margin: 0; padding: 5px 5px 5px 16px;
     border-radius: 28px; border: 0; background: var(--accent); color: var(--on-accent);
@@ -4342,11 +4338,11 @@
   .cc-head h3 { font-size: 24px; text-transform: uppercase; }
   .month h4 { font-size: 26px; }
   /* the bar above the tabs: the same buttons, in placard lettering */
-  .w3 span, .ctx-big, .cmp-new, #ctxMain .ctx-run .cr-stop, #ctxMain .ctx-run .cr-discard {
+  .w3 span, .cmp-new, #ctxMain .ctx-run .cr-stop, #ctxMain .ctx-run .cr-discard {
     font-family: var(--font-big); font-weight: 800; font-stretch: normal; font-size: 18px; letter-spacing: .05em; text-transform: uppercase;
   }
   .w3 span { font-size: 16px; letter-spacing: .03em; white-space: nowrap; }
-  .w3, .ctx-big, .composer, .cmp-new, #ctxMain .ctx-run { border-radius: 12px; }
+  .w3, .composer, .cmp-new, #ctxMain .ctx-run { border-radius: 12px; }
 
   /* ================================================================
      CHALK AND IRON, step 2 (b97): the stage and the sheet.
@@ -4404,6 +4400,62 @@
   .sm-up { width: 30px; height: 30px; display: grid; place-items: center; color: var(--accent); }
   .sm-up svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
   @media (prefers-reduced-motion: reduce) { .stage-mini, .stage-mini-wrap.show .stage-mini { transition: none; } }
+
+  /* ================================================================
+     CHALK AND IRON, step 3 (b98): the plate.
+     One action a tab, above the tab bar on the right, in place of the bar of
+     three. It hangs from the dock, so it rides on whatever the dock is
+     showing (the undo bar, the rest clock, a running cardio session) and
+     goes with it while the keyboard is up. The page keeps room at its foot
+     so the last row can always be scrolled clear of it.
+     ================================================================ */
+  .plates {
+    position: absolute; right: 12px; bottom: calc(100% + 10px); z-index: 1;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 10px; pointer-events: none;
+  }
+  .plates:empty { display: none; }
+  .plate {
+    pointer-events: auto; margin: 0; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;
+    filter: drop-shadow(0 5px 9px rgba(0, 0, 0, .3));
+  }
+  .plate { display: flex; align-items: center; min-height: 60px; padding: 0; border: 0; background: none; color: var(--on-accent); }
+  .plate .pl-tag {
+    display: flex; align-items: center; height: 46px; padding: 0 34px 0 16px; margin-right: -24px;
+    border-radius: 10px 0 0 10px; background: var(--accent); color: var(--on-accent); white-space: nowrap;
+    font-family: var(--font-big); font-weight: 800; font-size: 19px; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .plate .pl-disc {
+    flex: none; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center;
+    background:
+      radial-gradient(circle, transparent 0 52%, rgba(255, 255, 255, .5) 53% 56%, transparent 57% 82%, rgba(0, 0, 0, .2) 83% 100%),
+      var(--accent);
+    box-shadow: 0 0 0 3px var(--ground);
+  }
+  .plate .pl-disc svg { width: 28px; height: 28px; fill: none; stroke: var(--on-accent); stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
+  .plate[aria-expanded="true"] .pl-disc svg { transform: rotate(45deg); }
+  .plate:active .pl-disc { transform: scale(.95); }
+  /* room at the foot of the page for the plate to stand in */
+  :root[data-plate] main::after { content: ""; flex: none; height: 40px; }
+  @media (max-width: 340px) { .plate .pl-tag { font-size: 17px; padding-left: 13px; } }
+
+  /* the plate's sheet on Macros: three ways to log, a line under each name */
+  .ways-list { display: flex; flex-direction: column; gap: 10px; }
+  .way3 {
+    display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: center; text-align: left;
+    min-height: 68px; padding: 10px 16px; border: 1.5px solid var(--rule); border-radius: 12px;
+    background: var(--surface); color: var(--ink);
+  }
+  .way3 svg { width: 26px; height: 26px; justify-self: center; fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .way3 .w3-t { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .way3 .w3-t b { font-family: var(--font-big); font-weight: 800; font-size: 21px; letter-spacing: .04em; text-transform: uppercase; line-height: 1.05; }
+  .way3 .w3-t span { font-family: var(--font-ui); font-size: 14px; font-weight: 500; color: var(--ink-2); }
+  .way3[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .way3-main, .way3-main[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .way3-main svg { stroke: var(--on-accent); }
+  .way3-main .w3-t span { color: var(--on-accent); }
+  .way3-main[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  @media (prefers-reduced-motion: reduce) { .plate:active .pl-disc { transform: none; } }
 </style>
 
 <div class="app">
@@ -4437,6 +4489,9 @@
   <main id="view"></main>
 
   <div class="dock">
+  <!-- The plate (b98): the tab's one action, hung above the dock so it rides
+       on whatever the dock is showing. Filled by the tab's own render. -->
+  <div class="plates" id="plates"></div>
   <div class="savebar" id="savebar" hidden>
     <span id="saveLabel"></span>
     <button id="saveBackupBtn">Back up</button>
@@ -4447,9 +4502,10 @@
     <button id="undoBtn">Undo</button>
   </div>
 
-  <!-- The bar above the tabs changes with the tab: each tab's most-used
-       action under the thumb. The rest timer is the Gym's, and records
-       nothing; #ctxMain is filled by the tab's own render. -->
+  <!-- The bar above the tabs: Gym's three buttons, Pantry's search, and a
+       cardio session while it runs. From b98 the other tabs' one action is
+       the plate above. The rest timer is the Gym's, and records nothing;
+       #ctxMain is filled by the tab's own render. -->
   <div class="ctxbar" id="ctxbar">
     <div class="rest-alert" id="restAlert" role="group" aria-label="Buzz when rest is up" hidden></div>
     <div class="restbar" id="restbar" hidden>
@@ -4570,6 +4626,31 @@
     <h2>What’s new</h2>
     <div class="news" id="newsBody"></div>
     <button class="btn" id="newsDone">Got it</button>
+  </div>
+</div>
+
+<!-- The plate's sheet on Macros (b98): the three ways to add food, each named
+     beside its picture, asked for by the owner (b71): a pencil and a # with
+     no words said nothing about which was which. The pencil writes down
+     numbers you have, the # asks the agent for ones you don't, and Scan reads
+     a barcode. Here there is room for a line under each name saying what it
+     is for. Ask an agent is the one most used, so it is first and filled.
+     Pressing the one that is open folds it, as it did in the bar. -->
+<div class="sheet ways-sheet" id="waysSheet" role="dialog" aria-label="Log food" hidden>
+  <div class="sheet-inner">
+    <h2>Log food</h2>
+    <div class="ways-list" role="group" aria-label="Add food">
+      <button class="way3 way3-main" data-logway="estimate" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg>
+        <span class="w3-t"><b>Ask an agent</b><span>Say what you ate, in your own words</span></span></button>
+      <button class="way3" data-logway="numbers" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>
+        <span class="w3-t"><b>Log numbers</b><span>Calories and protein you already know</span></span></button>
+      <button class="way3" data-scanway="1" aria-label="Scan a barcode">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg>
+        <span class="w3-t"><b>Scan</b><span>The barcode on a packet</span></span></button>
+    </div>
+    <button class="btn ghost" id="waysClose">Close</button>
   </div>
 </div>
 
@@ -4758,7 +4839,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-12.97";
+  var BUILD = "2026-11-13.98";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5156,6 +5237,7 @@
   // row's "Tap to estimate" among them); folding it away while one is showing
   // puts that one aside in estShut, and the next one opens it again.
   var logWay = null;
+  var waysOpen = false;    // the plate's sheet on Macros: the three ways to log
   var estShut = null;
   var brandsStatus = "";    // the grocery brands download: "" | "loading" | "error"
   // The barcode sheet. scanFor is where a find goes: the estimate on Macros,
@@ -5751,6 +5833,11 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-13.98", t: "The plate", items: [
+      "On Macros, Cardio and Progress the bar above the tabs is now one button, a plate, at the bottom right. It says what it does: Log food, Start cardio, New check-in.",
+      "On Macros, the plate opens the same three ways to log, each with a line saying what it is for: Ask an agent, Log numbers, Scan.",
+      "Your lists get the room the old bar took.",
+      "Gym keeps its three buttons and Pantry its search bar: there the bar is the better tool, so nothing has moved." ] },
     { b: "2026-11-12.97", t: "The stage and the sheet", items: [
       "The top of each tab is now one black stage, and your lists are a sheet that slides over it.",
       "Scroll down and a slim bar takes the stage\u2019s place at the top: a small barbell with your calories and protein on Macros and Pantry, the workout clock on Gym, your goal on Cardio. Log a food from lower down and you can watch its plates load.",
@@ -8363,6 +8450,44 @@
       '<span class="sm-up" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></span>';
     syncStage();
   }
+  // Where the page's own content starts on screen: under the header while it
+  // is in view, under the slim bar once it has scrolled away. Anything the app
+  // brings up to the top is brought to here, not to the header's foot, which
+  // is off the screen (and a negative number) once the page has scrolled.
+  function topEdge() {
+    var bar = document.querySelector(".topbar");
+    return Math.max(bar ? bar.getBoundingClientRect().bottom : 0,
+      document.documentElement.hasAttribute("data-stage") ? 54 : 0);
+  }
+  // The plate (b98): one action a tab, above the tab bar on the right, where
+  // the bar stood on Macros, Cardio and Progress. A tab's render hands its
+  // plate. The page keeps room at its foot so its last row can always be
+  // scrolled clear of it; data-plate says one is standing. Gym and Pantry
+  // keep their bars on purpose (docs/ui.md, *The plate*).
+  var PLATE_PLUS = '<span class="pl-disc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>';
+  var PLATE_GO = '<span class="pl-disc" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.5v11l9-5.5z"/></svg></span>';
+  function plateHtml(attrs, label, disc) {
+    return '<button class="plate" ' + attrs + '><span class="pl-tag">' + label + '</span>' + (disc || PLATE_PLUS) + '</button>';
+  }
+  function setPlates(html) {
+    var box = document.getElementById("plates");
+    if (!box) return;
+    box.innerHTML = html || "";
+    var n = box.children.length;
+    if (n) document.documentElement.setAttribute("data-plate", String(n));
+    else document.documentElement.removeAttribute("data-plate");
+  }
+  // The plate's sheet on Macros. Shown and put away without a redraw.
+  function showWays(on) {
+    var sh = document.getElementById("waysSheet"), pl = document.getElementById("plate");
+    waysOpen = !!on && tab === "macros";
+    if (sh) sh.hidden = !waysOpen;
+    if (pl) pl.setAttribute("aria-expanded", String(waysOpen));
+    if (waysOpen) {
+      var first = sh.querySelector(".way3");
+      if (first) { try { first.focus({ preventScroll: true }); } catch (e) { first.focus(); } }
+    }
+  }
   // Shown once the stage has all but left the top of the screen: the foot of
   // the picture where a tab has one, the foot of the header where it has not.
   function syncStage() {
@@ -8426,6 +8551,7 @@
     drawRest();              // in the dock, outside #view, so not redrawn below
     var ctxMain = document.getElementById("ctxMain");
     if (ctxMain) ctxMain.innerHTML = "";
+    setPlates("");
     // The bar belongs to the screen its changes were made on. Looking at
     // another tab or day hides it — nothing being undone could be seen from
     // there — and coming back brings it back. Looking is not a change.
@@ -10086,24 +10212,12 @@
       (estSheet ? waySheet("estimate", "Ask an agent", estimatorHtml(key, d), "Close") : '') +
       (scanOpen ? scanSheetHtml() : '');
 
-    // Three ways to add food, each named under its picture, asked for by the
-    // owner (b71): a pencil and a # with no words said nothing about which
-    // was which, and the pencil opened the box for numbers you don't know.
-    // The pencil writes down numbers you have, the # asks the agent for ones
-    // you don't, and Scan reads a barcode. Ask an agent is the one most used,
-    // so it is the filled one in the middle.
-    document.getElementById("ctxMain").innerHTML =
-      '<div class="ways3" role="group" aria-label="Add food">' +
-        '<button class="w3" data-logway="numbers" aria-expanded="' + numOpen + '">' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/></svg>' +
-          '<span>Log numbers</span></button>' +
-        '<button class="w3 w3-main" data-logway="estimate" aria-expanded="' + estOpen + '">' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16"/></svg>' +
-          '<span>Ask an agent</span></button>' +
-        '<button class="w3" data-scanway="1" aria-label="Scan a barcode">' +
-          '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 8v8M10.5 8v8M14 8v8M17 8v8"/></svg>' +
-          '<span>Scan</span></button>' +
-      '</div>';
+    // The plate: the one action on Macros. It brings up #waysSheet, the three
+    // ways to log. The sheet stands outside #view and is shown without a
+    // redraw: a redraw would take a half-typed number out of Log numbers,
+    // and looking at the sheet is not a change.
+    setPlates(plateHtml('id="plate" aria-haspopup="dialog" aria-expanded="' + waysOpen + '"', 'Log food'));
+    document.getElementById("plate").addEventListener("click", function () { showWays(true); });
 
     // Deleting is delegated too — see the handler near setTab.
 
@@ -10199,35 +10313,37 @@
 
     // One open at a time. Opening puts the cursor in the first field, ready,
     // the way the set sheet does; pressing the open one again folds it.
-    document.querySelectorAll("#view [data-logway], #ctxMain [data-logway]").forEach(function (b) {
-      b.addEventListener("click", function () {
+    // The sheet's buttons outlive a redraw, so each is handed its state and
+    // its press here (onclick, which replaces the last draw's, never stacks).
+    document.querySelectorAll("#waysSheet [data-logway]").forEach(function (b) {
+      b.setAttribute("aria-expanded", String(b.dataset.logway === "numbers" ? numOpen : estOpen));
+      b.onclick = function () {
         var w = b.dataset.logway, wasOpen = b.getAttribute("aria-expanded") === "true";
+        showWays(false);
         if (est) estShut = est;
         logWay = wasOpen ? null : w;
         if (logWay === "estimate") estShut = null;
         render();
         if (wasOpen) return;
-        // Up to just under the top bar, which is sticky: scrolled to the very
-        // top, the button would sit behind it. A pop-up needs no scrolling.
+        // Up to just under the header, or the slim bar that takes its place
+        // once the page has scrolled. A pop-up needs no scrolling.
         var top = document.getElementById("logWays");
-        var bar = document.querySelector(".topbar");
-        if (top && !popsUp(w)) window.scrollBy(0, top.getBoundingClientRect().top -
-          (bar ? bar.getBoundingClientRect().bottom : 0) - 8);
+        if (top && !popsUp(w)) window.scrollBy(0, top.getBoundingClientRect().top - topEdge() - 8);
         var f = w === "numbers" ? document.getElementById("fCal")
           : est ? null : document.getElementById("estText");
         if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
-      });
+      };
     });
 
-    // Scan in the bottom bar opens the barcode reader itself. It used to open
-    // a Scan tab whose one button opened the reader: two presses for one job.
+    // Scan opens the barcode reader itself. It used to open a Scan tab whose
+    // one button opened the reader: two presses for one job.
     // What it finds lands in Ask an agent's review, as it always has.
-    var scanWay = document.querySelector("#ctxMain [data-scanway]");
-    if (scanWay) scanWay.addEventListener("click", function () {
+    document.querySelector("#waysSheet [data-scanway]").onclick = function () {
+      showWays(false);
       scanOpen = true; scanFor = "estimate";
       render();
       if (store.brandsOn || BR) startScanCamera();
-    });
+    };
 
     // Closing a pop-up is folding its box: an estimate showing in it is put
     // aside, not lost. Its Cancel / Close, or a tap on the dimmed page.
@@ -11022,7 +11138,7 @@
         '<div class="sec-title"><h2>' + (key === TODAY ? 'Today’s cardio' : 'Cardio · ' + shortDate(key)) + '</h2>' +
           (dayMin ? '<span>' + fmt(dayMin) + ' min ' + (key === TODAY ? 'today' : 'that day') + '</span>' : '') + '</div>' +
         (cards ? '<section class="cardio-list">' + cards + '</section>'
-               : '<p class="empty">No cardio logged for this day.<br>Start a session above the tabs, or log one by hand.</p>') +
+               : '<p class="empty">No cardio logged for this day.<br>Start a session with the plate, or log one by hand.</p>') +
         (done ? '' : '<button class="btn ghost cardio-hand" id="cardioByHand">Log a session by hand</button>') +
         (!done && (list.length || running)
           ? '<button class="btn cardio-finish" id="cardioFinish">Finish cardio</button>' : '') +
@@ -11038,7 +11154,11 @@
             '<button class="cr-discard" id="cardioDiscard">Discard</button>' +
             (stale ? '' : '<button class="cr-stop" id="cardioStop">Stop &amp; log it</button>') +
           '</div>'
-        : '<button class="ctx-big" id="cardioStart">Start cardio session</button>';
+        : '';
+    // Start is the plate (b98). A running session keeps its bar in the dock:
+    // Stop and Discard are a state to act on, not a way in, and stay under
+    // the thumb for as long as the clock runs.
+    if (!done && !running) setPlates(plateHtml('id="cardioStart" aria-label="Start cardio session"', 'Start cardio', PLATE_GO));
 
     // ---- wiring ----
     function redo() { touch(key); save(); render(); }
@@ -12075,10 +12195,10 @@
     function showGymWay() {
       var box = document.getElementById("gymWays");
       if (!box) return;
-      var dock = document.querySelector(".dock"), bar = document.querySelector(".topbar");
+      var dock = document.querySelector(".dock");
       var r = box.getBoundingClientRect();
       var floor = (dock ? dock.getBoundingClientRect().top : window.innerHeight) - 8;
-      var ceil = (bar ? bar.getBoundingClientRect().bottom : 0) + 8;
+      var ceil = topEdge() + 8;
       var by = r.bottom > floor ? Math.min(r.bottom - floor, r.top - ceil) : r.top < ceil ? r.top - ceil : 0;
       if (by) window.scrollBy(0, by);
     }
@@ -14539,11 +14659,8 @@
         '</div>' + top + months +
       '</section>' + progSheet();
 
-    var ctx = document.getElementById("ctxMain");
-    if (ctx) {
-      ctx.innerHTML = '<button class="ctx-big" id="pgNew">New check-in</button>';
-      document.getElementById("pgNew").addEventListener("click", newCheckin);
-    }
+    setPlates(plateHtml('id="pgNew"', 'New check-in'));
+    document.getElementById("pgNew").addEventListener("click", newCheckin);
     document.getElementById("pgPrevYear").addEventListener("click", function () { progYear--; render(); });
     document.getElementById("pgNextYear").addEventListener("click", function () { progYear++; render(); });
     var fl = document.getElementById("pgFirstLast");
@@ -14723,6 +14840,7 @@
   function setTab(t) {
     tab = t;
     editingGoal = false;
+    showWays(false);
     if (scanOpen) closeScan();
     if (t === "log") {
       if (logOpened !== ymd(cursor)) { logYear = cursor.getFullYear(); logMonth = cursor.getMonth(); logOpened = null; }
@@ -16072,9 +16190,11 @@
       return;
     }
     setTab("macros");
-    if (act === "log-food") press('#ctxMain [data-logway="numbers"][aria-expanded="false"]');
-    else if (act === "ask-agent") press('#ctxMain [data-logway="estimate"][aria-expanded="false"]');
-    else if (act === "scan") press("#ctxMain [data-scanway]");
+    // The ways are the buttons on the plate's sheet (b98), which stand in the
+    // page whether or not the sheet is showing, so they are pressed directly.
+    if (act === "log-food") press('#waysSheet [data-logway="numbers"][aria-expanded="false"]');
+    else if (act === "ask-agent") press('#waysSheet [data-logway="estimate"][aria-expanded="false"]');
+    else if (act === "scan") press("#waysSheet [data-scanway]");
   }
   if (NATIVE) {
     window.addEventListener("mntlquickaction", quickCheck);
@@ -16133,6 +16253,9 @@
   }
 
   var setSheet = document.getElementById("setSheet");
+  var waysSheetEl = document.getElementById("waysSheet");
+  document.getElementById("waysClose").addEventListener("click", function () { showWays(false); });
+  waysSheetEl.addEventListener("click", function (e) { if (e.target === waysSheetEl) showWays(false); });
 
   // Coach is off unless it has been switched on. It is put away, not taken
   // out: its days are the same splits the Gym tab edits, so nothing in it is

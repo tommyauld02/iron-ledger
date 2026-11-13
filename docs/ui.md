@@ -14,11 +14,12 @@ design. What holds it together:
   calendar row, so like the Log's cells it is exempt from the 44px width at
   320px (it keeps the height).
 - **A bar above the tabs that changes with the tab** (`#ctxbar` / `#ctxMain`,
-  inside the `.dock`). Macros: *Log numbers*, *Ask an agent* and *Scan*, a
-  name under each picture (`docs/food.md`).
-  Pantry: find, scan, *New*. Cardio: *Start cardio session*, then the running
-  clock with *Discard* and *Stop & log it*. Gym: the rest timer, as before.
-  `render()` clears it, so a tab that does not fill it shows none.
+  inside the `.dock`). Pantry: find, scan, *New*. Gym: *Choose gym*, *Add
+  movement* and *Rest timer* (`docs/gym.md`). Cardio: the running clock with
+  *Discard* and *Stop & log it*, while a session runs.
+  `render()` clears it, so a tab that does not fill it shows none. Until b98
+  Macros, Cardio and Progress had their one action here too; that is the
+  plate now (*The plate*, below).
 - **Pictures for goals.** Macros is a barbell: the bar is calories (it bends,
   then shakes, past the target), the plates are protein, kettlebells are carbs
   and fat when that setting is on. Cardio is a running track where one lap is
@@ -188,7 +189,8 @@ It is built in four steps so that only one thing is in question at a time:
 1. **The look, with nothing moved (b96).** This step.
 2. The stage and the sheet: lists slide over the picture, which shrinks to a
    bar and stays.
-3. The plate: one action button in place of the three-button bar.
+3. The plate (b98): one action button in place of the bar, where one button
+   serves (Macros, Cardio, Progress).
 4. Pantry moves inside Food.
 
 **Step 1 is one block of CSS** at the end of the main `<style>`, headed
@@ -262,8 +264,61 @@ Now the slim bar's barbell loads and turns gold where it can be seen.
   `--ground` is the floor. The hero and the daily line go full-bleed with
   negative margins against `main`'s padding.
 - **A new tab picture** needs its selector in `STAGE_HERO` and in the three
-  `data-stage="hero"` rules. Steps 3 (the plate) and 4 (Pantry inside Food)
-  are not built.
+  `data-stage="hero"` rules.
+- **Where the page's content starts is `topEdge()`** (b98): the header's foot
+  while it is in view, the slim bar's once it has scrolled away. Anything
+  the app brings up to the top (an opened way to log, the Gym's box) is
+  brought to there. The header's own foot is off the screen, and a negative
+  number, once the page has scrolled.
+
+**The plate (b98): step 3 of Chalk and Iron.** On Macros, Cardio and Progress
+the bar above the tabs is one button, a plate, hung above the dock on the
+right: a tag that says what it does and a disc. The owner liked the idea in
+the concept for one reason, which is the one it is held to: a simpler screen
+with the same actions. The lists get the room the bar took.
+
+- **It says what it does.** *Log food*, *Start cardio*, *New check-in*. A
+  picture with no word was the owner's complaint about the first bar (b71),
+  so the plate is never a bare disc.
+- **Macros' plate opens a sheet** (`#waysSheet`): *Ask an agent*, *Log
+  numbers* and *Scan*, each with a line under its name saying what it is
+  for. It costs one more tap than the bar did, and buys the room for those
+  lines. What each way opens, and *Adding food opens* (in place or as a
+  pop-up), are unchanged (`docs/food.md`).
+- **The sheet is shown without a redraw** (`showWays()`). It stands outside
+  `#view`, like Settings. A redraw would take a half-typed number out of
+  *Log numbers*, and looking at the sheet is not a change. Its buttons keep
+  their state (`aria-expanded`) while hidden, set by Macros' render, and
+  their presses are handed over with `onclick`, which replaces the last
+  draw's and never stacks. The iPhone app's quick actions press them
+  directly.
+- **It hangs from the dock** (`#plates`, the dock's first child, `bottom:
+  100%`), so it rides on whatever the dock is showing (the undo bar, the save
+  warning) and goes with the dock while the keyboard is up. A tab's render
+  hands its plate to `setPlates()`; `render()` clears it first, like the bar.
+- **The page keeps room at its foot** (`data-plate` on `<html>`, a
+  `main::after` spacer), so the last row can always be scrolled clear of the
+  plate. A plate floats over the page, which a bar never did: a row passing
+  under it is behind it, the same as under the dock. `sweep` checks the last
+  line of a long ledger and the foot of the open *Log numbers* box clear it;
+  `hittest` treats the plate as chrome over content, and judges the plate
+  itself wherever it stands.
+- **Cardio's running session keeps its bar.** *Stop & log it* and *Discard*
+  are a state to act on, not a way in, and stay under the thumb for as long
+  as the clock runs. The plate goes while it does.
+- **Gym and Pantry keep their bars, on purpose.** Built with a plate first,
+  Gym's sat on the *Set* button and the weight and reps fields of the
+  movement being worked, which is the most-used row in the app, and the rest
+  timer needed a second button stacked on it. The Gym's rule is that every
+  action stays on screen, and the bar of three keeps it without covering
+  anything. Pantry's rows carry their `+` at the right edge, exactly where
+  a plate stands, and its search field is engineered into the dock (*A field
+  in the dock lifts the dock*). Pantry is re-homed in step 4, when it moves
+  inside Food.
+- **The suites reach a way through `tests/logways.py`**, the plate and then
+  the way, as a person does.
+
+Step 4 (Pantry inside Food) is not built.
 
 **Gold means you earned it (b94).** Asked for by the owner after a review
 found that wins were quiet: beating the protein goal changed almost nothing on

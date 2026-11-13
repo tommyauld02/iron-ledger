@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
@@ -96,11 +97,13 @@ with sync_playwright() as pw:
                 box=t.split(":")[1]          # not `w`: that is the phone's width
                 # already open, a press would fold it
                 # the checklist folds on Pantry the way the two ways in do on Macros
-                opener=('#suppToggle' if box=="checklist"
-                        else '#ctxMain [data-gymway="%s"]'%box if box in ("gym","move","rest")
-                        else '[data-logway="%s"]'%box)
-                if p.locator(opener+'[aria-expanded="false"]').count():
-                    p.click(opener); p.wait_for_timeout(300)
+                # Macros' two ways in are on the plate's sheet from b98
+                if box in ("numbers","estimate"): logways.open_way(p, box, 300)
+                else:
+                    opener=('#suppToggle' if box=="checklist"
+                            else '#ctxMain [data-gymway="%s"]'%box)
+                    if p.locator(opener+'[aria-expanded="false"]').count():
+                        p.click(opener); p.wait_for_timeout(300)
                 if not p.locator(FIRST[t.split(":",1)[1]]).count():
                     FAILS.append("%s: %s box not on screen to measure" % (name, t))
             if t=="coach" and p.locator("[data-openday]").count():

@@ -47,7 +47,8 @@ that is empty or could not be read can never take a photo with it, and a
 backup restored before that open still finds its photos.
 
 **One check-in a day; New check-in opens today's.** *New check-in* is always
-the button above the tabs. If today already has a check-in, it opens that one,
+the plate above the tabs (the bar's one button until b98; `docs/ui.md`, *The
+plate*). If today already has a check-in, it opens that one,
 says so, and *Change day* goes to an earlier day (never a later one) to fill
 one in after the fact. A day chosen that already has a check-in is opened, and
 said, rather than written over unseen. What was typed or picked in the editor

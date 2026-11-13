@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 import fakeai
@@ -8,8 +9,7 @@ import fakeai
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
     # the words box sits folded behind Ask an agent until asked for
-    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "estimate")
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 base={"days":{},"moves":None,"goal":G,"region":"United States","pantry":[],"v":1}
@@ -33,10 +33,11 @@ with sync_playwright() as pw:
     def food(): return p.evaluate("()=>(JSON.parse(localStorage['iron-ledger-v1']).days['%s']||{}).food||[]"%T)
 
     reset()
-    check("folded until asked for, behind the bottom bar's Ask an agent",
-          "Ask an agent" in p.text_content('[data-logway="estimate"]')
+    logways.sheet(p)
+    check("folded until asked for, behind Ask an agent on the plate's sheet",
+          "Ask an agent" in p.text_content('#waysSheet [data-logway="estimate"]')
           and p.locator("#estText").count()==0)
-    p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    logways.press(p, "estimate")
     check("Ask an agent opens straight on the words box, with no tabs or table",
           p.locator("#estText").count()==1 and p.locator("[data-esttab], [data-ef]").count()==0,
           "box=%d" % p.locator("#estText").count())

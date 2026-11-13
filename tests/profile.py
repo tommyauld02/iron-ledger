@@ -29,6 +29,7 @@ not import answered. It checks that:
 - the iPhone app keeps the profile in native storage, with the log
 - 44px targets, 16px fields, contrast in light and dark, no sideways scroll
 """
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, json, datetime, threading, functools, sys
@@ -122,7 +123,7 @@ def born(p, y="1992", m="3", dd="14"):
 
 def ask_agent(p, words="6 oz sirloin"):
     if not shown(p, "#estText"):
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+        logways.press(p, "estimate")
     p.fill("#estText", words)
     p.click("#runEst"); p.wait_for_timeout(500)
 
