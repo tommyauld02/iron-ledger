@@ -224,6 +224,47 @@ point of the step: a control that is where it was cannot be lost.
 - **The week is seven small plates**, the number in a ring; the mark under it
   is unchanged.
 
+**The stage and the sheet (b97): step 2 of Chalk and Iron.** The header and
+the tab's picture are one black stage, and the lists are a sheet whose rounded
+top edge is drawn over the stage's foot. The stage scrolls away with the page,
+and a slim bar (`#stageMini`) takes its place at the top. The reason is one
+found while building gold plates: a food logged from *Log numbers*, lower down
+the page, loaded its plates on a barbell that was off the top of the screen.
+Now the slim bar's barbell loads and turns gold where it can be seen.
+
+- **The header no longer sticks, on any tab.** `data-stage` on `<html>` is
+  `hero` where the tab has a picture (`STAGE_HERO`: Macros' today card, Gym's
+  session card, Cardio's goal card) and `plain` where it has not; either way
+  `.topbar` is `position: relative`. The owner was shown that the date and
+  week strip scroll away with it and chose it, for the room it gives the
+  lists. Scrolling up, or a tap on the slim bar, brings the stage back. This
+  is also how a suite reaches a header control from lower down: Playwright
+  scrolls to it, as a thumb would.
+- **Showing the slim bar moves nothing.** It is a button hung under a
+  zero-height sticky wrapper between the header and `main`, shown with a
+  transform. This app's hardest bugs were a page that changed height under
+  the thumb, so the bar must never be given height in the flow. `sweep`
+  checks the page is exactly as tall with it shown.
+- **Nothing is scrolled in behind it.** `:root[data-stage]` carries
+  `scroll-padding-top`, so the app's own `scrollIntoView` calls and the
+  browser's scroll to a focused field stop below the bar. `hittest` and
+  `handoff` count the bar as top chrome, the way they counted the sticky
+  header: content scrolled under it is behind it by design.
+- **What it says** (`drawStage()`, run from `render()` before
+  `animateBarbells()` so its plates animate with the rest): Macros and Pantry,
+  a small barbell with calories left and protein, gold when the day is won;
+  Gym, the running clock (`#stageClock`, kept in step by the workout's own
+  ticker, not a second timer) and movements and sets; Cardio, the goal's
+  numbers; Log and Progress, the year; Coach, its name. It hides while the
+  keyboard is up.
+- **The sheet's lip is the hero's `::after`**, drawn in `--sheet-bg`, which is
+  the page's own ground captured on `:root`, because inside the floor scope
+  `--ground` is the floor. The hero and the daily line go full-bleed with
+  negative margins against `main`'s padding.
+- **A new tab picture** needs its selector in `STAGE_HERO` and in the three
+  `data-stage="hero"` rules. Steps 3 (the plate) and 4 (Pantry inside Food)
+  are not built.
+
 **Gold means you earned it (b94).** Asked for by the owner after a review
 found that wins were quiet: beating the protein goal changed almost nothing on
 screen. It is the third colour rule, beside teal for tap and green and red for

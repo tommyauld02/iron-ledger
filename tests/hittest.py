@@ -77,7 +77,13 @@ HITTEST = """() => {
     if (!chrome) {
       const bar = document.querySelector('.topbar');
       const dock = document.querySelector('.dock');
-      const top = bar ? bar.getBoundingClientRect().bottom : 0;
+      // From b97 the header scrolls away and a slim bar takes its place at
+      // the top once the stage has gone by. Whichever is lower is where the
+      // band starts: content under the slim bar is behind it by design, the
+      // same as it was under the header.
+      const mini = document.querySelector('.stage-mini-wrap.show .stage-mini');
+      const top = Math.max(bar ? bar.getBoundingClientRect().bottom : 0,
+                           mini ? mini.getBoundingClientRect().bottom : 0);
       const bottom = dock ? dock.getBoundingClientRect().top : innerHeight;
       if (r.top < top || r.bottom > bottom) continue;
     } else if (r.top < 0 || r.bottom > innerHeight) {
@@ -109,7 +115,7 @@ HITTEST = """() => {
       // matters is a corner taken by something floating over the layout,
       // because that is a bar or panel eating the tap.
       const overlay = /fixed|sticky/.test(getComputedStyle(hit).position)
-                   || !!hit.closest('.undobar, .tabs, .topbar, .sheet');
+                   || !!hit.closest('.undobar, .tabs, .topbar, .stage-mini, .sheet');
       if (where !== 'centre' && !overlay) continue;
 
       blocked.push(where + ' <- ' + (hit.id || hit.className || hit.tagName.toLowerCase()));
