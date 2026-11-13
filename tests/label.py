@@ -15,6 +15,7 @@ Two things this has to keep proving:
     "take the biggest number" would log sodium.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, datetime, threading, functools, time
@@ -79,7 +80,7 @@ with sync_playwright() as pw:
         p.click("text=Got it", timeout=2500)
     except Exception:
         pass
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(700)
+    rooms.go(p, "pantry"); p.wait_for_timeout(700)
     p.click("#panNew"); p.wait_for_timeout(250)
     check("the reader is offered with no Claude present",
           p.evaluate("() => !!document.getElementById('shotBtn')"))

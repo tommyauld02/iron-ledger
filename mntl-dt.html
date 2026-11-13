@@ -3574,17 +3574,7 @@
     font-family: var(--font-num); font-size: 13px; font-weight: 600; color: var(--accent); white-space: nowrap;
   }
   .pan-intro { margin: 0 0 4px; font-size: 14px; line-height: 1.45; color: var(--ink-2); }
-  .pan-bar {
-    display: flex; align-items: center; gap: 12px; padding: 8px 14px 8px 6px;
-    background: var(--surface); border: 1px solid var(--rule); border-radius: 18px;
-  }
-  .pb-bar { width: 152px; flex: none; }
-  .pan-bar .barbell, .pan-preview .barbell { width: 100%; margin: 0; }
-  .pb-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .pb-v { font-family: var(--font-num); font-size: 13px; color: var(--ink-2); }
-  .pb-v b { font-weight: 600; color: var(--ink); }
-  .pb-v b.is-hit { color: var(--hit); }
-  .pb-cf { font-family: var(--font-num); font-size: 11px; color: var(--ink-3); }
+  .pan-preview .barbell { width: 100%; margin: 0; }
 
   .pan-list { display: flex; flex-direction: column; gap: 10px; }
   .pan-chips { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -4187,7 +4177,7 @@
      darkcheck has measured for years, over a ground that is darker still,
      so every pairing only gains contrast. It is the same in light and dark:
      a rubber floor does not change with the lights. */
-  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs {
+  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .dayline, .stage-mini, .tabs {
     --ground: #0E1211;
     --surface: #171D1B;
     --surface-2: #1F2725;
@@ -4227,11 +4217,11 @@
     --ink: var(--chalk); --ink-2: var(--chalk-dim);
     color: var(--ink);
   }
-  :root[data-accent="blue"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #7DB0E8; --accent-soft: #1A3150; --on-accent: #0B1614; }
-  :root[data-accent="violet"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #B69CEB; --accent-soft: #33284F; --on-accent: #0B1614; }
-  :root[data-accent="orange"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #EE9B5C; --accent-soft: #3F2918; --on-accent: #0B1614; }
-  :root[data-accent="graphite"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini, .tabs) { --accent: #C4CDC9; --accent-soft: #2A3230; --on-accent: #0B1614; }
-  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .pan-bar, .dayline, .stage-mini {
+  :root[data-accent="blue"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .dayline, .stage-mini, .tabs) { --accent: #7DB0E8; --accent-soft: #1A3150; --on-accent: #0B1614; }
+  :root[data-accent="violet"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .dayline, .stage-mini, .tabs) { --accent: #B69CEB; --accent-soft: #33284F; --on-accent: #0B1614; }
+  :root[data-accent="orange"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .dayline, .stage-mini, .tabs) { --accent: #EE9B5C; --accent-soft: #3F2918; --on-accent: #0B1614; }
+  :root[data-accent="graphite"] :is(.topbar, .today-card, .session-card, .cardio-goal, .year-card, .dayline, .stage-mini, .tabs) { --accent: #C4CDC9; --accent-soft: #2A3230; --on-accent: #0B1614; }
+  .topbar, .today-card, .session-card, .cardio-goal, .year-card, .dayline, .stage-mini {
     background-color: var(--floor);
     background-image: radial-gradient(rgba(255,255,255,.085) 1px, transparent 1.3px), radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px);
     background-size: 13px 13px, 21px 21px; background-position: 0 0, 6px 11px;
@@ -4281,7 +4271,7 @@
     font-family: var(--font-big); font-weight: 800; font-stretch: normal; font-size: 19px; letter-spacing: .06em; text-transform: uppercase;
     border-radius: 8px;
   }
-  .today-card, .card, .year-card, .pg-card, .pan-bar, .session-card, .week-card, .split-card, .cardio-goal, .dayline { border-radius: 14px; }
+  .today-card, .card, .year-card, .pg-card, .session-card, .week-card, .split-card, .cardio-goal, .dayline { border-radius: 14px; }
 
   /* ---- the week: seven small plates ---- */
   .week-day, .week-day[aria-pressed="true"] { border-color: transparent; background: none; }
@@ -4453,6 +4443,24 @@
   .way3-main, .way3-main[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
   .way3-main svg { stroke: var(--on-accent); }
   .way3-main .w3-t span { color: var(--on-accent); }
+
+  /* ================================================================
+     CHALK AND IRON, step 4 (b99): Pantry inside Macros.
+     One tab, one picture, and a switch at the top of the sheet between the
+     day's ledger and the pantry. The switch is the first thing on the sheet
+     in both, in the same place.
+     ================================================================ */
+  .food-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .food-seg button {
+    min-height: 48px; padding: 0 8px; border-radius: 10px; border: 1.5px solid var(--rule);
+    background: var(--surface); color: var(--accent); white-space: nowrap;
+    font-family: var(--font-big); font-weight: 800; font-size: 20px; letter-spacing: .05em; text-transform: uppercase;
+  }
+  .food-seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  /* read out, not drawn: the pressed half of the switch already says Pantry */
+  .vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+  .pan-head { min-height: 44px; }
+  .pan-head .pan-count { margin-left: 0; }
   .way3-main[aria-expanded="true"] { box-shadow: 0 0 0 3px var(--accent-soft); }
 
   @media (prefers-reduced-motion: reduce) { .plate:active .pl-disc { transform: none; } }
@@ -4518,7 +4526,6 @@
 
   <nav class="tabs" role="tablist">
     <button role="tab" data-tab="macros" aria-selected="true"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11h18a9 9 0 0 1-18 0z"/><path d="M8 7c0-1.5 1-2 1-3M12 7c0-1.5 1-2 1-3M16 7c0-1.5 1-2 1-3"/></svg></span><span class="tl">Macros</span></button>
-    <button role="tab" data-tab="pantry" aria-selected="false"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3h8v3H8z"/><path d="M7 6h10a1 1 0 0 1 1 1v12a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7a1 1 0 0 1 1-1z"/><path d="M6 11h12"/></svg></span><span class="tl">Pantry</span></button>
     <button role="tab" data-tab="gym" aria-selected="false"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg></span><span class="tl">Gym</span></button>
     <button role="tab" data-tab="cardio" aria-selected="false"><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2-4 4 8 2-4h6"/></svg></span><span class="tl">Cardio</span></button>
     <button role="tab" data-tab="coach" aria-selected="false" hidden><span class="ti"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4h6v3H9z"/><path d="M8 5.5H6.5a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1H16"/><path d="M9 12h6M9 16h4"/></svg></span><span class="tl">Coach</span></button>
@@ -4839,7 +4846,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-13.98";
+  var BUILD = "2026-11-13.99";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5833,6 +5840,11 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-13.99", t: "Pantry is inside Macros", items: [
+      "Pantry is no longer a tab of its own. It is the second half of Macros: a switch at the top of your list goes between Ledger and Pantry.",
+      "Both stand under the same barbell, so a food added from the pantry loads its plates right there.",
+      "Choosing Pantry, or typing in its search, brings the list to the top of the screen.",
+      "Everything in the pantry is where it was: search, scan, New, sections, Build a meal, the daily checklist." ] },
     { b: "2026-11-13.98", t: "The plate", items: [
       "On Macros, Cardio and Progress the bar above the tabs is now one button, a plate, at the bottom right. It says what it does: Log food, Start cardio, New check-in.",
       "On Macros, the plate opens the same three ways to log, each with a line saying what it is for: Ask an agent, Log numbers, Scan.",
@@ -8388,10 +8400,13 @@
   // only, and never over a clock that is running: nobody wants to be told
   // about last week mid-set.
   function drawDayLine(key, d) {
-    if (key !== TODAY || (tab !== "macros" && tab !== "gym" && tab !== "cardio")) return;
+    // Pantry stands under Macros' card, so it carries Macros' line: the top
+    // of the screen is the same whichever section is showing.
+    var where = tab === "pantry" ? "macros" : tab;
+    if (key !== TODAY || (where !== "macros" && where !== "gym" && where !== "cardio")) return;
     if (tab === "gym" && d && d.workoutStart) return;
     if (tab === "cardio" && d && d.cardioStart) return;
-    var ln = dailyLine(tab, TODAY);
+    var ln = dailyLine(where, TODAY);
     if (!ln) return;
     view.insertAdjacentHTML("afterbegin",
       '<section class="dayline is-' + ln.kind + '" aria-label="' + (ln.kind === "win" ? 'A good week' : 'A reminder') + '">' +
@@ -8409,7 +8424,7 @@
   // with the bar hung under it: showing it moves nothing, which matters in an
   // app whose hardest bugs were a page that changed height under the thumb.
   var stageRaf = 0;
-  var STAGE_HERO = { macros: "#view > .today-card", gym: "#view > .gym-top > .session-card", cardio: "#view > .cardio-page > .cardio-goal" };
+  var STAGE_HERO = { macros: "#view > .today-card", pantry: "#view > .today-card", gym: "#view > .gym-top > .session-card", cardio: "#view > .cardio-page > .cardio-goal" };
   var STAGE_NAME = { macros: "Macros", pantry: "Pantry", gym: "Gym", cardio: "Cardio", coach: "Coach", progress: "Progress", log: "Log" };
   function stageHero() { return STAGE_HERO[tab] ? document.querySelector(STAGE_HERO[tab]) : null; }
   function drawStage(key, d) {
@@ -8512,7 +8527,7 @@
     var chip = document.getElementById("dateChip");
     if (chip) {
       // Three days on target in a row is earned: gold, with a flame (b94).
-      var chipSay = weekChip(key), earned = !!chipSay && tab === "macros" && key === TODAY && onTargetStreak() >= 3;
+      var chipSay = weekChip(key), earned = !!chipSay && (tab === "macros" || tab === "pantry") && key === TODAY && onTargetStreak() >= 3;
       chip.classList.toggle("is-earned", earned);
       chip.innerHTML = (earned ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-2 1-4 2-5 0 2 1 3 2 3 0-3-1-6 2-10z"/></svg>' : '') + esc(chipSay);
     }
@@ -8561,13 +8576,14 @@
       if (tab === "macros") renderMacros(key, d);
       else if (tab === "gym") renderGym(key, d);
       else if (tab === "cardio") renderCardio(key, d);
-      else if (tab === "pantry") renderPantry();
+      else if (tab === "pantry") renderPantry(key, d);
     else if (tab === "coach") renderCoach();
       else if (tab === "progress") renderProgress();
       else renderLog();
       drawStage(key, d);
       animateBarbells();
       drawDayLine(key, d);
+      roomToLift();   // last: the daily line and the dock's bar are part of the page's height
     } catch (e) {
       lastError = (e && e.message ? e.message : String(e)) + " · in " + tab;
       if (window.console && console.error) console.error("render failed in " + tab + ":", e);
@@ -9866,6 +9882,160 @@
       '</span></div>';
   }
 
+  // ---------- the Today card ----------
+  // The picture at the top of Macros: the day as a barbell. From b99 the
+  // Pantry is a section of the same tab and stands under the same card, so
+  // it is drawn here for both. Whoever draws it calls wireTodayCard() after.
+  function todayCardHtml(key, d) {
+    var t = totals(d), g = goalFor(key), logged = d.food.length > 0;
+    // ---- the Today card: how am I doing, as one picture ----
+    var bs = barState(t.cal, g.cal), pend = pendingCount(d);
+    var proHit = g.pro.dir === "+" ? t.pro >= g.pro.v : t.pro <= g.pro.v;
+    var calBig, calWord, calCls = "", calSay, sayCls = "";
+    if (g.cal.dir === "+") {
+      var short = Math.max(0, g.cal.v - t.cal);
+      calBig = fmt(short ? short : t.cal - g.cal.v); calWord = short ? "to go" : "over";
+      if (!short) calCls = " is-hit";
+      calSay = short ? "Bar\u2019s loading \u2014 " + fmt(short) + " kcal to go" : "Calorie goal hit";
+    } else if (bs.over > 0) {
+      calBig = fmt(bs.over); calWord = "over"; calCls = bs.state === "warn" ? " is-warn" : " is-bad";
+      calSay = (bs.state === "warn" ? "Bar\u2019s bending \u2014 " : "Bar\u2019s about to give \u2014 ") + fmt(bs.over) + " kcal over";
+      sayCls = calCls;
+    } else {
+      calBig = fmt(-bs.over); calWord = "left"; calSay = "Bar\u2019s steady \u2014 " + fmt(-bs.over) + " kcal left";
+    }
+    // Totals with a food still waiting are not finished; "steady" would be the
+    // confident wrong answer.
+    if (pend) { calSay = pend + (pend === 1 ? " food still needs numbers" : " foods still need numbers"); sayCls = ""; }
+    else if (!logged) calSay = "Nothing logged yet \u2014 the bar is empty";
+    var proSub = g.pro.dir === "+"
+      ? (proHit ? "Goal hit" + (t.pro > g.pro.v ? " \u00b7 +" + fmt(t.pro - g.pro.v) + " g" : "") : fmt(g.pro.v - t.pro) + " g to go")
+      : (t.pro <= g.pro.v ? fmt(g.pro.v - t.pro) + " g left" : fmt(t.pro - g.pro.v) + " g over");
+    var cfNow = cfOn() && d.food.length ? cfTotals(d) : null;
+    // With no target the kettlebells have nothing to fill toward. Drawing
+    // nothing read as a screen that had not caught up (the owner's video:
+    // carbs and fat typed, the setting on, no kettlebell) — so the card still
+    // shows, says what is missing, and takes you to where it is set.
+    var kbs = cfOn() && (g.carb || g.fat)
+      ? '<div class="kbs">' +
+          (g.carb ? kettlebellHtml("Carbs", cfNow ? cfNow.carb : 0, g.carb, cfNow ? cfNow.missing : 0) : '') +
+          (g.fat ? kettlebellHtml("Fat", cfNow ? cfNow.fat : 0, g.fat, cfNow ? cfNow.missing : 0) : '') +
+        '</div>'
+      : cfOn()
+        ? '<div class="kbs"><button class="kb kb-set" id="kbSetGoal">' +
+            '<span class="kb-icon" aria-hidden="true"><i class="kb-handle"></i><i class="kb-body"></i></span>' +
+            '<span class="kb-text"><span class="kb-k">Carbs · fat</span>' +
+              '<span class="kb-v">' + fmt(cfNow ? cfNow.carb : 0) + ' g · ' + fmt(cfNow ? cfNow.fat : 0) + ' g</span>' +
+              '<span class="kb-s">No target yet · tap to set one</span></span></button></div>'
+        : '';
+    // Drawn before the note, which stamps in only when this draw is the one
+    // that crossed the line. The note and the gold plates are one condition.
+    var wonNow = barWon(t.cal, g.cal, t.pro, g.pro, pend);
+    var barHtml = barbellHtml("macros", t.cal, g.cal, t.pro, g.pro, { hold: pend, day: key });
+    // The bar may be off the top of the screen when the food that wins the
+    // day goes in from a box lower down, so the confirmation under the ledger
+    // says it too, where the eye already is. Rule 3: a win nobody sees is no win.
+    if (barNewWin.macros) { buzz("up"); if (lastAdded) lastAdded.won = key; }
+    var hitNote = wonNow
+      ? '<div class="hit-note" data-new="' + (barNewWin.macros ? 1 : 0) + '"><span class="hit-tick" aria-hidden="true">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span><span><b>Protein goal hit</b>' +
+          (key === TODAY && g.cal.dir === "-"
+            ? '<span>Stay under ' + fmt(g.cal.v) + ' kcal and today makes it a ' + (onTargetStreak() + 1) + '-day streak.</span>' : '') +
+        '</span></div>'
+      : '';
+    var dirSign = function (x) { return x.dir === "+" ? "+" : "\u2212"; };
+    var html =
+      '<section class="today-card' + (wonNow ? ' is-won' : '') + '" aria-label="' + (key === TODAY ? 'Today' : 'This day') + ' at a glance">' +
+        '<div class="tc-head"><span class="tc-k">' + (key === TODAY ? 'Today' : esc(cursor.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))) + '</span>' +
+          '<button class="tc-edit" id="openGoal" aria-expanded="' + editingGoal + '">' + dirSign(g.cal) + fmt(g.cal.v) + ' kcal \u00b7 ' +
+            dirSign(g.pro) + fmt(g.pro.v) + ' g \u00b7 Edit</button></div>' +
+        '<div class="tc-figs">' +
+          '<div class="tc-fig"><span class="tc-l"><i class="ic-bar" aria-hidden="true"></i>Calories \u00b7 bar</span>' +
+            '<span class="tc-n"><b class="' + calCls.trim() + '">' + calBig + '</b><span class="' + calCls.trim() + '">' + calWord + '</span></span>' +
+            '<span class="tc-s">' + fmt(t.cal) + ' of ' + fmt(g.cal.v) + ' kcal</span></div>' +
+          '<div class="tc-fig"><span class="tc-l"><i class="ic-plate" aria-hidden="true"></i>Protein \u00b7 plates</span>' +
+            '<span class="tc-n"><b' + (wonNow ? ' class="is-won"' : '') + '>' + fmt(t.pro) + '</b><span>g</span></span>' +
+            '<span class="tc-s' + (wonNow ? ' is-won' : proHit && g.pro.dir === "+" ? ' is-hit' : '') + '">' + proSub + '</span></div>' +
+        '</div>' +
+        barHtml +
+        '<p class="tc-say" role="status"><i class="tc-dot' + (pend || !logged ? '' : sayCls || ' is-ok') + '" aria-hidden="true"></i>' +
+          '<span class="' + sayCls.trim() + '">' + calSay + '</span></p>' +
+        '<p class="tc-legend">Dashed = your ' + fmt(g.pro.v) + ' g goal \u00b7 1 g protein = 1 lb of plates</p>' +
+        kbs + hitNote +
+      '</section>';
+    return { html: html, won: wonNow };
+  }
+  function wireTodayCard() {
+    // The goal's editor lives on the ledger, under the card, so from Pantry
+    // Edit goes there: the card is the same one, and only the sheet changes.
+    function edit(then) {
+      if (tab !== "macros") setTab("macros");
+      editingGoal = true; render();
+      if (then) then();
+    }
+    var og = document.getElementById("openGoal");
+    if (og) og.addEventListener("click", function () { edit(); });
+    var kb = document.getElementById("kbSetGoal");
+    if (kb) kb.addEventListener("click", function () {
+      edit(function () { var f = document.getElementById("gCarb"); if (f) f.focus(); });
+    });
+  }
+
+  // ---------- Food's two sections (b99) ----------
+  // Pantry moved inside Macros: one tab, one picture, and a switch at the top
+  // of the sheet between the day's ledger and the pantry. Inside the app the
+  // two are still the tabs "macros" and "pantry", so everything that asks
+  // which one is showing asks as it always did; the tab bar marks Macros for
+  // both. The tab itself always opens on the ledger, so the pantry is never
+  // what someone finds there without having asked for it.
+  function foodSegHtml() {
+    function b(id, name) {
+      return '<button type="button" data-fseg="' + id + '" aria-pressed="' + (tab === id) + '">' + name + '</button>';
+    }
+    return '<div class="food-seg" id="foodSeg" role="group" aria-label="Show">' +
+      b("macros", "Ledger") + b("pantry", "Pantry") + '</div>';
+  }
+  function wireFoodSeg() {
+    view.querySelectorAll("[data-fseg]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        // A press redraws the section even when it is the one showing, as a
+        // press on a tab does.
+        var to = b.getAttribute("data-fseg");
+        setTab(to);
+        if (to === "pantry") liftFoodSheet(true);
+      });
+    });
+  }
+  // The pantry is a list to find things in, and it starts under a picture
+  // most of a screen tall. Choosing it, or typing in its search, brings the
+  // switch up to the top of the screen, where the slim bar stands in for the
+  // picture. Nothing moves if it is already there or higher.
+  function liftFoodSheet(smooth) {
+    var seg = document.getElementById("foodSeg");
+    if (!seg) return;
+    var top = seg.getBoundingClientRect().top, want = 62;
+    if (top <= want + 2) return;
+    var still = !smooth;
+    try { if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) still = true; } catch (e) {}
+    window.scrollTo({ top: Math.max(0, window.scrollY + top - want), behavior: still ? "auto" : "smooth" });
+  }
+  // A short pantry, or a search that leaves one row, would make the page too
+  // short for the switch to reach the top, and what is typed under the
+  // keyboard would then filter rows nobody can see. So in Pantry the page is
+  // always tall enough: a least height on main, which only ever adds room at
+  // the foot, below everything. It is worked out without first taking the
+  // old one away, because a page made shorter for an instant is scrolled
+  // back by the browser, and stays there.
+  function roomToLift() {
+    var seg = document.getElementById("foodSeg"), main = document.querySelector("main");
+    if (!main) return;
+    if (!seg || tab !== "pantry") { main.style.minHeight = ""; return; }
+    var mr = main.getBoundingClientRect(), mainTop = mr.top + window.scrollY;
+    var below = document.documentElement.scrollHeight - (mainTop + mr.height);
+    var need = seg.getBoundingClientRect().top + window.scrollY - 62 + window.innerHeight;
+    main.style.minHeight = Math.max(0, Math.ceil(need - mainTop - below)) + "px";
+  }
+
   function renderMacros(key, d) {
     var t = totals(d);
     var rows = d.food.map(function (f, i) {
@@ -10026,8 +10196,8 @@
           '<dl>' +
             '<dt>Macros</dt><dd>Calories left, protein right, totals at the bottom. Under them, log the numbers ' +
               'with Log numbers if you know them — or tap Ask an agent and name the food: “chicken and rice” works, and you can correct it before it goes in. Scan reads a barcode.</dd>' +
-            '<dt>Pantry</dt><dd>Save things you eat often, once. Pre-made items are counted in bottles ' +
-              'and bars, not weighed.</dd>' +
+            '<dt>Pantry</dt><dd>Inside Macros, one tap from the ledger. Save things you eat often, once. ' +
+              'Pre-made items are counted in bottles and bars, not weighed.</dd>' +
             '<dt>Gym</dt><dd>Pick a split, add movements, log weight and reps. It shows what you lifted last time.</dd>' +
             '<dt>Cardio</dt><dd>Time a session or add one, named your way, and see the week against your goal.</dd>' +
             '<dt>Log</dt><dd>The year at a glance. Green means you hit your target, red means you missed.</dd>' +
@@ -10078,85 +10248,12 @@
         '<span class="lw-c" aria-hidden="true">' + (open ? '▴' : '▾') + '</span></button>';
     }
 
-    // ---- the Today card: how am I doing, as one picture ----
-    var bs = barState(t.cal, g.cal), pend = pendingCount(d);
-    var proHit = g.pro.dir === "+" ? t.pro >= g.pro.v : t.pro <= g.pro.v;
-    var calBig, calWord, calCls = "", calSay, sayCls = "";
-    if (g.cal.dir === "+") {
-      var short = Math.max(0, g.cal.v - t.cal);
-      calBig = fmt(short ? short : t.cal - g.cal.v); calWord = short ? "to go" : "over";
-      if (!short) calCls = " is-hit";
-      calSay = short ? "Bar\u2019s loading \u2014 " + fmt(short) + " kcal to go" : "Calorie goal hit";
-    } else if (bs.over > 0) {
-      calBig = fmt(bs.over); calWord = "over"; calCls = bs.state === "warn" ? " is-warn" : " is-bad";
-      calSay = (bs.state === "warn" ? "Bar\u2019s bending \u2014 " : "Bar\u2019s about to give \u2014 ") + fmt(bs.over) + " kcal over";
-      sayCls = calCls;
-    } else {
-      calBig = fmt(-bs.over); calWord = "left"; calSay = "Bar\u2019s steady \u2014 " + fmt(-bs.over) + " kcal left";
-    }
-    // Totals with a food still waiting are not finished; "steady" would be the
-    // confident wrong answer.
-    if (pend) { calSay = pend + (pend === 1 ? " food still needs numbers" : " foods still need numbers"); sayCls = ""; }
-    else if (!logged) calSay = "Nothing logged yet \u2014 the bar is empty";
-    var proSub = g.pro.dir === "+"
-      ? (proHit ? "Goal hit" + (t.pro > g.pro.v ? " \u00b7 +" + fmt(t.pro - g.pro.v) + " g" : "") : fmt(g.pro.v - t.pro) + " g to go")
-      : (t.pro <= g.pro.v ? fmt(g.pro.v - t.pro) + " g left" : fmt(t.pro - g.pro.v) + " g over");
-    var cfNow = cfOn() && d.food.length ? cfTotals(d) : null;
-    // With no target the kettlebells have nothing to fill toward. Drawing
-    // nothing read as a screen that had not caught up (the owner's video:
-    // carbs and fat typed, the setting on, no kettlebell) — so the card still
-    // shows, says what is missing, and takes you to where it is set.
-    var kbs = cfOn() && (g.carb || g.fat)
-      ? '<div class="kbs">' +
-          (g.carb ? kettlebellHtml("Carbs", cfNow ? cfNow.carb : 0, g.carb, cfNow ? cfNow.missing : 0) : '') +
-          (g.fat ? kettlebellHtml("Fat", cfNow ? cfNow.fat : 0, g.fat, cfNow ? cfNow.missing : 0) : '') +
-        '</div>'
-      : cfOn()
-        ? '<div class="kbs"><button class="kb kb-set" id="kbSetGoal">' +
-            '<span class="kb-icon" aria-hidden="true"><i class="kb-handle"></i><i class="kb-body"></i></span>' +
-            '<span class="kb-text"><span class="kb-k">Carbs · fat</span>' +
-              '<span class="kb-v">' + fmt(cfNow ? cfNow.carb : 0) + ' g · ' + fmt(cfNow ? cfNow.fat : 0) + ' g</span>' +
-              '<span class="kb-s">No target yet · tap to set one</span></span></button></div>'
-        : '';
-    // Drawn before the note, which stamps in only when this draw is the one
-    // that crossed the line. The note and the gold plates are one condition.
-    var wonNow = barWon(t.cal, g.cal, t.pro, g.pro, pend);
-    var barHtml = barbellHtml("macros", t.cal, g.cal, t.pro, g.pro, { hold: pend, day: key });
-    // The bar may be off the top of the screen when the food that wins the
-    // day goes in from a box lower down, so the confirmation under the ledger
-    // says it too, where the eye already is. Rule 3: a win nobody sees is no win.
-    if (barNewWin.macros) { buzz("up"); if (lastAdded) lastAdded.won = key; }
-    var hitNote = wonNow
-      ? '<div class="hit-note" data-new="' + (barNewWin.macros ? 1 : 0) + '"><span class="hit-tick" aria-hidden="true">' +
-          '<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg></span><span><b>Protein goal hit</b>' +
-          (key === TODAY && g.cal.dir === "-"
-            ? '<span>Stay under ' + fmt(g.cal.v) + ' kcal and today makes it a ' + (onTargetStreak() + 1) + '-day streak.</span>' : '') +
-        '</span></div>'
-      : '';
-    var dirSign = function (x) { return x.dir === "+" ? "+" : "\u2212"; };
-    var todayCard =
-      '<section class="today-card' + (wonNow ? ' is-won' : '') + '" aria-label="' + (key === TODAY ? 'Today' : 'This day') + ' at a glance">' +
-        '<div class="tc-head"><span class="tc-k">' + (key === TODAY ? 'Today' : esc(cursor.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }))) + '</span>' +
-          '<button class="tc-edit" id="openGoal" aria-expanded="' + editingGoal + '">' + dirSign(g.cal) + fmt(g.cal.v) + ' kcal \u00b7 ' +
-            dirSign(g.pro) + fmt(g.pro.v) + ' g \u00b7 Edit</button></div>' +
-        '<div class="tc-figs">' +
-          '<div class="tc-fig"><span class="tc-l"><i class="ic-bar" aria-hidden="true"></i>Calories \u00b7 bar</span>' +
-            '<span class="tc-n"><b class="' + calCls.trim() + '">' + calBig + '</b><span class="' + calCls.trim() + '">' + calWord + '</span></span>' +
-            '<span class="tc-s">' + fmt(t.cal) + ' of ' + fmt(g.cal.v) + ' kcal</span></div>' +
-          '<div class="tc-fig"><span class="tc-l"><i class="ic-plate" aria-hidden="true"></i>Protein \u00b7 plates</span>' +
-            '<span class="tc-n"><b' + (wonNow ? ' class="is-won"' : '') + '>' + fmt(t.pro) + '</b><span>g</span></span>' +
-            '<span class="tc-s' + (wonNow ? ' is-won' : proHit && g.pro.dir === "+" ? ' is-hit' : '') + '">' + proSub + '</span></div>' +
-        '</div>' +
-        barHtml +
-        '<p class="tc-say" role="status"><i class="tc-dot' + (pend || !logged ? '' : sayCls || ' is-ok') + '" aria-hidden="true"></i>' +
-          '<span class="' + sayCls.trim() + '">' + calSay + '</span></p>' +
-        '<p class="tc-legend">Dashed = your ' + fmt(g.pro.v) + ' g goal \u00b7 1 g protein = 1 lb of plates</p>' +
-        kbs + hitNote +
-      '</section>';
+    // The Today card is drawn by todayCardHtml(), which Pantry draws too (b99).
+    var tcard = todayCardHtml(key, d), todayCard = tcard.html, wonNow = tcard.won;
 
     view.innerHTML =
       welcome +
-      todayCard + goalHtml +
+      todayCard + goalHtml + foodSegHtml() +
       '<section class="tchart">' +
         '<div class="t-head">' +
           '<span class="h-food">' + (key === TODAY ? 'Today\u2019s ledger' : 'The ledger') + '</span>' +
@@ -10228,17 +10325,8 @@
       });
     }
 
-    var openGoal = document.getElementById("openGoal");
-    if (openGoal) {
-      openGoal.addEventListener("click", function () { editingGoal = true; render(); });
-    }
-    var kbSet = document.getElementById("kbSetGoal");
-    if (kbSet) {
-      kbSet.addEventListener("click", function () {
-        editingGoal = true; render();
-        var f = document.getElementById("gCarb"); if (f) f.focus();
-      });
-    }
+    wireTodayCard();
+    wireFoodSeg();
 
     var pendingDir = { cal: g.cal.dir, pro: g.pro.dir };
     ["Cal", "Pro"].forEach(function (which) {
@@ -12987,7 +13075,7 @@
     });
   }
 
-  function renderPantry() {
+  function renderPantry(key, d) {
     var list = (store.pantry || []).slice().sort(function (a, b) {
       return a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1;
     });
@@ -13209,18 +13297,9 @@
     // the obvious place for it — and presses add others or take it off.
     var formSecs = f.secs !== undefined ? f.secs : (secName(panTab) ? [panTab] : []);
 
-    // The day the + writes to, said on the card: on any day but today a food
-    // would otherwise go into a day the screen was calling today.
-    var pkey = ymd(cursor), pday = store.days[pkey], pt = pday && pday.food ? totals(pday) : { cal: 0, pro: 0 }, pg = goalFor(pkey);
-    var pcf = cfOn() && pday && pday.food && pday.food.length ? cfTotals(pday) : null;
-    var barCard = '<section class="pan-bar">' +
-        '<div class="pb-bar">' + barbellHtml("pantry", pt.cal, pg.cal, pt.pro, pg.pro, { hold: pday ? pendingCount(pday) : 0, day: pkey }) + '</div>' +
-        '<div class="pb-text"><span class="tc-k">' + (pkey === TODAY ? 'Today’s bar'
-            : esc(cursor.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })) + ' — adding here') + '</span>' +
-          '<span class="pb-v"><b>' + fmt(pt.cal) + '</b> / ' + fmt(pg.cal.v) + ' kcal</span>' +
-          '<span class="pb-v"><b' + (pg.pro.dir === "+" && pt.pro >= pg.pro.v ? ' class="is-hit"' : '') + '>' + fmt(pt.pro) + '</b> / ' + fmt(pg.pro.v) + ' g</span>' +
-          (pcf ? '<span class="pb-cf">Carbs ' + fmt(pcf.carb) + ' g · Fat ' + fmt(pcf.fat) + ' g</span>' : '') +
-        '</div></section>';
+    // The day the + writes to is the one on the Today card above the list,
+    // the same card the ledger stands under (b99). Before that the pantry had
+    // a small bar of its own to say so.
     var newSheet = panNewOpen
       ? '<div class="sheet pan-new-sheet" id="panNewSheet"><div class="sheet-inner">' +
           '<div class="sh-head"><h2>New food</h2><button id="panNewClose" aria-label="Close">' +
@@ -13279,13 +13358,14 @@
         '</div></div>'
       : '';
     view.innerHTML =
+      todayCardHtml(key, d).html + foodSegHtml() +
       '<section class="pan-top">' +
-        '<div class="pan-head"><h2>Pantry</h2>' +
+        '<div class="pan-head"><h2 class="vh">Pantry</h2>' +
           '<span class="pan-count">' + (list.length ? list.length + (list.length === 1 ? ' food' : ' foods') : 'Nothing saved yet') + '</span>' +
           (!panCombine && list.length > 1 ? '<button class="pan-build" id="combStart">Build a meal</button>' : '') +
         '</div>' +
         '<p class="pan-intro">Your go-to foods. The plates show the protein one serving adds to your bar.</p>' +
-        (panCombine ? combineBlock : barCard) +
+        (panCombine ? combineBlock : '') +
       '</section>' +
 
       '<section class="pan-list">' +
@@ -13313,6 +13393,9 @@
           '<span class="lw-c" aria-hidden="true">' + (suppShown ? '▴' : '▾') + '</span></button>' +
         (suppShown ? suppBody : '') +
       '</section>' + newSheet;
+
+    wireTodayCard();
+    wireFoodSeg();
 
     // The bottom bar: find a food, scan one, or save a new one.
     document.getElementById("ctxMain").innerHTML =
@@ -13356,7 +13439,11 @@
     }
     filterPantry();
     var findIn = document.getElementById("panFind");
-    findIn.addEventListener("input", function () { panQuery = findIn.value; filterPantry(); });
+    // What is typed filters rows that may be a screen below, under the
+    // keyboard: bring them up. On the first letter, not on focus: by then
+    // the keyboard has arrived, and in the iPhone app the page is left alone
+    // while the WebView lifts the field (docs/ui.md).
+    findIn.addEventListener("input", function () { panQuery = findIn.value; filterPantry(); liftFoodSheet(false); });
     document.getElementById("panFindClear").addEventListener("click", function () {
       panQuery = ""; findIn.value = ""; filterPantry(); findIn.focus();
     });
@@ -14850,7 +14937,7 @@
     // first), and leaving it closes whatever was open over it.
     if (t !== "progress") { closeProgEdit(); progView = null; progCmp = null; }
     document.querySelectorAll(".tabs button").forEach(function (b) {
-      b.setAttribute("aria-selected", String(b.dataset.tab === t));
+      b.setAttribute("aria-selected", String(b.dataset.tab === (t === "pantry" ? "macros" : t)));
     });
     render();
   }

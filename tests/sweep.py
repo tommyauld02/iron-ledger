@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
@@ -21,7 +22,7 @@ def by_hand(pg):
 def pan_new(pg):
     if not pg.locator("#panName").count() or not pg.locator("#panName").is_visible():
         if not pg.locator("#panNew").count():
-            pg.click('.tabs button[data-tab="pantry"]'); pg.wait_for_timeout(300)
+            rooms.go(pg, "pantry"); pg.wait_for_timeout(300)
         pg.click("#panNew"); pg.wait_for_timeout(200)
 
 # Pantry rows open on tap; Remove is inside.
@@ -598,7 +599,7 @@ with sync_playwright() as pw:
     check("splits: undo brings it back", "Bi / Tri / RD" in p.evaluate(NAMES), str(p.evaluate(NAMES)))
 
     # ---------- PANTRY ----------
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    rooms.go(p, "pantry"); p.wait_for_timeout(500)
     pan_new(p)
     check("pantry: photo button (sample avail)", p.evaluate("()=>!!document.getElementById('shotBtn')"))
     pan_new(p); p.fill("#panName","Quest bar"); p.fill("#panServe","1"); p.select_option("#panUnit","bar")
@@ -703,7 +704,7 @@ with sync_playwright() as pw:
     p.click('.tabs button[data-tab="macros"]'); p.wait_for_timeout(400)
     check("pantry: the row really is on macros",
           p.evaluate("n=>[...document.querySelectorAll('.t-row')].some(r=>r.textContent.includes(n))", row["name"]))
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(400)
+    rooms.go(p, "pantry"); p.wait_for_timeout(400)
 
     # ---------- A COUNT IS ONE OF THE THING ----------
     # Typing 4 and picking "slice" means "one serving is four slices", and
@@ -734,7 +735,7 @@ with sync_playwright() as pw:
     # a record saved before that normalising existed is still read correctly
     STALE="()=>{const s=JSON.parse(localStorage.getItem('iron-ledger-v1')); s.pantry.push({id:'stale4',name:'old bacon',serveQty:4,serveUnit:'slice',serveG:null,sCal:172,sPro:12,aliases:[]}); localStorage.setItem('iron-ledger-v1', JSON.stringify(s)); return true;}"
     p.evaluate(STALE); p.reload(); p.wait_for_timeout(900)
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    rooms.go(p, "pantry"); p.wait_for_timeout(500)
     oldsub=p.evaluate("()=>{const r=[...document.querySelectorAll('.pan-item')]"
                       ".find(x=>x.querySelector('.nm').textContent==='old bacon');"
                       " return r?r.querySelector('.sub').textContent:'';}")
@@ -783,7 +784,7 @@ with sync_playwright() as pw:
     # you took them is the thing you want to see across a week.
     check("checklist: nothing on macros until there is a list",
           p.locator(".supps").count()==0)
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    rooms.go(p, "pantry"); p.wait_for_timeout(500)
     # Folded until its header is pressed, like the two ways in on Macros.
     check("checklist: on the pantry it is folded until pressed",
           p.locator("#suppToggle[aria-expanded=false]").count()==1 and p.locator("#suppNameIn").count()==0)
@@ -876,7 +877,7 @@ with sync_playwright() as pw:
           p.eval_on_selector(".cal-cell.is-today","e=>e.title"))
 
     # ---------- RENAMING KEEPS HISTORY, REMOVING KEEPS THE NAME ----------
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    rooms.go(p, "pantry"); p.wait_for_timeout(500)
     was=p.evaluate(MARKS)
     # a reload since: the app opens with the checklist folded again
     check("checklist: a reload opens it folded", p.locator("#suppToggle[aria-expanded=false]").count()==1)
@@ -905,7 +906,7 @@ with sync_playwright() as pw:
     check("checklist: a tick for something dropped is still named",
           "no longer on your list" in p.eval_on_selector(".cal-cell.is-today","e=>e.title"),
           p.eval_on_selector(".cal-cell.is-today","e=>e.title"))
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    rooms.go(p, "pantry"); p.wait_for_timeout(500)
     p.click("#undoBtn"); p.wait_for_timeout(500)
     check("checklist: undo puts it back",
           p.locator(".supp-item").count()==2,
@@ -918,7 +919,7 @@ with sync_playwright() as pw:
     ACC="()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()"
     META="()=>{const m=document.querySelector('meta[name=theme-color]');return m&&m.content;}"
     for t in ["macros","pantry","gym","cardio","progress","log"]:
-        p.click('.tabs button[data-tab="%s"]'%t); p.wait_for_timeout(250)
+        rooms.go(p, t); p.wait_for_timeout(250)
         if not p.locator("#setBtn").is_visible():
             check("settings: the gear is on %s"%t, False); break
     else:
@@ -985,18 +986,19 @@ with sync_playwright() as pw:
     TABSHOWN="()=>[...document.querySelectorAll('.tabs button')].filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)"
     ROUTINE="()=>JSON.stringify(JSON.parse(localStorage.getItem('iron-ledger-v1')).routine)"
     check("coach tab: put away on a phone that never chose",
-          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","progress","log"], str(p.evaluate(TABSHOWN)))
+          p.evaluate(TABSHOWN)==["macros","gym","cardio","progress","log"], str(p.evaluate(TABSHOWN)))
     tw=p.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.getBoundingClientRect().width)")
     # the slabs of the weight stack (b96) have a gap between them, which is part of the bar
     bw=p.evaluate("()=>{const t=document.querySelector('.tabs'),s=getComputedStyle(t),n=[...t.children].filter(b=>b.getClientRects().length).length;return t.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight)-(parseFloat(s.columnGap)||0)*(n-1);}")
-    check("coach tab: the six left share the whole bar, evenly",
-          len(tw)==6 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
+    # five since b99: Pantry is a section of Macros, not a slab
+    check("coach tab: the five left share the whole bar, evenly",
+          len(tw)==5 and max(tw)-min(tw)<=1 and abs(sum(tw)-bw)<=2, "%s of %s" % ([round(x) for x in tw], bw))
     p.click("#setBtn"); p.wait_for_timeout(300)
     check("coach tab: Settings has the switch, on Hidden",
           p.eval_on_selector('[data-pick-coach="off"]',"e=>e.getAttribute('aria-pressed')")=="true")
     p.click('[data-pick-coach="on"]'); p.wait_for_timeout(300)
     check("coach tab: Shown puts it back at once, in its place",
-          p.evaluate(TABSHOWN)==["macros","pantry","gym","cardio","coach","progress","log"]
+          p.evaluate(TABSHOWN)==["macros","gym","cardio","coach","progress","log"]
           and p.eval_on_selector('[data-pick-coach="on"]',"e=>e.getAttribute('aria-pressed')")=="true",
           str(p.evaluate(TABSHOWN)))
     check("coach tab: and the choice is saved",
@@ -1650,7 +1652,7 @@ with sync_playwright() as pw:
           [x["name"] for x in pan]==["Usual lunch"], str([x["name"] for x in pan]))
     q.click("#discardEst"); q.wait_for_timeout(300)
 
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    rooms.go(q, "pantry"); q.wait_for_timeout(400)
     check("meal: the pantry says what it is",
           q.eval_on_selector(".pan-item .sub","e=>e.textContent").startswith("Meal of 2"),
           q.eval_on_selector(".pan-item .sub","e=>e.textContent"))
@@ -1708,7 +1710,7 @@ with sync_playwright() as pw:
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    rooms.go(q, "pantry"); q.wait_for_timeout(400)
     check("sections: tabs for All and the five, with how many are in each",
           q.evaluate(TABS)==["All 5*","Breakfast 2","Lunch","Dinner","Snacks 1","Desserts 1"],
           str(q.evaluate(TABS)))
@@ -1786,7 +1788,7 @@ with sync_playwright() as pw:
           q.evaluate(PANS).get("Rice cakes")=="" and q.evaluate(TABS)[0].endswith("*")
           and q.evaluate(SAYS)=="Saved Rice cakes to your pantry", "%s | %s" % (q.evaluate(TABS), q.evaluate(SAYS)))
     q.reload(); q.wait_for_timeout(900)
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    rooms.go(q, "pantry"); q.wait_for_timeout(300)
     check("sections: they are kept, not just drawn",
           q.evaluate(PANS)["Costco protein coffee"]=="breakfast+snacks" and q.evaluate(TABS)[0]=="All 7*", str(q.evaluate(TABS)))
 
@@ -1851,12 +1853,12 @@ with sync_playwright() as pw:
     check("undo: a change that cannot be undone ends the run", q.evaluate(SAYS)=="", q.evaluate(SAYS))
     del_row(q, 0); q.wait_for_timeout(250)
     gone=q.evaluate(SAYS)
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    rooms.go(q, "pantry"); q.wait_for_timeout(300)
     check("undo: another screen does not show it", q.evaluate(SAYS)=="", q.evaluate(SAYS))
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
     check("undo: back where it was made, it can still be taken back",
           gone.startswith("Removed") and q.evaluate(SAYS)==gone, "%s -> %s" % (gone, q.evaluate(SAYS)))
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    rooms.go(q, "pantry"); q.wait_for_timeout(300)
     q.click("#suppToggle"); q.wait_for_timeout(200)
     q.fill("#suppNameIn","Zinc"); q.click("#addSupp"); q.wait_for_timeout(300)
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
@@ -2457,7 +2459,7 @@ with sync_playwright() as pw:
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    rooms.go(q, "pantry"); q.wait_for_timeout(400)
     eb=q.locator("#editPanSecs").bounding_box()
     check("yours: Edit sections is offered, a proper target", eb is not None and eb["height"]>=MIN_TAP)
     check("yours: nothing is written until something changes", q.evaluate(YST).get("panSecs") is None)
@@ -2873,7 +2875,7 @@ with sync_playwright() as pw:
     q.reload(); q.wait_for_timeout(900)
     try: q.click("text=Got it", timeout=1500)
     except Exception: pass
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    rooms.go(q, "pantry"); q.wait_for_timeout(400)
     cb=q.locator("#combStart").bounding_box()
     check("combine: the pantry offers it, as a proper target", cb is not None and cb["height"]>=MIN_TAP)
     q.click("#combStart"); q.wait_for_timeout(300)
@@ -3327,7 +3329,7 @@ with sync_playwright() as pw:
     acc=q.evaluate(TEALJS)
     bare_all, stray_all = [], []
     for t in ["macros","gym","pantry","cardio","coach","progress","log"]:
-        q.click('.tabs button[data-tab="%s"]'%t); q.wait_for_timeout(400)
+        rooms.go(q, t); q.wait_for_timeout(400)
         if t=="macros": q.click(".meal-open"); q.wait_for_timeout(300)
         if t=="coach" and q.locator("[data-openday]").count(): q.locator("[data-openday]").first.click(); q.wait_for_timeout(300)
         # the checklist's Rename and Remove only exist once it is opened (b86)
@@ -3340,7 +3342,7 @@ with sync_playwright() as pw:
           all(m for _,_,m in bare_all), str([x for x in bare_all if not x[2]][:6]))
     check("teal: and nothing teal is a word that cannot be pressed", not stray_all, str(stray_all[:6]))
 
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    rooms.go(q, "pantry"); q.wait_for_timeout(400)
     row=q.evaluate("""()=>{const r=document.querySelector('.supp-item'),b=n=>r.querySelector(n).getBoundingClientRect();
       const btns=[...r.querySelectorAll('button')].map(x=>x.getBoundingClientRect());
       return {nmLeft:b('.nm').left, btnLeft:Math.min(...btns.map(x=>x.left)), nmTop:b('.nm').top, doseTop:b('.dose').top,
@@ -3377,7 +3379,7 @@ with sync_playwright() as pw:
     q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", CSTORE)
     q.reload(); q.wait_for_timeout(900)
     tabs=q.eval_on_selector_all(".tabs button","e=>e.filter(b=>b.getClientRects().length).map(b=>b.dataset.tab)")
-    check("cardio: a tab of its own, after Gym", tabs==["macros","pantry","gym","cardio","progress","log"], str(tabs))
+    check("cardio: a tab of its own, after Gym", tabs==["macros","gym","cardio","progress","log"], str(tabs))
     q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
     check("cardio: no rest timer here", q.evaluate("()=>document.getElementById('restbar').hidden"))
     check("cardio: an empty day says what to do", "Start a session with the plate" in q.inner_text("#view"))
@@ -3745,10 +3747,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The plate"
-          and titles[1]=="The stage and the sheet"
-          and titles[2]=="A new look: Chalk and Iron"
-          and titles[3]=="A line about your week", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Pantry is inside Macros"
+          and titles[1]=="The plate"
+          and titles[2]=="The stage and the sheet"
+          and titles[3]=="A new look: Chalk and Iron", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
@@ -3825,9 +3827,9 @@ with sync_playwright() as pw:
     q.wait_for_timeout(2600)
     check("gold: once it has turned, none of the iron is left showing",
           q.evaluate("()=>[...document.querySelectorAll('.today-card .bb-plate i em')].every(e=>getComputedStyle(e).opacity==='0')"))
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    rooms.go(q, "pantry"); q.wait_for_timeout(300)
     check("gold: the Pantry's bar for the day is gold too",
-          q.evaluate("()=>document.querySelector('.pan-bar .barbell').classList.contains('is-won')"))
+          q.evaluate("()=>document.querySelector('.today-card .barbell').classList.contains('is-won')"))
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
     g=q.evaluate(GOLD)
     check("gold: coming back to a day already won does not play it again",
@@ -3904,7 +3906,7 @@ with sync_playwright() as pw:
         star:l.querySelectorAll('.dl-mark svg').length, first:document.getElementById('view').firstElementChild===l,
         gold:getComputedStyle(l.querySelector('.dl-text span')).color===rgb(v('--gold-ink'))}; }"""
     def on(tabname):
-        q.click('.tabs button[data-tab="%s"]' % tabname); q.wait_for_timeout(300); return q.evaluate(LINE)
+        rooms.go(q, tabname); q.wait_for_timeout(300); return q.evaluate(LINE)
     def says(ln, kind, head, sub=None):
         return bool(ln) and ln["kind"]==kind and ln["head"]==head and ln["n"]==1 and ln["first"] \
             and (sub is None or ln["sub"]==sub) and (kind=="miss" or (ln["sub"]=="Keep it up!" and ln["star"]==1 and ln["gold"]))
@@ -4178,9 +4180,12 @@ with sync_playwright() as pw:
     # the tabs with no picture scroll the same way, with a plain bar
     pan=[{"id":"p%d"%i,"name":"Food %d"%i,"serveQty":1,"serveUnit":"serving","serveG":None,"sCal":100,"sPro":10,"aliases":[]} for i in range(14)]
     opened(dict(LBSTORE, goal=SG2, days={Ts: sday(3)}, build=BUILDNOW, pantry=pan))
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    rooms.go(q, "pantry"); q.wait_for_timeout(400)
     m=q.evaluate(MINI)
-    check("stage: Pantry has no picture to join the header, and scrolls the same way", m["stage"]=="plain" and m["head"]=="relative" and not m["show"], str(m))
+    # Pantry stands under Macros' picture since b99, and choosing it brings
+    # the list up, so the slim bar is already standing in for the picture
+    check("stage: Pantry joins Macros' picture to the header, and choosing it brings the list up under the slim bar",
+          m["stage"]=="hero" and m["head"]=="relative" and m["show"], str(m))
     m=down(500)
     check("stage: its slim bar carries the day's bar too", m["show"] and m["bar"]==1 and "1,700 left" in m["say"] and "30 g" in m["say"], str(m))
     # anything scrolled into view (the app's own calls, or the browser's for a
@@ -4273,13 +4278,99 @@ with sync_playwright() as pw:
     m=q.evaluate(PLT)
     check("plate: Gym keeps its three buttons in the bar, and has no plate over its sets",
           m["n"]==0 and m["mark"] is None and q.locator("#ctxMain [data-gymway]").count()==3, str(m))
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    rooms.go(q, "pantry"); q.wait_for_timeout(400)
     m=q.evaluate(PLT)
     check("plate: Pantry keeps its search bar", m["n"]==0 and q.locator("#ctxMain #panFind").count()==1 and q.locator("#ctxMain #panNew").count()==1, str(m))
     q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
     m=q.evaluate(PLT)
     check("plate: the Log has neither", m["n"]==0 and m["bar"]==0 and m["mark"] is None, str(m))
     check("plate: and leaving Macros never leaves its sheet behind", q.evaluate("()=>document.getElementById('waysSheet').hidden"))
+    c.close()
+
+    # ---------- PANTRY INSIDE MACROS (b99) ----------
+    # Step 4 of the Chalk and Iron look. Pantry is not a tab: it is the second
+    # section of Macros, behind a switch at the top of the sheet, under the
+    # same Today card. What has to hold: the switch is a proper target in the
+    # same place in both; the tab bar marks Macros for both and opens on the
+    # ledger; everything the pantry had is still there; and choosing it, or
+    # searching it, brings the list to the top of the screen, however short
+    # the pantry is, because a search that filters rows under the keyboard
+    # is an answer nobody can see.
+    SEG="""()=>{const s=document.getElementById('foodSeg'); if(!s) return null; const r=s.getBoundingClientRect();
+      const one=sel=>{const e=document.querySelector(sel); if(!e||!e.getClientRects().length) return null; const x=e.getBoundingClientRect(); return {top:Math.round(x.top), bottom:Math.round(x.bottom)};};
+      return {top:Math.round(r.top), b:[...s.querySelectorAll('button')].map(b=>({to:b.dataset.fseg, say:b.textContent.trim(), on:b.getAttribute('aria-pressed'),
+          h:Math.round(b.getBoundingClientRect().height), w:Math.round(b.getBoundingClientRect().width)})),
+        tab:(document.querySelector('.tabs button[aria-selected="true"]')||{dataset:{}}).dataset.tab,
+        slabs:[...document.querySelectorAll('.tabs button')].filter(b=>b.getClientRects().length).map(b=>b.dataset.tab),
+        card:document.querySelectorAll('#view > .today-card').length, ledger:document.querySelectorAll('#view .tchart').length,
+        rows:[...document.querySelectorAll('.pan-rows .pan-item')].filter(e=>!e.hidden).length, row:one('.pan-rows .pan-item:not([hidden])'),
+        dock:Math.round(document.querySelector('.dock').getBoundingClientRect().top), mini:document.getElementById('stageMiniWrap').classList.contains('show'),
+        cal:(document.querySelector('.today-card .tc-s')||{textContent:''}).textContent.trim(), plate:document.querySelectorAll('#plates .plate').length,
+        find:document.querySelectorAll('#ctxMain #panFind').length, y:Math.round(scrollY)};}"""
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True, reduced_motion="reduce")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("food: "+str(e)))
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
+    PAN3=[{"id":"f%d"%i,"name":nm,"serveQty":1,"serveUnit":"bottle","serveG":None,"sCal":kc,"sPro":pr,"aliases":[]}
+          for i,(nm,kc,pr) in enumerate([("Chicken breast",165,31),("Eggs",72,6),("Protein coffee",130,30)])]
+    opened(dict(LBSTORE, goal=SG2, days={Ts: sday(2)}, build=BUILDNOW, pantry=PAN3, supps=[{"id":"s1","name":"Creatine","dose":"5 g"}]))
+    m=q.evaluate(SEG)
+    check("food: Pantry has no slab of its own in the tab bar", m["slabs"]==["macros","gym","cardio","progress","log"], str(m))
+    check("food: Macros opens on the ledger, with a switch saying Ledger and Pantry",
+          [x["say"] for x in m["b"]]==["Ledger","Pantry"] and [x["on"] for x in m["b"]]==["true","false"] and m["ledger"]==1 and m["plate"]==1, str(m))
+    check("food: each half of the switch is a proper target", all(x["h"]>=48 and x["w"]>=120 for x in m["b"]), str(m))
+    check("food: the switch is the first thing on the sheet, under the card",
+          q.evaluate("()=>{const c=document.querySelector('#view > .today-card'), s=document.getElementById('foodSeg'); let n=c.nextElementSibling; return n===s;}"))
+    q.click('[data-fseg="pantry"]'); q.wait_for_timeout(500)
+    m=q.evaluate(SEG)
+    check("food: Pantry is shown under the same card, and the tab bar still marks Macros",
+          [x["on"] for x in m["b"]]==["false","true"] and m["tab"]=="macros" and m["card"]==1 and m["ledger"]==0 and m["rows"]==3, str(m))
+    check("food: it keeps its own bar above the tabs, and Macros' plate is put away", m["find"]==1 and m["plate"]==0, str(m))
+    check("food: choosing it brings the switch to the top of the screen, under the slim bar, even with three foods",
+          58<=m["top"]<=66 and m["mini"] and m["row"] and m["row"]["bottom"]<m["dock"], str(m))
+    for sel, what in (("#combStart","Build a meal"),("#editPanSecs","Edit sections"),('[data-pantab="all"]',"the sections"),("#suppToggle","the daily checklist"),
+                      ("#panNew","New"),("#panBarScan","the scanner"),("[data-addpan]","a food's +"),("[data-panmeals]","a food's own row")):
+        check("food: the pantry still has %s" % what, q.locator(sel).count()>=1)
+    # a food added with + loads the bar it stands under
+    before=m["cal"]
+    q.locator('[data-addpan]').first.click(); q.wait_for_timeout(300); q.click("#panAddBtn"); q.wait_for_timeout(500)
+    m2=q.evaluate(SEG)
+    check("food: a + from the pantry is counted on the card above it, and the pantry stays", before.startswith("200 of") and m2["cal"].startswith("365 of") and m2["rows"]==3, "%s -> %s" % (before, m2["cal"]))
+    check("food: and adding it does not move the page", abs(m2["top"]-m["top"])<=1, "%s -> %s" % (m["top"], m2["top"]))
+    # the search: typed with the page at its top, the rows must come up to be seen
+    q.evaluate("()=>window.scrollTo(0,0)"); q.wait_for_timeout(300)
+    q.click("#panFind"); q.wait_for_timeout(400)
+    check("food: the cursor alone moves nothing: the keyboard is still arriving", q.evaluate("()=>Math.round(scrollY)")==0)
+    q.keyboard.type("egg"); q.wait_for_timeout(300)
+    m=q.evaluate(SEG)
+    check("food: typing in the search brings the list up, and one match is still at the top",
+          58<=m["top"]<=66 and m["rows"]==1 and m["row"]["top"]<420, str(m))
+    q.click("#panFindClear"); q.evaluate("()=>document.activeElement&&document.activeElement.blur()"); q.wait_for_timeout(400)
+    # the card's Edit goes to the ledger, where the goal's editor lives
+    q.evaluate("()=>window.scrollTo(0,0)"); q.wait_for_timeout(300)
+    q.click("#openGoal"); q.wait_for_timeout(400)
+    m=q.evaluate(SEG)
+    check("food: Edit on the card, pressed from Pantry, opens the goal on the ledger",
+          q.locator("#saveGoal").count()==1 and [x["on"] for x in m["b"]]==["true","false"] and m["ledger"]==1, str(m))
+    q.click("#cancelGoal"); q.wait_for_timeout(300)
+    # leaving and coming back: the tab is the ledger, the pantry is asked for
+    q.click('[data-fseg="pantry"]'); q.wait_for_timeout(400)
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(300)
+    check("food: no switch on the other tabs", q.locator("#foodSeg").count()==0)
+    tall=q.evaluate("()=>document.querySelector('main').style.minHeight")
+    check("food: and the room the pantry kept at its foot does not follow to them", tall=="", repr(tall))
+    q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
+    m=q.evaluate(SEG)
+    check("food: the Macros tab always opens on the ledger", [x["on"] for x in m["b"]]==["true","false"] and m["ledger"]==1 and m["plate"]==1, str(m))
+    # an undo made in the pantry belongs to the pantry: looking at the ledger hides it, coming back shows it
+    q.click('[data-fseg="pantry"]'); q.wait_for_timeout(400)
+    q.locator("[data-panmeals]").first.click(); q.wait_for_timeout(300); q.click("[data-rmpan]"); q.wait_for_timeout(400)
+    seen=q.is_visible(".undobar")
+    q.click('[data-fseg="macros"]'); q.wait_for_timeout(300); away=q.is_visible(".undobar")
+    q.click('[data-fseg="pantry"]'); q.wait_for_timeout(400); back=q.is_visible(".undobar")
+    check("food: a Remove in the pantry offers undo there, not over the ledger", seen and not away and back, "%s %s %s" % (seen, away, back))
+    q.click(".undobar button"); q.wait_for_timeout(400)
+    check("food: and Undo puts the food back", q.evaluate(SEG)["rows"]==3)
     c.close()
 
     def fresh(store, label):
@@ -4354,7 +4445,7 @@ with sync_playwright() as pw:
           card[:120] or q.inner_text("#scanSheet")[:160])
     q.click("#scanToPantry"); q.wait_for_timeout(400)
     check("barcodes: the pantry form opens knowing the barcode",
-          q.get_attribute('.tabs button[data-tab="pantry"]',"aria-selected")=="true" and "71717171717 is saved with it" in q.inner_text("#view"))
+          q.get_attribute('[data-fseg="pantry"]',"aria-pressed")=="true" and "71717171717 is saved with it" in q.inner_text("#view"))
     pan_new(q); q.fill("#panName","Corner store protein bar"); q.fill("#panServe","1"); q.select_option("#panUnit","bar")
     q.fill("#panCal","210"); q.fill("#panPro","20"); q.click("#savePan"); q.wait_for_timeout(300)
     pan=[x for x in q.evaluate(LBST)["pantry"] if x["name"]=="Corner store protein bar"]
@@ -4367,7 +4458,7 @@ with sync_playwright() as pw:
           "Corner store protein bar" in card and "Your pantry" in card, card[:120] or q.inner_text("#scanSheet")[:160])
     q.click("#scanClose"); q.wait_for_timeout(200)
     # scanning on the Pantry tab fills the form from the label
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    rooms.go(q, "pantry"); q.wait_for_timeout(300)
     q.click("#panBarScan"); camera_answered(q)
     q.fill("#scanType", "888849000005"); q.click("#scanGo"); scan_card(q)
     q.click("#scanFill"); q.wait_for_timeout(300)
@@ -4463,7 +4554,7 @@ with sync_playwright() as pw:
     # The owner's video (b67): water switched on from the Pantry, and nothing
     # turned up on the screen behind Settings. Settings and the bar say where.
     c, q = fresh(LBSTORE, "water-where")
-    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(300)
+    rooms.go(q, "pantry"); q.wait_for_timeout(300)
     q.click("#setBtn"); q.wait_for_timeout(300)
     q.click('[data-pick-water="on"]'); q.wait_for_timeout(200)
     hint=q.inner_text("#setWaterHint") if q.locator("#setWaterHint").count() else ""

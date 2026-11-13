@@ -146,8 +146,10 @@ Everything else:
   floor is a scope with its own palette; every feature and setting carries
   over; from b97 the header scrolls away and a slim bar takes its place;
   from b98 Macros, Cardio and Progress have one action button, the plate,
-  where the bar was (Gym and Pantry keep their bars on purpose) →
-  `docs/ui.md` (*Chalk and Iron*, *The stage and the sheet*, *The plate*)
+  where the bar was (Gym and Pantry keep their bars on purpose); from b99
+  Pantry is a section of the Macros tab, not a tab →
+  `docs/ui.md` (*Chalk and Iron*, *The stage and the sheet*, *The plate*,
+  *Pantry inside Macros*)
 - **Gold, and the daily line** — gold means you earned it; one line at the
   top of Macros, Gym or Cardio about a goal that keeps being missed or a good
   week, with *Got it* → `docs/ui.md` (*Gold means you earned it*, *The daily
@@ -159,7 +161,7 @@ Everything else:
   relay → `relay/README.md`
 - **Reading a label**, grocery brands, barcodes → `docs/food.md`
 - **Carbs and fat, water, body weight, the goal calculator** → `docs/food.md`
-- **Pantry** — part-name matching, the `+` sheet, counts, saved and combined
+- **Pantry** — a section of the Macros tab (b99), part-name matching, the `+` sheet, counts, saved and combined
   meals, sections → `docs/pantry.md`
 - **Daily checklist** (supplements) → `docs/pantry.md`
 - **Gym tab** — the workout clock, Done and laps, sets and the set sheet,

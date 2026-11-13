@@ -23,11 +23,12 @@ showing which days have one. This suite plays all of it as a phone would:
 - the iPhone app: a shell without the Filesystem plugin keeps notes and weight
   and says photos come with the update; with it, photos are the app's files,
   and a file already gone (the plugin refuses that delete) still leaves the bin
-- every control 44px, every field 16px, and seven tabs on a 320px phone
+- every control 44px, every field 16px, and six tabs on a 320px phone
 
 Exits non-zero on any failure or page error: it is a gate.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, json, datetime, threading, functools, base64
@@ -122,7 +123,7 @@ def phone(b, store, w=402, h=874, init=None, expose=None):
 
 
 def tab(p, t):
-    p.click('.tabs button[data-tab="%s"]' % t); p.wait_for_timeout(350)
+    rooms.go(p, t); p.wait_for_timeout(350)
 
 
 def jpeg(p, w=2400, h=3200, tone="#8e7b6b"):
@@ -500,12 +501,12 @@ with sync_playwright() as pw:
           str(kept.get("photoBin")))
     allerrs += errs; ctx.close()
 
-    # ---------- 15. seven tabs on a 320px phone ----------
+    # ---------- 15. six tabs on a 320px phone (seven until b99 took Pantry into Macros) ----------
     ctx, p, errs = phone(b, fixture({Ts: {"at": 1, "note": "n"}}, coach=True), w=320, h=568)
     tabs = p.evaluate("""()=>[...document.querySelectorAll('.tabs button')].filter(b=>b.getClientRects().length).map(b=>{
       const r=b.getBoundingClientRect(),l=b.querySelector('.tl').getBoundingClientRect();
       return [b.dataset.tab,Math.round(r.width),Math.round(r.height),l.left>=r.left-1&&l.right<=r.right+1&&r.right<=innerWidth+1]})""")
-    check("320: seven tabs with Coach on", len(tabs) == 7, str(tabs))
+    check("320: six tabs with Coach on", len(tabs) == 6, str(tabs))
     check("320: each one at least 44px wide and 48px tall", all(t[1] >= 44 and t[2] >= 48 for t in tabs), str(tabs))
     check("320: every label inside its tab, nothing off the side", all(t[3] for t in tabs), str(tabs))
     tab(p, "progress")

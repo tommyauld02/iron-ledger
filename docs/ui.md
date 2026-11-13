@@ -191,14 +191,15 @@ It is built in four steps so that only one thing is in question at a time:
    bar and stays.
 3. The plate (b98): one action button in place of the bar, where one button
    serves (Macros, Cardio, Progress).
-4. Pantry moves inside Food.
+4. Pantry moves inside Macros (b99): six tabs become five, seven with Coach
+   become six.
 
 **Step 1 is one block of CSS** at the end of the main `<style>`, headed
 *CHALK AND IRON, step 1*. No markup and no behaviour changed, which is the
 point of the step: a control that is where it was cannot be lost.
 
 - **The floor is a scope, not a theme.** `.topbar`, `.today-card`,
-  `.session-card`, `.cardio-goal`, `.year-card`, `.pan-bar`, `.dayline` and
+  `.session-card`, `.cardio-goal`, `.year-card`, `.dayline` and
   `.tabs` redeclare the palette with the dark theme's values over `--floor`,
   a ground darker than any the dark theme uses. Those pairings have been
   measured by `darkcheck` for years and only gain contrast on a darker
@@ -222,7 +223,8 @@ point of the step: a control that is where it was cannot be lost.
 - **The tabs are a weight stack**: a slab a tab, a hole in each, and a pin in
   the one you are on (`::after` on the selected tab, which drops in; no
   script). The slabs have a gap, which is part of the bar when it is measured.
-  Seven tabs still fit a 320px phone.
+  Six tabs fit a 320px phone (seven did, before Pantry moved inside Macros
+  in b99).
 - **The week is seven small plates**, the number in a ring; the mark under it
   is unchanged.
 
@@ -313,12 +315,34 @@ with the same actions. The lists get the room the bar took.
   action stays on screen, and the bar of three keeps it without covering
   anything. Pantry's rows carry their `+` at the right edge, exactly where
   a plate stands, and its search field is engineered into the dock (*A field
-  in the dock lifts the dock*). Pantry is re-homed in step 4, when it moves
-  inside Food.
+  in the dock lifts the dock*). Step 4 moved Pantry inside Macros and left
+  its bar as it was, for the same reasons.
 - **The suites reach a way through `tests/logways.py`**, the plate and then
   the way, as a person does.
 
-Step 4 (Pantry inside Food) is not built.
+**Pantry inside Macros (b99): step 4 of Chalk and Iron.** The owner liked
+this in the first concept for the reason he liked the plate: simpler, with the
+same capabilities. Pantry is no longer a slab in the weight stack. The Macros
+tab's sheet opens with a switch, *Ledger* and *Pantry*, and the section chosen
+is drawn under it; the stage above, the Today card, is the same one for both.
+How Pantry itself is built is in `docs/pantry.md` (*Pantry is a section of
+Macros*).
+
+- **A new thing inside an area is a section of it**, which is the rule the
+  concept gave for what comes later: a shared cookbook would be a third
+  button on this switch, not a seventh tab.
+- **The switch is the first thing on the sheet in both sections**, in the
+  same place, at 48px. The pressed half is the accent, the other is a
+  bordered button in accent ink: both halves are plainly buttons.
+- **The tab opens on the ledger, always.** `tab` is `"macros"` or `"pantry"`
+  inside the app, and a press on the Macros slab sets `"macros"`.
+- **What it costs**, said to the owner: from Gym or Cardio the pantry is two
+  presses away, where it was one.
+- **Macros' plate is the ledger's.** In Pantry the bar above the tabs is the
+  pantry's own (find, scan, *New*), as in step 3.
+- **The stage treats the two as one room**: `STAGE_HERO` names the Today card
+  for both, the daily line shown is Macros', and the streak chip in the
+  header stays gold in both. The slim bar says *Pantry* while it is showing.
 
 **Gold means you earned it (b94).** Asked for by the owner after a review
 found that wins were quiet: beating the protein goal changed almost nothing on

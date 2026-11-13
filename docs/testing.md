@@ -60,7 +60,7 @@ side and as a slider; the Log's camera, ring and peek; Remove, Undo and the
 photo bin after the next open; a photo this phone does not have; kg; the
 iPhone app with and without the Filesystem plugin, against a stand-in bridge
 that refuses a missing file as the real plugin does;
-and seven tabs at 320px. It opens over `http`, because its reloads stand for
+and the tabs at 320px. It opens over `http`, because its reloads stand for
 the app being closed and opened (see *agecheck* below). The full list is in
 `docs/progress.md`.
 
@@ -145,6 +145,15 @@ plate, then the button, whatever it does), `scan(p)`, and `states(p)` for
 which are open. A list of taps (`keys`, `handoff`, `probe`) puts `#plate`
 before the way. `tests/gymways.py` is the same idea for the Gym's bar, which
 did not move.
+
+**Pantry is opened through the switch (b99).** It is a section of Macros, so
+there is no `[data-tab="pantry"]` to press. `tests/rooms.py` opens any tab by
+name: `rooms.go(p, "pantry")` presses Macros if the switch is not on screen,
+then *Pantry*, and waits until the page has stopped scrolling, because
+choosing Pantry brings the list to the top. The suites that walk the tabs by
+name (`mobile`, `hittest`, `handoff`, `darkcheck`, `keys`, `probe`) go
+through it, so "pantry" is still one of the screens they measure. A list of
+taps puts the Macros tab and `[data-fseg="pantry"]` where the Pantry tab was.
 
 **A run that crosses midnight fails on the clock, not the app.** A suite takes
 today's date once, when it starts, and seeds its fixture on that day; the app
