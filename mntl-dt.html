@@ -4381,6 +4381,9 @@
     background: linear-gradient(var(--sheet-rule), var(--sheet-rule)) center 10px / 40px 4px no-repeat, var(--sheet-bg);
   }
   /* the stage, small */
+  /* Anything the app or the browser scrolls into view stops below the slim
+     bar, not under it: the checklist's heading used to land behind the bar. */
+  :root[data-stage] { scroll-padding-top: 62px; }
   .stage-mini-wrap { position: sticky; top: 0; z-index: 19; height: 0; }
   .stage-mini {
     position: absolute; left: 0; right: 0; top: 0; box-sizing: border-box; width: 100%; min-height: 54px; margin: 0;

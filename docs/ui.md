@@ -245,6 +245,11 @@ Now the slim bar's barbell loads and turns gold where it can be seen.
   transform. This app's hardest bugs were a page that changed height under
   the thumb, so the bar must never be given height in the flow. `sweep`
   checks the page is exactly as tall with it shown.
+- **Nothing is scrolled in behind it.** `:root[data-stage]` carries
+  `scroll-padding-top`, so the app's own `scrollIntoView` calls and the
+  browser's scroll to a focused field stop below the bar. `hittest` and
+  `handoff` count the bar as top chrome, the way they counted the sticky
+  header: content scrolled under it is behind it by design.
 - **What it says** (`drawStage()`, run from `render()` before
   `animateBarbells()` so its plates animate with the rest): Macros and Pantry,
   a small barbell with calories left and protein, gold when the day is won;

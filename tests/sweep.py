@@ -4173,6 +4173,16 @@ with sync_playwright() as pw:
     check("stage: Pantry has no picture to join the header, and scrolls the same way", m["stage"]=="plain" and m["head"]=="relative" and not m["show"], str(m))
     m=down(500)
     check("stage: its slim bar carries the day's bar too", m["show"] and m["bar"]==1 and "1,700 left" in m["say"] and "30 g" in m["say"], str(m))
+    # anything scrolled into view (the app's own calls, or the browser's for a
+    # focused field) must stop below the slim bar, not behind it
+    sp=q.evaluate("""()=>{ const tall=document.documentElement.scrollHeight;
+      const row=[...document.querySelectorAll('#view button')].find(e=>{ const t=e.getBoundingClientRect().top+scrollY; return t>400 && t+innerHeight<tall-40; });
+      if(!row) return null; row.scrollIntoView({block:'start'});
+      return {top:Math.round(row.getBoundingClientRect().top), bar:Math.round(document.getElementById('stageMini').getBoundingClientRect().bottom),
+              shown:document.getElementById('stageMiniWrap').classList.contains('show'), end:Math.round(scrollY+innerHeight)>=document.documentElement.scrollHeight-1}; }""")
+    q.wait_for_timeout(300)
+    check("stage: what is scrolled into view stops below the slim bar, not behind it",
+          bool(sp) and sp["shown"] and not sp["end"] and sp["top"]>=sp["bar"], str(sp))
     q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
     m=down(500)
     check("stage: the Log's says the year", m["stage"]=="plain" and m["show"] and str(T.year) in m["say"], str(m))
