@@ -107,8 +107,9 @@ bin lets a name go only once its delete succeeds, and an open that empties the
 bin but saves nothing leaves the stored bin naming files already deleted. So
 `photos.del` takes that one refusal as done, and any other still fails.
 
-**Seven tabs on a 320px phone.** With Coach switched on there are seven tabs,
-and a 320px phone gave each one 43px. Below 341px the tab bar's side padding
+**Seven tabs on a 320px phone.** With Coach switched on there were seven tabs
+(six from b99, when Pantry moved inside Macros; the rule below still holds
+and is still checked), and a 320px phone gave each one 43px. Below 341px the tab bar's side padding
 drops to 2px, the icon pill to 40px and the label to 9px, so each tab keeps
 44px (rule 5) and *PROGRESS* stays inside its own.
 
@@ -121,6 +122,6 @@ limit; stepping; Compare both ways and from both places; the Log's marks,
 legend and peek; Remove, Undo and the bin after the next open; a photo this
 phone does not have; kg; the iPhone app with and without the plugin, against
 a stand-in bridge that refuses a missing file as the real plugin does, and a
-file already gone leaving the bin; and seven tabs at 320px. `darkcheck` opens a check-in and
+file already gone leaving the bin; and the tabs at 320px. `darkcheck` opens a check-in and
 the editor for contrast, `keys` types into the editor's two fields, and
 `mobile`, `hittest` and `handoff` walk the tab.

@@ -11,6 +11,7 @@ moment. Scrolling per element instead makes every rect measured before the
 scroll stale, which reports controls as covered when they are not.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
@@ -181,7 +182,7 @@ with sync_playwright() as pw:
     print("=== CONTROLS WITH SOMETHING ON TOP OF THEM ===")
     found = 0
     for tab in TABS:
-        p.click('.tabs button[data-tab="%s"]' % tab.split(":")[0])
+        rooms.go(p, tab.split(":")[0])
         p.wait_for_timeout(450)
         if ":" in tab:
             box = tab.split(":")[1]

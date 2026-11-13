@@ -17,6 +17,7 @@ Four things nothing else covers:
    other suite exercises together.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -32,7 +33,7 @@ def del_row(pg, i=0):
 def pan_new(pg):
     if not pg.locator("#panName").count() or not pg.locator("#panName").is_visible():
         if not pg.locator("#panNew").count():
-            pg.click('.tabs button[data-tab="pantry"]'); pg.wait_for_timeout(300)
+            rooms.go(pg, "pantry"); pg.wait_for_timeout(300)
         pg.click("#panNew"); pg.wait_for_timeout(200)
 
 # Pantry rows open on tap; Remove is inside.
@@ -200,7 +201,7 @@ with sync_playwright() as pw:
     first = {"numbers": "#fCal", "estimate": "#estText"}
     small, blocked, seen, cal_cells = [], [], 0, 0
     for t in tabs:
-        p.click('.tabs button[data-tab="%s"]' % t.split(":")[0]); p.wait_for_timeout(500)
+        rooms.go(p, t.split(":")[0]); p.wait_for_timeout(500)
         if ":" in t:
             box = t.split(":")[1]
             # already open, a press would fold it
@@ -703,9 +704,9 @@ with sync_playwright() as pw:
         # exists until something is pressed, so nothing that walks the tabs as
         # it finds them will ever paint them.
         ("how much from the pantry",
-                           ['.tabs button[data-tab="pantry"]', "[data-addpan]"], "#panQty"),
+                           ['.tabs button[data-tab="macros"]', '[data-fseg="pantry"]', "[data-addpan]"], "#panQty"),
         ("rename a checklist item",
-                           ['.tabs button[data-tab="pantry"]', "#suppToggle", "[data-editsupp]"], "#suppRename"),
+                           ['.tabs button[data-tab="macros"]', '[data-fseg="pantry"]', "#suppToggle", "[data-editsupp]"], "#suppRename"),
         # Today has no movement in this fixture, so the steps add one first.
         ("change a movement",
                            ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-editlift]"], "#liftMove"),
@@ -714,9 +715,9 @@ with sync_playwright() as pw:
         ("a note on a movement",
                            ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-liftnote]"], "#liftNoteIn"),
         ("the pantry's sections",
-                           ['.tabs button[data-tab="pantry"]', "#editPanSecs"], "#newSecName"),
+                           ['.tabs button[data-tab="macros"]', '[data-fseg="pantry"]', "#editPanSecs"], "#newSecName"),
         ("combining foods into one",
-                           ['.tabs button[data-tab="pantry"]', "#combStart"], "#combName"),
+                           ['.tabs button[data-tab="macros"]', '[data-fseg="pantry"]', "#combStart"], "#combName"),
         # the set sheet, opened from the card, and its Edit for the movement
         ("a new set",      ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-r]"], "#seR"),
         # Last, because the choice is saved and every later editor would

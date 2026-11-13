@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
@@ -44,7 +45,7 @@ with sync_playwright() as pw:
     p.click("#commitEst"); p.wait_for_timeout(400)
     print("  day total:", p.text_content(".t-total .t-cal b"), "kcal /", p.text_content(".t-total .t-pro b"), "g")
     # pantry photo button correctly absent
-    p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(500)
+    rooms.go(p, "pantry"); p.wait_for_timeout(500)
     p.click("#panNew"); p.wait_for_timeout(250)
     print("  photo button hidden:", not p.evaluate("()=>!!document.getElementById('shotBtn')"))
     print("  pantry still usable:", p.evaluate("()=>!!document.getElementById('savePan')"))

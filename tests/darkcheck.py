@@ -13,6 +13,7 @@ only measures the states its fixture puts on screen.
 """
 import fakeai
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
@@ -177,7 +178,7 @@ def walk(p, label):
         if low: found.append("what's new: %s" % low)
         p.click("#newsDone"); p.wait_for_timeout(200)
     for tab in ["macros", "gym", "pantry", "cardio", "coach", "progress", "log"]:
-        p.click('.tabs button[data-tab="%s"]' % tab); p.wait_for_timeout(350)
+        rooms.go(p, tab); p.wait_for_timeout(350)
         if tab == "coach" and p.locator("[data-openday]").count():
             p.locator("[data-openday]").first.click(); p.wait_for_timeout(300)
         if tab == "macros" and p.locator(".meal-open").count():
@@ -609,8 +610,9 @@ with sync_playwright() as pw:
             if not n: found.append("gold: the %s is not on screen" % k)
         low = p.evaluate(LOW)
         if low: found.append("gold (macros): %s" % low)
-        p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(350)
-        if not p.locator(".pan-bar .barbell.is-won").count(): found.append("gold: the Pantry's bar is not gold")
+        rooms.go(p, "pantry"); p.wait_for_timeout(350)
+        # Pantry stands under Macros' own card since b99; its small bar is gone.
+        if not p.locator(".today-card .barbell.is-won").count(): found.append("gold: the bar over the Pantry is not gold")
         low = p.evaluate(LOW)
         if low: found.append("gold (pantry): %s" % low)
         p.click('.tabs button[data-tab="cardio"]'); p.wait_for_timeout(350)

@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
@@ -19,8 +20,10 @@ with sync_playwright() as pw:
     # every tab still routes to the right screen
     checks=[("macros","logWays"),("pantry","panNew"),("gym","addLift"),("cardio","cardioByHand"),("coach","addDay"),("log","prevYear")]
     for name, marker in checks:
-        p.click('.tabs button[data-tab="%s"]'%name); p.wait_for_timeout(450)
-        sel = p.evaluate("n=>document.querySelector('.tabs button[data-tab='+n+']').getAttribute('aria-selected')", name)
+        rooms.go(p, name); p.wait_for_timeout(450)
+        # Pantry is Macros' second section (b99): the tab bar marks Macros for it
+        sel = p.evaluate("n=>document.querySelector('.tabs button[data-tab='+n+']').getAttribute('aria-selected')",
+                         "macros" if name == "pantry" else name)
         ok  = p.evaluate("m=>!!document.getElementById(m)", marker)
         print("  %-7s selected=%s  renders its screen=%s" % (name, sel, ok))
     print("errors:", errs if errs else "none")

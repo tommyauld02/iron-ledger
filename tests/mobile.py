@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
@@ -92,7 +93,7 @@ with sync_playwright() as pw:
         p.reload(); p.wait_for_timeout(700)
         zoom=set(); over=[]; small=set()
         for t in TABS:
-            p.click('.tabs button[data-tab="%s"]'%t.split(":")[0]); p.wait_for_timeout(350)
+            rooms.go(p, t.split(":")[0]); p.wait_for_timeout(350)
             if ":" in t:
                 box=t.split(":")[1]          # not `w`: that is the phone's width
                 # already open, a press would fold it

@@ -26,6 +26,7 @@ On two phones: the owner's (402x874) and the smallest (320x568). Exits
 non-zero on any failure or page error: it is a gate.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
@@ -149,10 +150,10 @@ def opened(b, w, h, native=False):
 
 def go(p, tab, steps):
     p.goto(URL); p.wait_for_timeout(700)
-    p.wait_for_selector('.tabs button[data-tab="%s"]' % tab, timeout=10000)
+    p.wait_for_selector('.tabs button[data-tab="%s"]' % ("macros" if tab == "pantry" else tab), timeout=10000)
     if p.locator("#newsSheet").is_visible():
         p.keyboard.press("Escape"); p.wait_for_timeout(200)
-    p.click('.tabs button[data-tab="%s"]' % tab); p.wait_for_timeout(350)
+    rooms.go(p, tab); p.wait_for_timeout(350)
     for s in steps:
         if s=="__new": p.select_option("#mSel","__new"); p.wait_for_timeout(200); continue
         p.locator(s).first.click(); p.wait_for_timeout(350)

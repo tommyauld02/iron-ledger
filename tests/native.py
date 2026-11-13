@@ -40,6 +40,7 @@ What it cannot show: that UserDefaults survives a phone restart. That is
 Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
@@ -258,7 +259,7 @@ with sync_playwright() as pw:
     p.goto(BASE); p.wait_for_timeout(150)
     for t in ("gym", "macros", "pantry", "macros"):
         try:
-            p.click('.tabs button[data-tab="%s"]' % t, timeout=300)
+            rooms.go(p, t, timeout=300)
         except Exception:
             pass
     p.evaluate("() => { window.dispatchEvent(new Event('focus')); window.dispatchEvent(new Event('pageshow')); }")
@@ -305,7 +306,7 @@ with sync_playwright() as pw:
     # nearest a test can get to "not https". The web copy opened from disk has
     # no vendor/ beside it in practice, so it does not offer the reader.
     def label_button(p):
-        p.click('.tabs button[data-tab="pantry"]'); p.wait_for_timeout(300)
+        rooms.go(p, "pantry"); p.wait_for_timeout(300)
         p.click("#panNew"); p.wait_for_timeout(300)
         return p.locator("#shotBtn").count() == 1
     native["prefs"] = {}

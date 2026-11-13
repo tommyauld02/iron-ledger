@@ -3,6 +3,56 @@
 Moved word for word from `CLAUDE.md` (issue #10), which keeps the seven
 rules and the index of these docs. The rules apply here too.
 
+**Pantry is a section of Macros (b99).** It was a tab of its own until step 4
+of Chalk and Iron (`docs/ui.md`, *Pantry inside Macros*). Now the Macros tab
+has a switch at the top of its sheet, *Ledger* and *Pantry*
+(`foodSegHtml()`, `[data-fseg]`), and both stand under the same Today card.
+Inside the app the two are still the tabs `"macros"` and `"pantry"`: `tab`
+takes either value, `renderPantry()` draws the second, and everything that
+asks which is showing (`screenKey()` for undo, the scanner, the label reader)
+asks as it always did. The tab bar marks Macros for both. Where this file says
+"the Pantry tab", read "Pantry, on the Macros tab".
+
+- **The Macros tab always opens on the ledger.** Pantry is shown only when
+  it is asked for, on the switch, so nobody finds a list of foods where they
+  left the day's numbers.
+- **Everything in it is where it was**: the count and *Build a meal* over the
+  list, the sections and *Edit sections*, the rows and their `+`, the daily
+  checklist at the foot, and the bar above the tabs with *Find in your
+  pantry*, the scanner and *New*.
+- **The small bar it had is gone, because the real one is there.** The
+  pantry used to carry a small barbell of its own (*Today's bar*) so a food
+  added with `+` could be seen loading its plates. It stands under the Today
+  card now (`todayCardHtml()`, drawn by both sections), and under the slim
+  bar once that has scrolled away. The day the `+` writes to is the one the
+  card names.
+- **Choosing Pantry brings the list up** (`liftFoodSheet()`). The list
+  starts under a picture most of a screen tall, so a press on *Pantry*, or
+  the first letter typed in *Find in your pantry*, scrolls the switch to the
+  top of the screen, where the slim bar stands in for the picture. Without
+  it, a search typed with the keyboard up filtered rows that were under the
+  keyboard: an answer nobody could see. It waits for a letter, not for the
+  cursor, so it never moves the page while the keyboard is arriving, which
+  in the iPhone app is the WebView's job alone (`docs/ui.md`, *In the iPhone
+  app the WebView handles the keyboard*).
+- **The page is always tall enough for that** (`roomToLift()`, the last
+  thing `render()` does). A pantry of three foods, or a search that leaves
+  one row, would make the page too short to scroll that far. `main` is given
+  a least height while Pantry is showing, which only adds room at the foot,
+  below everything. It is worked out without first taking the old one away:
+  a page made shorter for an instant is scrolled back by the browser and
+  stays there. It is measured after the daily line is drawn, since the line
+  moves the switch down.
+- **Edit on the Today card goes to the ledger**, where the goal's editor
+  lives, under the same card (`wireTodayCard()`).
+- **The suites open it through `tests/rooms.py`**: `rooms.go(p, "pantry")`
+  presses Macros and then *Pantry*, and waits for the page to stop moving.
+  `sweep`'s *food:* checks hold the rest: the switch and its two targets, the
+  tab bar marking Macros, everything the pantry had, a `+` counted on the
+  card above it, the list brought up with three foods and with one match,
+  Edit from Pantry, the tab opening on the ledger, and undo staying with the
+  section it was made in.
+
 **Your pantry answers to part of its name.** A pantry entry used to be found
 only by its whole name, so someone who saved "Costco protein coffee" and later
 typed "protein coffee" missed the pantry entirely and got the table's black

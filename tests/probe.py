@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 from playwright.sync_api import sync_playwright
 import os, json, datetime, hashlib
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today(); Ts=T.isoformat(); Y=(T-datetime.timedelta(days=1)).isoformat()
@@ -79,7 +80,7 @@ with sync_playwright() as pw:
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", STORE)
         p.reload(); p.wait_for_timeout(900)
         if tab!="macros":
-            p.click('.tabs button[data-tab="%s"]'%tab); p.wait_for_timeout(500)
+            rooms.go(p, tab); p.wait_for_timeout(500)
         note=""
         try:
             if fills:
