@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 import io, os, json, datetime, calendar
@@ -41,8 +42,7 @@ MIN_TAP = 43.5
 def words(p):
     """Open the plain-words box, Ask an agent."""
     # the words box sits folded behind Ask an agent until asked for
-    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "estimate")
 # A UPC-A barcode as an SVG, for the scanner to read from a "photo".
 _UPC_L = ["0001101", "0011001", "0010011", "0111101", "0100011", "0110001", "0101111", "0111011", "0110111", "0001011"]
 def upca_svg(code, mod=3, h=120):
@@ -65,8 +65,7 @@ def sizes_ok(p, sel):
 
 def way(p, w):
     """Open one of the ways in under the checklist; they start folded."""
-    if p.locator('[data-logway="%s"][aria-expanded="false"]' % w).count():
-        p.click('[data-logway="%s"]' % w); p.wait_for_timeout(250)
+    logways.open_way(p, w)
 
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d
 T=datetime.date.today(); Ts=T.isoformat()
@@ -2958,15 +2957,16 @@ with sync_playwright() as pw:
     # Asked for from real use: two whole forms under the checklist made the
     # Macros screen twice the height of a phone. They are buttons now, named
     # for what they are for, and each opens its box right under it. Since b71
-    # the bottom bar is three of them, each with its name under its picture:
-    # Log numbers (pencil), Ask an agent (#) and Scan.
+    # from b98 the three of them are on the plate's sheet, each with its name
+    # beside its picture and a line under it: Ask an agent (#), Log numbers
+    # (pencil) and Scan. WAYS reads them in the old order, numbers first.
     FG={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
     FSTORE={"days":{Ts:{"food":[{"id":"a","cal":520,"pro":46,"note":"Eggs"},
                                  {"id":"b","cal":0,"pro":0,"note":"chicken breast","pending":True}],
                         "lifts":[],"updated":1,"goal":FG,"supps":{}}},
             "supps":[{"id":"s1","name":"Creatine","dose":"5 g"}],
             "moves":{},"movesOwned":True,"goal":FG,"region":"United States","pantry":[],"v":1,"seen":True}
-    WAYS="()=>[...document.querySelectorAll('[data-logway]')].map(b=>[b.dataset.logway,b.getAttribute('aria-expanded')])"
+    WAYS="()=>[...document.querySelectorAll('#waysSheet [data-logway]')].map(b=>[b.dataset.logway,b.getAttribute('aria-expanded')]).sort((a,b)=>a[0]<b[0]?1:-1)"
     c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
     c.add_init_script("delete window.claude;"); fakeai.phone(c)
     q = c.new_page(); q.on("pageerror", lambda e: errs.append("ways: "+str(e)))
@@ -2977,27 +2977,37 @@ with sync_playwright() as pw:
           q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]]
           and q.locator("#fCal").count()==0 and q.locator("#runEst").count()==0, str(q.evaluate(WAYS)))
     # the words as written: since b96 they are drawn in capitals, which is lettering, not wording
-    W3="()=>[...document.querySelectorAll('#ctxMain .w3')].map(x=>x.textContent.trim())"
-    check("ways: three buttons, each saying what it is for, in the order pencil, #, barcode",
-          q.evaluate(W3)==["Log numbers","Ask an agent","Scan"]
+    PL="""()=>{const b=document.getElementById('plate'); if(!b) return null; const r=b.getBoundingClientRect();
+      return {say:b.textContent.trim(), h:Math.round(r.height), exp:b.getAttribute('aria-expanded'), bar:document.getElementById('ctxMain').children.length,
+              sheet:!document.getElementById('waysSheet').hidden}; }"""
+    pl=q.evaluate(PL)
+    check("ways: folded, the forms are down to one plate above the tabs, which says Log food",
+          bool(pl) and pl["say"]=="Log food" and pl["h"]>=MIN_TAP and pl["h"]<=80 and pl["bar"]==0 and not pl["sheet"] and pl["exp"]=="false", str(pl))
+    q.click("#plate"); q.wait_for_timeout(250)
+    pl=q.evaluate(PL)
+    check("ways: the plate brings up its sheet", pl["sheet"] and pl["exp"]=="true", str(pl))
+    W3="()=>[...document.querySelectorAll('#waysSheet .way3')].map(x=>[x.querySelector('b').textContent.trim(), x.querySelector('.w3-t span').textContent.trim().length>10])"
+    check("ways: three buttons, each named and saying what it is for, the one most used first",
+          q.evaluate(W3)==[["Ask an agent",True],["Log numbers",True],["Scan",True]]
           and q.get_attribute("[data-scanway]","aria-label")=="Scan a barcode", str(q.evaluate(W3)))
     check("ways: Ask an agent, the one most used, is the filled one",
-          q.locator('.w3-main[data-logway="estimate"]').count()==1 and q.locator(".w3-main").count()==1)
-    wb=q.eval_on_selector_all("#ctxMain .w3","e=>e.map(x=>x.getBoundingClientRect().height)")
+          q.locator('.way3-main[data-logway="estimate"]').count()==1 and q.locator(".way3-main").count()==1)
+    wb=q.eval_on_selector_all("#waysSheet .way3","e=>e.map(x=>x.getBoundingClientRect().height)")
     check("ways: all three are proper targets", len(wb)==3 and all(h>=MIN_TAP for h in wb), str(wb))
+    q.click("#waysClose"); q.wait_for_timeout(200)
+    check("ways: Close puts the sheet away and changes nothing", not q.evaluate(PL)["sheet"] and q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]])
+    q.click("#plate"); q.wait_for_timeout(200); q.mouse.click(200, 120); q.wait_for_timeout(200)
+    check("ways: so does a tap on the dimmed page", not q.evaluate(PL)["sheet"] and q.evaluate(PL)["exp"]=="false", str(q.evaluate(PL)))
     # Not "the day fits on the phone": that depends on how much is logged and
     # on the platform's fonts — Linux CI drew this fixture 21px taller than
     # Windows. What folding owns is how little it leaves, and what it saves.
-    WAYSPAN="()=>{const b=[...document.querySelectorAll('#ctxMain .w3')].map(x=>x.getBoundingClientRect());return Math.round(Math.max(...b.map(r=>r.bottom))-Math.min(...b.map(r=>r.top)));}"
-    check("ways: folded, the forms are down to one row of buttons",
-          q.evaluate(WAYSPAN)<=170, "%spx" % q.evaluate(WAYSPAN))
     folded_h=q.evaluate("()=>document.documentElement.scrollHeight")
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     open_h=q.evaluate("()=>document.documentElement.scrollHeight")
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("ways: and folding takes most of a screen off the page",
           open_h-folded_h>=400, "%s folded, %s open" % (folded_h, open_h))
-    q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
+    logways.press(q, "numbers", 300)
     check("ways: Log numbers opens its box, ready to type",
           q.evaluate(WAYS)[0]==["numbers","true"] and q.evaluate("()=>document.activeElement.id")=="fCal")
     check("ways: and its box opens on the page, with a Close of its own",
@@ -3005,25 +3015,25 @@ with sync_playwright() as pw:
     q.fill("#fCal","300"); q.fill("#fPro","25"); q.fill("#fNote","Yogurt"); q.click("#addFood"); q.wait_for_timeout(400)
     check("ways: adding says so, and the box stays open for the next one",
           "Added Yogurt" in q.inner_text(".added-flash") and q.locator("#fCal").count()==1)
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("ways: one open at a time — the other folds",
           q.evaluate(WAYS)==[["numbers","false"],["estimate","true"]] and q.locator("#fCal").count()==0
           and q.evaluate("()=>document.activeElement.id")=="estText")
     check("ways: the confirmation still shows with the numbers box folded",
           q.locator(".added-flash").count()==1)
     q.fill("#estText","toast")
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("ways: pressing the open one folds it", q.evaluate(WAYS)==[["numbers","false"],["estimate","false"]])
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("ways: and what was typed is still there when it opens again", q.input_value("#estText")=="toast")
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     # a row waiting on numbers: its button must not land in a folded box
     q.click('[data-est="b"]'); q.wait_for_timeout(900)
     check("ways: a waiting row's button opens its answer even with everything folded",
           q.locator("#commitEst").count()==1 and q.evaluate(WAYS)[1]==["estimate","true"], str(q.evaluate(WAYS)))
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("ways: folding puts the review aside", q.locator("#commitEst").count()==0)
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("ways: and opening brings it back, not lost", q.locator("#commitEst").count()==1)
     c.close()
 
@@ -3044,7 +3054,7 @@ with sync_playwright() as pw:
         q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
         q.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", dict(FSTORE, logOpen=mode))
         q.reload(); q.wait_for_timeout(900)
-        q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
+        logways.press(q, "numbers", 300)
         HIGH="()=>document.documentElement.scrollHeight"
         ROOM="()=>document.documentElement.classList.contains('kb-room')"
         q.focus("#fCal"); q.wait_for_timeout(50)
@@ -3094,7 +3104,7 @@ with sync_playwright() as pw:
             # the page is put somewhere else and the phone keeps reporting the same
             # keyboard. The app must move it once, then leave it alone.
             q.evaluate("()=>window.scrollTo(0,0)")
-            q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+            logways.press(q, "estimate", 300)
             # where the video had it: the box low on the screen, where the keyboard will be
             q.evaluate("()=>window.scrollBy(0,-250)")
             q.evaluate("()=>{window.__moves=0; const sb=window.scrollBy.bind(window); window.scrollBy=(x,y)=>{window.__moves++; sb(x,y);};}")
@@ -3147,7 +3157,7 @@ with sync_playwright() as pw:
     q.evaluate("""s=>{const j=JSON.stringify(s); localStorage.setItem('iron-ledger-v1',j);
                      sessionStorage.setItem('__pref_iron-ledger-v1',j);}""", dict(FSTORE, logOpen="inplace"))
     q.reload(); q.wait_for_timeout(900)
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("keyboard (app): the page knows it is in the iPhone app and Ask an agent is open",
           q.evaluate("()=>!!window.Capacitor.isNativePlatform()") and q.locator("#estText").count()==1)
     q.evaluate("()=>{window.__moves=0; const sb=window.scrollBy.bind(window); window.scrollBy=(x,y)=>{window.__moves++; sb(x,y);};}")
@@ -3206,7 +3216,7 @@ with sync_playwright() as pw:
     q.click("#setDone"); q.wait_for_timeout(250)
 
     # pop-up
-    q.click('[data-logway="numbers"]'); q.wait_for_timeout(300)
+    logways.press(q, "numbers", 300)
     check("opens: pop-up — Log numbers slides up, ready to type",
           q.evaluate(SHEETS)==["numbers"] and q.evaluate(INLINE)==[False,False]
           and q.evaluate("()=>document.activeElement.id")=="fCal")
@@ -3216,21 +3226,21 @@ with sync_playwright() as pw:
           len(sb)>=5 and all(h>=MIN_TAP and f>=16 for _,h,f in sb), str(sb))
     q.click('[data-wayclose="numbers"]'); q.wait_for_timeout(250)
     check("opens: Cancel puts it away", q.evaluate(SHEETS)==[] and q.locator("#fCal").count()==0)
-    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    logways.press(q, "numbers")
     q.mouse.click(200, 120); q.wait_for_timeout(250)
     check("opens: so does a tap on the dimmed page", q.evaluate(SHEETS)==[])
-    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    logways.press(q, "numbers")
     q.fill("#fCal","300"); q.fill("#fPro","25"); q.fill("#fNote","Yogurt"); q.click("#addFood"); q.wait_for_timeout(400)
     check("opens: adding goes in, the pop-up goes, and the page says so",
           q.evaluate(SHEETS)==[] and "Added Yogurt" in q.inner_text(".added-flash")
           and any(f.get("note")=="Yogurt" for f in q.evaluate(LST)["days"][Ts]["food"]))
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(300)
+    logways.press(q, "estimate", 300)
     check("opens: pop-up — Ask an agent slides up too",
           q.evaluate(SHEETS)==["estimate"] and q.evaluate("()=>document.activeElement.id")=="estText")
     q.fill("#estText","white rice"); q.click("#runEst"); q.wait_for_timeout(1000)
     check("opens: its review stays in the pop-up", q.locator('[data-waysheet] #commitEst').count()==1)
     q.click('[data-wayclose="estimate"]'); q.wait_for_timeout(250)
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(250)
+    logways.press(q, "estimate")
     check("opens: Close puts the review aside, not away", q.locator('[data-waysheet] #commitEst').count()==1)
     q.click("#commitEst"); q.wait_for_timeout(400)
     check("opens: adding from the review closes it and says what went in",
@@ -3245,10 +3255,10 @@ with sync_playwright() as pw:
 
     # mix
     pick("mix")
-    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    logways.press(q, "numbers")
     check("opens: mix — the numbers pop up", q.evaluate(SHEETS)==["numbers"])
     q.click('[data-wayclose="numbers"]'); q.wait_for_timeout(250)
-    q.click('[data-logway="estimate"]'); q.wait_for_timeout(250)
+    logways.press(q, "estimate")
     check("opens: mix — the estimate opens in place", q.evaluate(SHEETS)==[] and q.evaluate(INLINE)==[False,True])
 
     # a box already open changes at once
@@ -3257,11 +3267,11 @@ with sync_playwright() as pw:
           q.evaluate(SHEETS)==["estimate"] and q.evaluate(INLINE)==[False,False])
     q.click('[data-wayclose="estimate"]'); q.wait_for_timeout(250)
     q.reload(); q.wait_for_timeout(900)
-    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    logways.press(q, "numbers")
     check("opens: the choice survives a reload", q.evaluate(SHEETS)==["numbers"])
     q.click('[data-wayclose="numbers"]'); q.wait_for_timeout(250)
     pick("inplace")
-    q.click('[data-logway="numbers"]'); q.wait_for_timeout(250)
+    logways.press(q, "numbers")
     check("opens: and in place is in place again", q.evaluate(SHEETS)==[] and q.evaluate(INLINE)==[True,False])
     c.close()
 
@@ -3370,7 +3380,7 @@ with sync_playwright() as pw:
     check("cardio: a tab of its own, after Gym", tabs==["macros","pantry","gym","cardio","progress","log"], str(tabs))
     q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
     check("cardio: no rest timer here", q.evaluate("()=>document.getElementById('restbar').hidden"))
-    check("cardio: an empty day says what to do", "Start a session above" in q.inner_text("#view"))
+    check("cardio: an empty day says what to do", "Start a session with the plate" in q.inner_text("#view"))
     check("cardio: the goal starts at 150 minutes a week",
           " ".join(q.inner_text(".cardio-goal .cg-num").split())=="0 of 150 min" and q.inner_text(".cardio-goal .eyebrow")=="THIS WEEK")
     q.click("#cardioStart"); q.wait_for_timeout(250)
@@ -3735,10 +3745,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The stage and the sheet"
-          and titles[1]=="A new look: Chalk and Iron"
-          and titles[2]=="A line about your week"
-          and titles[3]=="Gold plates", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="The plate"
+          and titles[1]=="The stage and the sheet"
+          and titles[2]=="A new look: Chalk and Iron"
+          and titles[3]=="A line about your week", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
@@ -4188,6 +4198,90 @@ with sync_playwright() as pw:
     check("stage: the Log's says the year", m["stage"]=="plain" and m["show"] and str(T.year) in m["say"], str(m))
     c.close()
 
+    # ---------- THE PLATE (b98) ----------
+    # Step 3 of the Chalk and Iron look. On Macros, Cardio and Progress the bar
+    # above the tabs is one button, a plate, hung above the dock on the right.
+    # It floats over the page, so two things must hold that a bar got for
+    # free: the tap reaches it, and the page's last row can be scrolled clear
+    # of it. Gym and Pantry keep their bars on purpose: on Gym the plate sat
+    # on the Set button of the movement being worked, and Pantry's rows have
+    # their + exactly where it stands.
+    PLT="""()=>{const b=document.querySelector('#plates .plate'), bar=document.getElementById('ctxMain');
+      const o={n:document.querySelectorAll('#plates .plate').length, mark:document.documentElement.getAttribute('data-plate'), bar:bar.children.length};
+      if(b){const r=b.getBoundingClientRect(), dk=document.querySelector('.dock').getBoundingClientRect(), t=document.querySelector('.tabs').getBoundingClientRect();
+        const dc=b.querySelector('.pl-disc').getBoundingClientRect(), tg=b.querySelector('.pl-tag').getBoundingClientRect();
+        const h1=document.elementFromPoint(dc.left+dc.width/2, dc.top+dc.height/2), h2=document.elementFromPoint(tg.left+12, tg.top+tg.height/2);
+        Object.assign(o,{id:b.id, say:b.querySelector('.pl-tag').textContent.trim(), label:b.getAttribute('aria-label')||'', h:Math.round(r.height),
+          left:Math.round(r.left), right:Math.round(innerWidth-r.right), aboveDock:Math.round(dk.top-r.bottom), aboveTabs:Math.round(t.top-r.bottom),
+          reach:!!h1&&b.contains(h1)&&!!h2&&b.contains(h2)});}
+      return o;}"""
+    # at the very end of the page, the lowest thing drawn in it, against the plate's top
+    FOOT="""()=>{window.scrollTo(0,document.documentElement.scrollHeight); const b=document.querySelector('#plates .plate').getBoundingClientRect(); let low=0, what='';
+      document.querySelectorAll('#view button, #view input, #view p, #view b, #view span, #view td, #view h2, #view h3').forEach(e=>{
+        const r=e.getBoundingClientRect(); if(r.height&&r.width&&!e.closest('.sheet')&&r.bottom>low){low=r.bottom; what=e.id||e.className||e.tagName;}});
+      return {low:Math.round(low), plate:Math.round(b.top), what:String(what)}; }"""
+    c = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True, reduced_motion="reduce")
+    c.add_init_script("delete window.claude;"); fakeai.phone(c)
+    q = c.new_page(); q.on("pageerror", lambda e: errs.append("plate: "+str(e)))
+    q.goto("file://"+d+"/mntl-dt.html"); q.wait_for_timeout(400)
+    opened(dict(LBSTORE, goal=SG2, days={Ts: sday(12)}, build=BUILDNOW))
+    m=q.evaluate(PLT)
+    check("plate: Macros has one, on the right above the tabs, saying Log food, and no bar",
+          m["n"]==1 and m["id"]=="plate" and m["say"]=="Log food" and m["bar"]==0 and m["mark"]=="1" and m["right"]<=16 and m["aboveDock"]>=4, str(m))
+    check("plate: it is a proper target, and the tap reaches it on the disc and on the tag", m["h"]>=MIN_TAP and m["reach"], str(m))
+    f=q.evaluate(FOOT)
+    check("plate: the last line of a long ledger can be scrolled clear of it", f["low"]<=f["plate"], str(f))
+    # looking at the sheet is not a change: a number half typed must survive it
+    logways.open_way(q, "numbers"); q.fill("#fCal","250"); q.evaluate("()=>document.activeElement&&document.activeElement.blur()"); q.wait_for_timeout(500)
+    q.click("#plate"); q.wait_for_timeout(200); q.click("#waysClose"); q.wait_for_timeout(200)
+    check("plate: bringing its sheet up and putting it away redraws nothing: a half-typed number is still there",
+          q.input_value("#fCal")=="250")
+    f=q.evaluate(FOOT)
+    check("plate: Add to ledger, at the foot of the open box, is clear of it too", f["low"]<=f["plate"], str(f))
+    logways.press(q, "numbers")
+    # the undo bar is in the dock: the plate rides on it, and both are reached
+    q.evaluate("()=>window.scrollTo(0,0)"); q.wait_for_timeout(300)
+    was=q.evaluate(PLT)["aboveTabs"]
+    q.locator("[data-editrow]").first.click(); q.wait_for_timeout(250); q.locator(".t-del").first.click(); q.wait_for_timeout(400)
+    m=q.evaluate(PLT)
+    check("plate: with the undo bar showing it rides above it, still reached, and Undo is too",
+          q.is_visible("#undoBtn") and m["aboveDock"]>=4 and m["aboveTabs"]>was and m["reach"]
+          and q.evaluate("()=>{const u=document.getElementById('undoBtn'), r=u.getBoundingClientRect(); const h=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2); return h===u||u.contains(h);}"), "%s, %s above the tabs before" % (m, was))
+    q.set_viewport_size({"width":320,"height":640}); q.wait_for_timeout(300)
+    m=q.evaluate(PLT)
+    check("plate: it fits a 320px phone", m["left"]>=0 and m["right"]>=0 and m["reach"], str(m))
+    q.set_viewport_size({"width":402,"height":874}); q.wait_for_timeout(200)
+    # Cardio: Start is the plate; a running session keeps its bar
+    q.click('.tabs button[data-tab="cardio"]'); q.wait_for_timeout(400)
+    m=q.evaluate(PLT)
+    check("plate: Cardio's says Start cardio, and is named in full for a screen reader",
+          m["n"]==1 and m["id"]=="cardioStart" and m["say"]=="Start cardio" and m["label"]=="Start cardio session" and m["bar"]==0 and m["reach"], str(m))
+    q.click("#cardioStart"); q.wait_for_timeout(250)
+    if q.locator("#cPickNew").is_visible(): q.fill("#cPickNew","Bike"); q.evaluate("()=>document.activeElement&&document.activeElement.blur()"); q.wait_for_timeout(500)
+    q.click("#cPickGo"); q.wait_for_timeout(350)
+    m=q.evaluate(PLT)
+    check("plate: a running session takes the plate away and keeps Stop and Discard in the dock",
+          m["n"]==0 and m["mark"] is None and q.is_visible("#cardioStop") and q.is_visible("#cardioDiscard"), str(m))
+    q.click("#cardioDiscard"); q.wait_for_timeout(350)
+    m=q.evaluate(PLT)
+    check("plate: and it is back when the session is gone", m["n"]==1 and m["id"]=="cardioStart", str(m))
+    q.click('.tabs button[data-tab="progress"]'); q.wait_for_timeout(400)
+    m=q.evaluate(PLT)
+    check("plate: Progress's says New check-in", m["n"]==1 and m["id"]=="pgNew" and m["say"]=="New check-in" and m["bar"]==0 and m["reach"], str(m))
+    # the two that keep their bars, and the one with nothing to start
+    q.click('.tabs button[data-tab="gym"]'); q.wait_for_timeout(400)
+    m=q.evaluate(PLT)
+    check("plate: Gym keeps its three buttons in the bar, and has no plate over its sets",
+          m["n"]==0 and m["mark"] is None and q.locator("#ctxMain [data-gymway]").count()==3, str(m))
+    q.click('.tabs button[data-tab="pantry"]'); q.wait_for_timeout(400)
+    m=q.evaluate(PLT)
+    check("plate: Pantry keeps its search bar", m["n"]==0 and q.locator("#ctxMain #panFind").count()==1 and q.locator("#ctxMain #panNew").count()==1, str(m))
+    q.click('.tabs button[data-tab="log"]'); q.wait_for_timeout(400)
+    m=q.evaluate(PLT)
+    check("plate: the Log has neither", m["n"]==0 and m["bar"]==0 and m["mark"] is None, str(m))
+    check("plate: and leaving Macros never leaves its sheet behind", q.evaluate("()=>document.getElementById('waysSheet').hidden"))
+    c.close()
+
     def fresh(store, label):
         cx = b.new_context(viewport={"width":402,"height":874}, has_touch=True, is_mobile=True)
         cx.add_init_script("delete window.claude;"); fakeai.phone(cx)
@@ -4218,10 +4312,10 @@ with sync_playwright() as pw:
         except Exception: return ""
         return pg.inner_text(".scan-card")
     c, q = fresh(LBSTORE, "barcodes")
-    # Scan in the bottom bar opens the reader in one press (b71); it used to
-    # open a Scan tab whose one button opened it.
-    q.click("[data-scanway]"); q.wait_for_timeout(300)
-    check("barcodes: Scan in the bottom bar opens the reader itself",
+    # Scan opens the reader itself (b71); it used to open a Scan tab whose one
+    # button opened it. From b98 it is on the plate's sheet.
+    logways.scan(q, 300)
+    check("barcodes: Scan on the plate's sheet opens the reader itself",
           q.locator("#scanSheet").count()==1 and q.locator("#wayEstimate").count()==0)
     check("barcodes: before grocery brands are on the phone, it offers them rather than failing",
           q.locator("#scanBrands").count()==1 and "9 MB" in q.inner_text("#scanBrands"), q.inner_text("#scanSheet")[:120])
@@ -4252,7 +4346,7 @@ with sync_playwright() as pw:
     check("barcodes: Add puts it in the review, from the label",
           q.evaluate(ROWS)==["Great Value Whole Milk"] and q.inner_text(".rev-item .src-tag").upper()=="BRAND LABEL · 2026", str(q.evaluate(ROWS)))
     q.click("#discardEst"); q.wait_for_timeout(300)
-    q.click("[data-scanway]"); camera_answered(q)
+    logways.scan(q); camera_answered(q)
     q.fill("#scanType", "071717171717"); q.click("#scanGo")
     card=scan_card(q)
     check("barcodes: a number that is nowhere says so, and offers the pantry",
@@ -4266,7 +4360,7 @@ with sync_playwright() as pw:
     pan=[x for x in q.evaluate(LBST)["pantry"] if x["name"]=="Corner store protein bar"]
     check("barcodes: it is saved with the food", pan and pan[0].get("upc")=="71717171717", str(pan))
     q.click('.tabs button[data-tab="macros"]'); q.wait_for_timeout(300)
-    q.click("[data-scanway]"); camera_answered(q)
+    logways.scan(q); camera_answered(q)
     q.fill("#scanType", "071717171717"); q.click("#scanGo")
     card=scan_card(q)
     check("barcodes: and the next scan finds it, from the pantry",

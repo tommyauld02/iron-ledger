@@ -11,6 +11,7 @@ moment. Scrolling per element instead makes every rect measured before the
 scroll stale, which reports controls as covered when they are not.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 
@@ -57,7 +58,7 @@ HITTEST = """() => {
   // cannot be picked up at all.
   const sel = 'button, input, select, textarea, [role=tab], [role=button]';
   const els = [...document.querySelectorAll(
-    'main ' + sel + ', .topbar ' + sel + ', .tabs ' + sel + ', .undobar ' + sel)];
+    'main ' + sel + ', .topbar ' + sel + ', .tabs ' + sel + ', .undobar ' + sel + ', .plates ' + sel)];
 
   for (const el of els) {
     // The year calendar is 365 deliberately-tiny cells in a dense grid; it is
@@ -108,6 +109,11 @@ HITTEST = """() => {
       const hit = document.elementFromPoint(x, y);
       if (!hit) continue;
       if (hit === el || el.contains(hit) || hit.contains(el)) continue;
+      // The plate (b98) floats over the page above the dock. A row passing
+      // under it is behind it by design, the same as under the dock, and
+      // scrolls clear: sweep checks the last row of a page can. The plate
+      // itself is judged like the rest of the chrome, wherever it stands.
+      if (!chrome && hit.closest('.plates')) continue;
 
       // Two different things can be true here. A control whose CENTRE is taken
       // is unusable. A control clipped only at a corner by an ordinary
@@ -181,13 +187,18 @@ with sync_playwright() as pw:
             box = tab.split(":")[1]
             # already open, a press would fold it
             # the checklist folds on Pantry the way the two ways in do on Macros
-            opener = ("#suppToggle" if box == "checklist"
-                      # the Gym's bottom bar, b87: Training at, Add movement, the rest timer
-                      else '#ctxMain [data-gymway="%s"]' % box if box in ("gym", "move", "rest")
-                      else '[data-logway="%s"]' % box)
-            if p.locator(opener + '[aria-expanded="false"]').count():
-                p.click(opener); p.wait_for_timeout(350)
-            if not p.locator(opener + '[aria-expanded="true"]').count():
+            if box in ("numbers", "estimate"):
+                # Macros' ways in are on the plate's sheet from b98
+                logways.open_way(p, box, 350)
+                opened = logways.states(p).get(box) == "true"
+            else:
+                opener = ("#suppToggle" if box == "checklist"
+                          # the Gym's bottom bar, b87: Training at, Add movement, the rest timer
+                          else '#ctxMain [data-gymway="%s"]' % box)
+                if p.locator(opener + '[aria-expanded="false"]').count():
+                    p.click(opener); p.wait_for_timeout(350)
+                opened = p.locator(opener + '[aria-expanded="true"]').count() > 0
+            if not opened:
                 covered.append("%s did not open, so nothing in it was tested" % tab)
         # open the panels that only exist once something is expanded
         if tab == "coach" and p.locator("[data-openday]").count():

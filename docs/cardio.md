@@ -11,7 +11,8 @@ are the owner's own names (`store.cardioTypes`), added from the picker's *+ New
 type…* and taken off with its minus. Like movements, a session carries its
 own name, so taking a type off the list leaves history alone.
 
-*Start cardio session* asks what it is, then runs a clock (`d.cardioStart`,
+*Start cardio* (the plate above the tabs from b98, named *Start cardio
+session* for a screen reader) asks what it is, then runs a clock (`d.cardioStart`,
 `d.cardioType`) that is a timestamp for the workout clock's reason. *Stop and
 log it* turns it into a session (`stopCardio()`) under the same rules as the
 workout clock. Over `MAX_SESSION_MS` it was forgotten, so nothing is logged,

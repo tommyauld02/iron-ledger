@@ -79,8 +79,8 @@ NATIVEFAKE = """window.Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios
 # Every field a person types into: where it is, and the presses that reveal it.
 # "__new" picks + New movement in the list, which is what shows its name field.
 FIELDS=[
- ("macros: Log numbers",        "macros", ['[data-logway="numbers"]'], "#fCal"),
- ("macros: Ask an agent",       "macros", ['[data-logway="estimate"]'], "#estText"),
+ ("macros: Log numbers",        "macros", ['#plate', '[data-logway="numbers"]'], "#fCal"),
+ ("macros: Ask an agent",       "macros", ['#plate', '[data-logway="estimate"]'], "#estText"),
  ("pantry: Find in your pantry","pantry", [], "#panFind"),
  ("pantry: a new food (sheet)", "pantry", ["#panNew"], "#panName"),
  ("pantry: the checklist",      "pantry", ["#suppToggle"], "#suppNameIn"),
@@ -101,8 +101,8 @@ FIELDS=[
 # Every tab, folded and with each thing that opens a long box opened.
 SCREENS=[
  ("macros",                  "macros", []),
- ("macros, Log numbers open","macros", ['[data-logway="numbers"]']),
- ("macros, Ask an agent open","macros", ['[data-logway="estimate"]']),
+ ("macros, Log numbers open","macros", ['#plate', '[data-logway="numbers"]']),
+ ("macros, Ask an agent open","macros", ['#plate', '[data-logway="estimate"]']),
  ("pantry",                  "pantry", []),
  ("pantry, list folded",     "pantry", ['[data-pantab="all"]']),
  ("pantry, checklist open",  "pantry", ["#suppToggle"]),

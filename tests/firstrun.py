@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
@@ -17,7 +18,7 @@ with sync_playwright() as pw:
     p.reload(); p.wait_for_timeout(800)
     print(not p.evaluate("()=>!!document.querySelector('.welcome')"))
     # they can still log straight away
-    p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
+    logways.press(p, "numbers")
     p.fill("#fCal","400"); p.fill("#fPro","30"); p.fill("#fNote","Test meal")
     p.click("#addFood"); p.wait_for_timeout(400)
     print("tester can log:", p.eval_on_selector_all(".t-row","e=>e.length")==1)

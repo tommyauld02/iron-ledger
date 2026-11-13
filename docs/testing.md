@@ -137,6 +137,23 @@ the same for Ask an agent's permission (`IRON_LEDGER_AI`) unless
 will time out on the age check. `darkcheck` measures both screens while hidden,
 since none of its pages ever shows them; `agecheck` measures them on screen.
 
+**A way to log food is reached through the plate (b98).** Macros' three ways
+are on the plate's sheet, so a press on `[data-logway]` alone waits for a
+button that is not showing. `tests/logways.py` does it the way a person does:
+`open_way(p, "numbers")` (only if it is folded), `press(p, "estimate")` (the
+plate, then the button, whatever it does), `scan(p)`, and `states(p)` for
+which are open. A list of taps (`keys`, `handoff`, `probe`) puts `#plate`
+before the way. `tests/gymways.py` is the same idea for the Gym's bar, which
+did not move.
+
+**A run that crosses midnight fails on the clock, not the app.** A suite takes
+today's date once, when it starts, and seeds its fixture on that day; the app
+re-checks the date as it goes (`checkDayRollover()`). `sweep` runs for about
+nine minutes, and a full run started at ten to midnight (b98) had its fixture
+become yesterday halfway through: a tap on a row timed out, because the app
+had moved on to an empty today. Every check before and after it passed. Run it
+again; do not go looking for the bug.
+
 **`agecheck` and `profile` open over http, and seed their log once.** They used
 to fail now and then on CI with the age check back after a reload (2026-10-29,
 2026-10-31; a rerun passed). Opened from `file://`, Chromium sometimes hands a

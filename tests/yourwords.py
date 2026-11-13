@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, datetime
 
@@ -7,8 +8,7 @@ import os, datetime
 # of a phrase, not about how it was entered, so it opens the box and types.
 def words(p):
     # the words box sits folded behind Ask an agent until asked for
-    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "estimate")
 d=os.getcwd().replace("\\","/"); d="/"+d if d[1:2]==":" else d; T=datetime.date.today().isoformat()
 G={"cal":{"dir":"-","v":2000},"pro":{"dir":"+","v":150}}
 STORE={"days":{T:{"food":[],"lifts":[],"updated":1,"goal":G}},"moves":None,"goal":G,

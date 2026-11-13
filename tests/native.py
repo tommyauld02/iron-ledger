@@ -40,6 +40,7 @@ What it cannot show: that UserDefaults survives a phone restart. That is
 Apple's to keep, and is on the list Tommy runs on his iPhone (docs/ios.md).
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -152,8 +153,7 @@ def macros(p):
 
 def add_food(p, cal, note):
     macros(p)
-    if p.locator('[data-logway="numbers"][aria-expanded="false"]').count():
-        p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "numbers")
     p.fill("#fCal", str(cal)); p.fill("#fPro", "10"); p.fill("#fNote", note)
     p.click("#addFood")
 

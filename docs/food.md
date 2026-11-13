@@ -252,8 +252,12 @@ or zero items dissolves back into plain rows — call it after anything that can
 remove an item. `locate(d, id)` finds a row at the top level *or* inside a meal;
 use it anywhere food is looked up by id.
 
-**Three ways in, each named under its picture (b71).** The bottom bar on
-Macros is three buttons: *Log numbers* (a pencil — writing down numbers you
+**Three ways in, each named under its picture (b71).** From b98 the three are
+on the plate's sheet: the plate above the tabs says *Log food* and brings them
+up, *Ask an agent* first and filled, each with a line under its name
+(`docs/ui.md`, *The plate*). What follows is why there are three and what each
+is, which has not changed. Until b98 the bottom bar on
+Macros was three buttons: *Log numbers* (a pencil — writing down numbers you
 have), *Ask an agent* (a # — numbers you don't know) and *Scan* (a barcode).
 The owner found the old bar confusing: a pencil beside *What did you eat?*, a
 bare # and a barcode said nothing about which was which, and the pencil opened

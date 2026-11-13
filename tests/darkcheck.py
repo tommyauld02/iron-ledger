@@ -13,6 +13,7 @@ only measures the states its fixture puts on screen.
 """
 import fakeai
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 import os, time, datetime, json
@@ -416,23 +417,23 @@ def walk(p, label):
               document.querySelectorAll('.ss-zone.is-over').forEach(z=>z.classList.remove('is-over'));}""")
         if tab == "macros":
             # both boxes are folded until a press: open each and measure it
-            p.click('[data-logway="numbers"]'); p.wait_for_timeout(250)
+            logways.press(p, "numbers")
             if not p.locator("#fCal").count(): found.append("macros: the numbers box is not on screen")
             low = p.evaluate(LOW)
             if low: found.append("macros (log numbers): %s" % low)
-            p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+            logways.press(p, "estimate")
             if not p.locator("#estText").count(): found.append("macros: the Ask an agent box is not on screen")
             low = p.evaluate(LOW)
             if low: found.append("macros (ask an agent): %s" % low)
             # and as pop-ups, chosen in Settings, then back to in place; the
             # open box is folded first, or it would come back as a pop-up over
             # the very button the next step presses
-            p.click('[data-logway="estimate"]'); p.wait_for_timeout(200)
+            logways.press(p, "estimate", 200)
             p.click("#setBtn"); p.wait_for_timeout(250)
             p.click('[data-pick-logopen="popup"]'); p.wait_for_timeout(200)
             p.click("#setDone"); p.wait_for_timeout(250)
             for w in ("numbers", "estimate"):
-                p.click('[data-logway="%s"]' % w); p.wait_for_timeout(250)
+                logways.press(p, w)
                 if not p.locator('[data-waysheet="%s"]' % w).count():
                     found.append("macros: the %s pop-up is not on screen" % w)
                 low = p.evaluate(LOW)
@@ -441,7 +442,7 @@ def walk(p, label):
             p.click("#setBtn"); p.wait_for_timeout(250)
             p.click('[data-pick-logopen="inplace"]'); p.wait_for_timeout(200)
             p.click("#setDone"); p.wait_for_timeout(250)
-            p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+            logways.press(p, "estimate")
             # the review header sits on the soft tint too
             p.fill("#estText", "chicken and rice"); p.click("#runEst"); p.wait_for_timeout(900)
             low = p.evaluate(LOW)

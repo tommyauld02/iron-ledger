@@ -1,4 +1,5 @@
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
 import os, json, datetime
@@ -34,8 +35,7 @@ def add_movement(pg, name, wait=350):
     pg.click("#addLift"); pg.wait_for_timeout(wait)
 def way(p, w):
     """Open one of the ways in under the checklist; they start folded."""
-    if p.locator('[data-logway="%s"][aria-expanded="false"]' % w).count():
-        p.click('[data-logway="%s"]' % w); p.wait_for_timeout(250)
+    logways.open_way(p, w)
 
 
 with sync_playwright() as pw:

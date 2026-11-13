@@ -166,7 +166,7 @@ with sync_playwright() as pw:
     check("tab: with nothing yet, it says what a check-in is",
           p.locator("#pgIntro").is_visible() and "any one of them is a check-in" in p.locator("#pgIntro").inner_text())
     check("tab: and where photos stay", "Photos stay on this phone" in p.locator("#pgIntro").inner_text())
-    check("tab: New check-in is the bar above the tabs", p.locator("#ctxMain #pgNew").text_content().strip() == "New check-in")
+    check("tab: New check-in is the plate above the tabs", p.locator("#plates #pgNew").text_content().strip() == "New check-in")
     tab(p, "macros")
     check("tab: the date strip is back on Macros", not p.evaluate("document.getElementById('datenav').hidden"))
 

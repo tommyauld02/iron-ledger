@@ -16,6 +16,7 @@ cost a key, privacy or a wrong number:
 The relay is tests/fakeai.py, here as everywhere; nothing is sent anywhere.
 """
 import answered   # every page has said 18 or older: tests/answered.py
+import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 from playwright.sync_api import sync_playwright
 import os, io, re, json, datetime
 import fakeai
@@ -78,8 +79,7 @@ def page(b, relay=True, claude=False, reply=None, log=None, size=(402, 874)):
 
 def words(p, text, wait=900):
     if p.locator("#discardEst").count(): p.click("#discardEst"); p.wait_for_timeout(250)
-    if p.locator('[data-logway="estimate"][aria-expanded="false"]').count():
-        p.click('[data-logway="estimate"]'); p.wait_for_timeout(250)
+    logways.open_way(p, "estimate")
     p.fill("#estText", text); p.click("#runEst"); p.wait_for_timeout(wait)
 
 
