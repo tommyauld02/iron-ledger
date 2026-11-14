@@ -115,22 +115,24 @@ with sync_playwright() as pw:
                 FAILS.append("%s: set-to-beat lines not on screen to measure" % name)
             if t=="gym" and not p.eval_on_selector_all(".day-note, .lift .lift-note","e=>e.length")>=2:
                 FAILS.append("%s: notes not on screen to measure" % name)
-            # last time set by set: a six-set history has to fit every phone, and
-            # every state a row can be in has to be on screen to be measured
+            # last time's box and today's rows (b100): a six-set history has to
+            # fit every phone, and every state a row can be in has to be on
+            # screen to be measured
             if t=="gym":
-                lrows=p.evaluate("""()=>({rows:document.querySelectorAll('.lift .lastset').length,
+                lrows=p.evaluate("""()=>({rows:document.querySelectorAll('.lift .lb-set').length,
                   matched:document.querySelectorAll('.lift .ls-matched').length, beat:document.querySelectorAll('.lift .ls-beat').length,
-                  short:document.querySelectorAll('.lift .ls-short').length, next:document.querySelectorAll('.lift .ls-next').length,
-                  longest:Math.max(...[...document.querySelectorAll('.lift .lastsets')].map(e=>e.querySelectorAll('.lastset').length))})""")
+                  short:document.querySelectorAll('.lift .ls-short').length, next:document.querySelectorAll('.lift .trow.is-next').length,
+                  longest:Math.max(...[...document.querySelectorAll('.lift .lastbox')].map(e=>e.querySelectorAll('.lb-set').length))})""")
                 if lrows["longest"]<6 or not (lrows["matched"] and lrows["beat"] and lrows["short"] and lrows["next"]):
                     FAILS.append("%s: last-time rows not on screen to measure %s" % (name, lrows))
-                # A narrow phone wraps a row inside itself. Today's numbers must
-                # stay on the row's own first line: dropped under it, they read
-                # as the next row's.
-                drop=p.evaluate("""()=>[...document.querySelectorAll('.lift .lastset')].filter(r=>{
-                  const t=r.querySelector('.ls-right > span'); if(!t) return false;
-                  return Math.abs(t.getBoundingClientRect().top-r.getBoundingClientRect().top)>4;}).map(r=>r.textContent.trim().slice(0,40))""")
-                if drop: FAILS.append("%s: today's numbers dropped under their row: %s" % (name, " | ".join(drop)))
+                # Every row of today is one line, on every phone: a wrapped row
+                # puts its check or its Matched under it, where they read as the
+                # next row's. And the weight and reps boxes keep room for "150".
+                tall=p.evaluate("""()=>[...document.querySelectorAll('.lift .trow')].filter(r=>r.getBoundingClientRect().height>50)
+                  .map(r=>r.textContent.trim().replace(/\\s+/g,' ').slice(0,40))""")
+                if tall: FAILS.append("%s: a row of today wrapped onto two lines: %s" % (name, " | ".join(tall)))
+                thin=p.evaluate("""()=>[...document.querySelectorAll('.lift .trow input')].filter(i=>i.getBoundingClientRect().width<46).length""")
+                if thin: FAILS.append("%s: %d weight or reps boxes are too narrow to show 150" % (name, thin))
             if t=="cardio" and not p.eval_on_selector_all(".cardio-card","e=>e.length"):
                 FAILS.append("%s: no cardio session on screen to measure" % name)
             if t=="pantry" and p.eval_on_selector_all("[data-pantab]","e=>e.length")<6:

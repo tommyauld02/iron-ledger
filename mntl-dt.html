@@ -2137,6 +2137,21 @@
     color: var(--ink-2);
     white-space: nowrap;
   }
+  /* On an open card it is also where its targets come from (b100): a tap
+     switches between this gym and every gym. Teal, because it is a button. */
+  button.gymtag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    margin: -12px 0 -12px 2px;
+    padding: 0 8px;
+    background: none;
+    border: 0;
+    color: var(--accent);
+    vertical-align: middle;
+  }
 
   .liftgroup { display: flex; flex-direction: column; gap: 12px; }
 
@@ -2194,26 +2209,103 @@
     overflow-wrap: anywhere;
   }
   .lift .beat b { font-weight: 600; color: var(--ink); }
-  /* last time, set by set: read-only rows under the target. Nothing in them
-     is a control, so nothing is teal; only Beat is coloured, in --hit. */
-  .lift .lastsets { margin: 7px 0 9px; }
-  .lift .lastset {
-    min-height: 24px;
+  /* Last time, in a box of its own (b100): where, when, how long, its sets,
+     its note and the set to beat. Read-only, so nothing in it is teal; only a
+     beaten target is coloured, in --hit. */
+  .lift .lastbox { margin: 9px 0 0; padding: 9px 12px 10px; background: var(--surface-2); }
+  .lift .lb-head { margin: 0 0 4px; font-family: var(--font-num); font-size: 11.5px; color: var(--ink-3); overflow-wrap: anywhere; }
+  .lift .lb-head b { font-weight: 600; color: var(--ink-2); }
+  .lift .lb-set { margin: 0; font-size: 15px; line-height: 22px; color: var(--ink-2); }
+  .lift .lb-t { font-family: var(--font-num); font-size: 12px; color: var(--ink-3); }
+  .lift .lb-note { margin: 6px 0 0; font-size: 13.5px; font-style: italic; color: var(--ink-2); overflow-wrap: anywhere; }
+  .lift .lastbox .beat { margin-top: 6px; }
+  /* Today, one row a set. A row still to do is a plan: last time's numbers
+     sit in it as grey placeholders until something is typed, and its check
+     is what logs it. The next one to do has the filled check. */
+  .today { margin-top: 12px; }
+  .td-head { margin: 0 0 2px; font-family: var(--font-num); font-size: 11.5px; color: var(--ink-3); }
+  .td-head b { font-family: var(--font-ui); font-size: 13px; font-weight: 700; color: var(--ink-2); }
+  .trow {
+    display: grid;
+    grid-template-columns: 16px minmax(0, 1fr) 10px minmax(0, 1fr) 74px 48px;
+    gap: 6px;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .trow .tn { font-family: var(--font-num); font-size: 12px; color: var(--ink-3); text-align: center; }
+  .trow .tx { font-size: 13px; color: var(--ink-3); text-align: center; }
+  .trow input {
+    width: 100%;
+    min-width: 0;
+    height: 46px;
+    padding: 0 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .trow input::placeholder { color: var(--ink-3); opacity: 1; }
+  .tlog {
     display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 0 8px;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--catcolor);
+  }
+  .tlog svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+  .trow.is-next input { border-color: var(--catcolor); }
+  .trow.is-next .tlog { background: var(--catcolor); border-color: var(--catcolor); color: var(--surface); }
+  /* A logged row is the set itself: a tap opens it, to change or remove. */
+  .trow.is-logged { grid-template-columns: 16px minmax(0, 1fr) 112px; }
+  .tset {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 46px;
+    padding: 0 10px;
+    background: var(--surface-2);
+    border: 1px solid transparent;
+    border-radius: 2px;
+    text-align: left;
+    font-family: var(--font-num);
+    font-variant-numeric: tabular-nums;
+    font-size: 16px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .tset .x { color: var(--ink-3); margin: 0 1px; }
+  .tset .tq { margin-left: 6px; font-size: 12px; color: var(--ink-3); }
+  .trow .tmark { text-align: right; }
+  .tcount { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+  .tc-say { min-width: 0; font-family: var(--font-num); font-size: 11.5px; color: var(--ink-3); }
+  .tc-step { display: flex; gap: 6px; flex: none; }
+  .tc-step button {
+    min-width: 64px;
+    height: 44px;
+    padding: 0 10px;
+    background: none;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    font-family: var(--font-ui);
     font-size: 15px;
-    line-height: 20px;
+    font-weight: 700;
     color: var(--ink-2);
   }
-  /* A narrow phone wraps a row inside itself: last time's tag under its
-     numbers, the status under today's. Today's numbers never drop under the
-     row, where they would read as belonging to the row below. */
-  .lift .ls-num { white-space: nowrap; }
-  .lift .ls-right { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0 5px; text-align: right; }
-  .lift .ls-right > span { white-space: nowrap; }
-  .lift .ls-next { font-size: 12px; }
+  .tc-step button:disabled { opacity: .45; }
+  .today .tbar { margin-top: 8px; }
+  /* The narrowest phones keep both number boxes wide enough for "150". */
+  @media (max-width: 359px) {
+    .trow { grid-template-columns: 12px minmax(0, 1fr) 8px minmax(0, 1fr) 60px 46px; gap: 4px; }
+    .trow input { padding: 0 6px; }
+    .trow.is-logged { grid-template-columns: 12px minmax(0, 1fr) 96px; }
+  }
   .lift .ls-mark {
     font-family: var(--font-num);
     font-size: 12px;
@@ -2386,38 +2478,6 @@
     to   { transform: translate3d(var(--dx, 0), 112vh, 0) rotate(var(--spin, 540deg)); }
   }
   @media (prefers-reduced-motion: reduce) { .confetti { display: none; } }
-
-  .setadd {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 6px;
-    margin-top: 9px;
-    align-items: center;
-  }
-  .setadd input {
-    height: 46px;
-    padding: 0 8px;
-    background: var(--surface-2);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    font-family: var(--font-num);
-    font-variant-numeric: tabular-nums;
-    font-size: 15px;
-    width: 100%;
-  }
-  .setadd button {
-    height: 46px;
-    min-width: 56px;
-    padding: 0 14px;
-    border: 1px solid var(--catcolor);
-    color: var(--catcolor);
-    border-radius: 2px;
-    font-family: var(--font-num);
-    font-size: 12px;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-  }
-  .setadd button:hover { background: var(--catcolor); color: var(--surface); }
 
   .lift-foot {
     display: flex;
@@ -2601,30 +2661,6 @@
   #mDrop:hover:not(:disabled) { color: var(--danger); border-color: var(--danger); }
   #mDrop:disabled { opacity: .45; }
 
-  /* weight · reps · technique · Set — all four open the set sheet */
-  .setadd { grid-template-columns: 1fr 1fr 76px auto; }
-  /* They keep the look of the fields they were, so the row reads as always. */
-  .setadd .sa-field {
-    height: 46px;
-    min-width: 0;
-    padding: 0 8px;
-    text-align: left;
-    background: var(--surface-2);
-    border: 1px solid var(--rule);
-    border-radius: 2px;
-    font-family: var(--font-num);
-    font-size: 16px;
-    letter-spacing: 0;
-    text-transform: none;
-    color: var(--ink-3);
-  }
-  .setadd .tech {
-    min-width: 0;
-    padding: 0 4px;
-    border: 1px solid var(--rule);
-    background: var(--surface-2);
-    color: var(--ink-3);
-  }
   .se-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .se-head h2 { margin: 0; }
   .se-head button {
@@ -3902,10 +3938,9 @@
   }
   .lift .spine { width: 4px; }
   .lift-head h3 { font-size: 18px; font-weight: 700; font-stretch: 105%; }
-  .lift .lastsets { border-radius: 12px; background: var(--surface-2); padding: 4px 10px; }
+  .lift .lastbox { border-radius: 12px; }
   .set { border-radius: 12px; }
-  .setadd input, .setadd button, .setadd select { border-radius: 12px; }
-  .setadd button { font-family: var(--font-ui); letter-spacing: 0; text-transform: none; font-weight: 700; }
+  .trow input, .trow .tech, .tlog, .tset, .tc-step button { border-radius: 12px; }
   .lift-done {
     height: 48px; border-radius: 14px; font-family: var(--font-ui); font-size: 16px; font-weight: 700;
     letter-spacing: 0; text-transform: none;
@@ -4778,7 +4813,6 @@
         <button class="btn ghost" id="seMoveCancel">Keep it</button>
       </div>
     </div>
-    <p id="seLastSet" class="se-goal se-last" hidden></p>
     <p id="seGoal" class="se-goal" hidden></p>
     <!-- A machine at one gym is not the machine at another; a dumbbell is
          the same everywhere. Which numbers this movement answers to. -->
@@ -4846,7 +4880,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-13.99";
+  var BUILD = "2026-11-13.100";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5338,6 +5372,12 @@
   // null, "share" or "load" — which routine-sharing panel is open on Coach
   var suppEditing = null;   // which checklist item is being renamed
   var liftEditing = null;   // which movement on the day is having its name changed
+  // Today's rows (b100): what has been typed into a row not yet logged, and
+  // how many rows a movement shows beyond, or short of, last time's. Neither
+  // is in the log, because a row is a plan until its ✓; a reload starts
+  // again from last time.
+  var rowDraft = {};        // movement's id -> { row key: { w, r, t } }
+  var rowAdj = {};          // movement's id -> rows added (+) or taken off (−)
   var dayNoting = false;    // the note for the day is being written
   var movesTakenOff = 0;    // unused starting names cleared from the lists, said once
   var movesNeedSaving = false;
@@ -5840,6 +5880,11 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-13.100", t: "Today\u2019s sets, ready to tick off", items: [
+      "Add a movement and last time comes first, in a box of its own: where, when, how long that session was, each set, your note, and the set to beat.",
+      "Under it, today is one row for every set you did last time, already holding last time\u2019s numbers in grey. Did the same again? One tap on \u2713 and it is logged.",
+      "Type over any number that changed, and Enter logs it. \u2212 Set and + Set change how many sets there are.",
+      "Tap a set you logged to change or remove it, as before. Where its targets come from, this gym or every gym, is now the gym tag next to the movement\u2019s name." ] },
     { b: "2026-11-13.99", t: "Pantry is inside Macros", items: [
       "Pantry is no longer a tab of its own. It is the second half of Macros: a switch at the top of your list goes between Ledger and Pantry.",
       "Both stand under the same barbell, so a food added from the pantry loads its plates right there.",
@@ -7987,17 +8032,48 @@
              where: (at ? gymTagOf(at) + " \u00b7 " : "") + shortDate(prev.key) };
   }
   // The status as a small label. Grey, except Beat, which is the macro
-  // "target met" green: nothing in the rows is a button, so nothing is teal.
+  // "target met" green. It is a label, not a button, so it is never teal.
   function planMark(row) {
     if (!row || !row.status) return "";
     var word = row.status === "beat" ? "Beat" : row.status === "matched" ? "Matched" : "Short";
     var sym = row.status === "beat" ? "\u2191" : row.status === "matched" ? "=" : "\u2193";
     return '<span class="ls-mark ls-' + row.status + '"><span aria-hidden="true">' + sym + "</span> <span>" + word + "</span></span>";
   }
-  // The line over the pop-up's fields, naming where its numbers came from.
-  function planHint(plan, si) {
-    return "Last time, set " + (si + 1) + ": " + setText(plan.prev.lift.sets[si]) + " \u00b7 " + plan.where;
+
+  // ---------- today's sets, as rows (b100) ----------
+  // An open card lays today out one row a set. First the sets logged, in the
+  // order they were done, each with the set of last time it pairs with (the
+  // pairing above: by kind, in order). Then the sets still to do: last
+  // time's sets after the furthest one done today, so a warm-up skipped
+  // today is not offered again once the working sets have begun. With no
+  // last time there is always one row ready. − Set and + Set move the count
+  // by `adj`, which is clamped here so it can never take away a set already
+  // logged. A row to do is keyed by its place on the card ("r3"): logging the
+  // row above leaves it where it was, and so does switching to another gym's
+  // numbers, so what was typed into it stays put while the grey numbers
+  // around it follow the new last time.
+  var ROWS_MAX = 20;
+  function todayRows(l, plan, adj) {
+    var rows = [], partner = {};
+    if (plan) plan.rows.forEach(function (r) { if (r.today) partner[l.sets.indexOf(r.today)] = r; });
+    l.sets.forEach(function (s, si) {
+      var p = partner[si];
+      rows.push({ logged: true, si: si, set: s, status: p ? p.status : null });
+    });
+    var ahead = [];
+    if (plan && plan.next !== null) {
+      for (var k = plan.next; k < plan.rows.length; k++) ahead.push(plan.rows[k]);
+    }
+    var ready = plan ? ahead.length : 1;
+    adj = Math.min(Number(adj) || 0, ROWS_MAX - l.sets.length - ready);
+    adj = Math.max(adj, -ready);
+    for (var j = 0; j < ready + adj; j++) {
+      var a = j < ahead.length ? ahead[j] : null;
+      rows.push({ logged: false, key: "r" + rows.length, from: a ? a.last : null, extra: !a });
+    }
+    return { rows: rows, adj: adj };
   }
+  function rowId(l) { return l.id || l.movement; }
   // Last time's best: the set worth most, and the heavier of two worth the
   // same, because that is the one that was on the bar. A warm-up is never it
   // — nobody is trying to pass their warm-up — and any other tag rides along
@@ -11867,6 +11943,86 @@
         (w.how === "guess" ? ' <span class="wk-g">a guess from “' + esc(w.word) + '”</span>' : '') +
         '</span><button class="wk-ed" data-works="' + i + '" aria-label="Change what ' + esc(l.movement) + ' works">Change</button></p>';
     }
+    // Today, as rows (b99, the owner's layout): the sets logged, in order,
+    // each beside how it went against the set of last time it pairs with,
+    // then one row for each set still to do, holding last time's numbers in
+    // grey. A row still to do is a plan and nothing more. It is not in the
+    // log until its ✓, which is one tap when the set went as it did last
+    // time. − Set and + Set change how many rows there are.
+    function todayHtml(l, i, plan, locked) {
+      if (locked && !l.sets.length) return "";
+      var id = rowId(l);
+      var tr = todayRows(l, plan, rowAdj[id]);
+      rowAdj[id] = tr.adj;
+      var drafts = rowDraft[id] || {};
+      var name = esc(l.movement);
+      var upW = "", upR = "", nextW = null, planned = 0;
+      var rows = tr.rows.map(function (row, n) {
+        var no = n + 1;
+        if (row.logged) {
+          var s = row.set;
+          upW = String(s.w); upR = String(s.r);
+          var inner = s.w + '<span class="x">×</span>' + s.r +
+            (s.tech ? ' <span class="tq">' + esc(techShort(s.tech)) + '</span>' : '');
+          return '<div class="trow is-logged"><span class="tn">' + no + '</span>' +
+            (locked
+              ? '<span class="tset">' + inner + '</span>'
+              : '<button class="tset" data-lift="' + i + '" data-set="' + row.si + '" aria-label="Set ' + no + ' of ' +
+                  name + ', ' + esc(setText(s)) + '. Tap to change or remove it">' + inner + '</button>') +
+            '<span class="tmark">' + planMark(row) + '</span></div>';
+        }
+        // Last time's numbers when the row is one of last time's sets; past
+        // them, the row above's, because sets so often repeat. How a set is
+        // done comes from last time's matching set only, never the set
+        // before, so a drop tag does not ride along onto every set after it.
+        var phW = row.from ? String(row.from.w) : upW;
+        var phR = row.from ? String(row.from.r) : upR;
+        var dr = drafts[row.key] || {};
+        var t = dr.t !== undefined ? dr.t : (row.from && row.from.tech) || "";
+        var known = false;
+        var opts = TECHNIQUES.map(function (x) {
+          if (x.id === t) known = true;
+          return '<option value="' + x.id + '"' + (x.id === t ? ' selected' : '') + '>' + x.name + '</option>';
+        }).join("");
+        if (!known) opts += '<option value="' + esc(t) + '" selected>' + esc(techShort(t)) + '</option>';
+        upW = dr.w ? dr.w : phW; upR = dr.r ? dr.r : phR;
+        var first = planned === 0;
+        if (first) nextW = upW;
+        planned++;
+        return '<div class="trow is-plan' + (first ? ' is-next' : '') + '" data-li="' + i + '" data-row="' + row.key + '"' +
+            (row.extra ? ' data-extra="1"' : '') + '>' +
+          '<span class="tn">' + no + '</span>' +
+          '<input class="tw" inputmode="decimal" enterkeyhint="next" autocomplete="off" placeholder="' + esc(phW || 'lb') +
+            '" data-ph="' + esc(phW) + '" value="' + esc(dr.w || '') + '" aria-label="Weight for set ' + no + ' of ' + name + '">' +
+          '<span class="tx" aria-hidden="true">×</span>' +
+          '<input class="tr" inputmode="numeric" enterkeyhint="done" autocomplete="off" placeholder="' + esc(phR || 'reps') +
+            '" data-ph="' + esc(phR) + '" value="' + esc(dr.r || '') + '" aria-label="Reps for set ' + no + ' of ' + name + '">' +
+          '<span class="tech' + (t ? ' is-set' : '') + '"><span class="tech-show">' + esc(t ? techShort(t) : 'normal') + '</span>' +
+            '<select class="tt" aria-label="How set ' + no + ' of ' + name + ' is done">' + opts + '</select></span>' +
+          '<button class="tlog" data-logrow="' + row.key + '" aria-label="Log set ' + no + ' of ' + name + '">' +
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>' +
+        '</div>';
+      }).join("");
+      var total = tr.rows.length;
+      var say = total + (total === 1 ? ' set' : ' sets') +
+        (plan ? (total === plan.rows.length ? ', as last time' : ' · ' + plan.rows.length + ' last time') : '');
+      var bt = !locked && nextW !== null && isBarbellLift(l.movement) ? barText(num(nextW)) : null;
+      return '<div class="today" data-today="' + i + '">' +
+        '<p class="td-head"><b>Today</b>' +
+          (plan && planned && !l.sets.length ? ' · last time’s numbers until you type yours' : '') + '</p>' +
+        rows +
+        (locked ? '' :
+          '<div class="tcount"><span class="tc-say">' + say + '</span><span class="tc-step">' +
+            '<button data-rowless="' + i + '"' + (planned ? '' : ' disabled') + ' aria-label="One set fewer for ' + name + '">− Set</button>' +
+            '<button data-rowmore="' + i + '" aria-label="One more set for ' + name + '">+ Set</button>' +
+          '</span></div>' +
+          // On a barbell lift, what goes on the bar for the next set, as the
+          // set sheet has shown since b66.
+          (isBarbellLift(l.movement) && nextW !== null
+            ? '<div class="se-bar tbar"' + (bt ? '' : ' hidden') + '>' + (bt ? barHtml(bt) : '') + '</div>'
+            : '')) +
+      '</div>';
+    }
     var cardList = d.lifts.map(function (l, i) {
       var lc = cat(l.cat);
       var inGroup = !!l.ss;
@@ -11887,21 +12043,24 @@
       // light session — and the movement's own, "last set was really hard".
       var prevDay = prev ? store.days[prev.key] : null;
       var prevAt = here && prevDay && prevDay.gym ? gymInfo(prevDay.gym) : null;
-      var gymTag = here ? '<span class="gymtag">' + (shared ? 'every gym' : esc(gymTagOf(hereInfo))) + '</span>' : '';
-      // An open card lays last time's sets out as rows under the target, so the
-      // line keeps where, when and both notes; a locked card draws no rows, so
-      // its line still carries the sets.
+      var tagWord = shared ? 'every gym' : esc(gymTagOf(hereInfo));
+      var gymTag = here ? '<span class="gymtag">' + tagWord + '</span>' : '';
+      // On an open card the tag is also the switch for where its targets come
+      // from: this gym only, or every gym, because a dumbbell weighs the same
+      // everywhere. It was in the set sheet until b99, when adding a set
+      // stopped opening the sheet.
+      var gymTagBtn = here && !locked
+        ? '<button class="gymtag" data-sharetag="' + i + '" aria-label="' + esc(l.movement) + ' takes its targets from ' +
+            (shared ? 'every gym' : esc(gymTagOf(hereInfo)) + ' only') + '. Tap to change">' + tagWord + '</button>'
+        : gymTag;
       var plan = locked ? null : lastPlan(prev, l);
-      var lastLine = prev
-        ? 'Last' + (prevAt ? ' at ' + esc(gymTagOf(prevAt)) : '') + ' · ' + shortDate(prev.key) +
-          (prevDay && prevDay.gymNote ? ' (' + esc(clip(prevDay.gymNote, 32)) + ')' : '') +
-          (plan ? '' : ' — <em>' + prev.lift.sets.map(setText).join(", ") + '</em>') +
-          (prev.lift.note ? ' · \u201c' + esc(clip(prev.lift.note, 48)) + '\u201d' : '')
-        : away
-          ? 'First time at ' + esc(gymTagOf(hereInfo)) + '. ' +
-            (awayAt ? 'At ' + esc(gymTagOf(awayAt)) + ', ' : 'Unmarked, ') + shortDate(away.key) +
-            ' — <em>' + away.lift.sets.map(setText).join(", ") + '</em> · not a target here'
-          : 'First time logging this one.';
+      // Never done here, or never done: one line, as it always was. Another
+      // gym's numbers are a reference, so they are never laid out as rows.
+      var lastLine = away
+        ? 'First time at ' + esc(gymTagOf(hereInfo)) + '. ' +
+          (awayAt ? 'At ' + esc(gymTagOf(awayAt)) + ', ' : 'Unmarked, ') + shortDate(away.key) +
+          ' — <em>' + away.lift.sets.map(setText).join(", ") + '</em> · not a target here'
+        : 'First time logging this one.';
       // The set to pass, and the moment one of today's goes past it. A day
       // that is over only says so if it did: "To beat" with nothing left to
       // do about it is a nag.
@@ -11918,16 +12077,23 @@
           : goal && !locked && !l.closed
             ? '<p class="beat"><span class="beat-k">To beat ·</span> <b>' + esc(setText(goal)) + '</b></p>'
             : '';
-
-      var sets = l.sets.map(function (s, si) {
-        // Locked chips are spans, not disabled buttons: probe treats a control
-        // that does nothing as dead, and a span is honestly not a control.
-        var tq = s.tech ? '<span class="tq">' + esc(techShort(s.tech)) + '</span>' : '';
-        return locked
-          ? '<span class="set">' + s.w + '<span class="x">×</span>' + s.r + tq + '</span>'
-          : '<button class="set" data-lift="' + i + '" data-set="' + si + '" title="Tap to change">' +
-            s.w + '<span class="x">×</span>' + s.r + tq + '</button>';
-      }).join("");
+      // Last time, in a box of its own (b99, the owner's layout): where, when
+      // and how long that whole session took, the day's note, its sets in
+      // order with how each was done, the movement's own note, and the set to
+      // beat. Read-only, so nothing in it is teal.
+      var lastBox = prev
+        ? '<div class="lastbox">' +
+            '<p class="lb-head"><b>Last</b>' + (prevAt ? ' at ' + esc(gymTagOf(prevAt)) : '') + ' · ' + shortDate(prev.key) +
+              (prevDay && prevDay.workoutMs ? ' · ' + fmtDurShort(prevDay.workoutMs) + ' session' : '') +
+              (prevDay && prevDay.gymNote ? ' (' + esc(clip(prevDay.gymNote, 32)) + ')' : '') + '</p>' +
+            prev.lift.sets.map(function (s, si) {
+              return '<p class="lb-set">Set ' + (si + 1) + ' · ' + s.w + '×' + s.r +
+                (s.tech ? ' <span class="lb-t">' + esc(techShort(s.tech)) + '</span>' : '') + '</p>';
+            }).join('') +
+            (prev.lift.note ? '<p class="lb-note">“' + esc(clip(prev.lift.note, 140)) + '”</p>' : '') +
+            beatLine +
+          '</div>'
+        : '<p class="last">' + lastLine + '</p>' + beatLine;
 
       // Finished: what you did and how long it took, and nothing on it to hit
       // by accident. Reopen is the one control left, and it changes nothing
@@ -11949,7 +12115,7 @@
               ? '<p class="last done-sets">' +
                   l.sets.map(setText).join(", ") + '</p>'
               : '') +
-            (l.note ? '<p class="last lift-note-done">\u201c' + esc(l.note) + '\u201d</p>' : '') +
+            (l.note ? '<p class="last lift-note-done">“' + esc(l.note) + '”</p>' : '') +
             beatLine +
             '<div class="lift-foot">' +
               '<span>' + (v.sets
@@ -11976,7 +12142,7 @@
         ? '<h3>' + esc(l.movement) + gymTag + '</h3>'
         : '<h3><button class="lift-name" data-editlift="' + i + '" aria-label="Change ' +
             esc(l.movement) + '">' + esc(l.movement) + '<span class="chev" aria-hidden="true">▾</span>' +
-          '</button>' + gymTag + '</h3>';
+          '</button>' + gymTagBtn + '</h3>';
 
       return '<article class="lift" data-li="' + i + '" style="--catcolor:' + lc.color + '">' +
         '<div class="spine"></div>' +
@@ -11997,35 +12163,8 @@
               lc.tag + '</span>' + grip + '</div>' + zone + worksLine(l, i) +
           (lc.gone ? '<p class="last">Logged under <em>' + esc(lc.name) +
                      '</em> — a day you no longer train.</p>' : '') +
-          '<p class="last">' + lastLine + '</p>' +
-          beatLine +
-          // Read-only: last time's sets, today's against each, and the next
-          // one to do. Today's tag only when it is not last time's, so a
-          // warm-up row stays on one line.
-          (plan ? '<div class="lastsets">' + plan.rows.map(function (row) {
-            var t = row.today;
-            var ls = row.last;
-            return '<div class="lastset"><span><span class="ls-num">Set ' + (row.si + 1) + ' · ' + ls.w + '×' + ls.r + '</span>' +
-                (ls.tech ? ' <span class="ls-num">' + esc(techShort(ls.tech)) + '</span>' : '') + '</span>' +
-              '<span class="ls-right">' +
-                (t ? '<span>' + esc((t.tech || '') === (row.last.tech || '') ? t.w + '×' + t.r : setText(t)) + '</span> ' +
-                     planMark(row) : '') +
-                (plan.next === row.si ? '<span class="ls-next">next</span>' : '') +
-              '</span></div>';
-          }).join('') + '</div>' : '') +
-          (sets ? '<div class="sets">' + sets + '</div>' : '') +
-          (locked ? '' :
-            // The row looks as it always did, and every part of it opens the
-            // set sheet — at the weight, the reps or the technique, wherever
-            // the thumb landed. Typing happens there, away from everything
-            // else on the card.
-            '<div class="setadd">' +
-              '<button class="sa-field" data-w="' + i + '" aria-label="Weight for the next set of ' + esc(l.movement) + '">lb</button>' +
-              '<button class="sa-field" data-r="' + i + '" aria-label="Reps for the next set of ' + esc(l.movement) + '">reps</button>' +
-              '<button class="tech" data-techopen="' + i + '" aria-label="Technique for the next set of ' + esc(l.movement) + '">' +
-                '<span class="tech-show">normal</span></button>' +
-              '<button class="sa-set" data-addset="' + i + '">Set</button>' +
-            '</div>') +
+          lastBox +
+          todayHtml(l, i, plan, locked) +
           // Nothing to be done with until there is a set. Full width and away
           // from Remove, because the whole point is ending a movement cleanly.
           // a superset is finished as a whole, from the group, not per member
@@ -12036,7 +12175,7 @@
           '<div class="lift-foot">' +
             '<span>' + (v.sets
               ? v.sets + (v.sets === 1 ? ' set · ' : ' sets · ') + v.reps + ' reps · ' + fmt(v.vol) + ' lb volume'
-              : (locked ? 'No sets logged' : 'Log your first set — tap a set to change or remove it')) + '</span>' +
+              : (locked ? 'No sets logged' : '✓ logs a set — tap a logged set to change or remove it')) + '</span>' +
             (locked ? '' : '<button data-rmlift="' + i + '">Remove</button>') +
           '</div>' +
         '</div>' +
@@ -12633,11 +12772,91 @@
       });
     }
 
-    [["data-w", "w"], ["data-r", "r"], ["data-techopen", "t"], ["data-addset", "add"]].forEach(function (pair) {
-      view.querySelectorAll("[" + pair[0] + "]").forEach(function (b) {
-        b.addEventListener("click", function () {
-          openSetEditor(key, Number(b.getAttribute(pair[0])), null, pair[1]);
-        });
+    // Today's rows (b100). What is typed is kept per row, outside the log, so
+    // a redraw (a set logged above, a note saved) leaves it where it was.
+    view.querySelectorAll(".trow.is-plan").forEach(function (row) {
+      var lf = d.lifts[Number(row.dataset.li)];
+      if (!lf) return;
+      var rk = row.dataset.row;
+      var w = row.querySelector(".tw"), r = row.querySelector(".tr"), t = row.querySelector(".tt");
+      function keep() {
+        var all = rowDraft[rowId(lf)] || (rowDraft[rowId(lf)] = {});
+        all[rk] = { w: w.value, r: r.value, t: t.value };
+      }
+      [w, r].forEach(function (el) {
+        el.addEventListener("input", keep);
+        // Typing replaces what is in the box rather than landing in the
+        // middle of it: 12 over a 15 is not 1512.
+        el.addEventListener("focus", function () { setTimeout(function () { selectAll(el); }, 0); });
+      });
+      // The next set's weight is what the bar picture is for.
+      w.addEventListener("input", function () {
+        var bar = row.parentNode.querySelector(".tbar");
+        if (!bar || !row.classList.contains("is-next")) return;
+        var bt = barText(num(w.value.trim() !== "" ? w.value : w.dataset.ph));
+        bar.hidden = !bt;
+        bar.innerHTML = bt ? barHtml(bt) : "";
+      });
+      t.addEventListener("change", function () {
+        row.querySelector(".tech-show").textContent = t.value ? techShort(t.value) : "normal";
+        t.parentNode.classList.toggle("is-set", !!t.value);
+        keep();
+      });
+      // Enter moves on from the weight, and from the reps it logs the set.
+      w.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); r.focus(); }
+      });
+      r.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); logRow(row); }
+      });
+      row.querySelector("[data-logrow]").addEventListener("click", function () { logRow(row); });
+    });
+    // ✓: the row's numbers, or last time's where nothing was typed, go into
+    // the log as a set. logSet() is still the one way in, so the first set of
+    // the day still starts a forgotten clock, and the row turning into the
+    // set, with how it went beside it, is what says it was logged.
+    function logRow(row) {
+      var li = Number(row.dataset.li), lf = d.lifts[li];
+      if (!lf) return;
+      var w = row.querySelector(".tw"), r = row.querySelector(".tr"), t = row.querySelector(".tt");
+      var wv = num(w.value.trim() !== "" ? w.value : w.dataset.ph);
+      var rv = num(r.value.trim() !== "" ? r.value : r.dataset.ph);
+      // Weight may be nothing (bodyweight); reps may not, and it says so.
+      if (!rv) {
+        notify("How many reps? Type them, then tap ✓");
+        r.focus();
+        return;
+      }
+      var id = rowId(lf), rk = row.dataset.row;
+      if (rowDraft[id]) delete rowDraft[id][rk];
+      // A row added with + Set is used up by logging it, so the count stays.
+      if (row.dataset.extra && (rowAdj[id] || 0) > 0) rowAdj[id]--;
+      logSet(key, li, wv, rv, t.value);
+    }
+    // − Set takes the last row still to do off; + Set adds one after it. A
+    // logged set is never taken off this way: that is its own Remove, with
+    // undo, in the sheet a tap on it opens.
+    view.querySelectorAll("[data-rowmore], [data-rowless]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var more = b.hasAttribute("data-rowmore");
+        var lf = d.lifts[Number(more ? b.dataset.rowmore : b.dataset.rowless)];
+        if (!lf) return;
+        rowAdj[rowId(lf)] = (rowAdj[rowId(lf)] || 0) + (more ? 1 : -1);
+        render();
+      });
+    });
+    // The gym tag: where this movement's targets come from. Says what it did,
+    // and can be undone, because it changes what To beat means.
+    view.querySelectorAll("[data-sharetag]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var lf = d.lifts[Number(b.dataset.sharetag)];
+        if (!lf) return;
+        var name = lf.movement, was = sharedMove(name);
+        var at = gymTagOf(gymInfo(dayGym(key)));
+        setShared(name, !was);
+        render();
+        offerUndo(was ? name + " now takes targets from " + at + " only" : name + " now takes targets from every gym",
+          function () { setShared(name, was); render(); });
       });
     });
 
@@ -16644,11 +16863,10 @@
   // so a redraw or an undo in between cannot leave the editor writing to a
   // set that is no longer on the page.
   var setEditSheet = document.getElementById("setEditSheet");
-  var setEditing = null;    // { key, li, si } — si null when a set is being added
+  var setEditing = null;    // { key, li, si } — the logged set the sheet is changing
 
   // ---------- logging a set ----------
-  // The one way a set is added: from the sheet, which every part of a card's
-  // entry row opens.
+  // The one way a set is added: a row's ✓ on the movement's card (b100).
   function logSet(key, li, w, r, tech) {
     var d = day(key), l = d.lifts[li];
     if (!l) return false;
@@ -16731,30 +16949,33 @@
     var txt = load.length ? "Bar + " + load.join(" + ") + " a side" : "Just the 45 lb bar";
     return { load: load, text: txt + (left > 0 ? " (+" + left + " won\u2019t load)" : "") };
   }
+  // What goes on the bar, drawn: the plates on a sleeve, and in words. The
+  // set sheet shows it for the set being changed, a card for its next row.
+  function barHtml(bt) {
+    return '<span class="eyebrow">On the bar</span>' +
+      '<span class="sb-pic" aria-hidden="true"><span class="sb-sleeve"></span>' +
+        bt.load.map(function (p) { return '<span class="mp mp' + String(p).replace(".", "_") + '"></span>'; }).join("") +
+      '</span><span class="sb-text">' + bt.text + '</span>';
+  }
   function drawSeBar() {
     var el = document.getElementById("seBar"), l = setEditing && sheetLift();
     var bt = l && isBarbellLift(l.movement) ? barText(Number(document.getElementById("seW").value)) : null;
     el.hidden = !bt;
-    if (!bt) { el.innerHTML = ""; return; }
-    el.innerHTML = '<span class="eyebrow">On the bar</span>' +
-      '<span class="sb-pic" aria-hidden="true"><span class="sb-sleeve"></span>' +
-        bt.load.map(function (p) { return '<span class="mp mp' + String(p).replace(".", "_") + '"></span>'; }).join("") +
-      '</span><span class="sb-text">' + bt.text + '</span>';
+    el.innerHTML = bt ? barHtml(bt) : "";
   }
 
   function drawSetSheet() {
     var l = sheetLift();
     if (!l) return;
     drawSeBar();
-    var adding = setEditing.si === null;
     document.getElementById("seTitle").textContent = l.movement + " · set " +
-      (adding ? l.sets.length + 1 : (setEditing.si + 1) + " of " + l.sets.length);
+      (setEditing.si + 1) + " of " + l.sets.length;
     // The card is behind the sheet, so the number to beat comes with it —
     // from this gym, or from every gym if this movement is set that way.
     var here = gyms().length ? dayGym(setEditing.key) : null;
     var shared = sharedMove(l.movement), hereInfo = here ? gymInfo(here) : null;
     var bs = beatState(lastTime(l.movement, setEditing.key, here), l);
-    var goalEl = document.getElementById("seGoal"), lastEl = document.getElementById("seLastSet");
+    var goalEl = document.getElementById("seGoal");
     var gymEl = document.getElementById("seGym");
     gymEl.hidden = !here;
     if (here) {
@@ -16762,10 +16983,6 @@
         '<button data-seshare="off" aria-pressed="' + !shared + '">' + esc(gymTagOf(hereInfo)) + ' only</button>' +
         '<button data-seshare="on" aria-pressed="' + shared + '">Every gym</button>';
     }
-    // Adding: which of last time's sets the fields were filled from.
-    var fp = adding ? lastPlan(lastTime(l.movement, setEditing.key, here), l) : null;
-    lastEl.hidden = !(fp && fp.next !== null);
-    if (!lastEl.hidden) lastEl.textContent = planHint(fp, fp.next);
     goalEl.hidden = !bs.goal && !(here && !shared);
     goalEl.classList.toggle("is-beaten", !!(bs.passed || bs.extra));
     if (bs.passed) goalEl.textContent = "↑ Beaten · " + setText(bs.passed) + " over " + setText(bs.goal);
@@ -16781,76 +16998,38 @@
     if (!b || !l) return;
     setShared(l.movement, b.dataset.seshare === "on");
     render();
-    fillSetSheet(false);
     drawSetSheet();
   });
 
-  // What a new set starts as. With a next set from last time — the set that
-  // pairs with this one, by kind and in order — its weight, reps and
-  // technique, and the sheet says which set that was. Without one, as it
-  // always was: the weight of the set before, since sets so often repeat it,
-  // blank reps and a normal set. The technique comes from last time's matching
-  // set, named in the line, never from the set before: a drop tag must not
-  // ride along onto every set after it.
-  function setFillFor(l, key) {
-    var plan = lastPlan(lastTime(l.movement, key, gyms().length ? dayGym(key) : null), l);
-    var src = plan && plan.next !== null ? plan.rows[plan.next].last : null;
-    var before = l.sets[l.sets.length - 1];
-    return { w: src ? src.w : (before ? before.w : ""), r: src ? src.r : "",
-             t: src && src.tech ? src.tech : "", from: !!src };
-  }
-  // Put those numbers in the fields. setEditing.put remembers what the code
-  // last wrote, so a later refill (another gym, another movement) only touches
-  // a field that still holds it — a number already typed is never overwritten.
-  function fillSetSheet(force) {
-    var l = sheetLift();
-    if (!l || !setEditing || setEditing.si !== null) return false;
-    var fill = setFillFor(l, setEditing.key), put = setEditing.put || {};
-    [["w", "seW"], ["r", "seR"], ["t", "seT"]].forEach(function (p) {
-      var el = document.getElementById(p[1]);
-      if (!force && String(el.value) !== String(put[p[0]])) return;
-      el.value = String(fill[p[0]]);
-      if (el.value !== String(fill[p[0]])) el.value = "";   // a technique this build does not list
-      put[p[0]] = el.value;
-    });
-    setEditing.put = put;
-    return fill.from;
-  }
-
   // Typing replaces a number that is already in the box, instead of landing
-  // in the middle of it: 12 over a pre-filled 15 is not 1512. Adding only; a
-  // set being changed keeps its caret where it was tapped.
+  // in the middle of it: 12 over a pre-filled 15 is not 1512. A card's rows
+  // use it; a set being changed in the sheet keeps its caret where it was
+  // tapped, to fix one digit.
   function selectAll(el) {
     if (!el.select) return;
     el.select();
     try { el.setSelectionRange(0, el.value.length); } catch (e) { /* not a text box */ }
   }
 
-  function openSetEditor(key, li, si, focus) {
-    setEditing = { key: key, li: li, si: si === undefined ? null : si };
+  // A tap on a logged set opens it here, to change or remove. Adding a set
+  // happens on the card's own rows since b100.
+  function openSetEditor(key, li, si) {
+    setEditing = { key: key, li: li, si: si };
     var l = sheetLift();
     var at = editedSet();
-    if (!l || (setEditing.si !== null && !at)) { setEditing = null; return; }
-    var adding = setEditing.si === null;
-    var tech = adding ? "" : (at.st.tech || "");
-    document.getElementById("seW").value = adding ? "" : at.st.w;
-    document.getElementById("seR").value = adding ? "" : at.st.r;
+    if (!l || !at) { setEditing = null; return; }
+    var tech = at.st.tech || "";
+    document.getElementById("seW").value = at.st.w;
+    document.getElementById("seR").value = at.st.r;
+    var known = false;
     document.getElementById("seT").innerHTML = TECHNIQUES.map(function (t) {
+      if (tech === t.id) known = true;
       return '<option value="' + t.id + '"' + (tech === t.id ? " selected" : "") + '>' + t.name + '</option>';
-    }).join("");
-    var filled = adding && fillSetSheet(true);
-    document.getElementById("seSave").textContent = adding ? "Add set" : "Save";
-    document.getElementById("seRemove").hidden = adding;
+    }).join("") + (known ? "" : '<option value="' + esc(tech) + '" selected>' + esc(techShort(tech)) + '</option>');
     document.getElementById("seMoveRow").hidden = true;
     document.getElementById("seWarn").hidden = true;
     drawSetSheet();
     setEditSheet.hidden = false;
-    // The Set button on the card, with numbers already in the fields: leave
-    // the keyboard down, the numbers are there to check. Any other way in
-    // goes straight to the field it stands for, with its value selected.
-    if (focus === "add") focus = filled ? "" : "w";
-    var target = document.getElementById(focus === "r" ? "seR" : focus === "t" ? "seT" : focus === "w" ? "seW" : "");
-    if (target) { target.focus(); selectAll(target); }
   }
 
   function closeSetEditor() { setEditing = null; setEditSheet.hidden = true; }
@@ -16881,22 +17060,12 @@
     if (!name) { seMoveNew.focus(); return; }
     changeMovement(setEditing.key, setEditing.li, name);
     seMoveRow.hidden = true;
-    fillSetSheet(false);
     drawSetSheet();
   });
 
   // Enter moves on from the weight, and from the reps it saves.
   document.getElementById("seW").addEventListener("keydown", function (e) {
-    if (e.key !== "Enter") return;
-    var r = document.getElementById("seR");
-    r.focus();
-    if (setEditing && setEditing.si === null) selectAll(r);
-  });
-  ["seW", "seR"].forEach(function (id) {
-    document.getElementById(id).addEventListener("focus", function (e) {
-      var el = e.target;
-      if (setEditing && setEditing.si === null) setTimeout(function () { selectAll(el); }, 0);
-    });
+    if (e.key === "Enter") document.getElementById("seR").focus();
   });
   document.getElementById("seR").addEventListener("keydown", function (e) {
     if (e.key === "Enter") document.getElementById("seSave").click();
@@ -16916,12 +17085,6 @@
       var warn = document.getElementById("seWarn");
       warn.hidden = false; warn.textContent = "How many reps?";
       document.getElementById("seR").focus();
-      return;
-    }
-    if (setEditing.si === null) {
-      var k = setEditing.key, li = setEditing.li;
-      closeSetEditor();
-      logSet(k, li, w, r, tech);
       return;
     }
     var at = editedSet();

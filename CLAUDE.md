@@ -164,7 +164,8 @@ Everything else:
 - **Pantry** — a section of the Macros tab (b99), part-name matching, the `+` sheet, counts, saved and combined
   meals, sections → `docs/pantry.md`
 - **Daily checklist** (supplements) → `docs/pantry.md`
-- **Gym tab** — the workout clock, Done and laps, sets and the set sheet,
+- **Gym tab** — the workout clock, Done and laps, today's sets as rows with a
+  check to log each (b100), the set sheet for changing one,
   techniques, supersets, the drag, the rest timer, movement lists, the
   week's plan, what a movement works and the recovery body map →
   `docs/gym.md`

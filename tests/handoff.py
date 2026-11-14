@@ -658,9 +658,8 @@ with sync_playwright() as pw:
     p.click('#ctxMain [data-gymway="move"]'); p.wait_for_timeout(250)
     p.click('#ctxMain [data-gymway="rest"]'); p.wait_for_timeout(250)
     p.select_option("#mSel", "Barbell Row"); p.click("#addLift"); p.wait_for_timeout(350)
-    p.click('[data-addset="0"]'); p.wait_for_timeout(200)
-    p.fill("#seW", "135"); p.fill("#seR", "10")
-    p.click("#seSave"); p.wait_for_timeout(400)
+    p.fill(".lift .trow.is-next .tw", "135"); p.fill(".lift .trow.is-next .tr", "10")
+    p.click(".lift .trow.is-next .tlog"); p.wait_for_timeout(400)
     check("the first-set notice is showing for this check",
           not p.evaluate("() => document.getElementById('undobar').hidden")
           and "first set" in p.eval_on_selector("#undoLabel", "e => e.textContent"))
@@ -718,8 +717,8 @@ with sync_playwright() as pw:
                            ['.tabs button[data-tab="macros"]', '[data-fseg="pantry"]', "#editPanSecs"], "#newSecName"),
         ("combining foods into one",
                            ['.tabs button[data-tab="macros"]', '[data-fseg="pantry"]', "#combStart"], "#combName"),
-        # the set sheet, opened from the card, and its Edit for the movement
-        ("a new set",      ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-r]"], "#seR"),
+        # a set's row on the card (b100), and the card's own picker for the movement
+        ("a new set",      ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift"], ".liftgroup > .lift:last-child .trow.is-next .tr"),
         # Last, because the choice is saved and every later editor would
         # open in it: the same two fields, as pop-ups.
         ("log numbers, as a pop-up",
@@ -727,8 +726,8 @@ with sync_playwright() as pw:
                             '.tabs button[data-tab="macros"]', '#plate', '[data-logway="numbers"]'], "#fCal"),
         ("ask an agent, as a pop-up",
                            ['.tabs button[data-tab="macros"]', '#plate', '[data-logway="estimate"]'], "#estText"),
-        ("the movement, from the set sheet",
-                           ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-addset]", "#seMoveBtn"], "#seMove"),
+        ("the movement, from the card",
+                           ['.tabs button[data-tab="gym"]', '#ctxMain [data-gymway="move"]', "#addLift", "[data-editlift]"], "#liftMove"),
     ]
     unopened, small, zoomy = [], [], []
     for name, steps, field in EDITORS:
