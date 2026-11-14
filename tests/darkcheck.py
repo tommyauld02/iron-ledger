@@ -72,11 +72,12 @@ def fixture(theme=None, accent=None):
         #
         # The same sets are laid out as rows under each open card, and each row
         # has a state of its own: Barbell Row is beat, Barbell Curl matched,
-        # Dumbbell Curl short with the next set still to do. A state the fixture
-        # stops painting is a state this suite stops measuring, so the walk fails
-        # if any of the four is missing.
+        # Dumbbell Curl short with the next set still to do, and since b100 a
+        # third set after it, so a row to do that is not the next one is on
+        # screen too. A state the fixture stops painting is a state this suite
+        # stops measuring, so the walk fails if any of them is missing.
         "lifts": [{"id": "p1", "cat": "back", "movement": "Barbell Row", "note": "Last set was really hard", "sets": [{"w": 115, "r": 10}]},
-                  {"id": "p2", "cat": "back", "movement": "Dumbbell Curl", "sets": [{"w": 40, "r": 12}, {"w": 40, "r": 12}]},
+                  {"id": "p2", "cat": "back", "movement": "Dumbbell Curl", "sets": [{"w": 40, "r": 12}, {"w": 40, "r": 12}, {"w": 40, "r": 10}]},
                   {"id": "p3", "cat": "back", "movement": "Lat Pulldown", "sets": [{"w": 110, "r": 10}]},
                   {"id": "p4", "cat": "back", "movement": "Barbell Curl", "sets": [{"w": 60, "r": 10}]}]}
     # an earlier workout nobody has said the gym of: the one-time question
@@ -300,14 +301,17 @@ def walk(p, label):
             # 2026-10-14; it must not be on screen, in either theme
             if p.locator(".lift .beat-ways").count():
                 found.append("set to beat: the suggestions line is back on the card")
-            # last time, set by set: every state a row can be in is measured, so
-            # the fixture has to paint each of them
+            # last time's box, and today's rows (b100): every state a row can be
+            # in is measured, so the fixture has to paint each of them
             rows = p.evaluate("""()=>({
-              rows: document.querySelectorAll('.lift .lastset').length,
+              lastbox: document.querySelectorAll('.lift .lastbox .lb-set').length,
+              logged: document.querySelectorAll('.lift .trow.is-logged button.tset').length,
               matched: document.querySelectorAll('.lift .ls-mark.ls-matched').length,
               beat: document.querySelectorAll('.lift .ls-mark.ls-beat').length,
               short: document.querySelectorAll('.lift .ls-mark.ls-short').length,
-              next: document.querySelectorAll('.lift .ls-next').length})""")
+              next: document.querySelectorAll('.lift .trow.is-next .tlog').length,
+              todo: document.querySelectorAll('.lift .trow.is-plan:not(.is-next)').length,
+              count: document.querySelectorAll('.lift .tc-step button').length})""")
             for k, n in rows.items():
                 if not n: found.append("last time, set by set: the %s state is not on screen" % k)
             # Beat is the one coloured label, in the macro green; the rest are grey
@@ -323,16 +327,16 @@ def walk(p, label):
               day: document.querySelectorAll('.day-note').length,
               open: document.querySelectorAll('.lift .lift-note').length,
               folded: document.querySelectorAll('.lift .lift-note-done').length,
-              last: [...document.querySelectorAll('.lift .last')].filter(e=>e.textContent.includes('\u201c')).length})""")
+              last: document.querySelectorAll('.lift .lastbox .lb-note').length})""")
             for k, n in notes.items():
                 if not n: found.append("notes: the %s note is not on screen" % k)
-            # the set sheet, adding a set with the target in it, then its Edit
-            p.locator("[data-addset]").first.click(); p.wait_for_timeout(250)
-            # filled from last time's next set, with the line that says so
-            if not p.is_visible("#seLastSet") or not p.eval_on_selector("#seLastSet", "e=>e.textContent").startswith("Last time, set "):
-                found.append("set sheet: the Last time line is not on screen")
+            # the set sheet, opened from a logged set with the target in it, then
+            # its Edit (adding a set is on the card's rows since b100)
+            p.locator(".lift button.tset").first.click(); p.wait_for_timeout(250)
+            if p.evaluate("()=>document.getElementById('setEditSheet').hidden"):
+                found.append("set sheet: a logged set did not open it")
             low = p.evaluate(LOW)
-            if low: found.append("set sheet (adding): %s" % low)
+            if low: found.append("set sheet (changing a set): %s" % low)
             p.click("#seMoveBtn"); p.wait_for_timeout(200)
             low = p.evaluate(LOW)
             if low: found.append("set sheet (changing the movement): %s" % low)
@@ -350,11 +354,11 @@ def walk(p, label):
             if low: found.append("gym (training at): %s" % low)
             gyms = p.evaluate("""()=>({
               chosen: document.querySelectorAll('[data-gym][aria-pressed=true]').length,
-              tag: document.querySelectorAll('.lift h3 .gymtag').length,
+              tag: document.querySelectorAll('.lift h3 button.gymtag').length,
               ask: document.querySelectorAll('[data-gymask]').length})""")
             for k, n in gyms.items():
                 if not n: found.append("gyms: the %s is not on screen" % k)
-            p.locator("[data-addset]").first.click(); p.wait_for_timeout(250)
+            p.locator(".lift button.tset").first.click(); p.wait_for_timeout(250)
             if not p.locator("#seGym").is_visible():
                 found.append("gyms: the set sheet's Targets row is not on screen")
             p.click("#seCancel"); p.wait_for_timeout(200)

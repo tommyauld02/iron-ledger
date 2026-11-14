@@ -289,7 +289,8 @@ and says so; doing nothing at all would read exactly like a dead button.
 two forms under the checklist made Macros twice the height of a phone. They are
 buttons now, named for when you would reach for each — *Log numbers* and *Ask
 an agent* since b71 (see above). Each opens its box directly under itself
-with the cursor in the first field, the way the set sheet opens. One is open
+with the cursor in the first field, the way the set sheet opened for a new
+set until b100. One is open
 at a time, and pressing the open one folds it again. `logWay` is that state.
 It is transient but survives redraws, so adding an entry leaves the box open
 for the next one. Folded, a normal day fits on the phone without scrolling.

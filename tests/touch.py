@@ -141,16 +141,16 @@ with sync_playwright() as pw:
     p.eval_on_selector("#addLift","e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(150)
     lb=p.locator("#addLift").bounding_box()
     p.touchscreen.tap(lb["x"]+lb["width"]/2, lb["y"]+lb["height"]/2); p.wait_for_timeout(450)
-    sb=p.locator("[data-addset='0']").bounding_box()
-    check("the Set button is a proper target",
+    # a set is logged on its row (b100): typed into, then its check tapped
+    NR=".lift .trow.is-next"
+    p.fill(NR+" .tw","135"); p.fill(NR+" .tr","10")
+    p.eval_on_selector(NR+" .tlog","e=>e.scrollIntoView({block:'center'})"); p.wait_for_timeout(150)
+    sb=p.locator(NR+" .tlog").bounding_box()
+    check("a set's check is a proper target",
           sb["height"]>=44 and sb["width"]>=44, "%dx%d"%(sb["width"],sb["height"]))
     p.touchscreen.tap(sb["x"]+sb["width"]/2, sb["y"]+sb["height"]/2); p.wait_for_timeout(450)
-    check("a finger on Set opens the set sheet", not p.evaluate("()=>document.getElementById('setEditSheet').hidden"))
-    p.fill("#seW","135"); p.fill("#seR","10")
-    ab=p.locator("#seSave").bounding_box()
-    p.touchscreen.tap(ab["x"]+ab["width"]/2, ab["y"]+ab["height"]/2); p.wait_for_timeout(450)
-    check("a set logs with a finger", p.locator(".set").count()==1,
-          "%d sets"%p.locator(".set").count())
+    check("a set logs with a finger", p.locator(".trow.is-logged").count()==1,
+          "%d sets"%p.locator(".trow.is-logged").count())
 
     # ---- moving and supersetting movements with a finger ----
     # The grip has touch-action: none, which is the only thing stopping a real
