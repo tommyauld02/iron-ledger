@@ -7349,7 +7349,8 @@
   // relay/worker.js, which asks Gemini the same question for the phone.
   function estimatePrompt(text) {
     var region = store.region || "United States";
-    return "You find the calories and macros of food people have eaten. Reply with JSON only.\n\n" +
+    return "You estimate the calories and macros of food people have eaten, the way a careful dietitian " +
+      "answers \"how many calories and how much protein is in that?\". Reply with JSON only.\n\n" +
       "Food eaten: \"" + text + "\"\n" +
       "Country: " + region + "\n\n" +
       "Rules:\n" +
@@ -7357,20 +7358,32 @@
         "restaurant products, and its typical cuts, preparations and serving sizes. A named store " +
         "or brand means that country's version of it, and an ambiguous unit means whatever that " +
         "country normally uses.\n" +
-      "- Split the description into individual foods, one object each. A restaurant order is one object per item.\n" +
+      "- Split the description into individual foods, one object each. A restaurant order is one object per item. " +
+        "Only what the text names or plainly implies: never add a drink, side or sauce nobody mentioned.\n" +
+      "- Always give real numbers. A vague, large or unusual amount (\"a big plate\", \"a lot\", \"55 pieces\", " +
+        "\"half the bag\") still gets your best estimate: decide what a realistic amount is, use it, and say what " +
+        "you assumed in the note. Never shrink a big amount to a normal serving.\n" +
+      "- Work it out a piece at a time. count is how many pieces, items or servings were eaten (55 pieces of " +
+        "sushi is 55, 3 slices is 3, 2 burgers is 2) and \"each\" describes ONE of them; the app multiplies. " +
+        "For a weight or a volume (\"6 oz\", \"200 g\", \"2 cups\") or a single dish, count is 1 and \"each\" is all of it.\n" +
+      "- Numbers are for the food as eaten: cooked, the edible part only (no bone, shell or peel), and with what it " +
+        "is normally cooked and served with (frying oil, skin, breading, sauce, dressing, cheese) unless the text " +
+        "says otherwise. Food that reads as eaten out gets the restaurant's portion and recipe, not a home one.\n" +
+      "- A mix with no kind given (\"sushi\", \"wings\", \"tacos\", \"cookies\") is the average of the usual " +
+        "assortment, not its lightest kind.\n" +
       "- Use the stated quantity. Weights of rice, pasta and grains are cooked weight unless the text says dry or uncooked.\n" +
       "- If a brand, store or restaurant is named and you know its published nutrition, use those figures " +
         "and set basis to \"published\". For a generic food use standard food composition data and set basis " +
         "to \"typical\". If you are unsure what it is or how big it was, give your best estimate and set basis to \"rough\".\n" +
       "- If a quantity is missing, assume one typical serving and say so in the note.\n" +
       "- If the text is not food at all, return no items.\n" +
-      "- amount: how much, in a few words, such as \"6 oz\", \"1 cup\", \"1 medium\" or \"1 burger\".\n" +
-      "- grams: what that amount weighs in grams, or 0 if you cannot say.\n" +
-      "- calories: whole kcal. protein, carbs, fat: whole grams. Calories should come close to " +
-        "4 x protein + 4 x carbs + 9 x fat, apart from alcohol.\n" +
+      "- amount: all of it, in a few words, such as \"55 pieces\", \"6 oz\", \"1 cup\" or \"2 burgers\".\n" +
+      "- each.grams: what ONE weighs in grams, or 0 if you cannot say.\n" +
+      "- each.calories: kcal in ONE. each.protein, each.carbs, each.fat: grams in ONE, to one decimal place. " +
+        "Calories should come close to 4 x protein + 4 x carbs + 9 x fat, apart from alcohol.\n" +
       "- note: one short sentence naming any assumption worth knowing, or an empty string.\n\n" +
-      'Return exactly this shape: {"items":[{"food":"","amount":"","grams":0,"calories":0,"protein":0,' +
-        '"carbs":0,"fat":0,"basis":"typical"}],"note":""}';
+      'Return exactly this shape: {"items":[{"food":"","amount":"","count":1,"each":{"grams":0,"calories":0,' +
+        '"protein":0,"carbs":0,"fat":0},"basis":"typical"}],"note":""}';
   }
   // The finder's own check. Calories come to about 4 a gram of protein and
   // carbs and 9 a gram of fat, so an answer far from that has a slip in it —
@@ -7381,7 +7394,7 @@
     return Math.abs(sum - it.calories) <= Math.max(40, it.calories * 0.2);
   }
   function recheckPrompt(text, out, off) {
-    return estimatePrompt(text) + "\n\nYou answered:\n" + JSON.stringify(out) + "\n\n" +
+    return estimatePrompt(text) + "\n\nYour answer came to these totals:\n" + JSON.stringify(out) + "\n\n" +
       "These don't add up — calories should come close to 4 x protein + 4 x carbs + 9 x fat: " +
       off.map(function (it) {
         return it.food + " (" + it.calories + " kcal, but " + (4 * it.protein + 4 * it.carbs + 9 * it.fat) + " from its macros)";
@@ -7389,10 +7402,35 @@
       ". Check them and answer again in exactly the same shape. If alcohol explains a gap, keep its calories and say so in the note.";
   }
   var BASIS = { published: "brand’s figures", typical: "typical", rough: "rough guess" };
+  // One piece times how many (b101). The finder is asked what ONE piece is
+  // and how many there were, and the multiplying is done in code, where it
+  // cannot slip: the relay does it for the phone (totalled() in
+  // relay/worker.js), and this does it for Claude's answers. A row that is
+  // already totals — every row from the relay — passes through as it is.
+  function totalled(it) {
+    var each = it && it.each && typeof it.each === "object" ? it.each : null;
+    if (!each) return it;
+    var count = Number(it.count);
+    if (!isFinite(count) || count <= 0) count = 1;
+    count = Math.min(count, 2000);
+    function times(v) { var x = Number(v); return v == null || !isFinite(x) || x < 0 ? null : x * count; }
+    return { food: it.food, amount: it.amount, basis: it.basis, count: count,
+             grams: times(each.grams), calories: times(each.calories), protein: times(each.protein),
+             carbs: times(each.carbs), fat: times(each.fat),
+             one: { calories: Math.round(Number(each.calories) || 0), protein: Math.round((Number(each.protein) || 0) * 10) / 10 } };
+  }
+  // What one piece came to, said under the answer, so a total as big as 55
+  // pieces of sushi can be checked against the piece it was built on.
+  function eachNote(out) {
+    return (out && Array.isArray(out.items) ? out.items : []).filter(function (it) { return it && it.food; })
+      .map(totalled).filter(function (t) { return t.one && t.count >= 2 && t.one.calories; })
+      .map(function (t) { return t.food + ": " + t.count + " at about " + t.one.calories + " kcal and " + t.one.protein + " g protein each."; })
+      .join(" ");
+  }
   function modelItems(out, src) {
     function n(v) { var x = Math.round(Number(v)); return isFinite(x) && x >= 0 ? x : null; }
     return (out && Array.isArray(out.items) ? out.items : []).filter(function (it) { return it && it.food; })
-      .map(function (it) {
+      .map(totalled).map(function (it) {
         var cal = n(it.calories) || 0, pro = n(it.protein) || 0, c = n(it.carbs), f = n(it.fat), g = n(it.grams);
         var row = { food: String(it.food), amount: it.amount ? String(it.amount) : "",
                     calories: cal, protein: pro, carbs: c, fat: f, src: src,
@@ -7430,13 +7468,20 @@
     return askClaude(text);
   }
   function askClaude(text) {
-    function note(o) { return o && o.note ? String(o.note) : ""; }
+    function note(o) { return [o && o.note ? String(o.note) : "", eachNote(o)].filter(Boolean).join(" "); }
     function ask(prompt) { return sampleFn.json(prompt, { modelTier: "default", cache: true }); }
+    // The totals the answer came to, for the second look to be shown.
+    function totals(items, o) {
+      return { items: items.map(function (it) {
+        return { food: it.food, amount: it.amount, grams: it.grams || 0, calories: it.calories,
+                 protein: it.protein, carbs: it.carbs, fat: it.fat, basis: it.basis || "rough" };
+      }), note: o && o.note ? String(o.note) : "" };
+    }
     return ask(estimatePrompt(text)).then(function (out) {
       var items = modelItems(out, "claude");
       var off = items.filter(function (it) { return it.off; });
       if (!off.length) return { items: items, note: note(out) };
-      return ask(recheckPrompt(text, out, off)).then(function (out2) {
+      return ask(recheckPrompt(text, totals(items, out), off)).then(function (out2) {
         var again = modelItems(out2, "claude");
         var still = again.filter(function (it) { return it.off; }).length;
         return again.length && still < off.length ? { items: again, note: note(out2) || note(out) }
