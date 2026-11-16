@@ -76,15 +76,27 @@ status and message (`Gemini 400: …`); the app only ever gets a code like
 
 ## Which model answers
 
-Each Gemini model has its own free daily allowance, and the busiest has the
-smallest: on the first night `gemini-flash-latest` answered "high demand"
-(503) five times, then "quota exceeded … limit: 20" a day (429), while
-`gemini-flash-lite-latest` answered every lookup. So `MODELS` in
-`wrangler.toml` is a list, lightest first. A model that is overloaded, out of
-allowance, slower than 12 seconds or retired hands the question to the next;
-one out of allowance is left alone until Google says it's back. Only when every
-model has said no does the app hear "busy". A refused key is said straight
-away, since another model would not help.
+Each Gemini model has its own free daily allowance, and the better the model
+the smaller it is: 500 lookups a day for each lite model, 20 for each stronger
+one (your limits page, 2026-11-16). The stronger ones give better numbers, and
+are the ones the free tier most often turns away. So `wrangler.toml` has two
+lists, and the relay asks down both at the same time:
+
+- `BEST`: the stronger models. Their answer is used if it comes inside 8
+  seconds.
+- `MODELS`: the lite models. Their answer is used when no best model was in
+  time, so a lookup is never worse than it was before there was a `BEST`.
+
+Down either list, a model that is overloaded, out of allowance, too slow,
+retired or unreadable hands the question to the next; one out of allowance is
+left alone until Google says it's back. Only when every model on both lists has
+said no does the app hear "busy". A refused key is said straight away, since
+another model would not help.
+
+`EFFORT` (default `low`) is how much the model thinks before it answers.
 
 To see each model's real allowance on this key: https://ai.dev/rate-limit
-(signed in as the key's owner).
+(signed in as the key's owner). To try a change against real Gemini without
+replacing the live relay: `npx wrangler dev --remote` from this folder runs a
+test copy with the live relay's key, answering at `http://localhost:8787/find`
+(send `Origin: http://localhost:8000`).

@@ -8,11 +8,21 @@ compatibility_date = "2025-09-01"
 # no answer (a phone on the home wifi running tools/serve.py is let through by
 # the code itself).
 ALLOWED_ORIGINS = "https://tommyauld02.github.io,capacitor://localhost"
-# Asked in this order; each has its own free daily allowance. The lightest is
-# first: it is the fastest, the least often overloaded, and has the most
-# allowance (the big Flash model allows 20 a day on the free tier). Aliases,
-# so Google renaming a model does not break the finder.
-MODELS = "gemini-flash-lite-latest,gemini-flash-latest,gemini-3.5-flash-lite"
+# Two lists, asked at the same time (see "Which model answers" in worker.js).
+# BEST is the stronger models: better numbers, 20 lookups a day each on the
+# free tier, and often busy. Their answer is used when it comes inside 8
+# seconds. Not on it, on purpose: gemini-flash-latest (Gemini 3.8 Flash), which
+# answered nothing in 28 seconds thirteen times running on 2026-11-16, and
+# gemini-3.6-flash, right but 12 to 21 seconds every time.
+BEST = "gemini-4-hydrogen,gemini-3-flash-preview"
+# MODELS is the lite ones, in this order, 500 lookups a day each: the answer
+# when no BEST model is in time, and so never worse than before there was a
+# BEST. The first is an alias, so Google renaming it does not break the finder;
+# the second is a different model with an allowance of its own. (Until b101 the
+# last was gemini-3.5-flash-lite, which is what the alias already points at:
+# the same model and the same allowance, asked twice.) The big Flash model is
+# last, for the day both lite ones are out.
+MODELS = "gemini-flash-lite-latest,gemini-3.1-flash-lite,gemini-flash-latest"
 
 # 20 lookups a minute from any one phone (by its internet address): plenty for
 # a person logging a meal, and a wall for anything trying to drain the free

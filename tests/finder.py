@@ -36,6 +36,7 @@ CLAUDE = """
 window.claude={use:function(n){
  if(n==='sample'){var f=function(){};
   f.json=function(p){window.__claudeAsked=(window.__claudeAsked||0)+1;
+    if(/Food eaten: "55 pieces of sushi"/.test(p)) return Promise.resolve({items:[{food:'Sushi',amount:'55 pieces',grams:1925,calories:2590,protein:110,carbs:413,fat:55,basis:'typical',count:55}],note:'Assumed a usual mix of nigiri and rolls.'});
     return Promise.resolve({items:[{food:'Beef wellington',amount:'1 slice',grams:250,calories:675,protein:33,carbs:38,fat:44,basis:'rough'}],note:''});};
   f.limits=function(){return Promise.resolve({});};
   return Promise.resolve(f);}
@@ -55,6 +56,19 @@ check("the relay it asks is the owner's Cloudflare Worker, over https",
       relay_url and re.match(r"^https://iron-ledger-finder\.[a-z0-9-]+\.workers\.dev/find$", relay_url.group(1)),
       relay_url and relay_url.group(1))
 check("the loading line says it is finding the numbers", "Finding the numbers for" in SRC)
+# The app asks Claude the relay's own question when the relay is out of reach,
+# so the two prompts have to say the same thing. Compared as text: everything
+# from "Reply with JSON only" to the shape, less the name of the food.
+WORKER = io.open(os.path.join(ROOT, "relay", "worker.js"), encoding="utf-8").read()
+def prompt_text(src, start):
+    body = src[src.index(start):]
+    body = body[:body.index("\n}") if start.startswith("export") else body.index("\n  }")]
+    lits = re.findall(r'"((?:[^"\\]|\\.)*)"|\'((?:[^\'\\]|\\.)*)\'', body[body.index("return "):])
+    return "".join(a or b for a, b in lits)
+mine, relays = prompt_text(SRC, "function estimatePrompt(text) {"), prompt_text(WORKER, "export function estimatePrompt(food, region) {")
+check("the app's own prompt, for Claude, is word for word the relay's",
+      mine == relays and "55 pieces is 55 pieces" in mine and len(mine) > 1500,
+      "app %d characters, relay %d" % (len(mine), len(relays)))
 
 
 def page(b, relay=True, claude=False, reply=None, log=None, size=(402, 874)):
@@ -174,6 +188,24 @@ with sync_playwright() as pw:
     check("with the relay out of reach, as inside a published artifact, Claude answers",
           p.evaluate(ROWS) == ["Beef wellington | estimated · rough guess"] and p.evaluate("()=>window.__claudeAsked") == 1,
           str(p.evaluate(ROWS)))
+    allerrs += errs; ctx.close()
+
+    # b101: a food that was counted says what one of it came to
+    ctx, p, errs, _, _ = page(b, claude=True, reply=lambda q: "abort")
+    words(p, "55 pieces of sushi")
+    said = p.inner_text(".review .rev-assume") if p.locator(".review .rev-assume").count() else ""
+    check("Claude's answer for 55 pieces says what one piece came to",
+          "Assumed a usual mix of nigiri and rolls. Sushi: 55 at about 47 kcal and 2 g protein each." in said
+          and "2,590" in p.inner_text(".review header"), said[:140])
+    allerrs += errs; ctx.close()
+    ctx, p, errs, _, _ = page(b, reply=lambda q: {"items": [{"food": "Chicken wings", "amount": "30 pieces", "grams": 960,
+        "calories": 2895, "protein": 255, "carbs": 30, "fat": 195, "basis": "typical"}],
+        "note": "Assumed bone-in wings, meat and skin. Chicken wings: 30 at about 97 kcal and 8.5 g protein each.", "rechecked": False})
+    words(p, "30 chicken wings")
+    said = p.inner_text(".review .rev-assume") if p.locator(".review .rev-assume").count() else ""
+    check("and the relay's own line about one piece is shown under its answer",
+          "Chicken wings: 30 at about 97 kcal and 8.5 g protein each." in said and "2,895" in p.inner_text(".review header")
+          and p.evaluate("()=>document.documentElement.scrollWidth<=innerWidth"), said[:140])
     allerrs += errs; ctx.close()
 
     ctx, p, errs, _, _ = page(b, claude=True, reply=lambda q: (429, {"error": "busy"}))
