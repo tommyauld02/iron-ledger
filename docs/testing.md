@@ -234,6 +234,26 @@ Two lessons paid for the hard way:
   failed with nothing wrong in the app (2026-10-17, Windows). Wait for
   whatever redraws to be done — there, the camera's answer on the sheet —
   before typing, then wait for the result rather than sleeping.
+- **A machine types sooner than anything deferred.** `sweep` began failing on
+  untouched `main` (b100, 2026-11-16) with different checks on different runs:
+  a stray set `85x5` where `185x5` was typed, or a crash at a colour check
+  because a set typed as 205 had gone in as 05 and read Short, so there was no
+  Beat on the page to measure. A Gym row's box selects what is in it in a
+  `setTimeout(0)` after it is focused; Playwright's first key arrives about
+  5 ms after its tap, and the timeout ran before it on some runs and after it
+  on others (8 of 12 on this Mac, about the same with the page's clock put
+  back to the Friday CI passed on, so it was never the date). When it ran
+  after, the first digit was selected and the second typed over it. The fault
+  was the app's, small as it was: the box is now selected only if it still
+  holds what it held when focused, so nothing typed is ever typed over, and
+  `sweep` pins it with a digit put in during the same turn as the focus,
+  which is ahead of the timeout on any machine (it gave 05 five times in five
+  on b100). No person types 5 ms after a tap, so nobody saw this on a phone.
+  Two things to keep: when different checks fail on different runs of the
+  same code, look for something the app defers and the test does not wait
+  for; and a suite that prints only at the end hides everything behind a
+  crash, so `sweep` now says each failure as it happens and, if it stops
+  early, how far it got.
 - **Tests ran for a while against a stale generated copy** and passed
   everything against an old build. The suites now read `mntl-dt.html`
   directly, so there is nothing to go stale.
