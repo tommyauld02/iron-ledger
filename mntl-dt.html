@@ -12787,7 +12787,15 @@
         el.addEventListener("input", keep);
         // Typing replaces what is in the box rather than landing in the
         // middle of it: 12 over a 15 is not 1512.
-        el.addEventListener("focus", function () { setTimeout(function () { selectAll(el); }, 0); });
+        // The selecting waits a moment, for the tap that focused the box to
+        // finish placing its caret. Anything typed in that moment is the
+        // start of the new number, not what was in the box, so it is left
+        // alone: selecting it had the next digit typed over it, 185 going
+        // in as 85 (sweep, 2026-11-16, typing 5 ms after its tap).
+        el.addEventListener("focus", function () {
+          var was = el.value;
+          setTimeout(function () { if (el.value === was) selectAll(el); }, 0);
+        });
       });
       // The next set's weight is what the bar picture is for.
       w.addEventListener("input", function () {
