@@ -224,15 +224,31 @@ export function tidy(out) {
 // as big as 55 pieces of sushi can be checked against the piece it stands on:
 // "55 at about 45 kcal and 2.4 g protein each". Worked out from the totals,
 // so it always agrees with them.
-export function answer(got, rechecked) {
+export function answer(got, rechecked, typed) {
+  const name = (it) => unstray(it.food, typed) || it.food;   // a name is never emptied: the app drops a nameless row
   const how = got.items.filter((it) => it.count >= 2 && it.calories).map((it) =>
-    it.food + ": " + it.count + " at about " + Math.round(it.calories / it.count) + " kcal and " +
+    name(it) + ": " + it.count + " at about " + Math.round(it.calories / it.count) + " kcal and " +
     (Math.round(it.protein / it.count * 10) / 10) + " g protein each.");
   return {
-    items: got.items.map((it) => ({ food: it.food, amount: it.amount, grams: it.grams, calories: it.calories,
+    items: got.items.map((it) => ({ food: name(it), amount: unstray(it.amount, typed), grams: it.grams, calories: it.calories,
       protein: it.protein, carbs: it.carbs, fat: it.fat, basis: it.basis })),
-    note: clean([got.note].concat(how).filter(Boolean).join(" "), MAX_NOTE), rechecked: rechecked
+    note: clean([unstray(got.note, typed)].concat(how).filter(Boolean).join(" "), MAX_NOTE), rechecked: rechecked
   };
+}
+
+// The lite model garbles words as well as numbers. On 2026-11-17 the live
+// relay answered "55 pieces of sushi" with the amount "55 pieces" and two
+// Burmese letters after it, and they went to the phone as the row's amount.
+// So when what was typed is in Latin letters, letters of any other writing
+// system are taken out of the names, amounts and note that go back. Accents
+// are Latin and stay (jalapeño, phở); so do Greek letters, for the µ in a
+// unit. A question typed in another writing system is left exactly as the
+// model answered it: there those letters are the answer.
+const STRAY = "(?![\\p{Script=Latin}\\p{Script=Greek}\\p{Script=Common}\\p{Script=Inherited}])[\\p{L}\\p{M}\\p{N}]";
+const HAS_STRAY = new RegExp(STRAY, "u"), EVERY_STRAY = new RegExp(STRAY + "+", "gu");
+export function unstray(text, typed) {
+  if (typeof text !== "string" || !text || HAS_STRAY.test(String(typed || ""))) return text;
+  return text.replace(EVERY_STRAY, "").replace(/\s+/g, " ").trim();
 }
 
 // Which model answers. Gemini's free tier gives each model its own daily
@@ -432,13 +448,13 @@ export async function findMacros(food, region, env) {
   const until = Date.now() + (Number(env.BUDGET_MS) || BUDGET_MS);
   const first = await ask(estimatePrompt(food, region), env, until);
   const off = first.items.filter((it) => !addsUp(it));
-  if (!off.length || until - Date.now() < RECHECK_NEEDS) return answer(first, false);
+  if (!off.length || until - Date.now() < RECHECK_NEEDS) return answer(first, false, food);
   let second = null;
   try { second = await ask(recheckPrompt(food, region, first, off), env, until); } catch (e) { /* keep the first */ }
   const still = second ? second.items.filter((it) => !addsUp(it)).length : off.length;
   if (second && second.items.length && still < off.length) {
     if (!second.note) second.note = first.note;
-    return answer(second, true);
+    return answer(second, true, food);
   }
-  return answer(first, true);
+  return answer(first, true, food);
 }

@@ -115,7 +115,16 @@ the lite model answered *a big plate of spaghetti bolognese* with
 `"carbs":95id` three times in eight (2026-11-16), so a number with letters
 stuck to its end is read as the number (`readJson()`), and a reply that still
 can't be read hands the question to the next model rather than failing the
-lookup. Which models are asked is *Two lists of models* below.
+lookup. It garbles words too: on 2026-11-17 the live relay answered *55 pieces
+of sushi* with the amount "55 pieces" and two Burmese letters after it, which
+went to the phone as the row's amount. So when what was typed is in Latin
+letters, letters of any other writing system are taken out of the names,
+amounts and note that go back (`unstray()`). Accents stay (jalapeño, phở),
+and so do Greek letters, for the µ in a unit. A question typed in another
+writing system is left exactly as the model answered it, since there those
+letters are the answer; and a name that would be emptied is left as it came,
+because the app drops a row with no name. Which models are asked is *Two
+lists of models* below.
 
 **Better numbers for a count or a vague amount (b101).** The owner's ask
 (2026-11-16): the finder should do what a search does for "55 pieces of

@@ -20,7 +20,7 @@ if not node:
 
 HARNESS = r"""
 import { readFileSync } from "node:fs";
-import worker, { originAllowed, findMacros, tidy, answer, readJson, restFor, forgetResting, modelsFor, bestFor, MAX_FOOD, MAX_BODY } from "./worker.mjs";
+import worker, { originAllowed, findMacros, tidy, answer, unstray, readJson, restFor, forgetResting, modelsFor, bestFor, MAX_FOOD, MAX_BODY } from "./worker.mjs";
 
 const res = [];
 const check = (n, ok, d) => res.push([ok ? "PASS" : "FAIL", n, d === undefined ? "" : String(d)]);
@@ -177,6 +177,24 @@ check("one of something says nothing extra", noted(item("Ribeye", 990, 82, 0, 73
 check("a count that is missing, zero or nonsense is one", [undefined, 0, "lots", -3].every((c) => noted(item("Egg", 72, 6, 0, 5, { count: c })).note === ""));
 check("a count out of all reason is held, and never divides by nothing",
   tidy({ items: [item("Peanut", 6, 0, 0, 1, { count: 1e9 })] }).items[0].count === 5000 && noted(item("Water", 0, 0, 0, 0, { count: 8 })).note === "");
+// ---- stray letters of another writing system (the live relay, 2026-11-17) ----
+const BURMESE = "\u101E\u1019";
+script = [{ items: [item("Sushi assortment " + BURMESE, 2035, 77, 300, 40, { amount: "55 pieces " + BURMESE, count: 55 })], note: "A usual mix" + BURMESE + "." }];
+r = await call(req("POST", { food: "55 pieces of sushi" }));
+check("stray letters of another writing system are taken out of the amount, the name and the note",
+  r.status === 200 && r.json.items[0].amount === "55 pieces" && r.json.items[0].food === "Sushi assortment"
+  && r.json.note === "A usual mix. Sushi assortment: 55 at about 37 kcal and 1.4 g protein each.", r.text.slice(0, 200));
+check("accents and a Greek unit letter are not stray", unstray("Jalape\u00f1o poppers", "x") === "Jalape\u00f1o poppers"
+  && unstray("Ph\u1edf b\u00f2", "x") === "Ph\u1edf b\u00f2" && unstray("cre\u0300me bru\u0302le\u0301e", "x") === "cre\u0300me bru\u0302le\u0301e"
+  && unstray("400 \u03bcg", "x") === "400 \u03bcg" && unstray("1/2 cup (120 ml) \u2013 25%", "x") === "1/2 cup (120 ml) \u2013 25%");
+script = [{ items: [item("\u5bff\u53f8", 2035, 77, 300, 40, { amount: "55\u500b", count: 55 })], note: "" }];
+r = await call(req("POST", { food: "\u5bff\u53f8 55\u500b" }));
+check("a question typed in another writing system is answered in it, untouched",
+  r.status === 200 && r.json.items[0].food === "\u5bff\u53f8" && r.json.items[0].amount === "55\u500b", r.text.slice(0, 120));
+script = [{ items: [item(BURMESE, 105, 1, 27, 0)], note: "" }];
+r = await call(req("POST", { food: "banana" }));
+check("a name that is nothing but stray letters is left as it came, so its row is not lost",
+  r.status === 200 && r.json.items.length === 1 && r.json.items[0].food === BURMESE, r.text.slice(0, 120));
 check("what a model adds beside the rows is dropped", !("secret" in noted(item("Egg", 72, 6, 0, 5, { secret: "x" })).items[0]));
 
 // ---- replies that are not tidy ----
