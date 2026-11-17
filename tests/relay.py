@@ -282,7 +282,48 @@ r = await call(req("POST", { food: "30 chicken wings" }), TWO);
 check("a best model that is not in time is not waited for: the lite answer is used",
   r.status === 200 && r.json.items[0].calories === 1410 && Date.now() - t0 >= 3000 && Date.now() - t0 < 5000 && who() === "best-a,lite-a",
   (Date.now() - t0) + " ms of a 3,300 ms wait, " + who());
+calls = []; byModel = { "best-b": [BETTER], "lite-a": [LITE] };
+r = await call(req("POST", { food: "30 chicken wings" }), TWO);
+check("and a best model that was silent to the end of its time is left alone for a while",
+  r.status === 200 && r.json.items[0].calories === 2895 && who() === "best-b,lite-a", who());
 const TWO3 = Object.assign({}, TWO, { BEST_WAIT: 3600 });
+
+// One best model silent, the next quick: what Gemini 4 Hydrogen and Gemini 3
+// Flash did on 2026-11-17. The silent one must not use up the whole wait.
+const HEAD = Object.assign({}, TWO, { BEST_WAIT: 3600, HEAD_START: 300 });
+forgetResting(); calls = []; logged.length = 0; byModel = { "best-a": ["hang"], "best-b": [BETTER], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("a best model that says nothing gives the next one a head start, not the whole wait",
+  r.status === 200 && r.json.items[0].calories === 2895 && Date.now() - t0 >= 250 && Date.now() - t0 < 1500 && who() === "best-a,best-b,lite-a",
+  (Date.now() - t0) + " ms of a 3,600 ms wait, " + who());
+check("the silent one is told to stop once there is an answer, and that is not logged as a failure",
+  calls.filter((c) => c.body.model === "best-a")[0].init.signal.aborted && logged.join(" ").indexOf("best-a") === -1, logged.join(" | "));
+calls = []; byModel = { "best-b": [BETTER], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("and the lookups after it go straight to the one that answers",
+  r.status === 200 && r.json.items[0].calories === 2895 && who() === "best-b,lite-a" && Date.now() - t0 < 250, (Date.now() - t0) + " ms, " + who());
+forgetResting(); calls = []; byModel = { "best-a": [BETTER], "best-b": [BETTER], "lite-a": [LITE] };
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("a best model that answers inside its head start is the only best one asked", r.status === 200 && who() === "best-a,lite-a", who());
+calls = []; byModel = { "best-a": ["hang"], "best-b": ["hang"], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("with every best model silent the lite answer is used when the wait is up, never later",
+  r.status === 200 && r.json.items[0].calories === 1410 && Date.now() - t0 >= 3300 && Date.now() - t0 < 5000 && who() === "best-a,best-b,lite-a",
+  (Date.now() - t0) + " ms of a 3,600 ms wait, " + who());
+calls = []; byModel = { "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("and after that the lite answer comes at once, with no best model asked",
+  r.status === 200 && r.json.items[0].calories === 1410 && who() === "lite-a" && Date.now() - t0 < 250, (Date.now() - t0) + " ms, " + who());
+forgetResting(); calls = []; byModel = { "best-a": ["hang"], "best-b": [{ status: 503 }], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("a best model still thinking is waited for when the one asked beside it says no",
+  r.status === 200 && r.json.items[0].calories === 1410 && Date.now() - t0 >= 3300 && who() === "best-a,best-b,lite-a", (Date.now() - t0) + " ms, " + who());
+forgetResting();
 calls = []; byModel = { "best-a": [{ status: 503, text: "high demand" }], "best-b": [BETTER], "lite-a": [LITE] };
 r = await call(req("POST", { food: "30 chicken wings" }), TWO3);
 check("a best model that is overloaded hands the question to the next best",

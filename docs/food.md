@@ -179,6 +179,33 @@ that day, and Gemini 3.6 Flash was right but took 12 to 21 seconds every time.
 Gemma 4 has 14,400 a day but was overloaded on every try, so it is not on a
 list either. Every lookup now uses one lite request as well as a best one.
 
+**A best model that says nothing is not waited out (2026-11-17).** The day
+b101 went live, Gemini 4 Hydrogen answered nothing at all: not in 28 seconds,
+not for "a banana", with or without the thinking setting. It did not say no,
+which would have handed the question on at once; it said nothing. Asked in
+turn, it used up all of `BEST_WAIT`, Gemini 3 Flash (answering in 1.4 seconds
+that same hour) was never asked, and every lookup took 8 seconds to come back
+with the lite answer: the wait of the new relay and the numbers of the old
+one. So the best list is asked with a head start each (`askBest()`):
+
+- A best model that has said nothing after `HEAD_START`, 4 seconds, is left
+  running and the next is asked beside it. The first good answer is used and
+  whoever is still running is told to stop, which is not logged as a failure.
+- 4 seconds, because a healthy best model answers in 2 to 6: most of the
+  time the first is the only one asked, and the second's 20 a day are not
+  spent beside it. A silent first model costs 4 seconds, then, not 8.
+- A model passed while silent, or silent to the end of its time, rests for
+  `SLOW_REST`, ten minutes, in the same list a spent allowance rests in. The
+  lookups after it go straight to the one that answers (1.1 seconds, measured
+  the same day), and neither wait for the silent one nor spend its allowance.
+  That memory is the Worker instance's, so a fresh instance pays the 4
+  seconds once and learns again.
+- A model that says no outright (busy, out of allowance, gone, unreadable)
+  still hands on at once, as down the lite list.
+- Hydrogen stays first. On the owner's example it gave 110 g of protein for
+  55 pieces of sushi, inside what a search gives (2 to 4 g a piece), where
+  Gemini 3 Flash gave 83. The owner asked for the most accurate number.
+
 **A lookup has 30 seconds (b101).** The app waits 45 (`RELAY_WAIT`) and then
 says it took too long. Three models at 12 seconds each, asked twice when the
 numbers needed a second look, could run to 72, and on 2026-11-16 a lookup that
