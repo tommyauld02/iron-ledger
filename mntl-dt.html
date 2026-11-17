@@ -4880,7 +4880,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-13.100";
+  var BUILD = "2026-11-16.101";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5880,6 +5880,11 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-16.101", t: "Ask an agent, better numbers", items: [
+      "Ask an agent now asks a stronger free AI as well as the quick one, and uses the stronger answer whenever it comes in time. Things like 55 pieces of sushi or 30 wings come out much closer to what a search would tell you.",
+      "A big count stays big, and a vague amount like \u201ca big plate\u201d or \u201call you can eat\u201d still gets a real estimate, with what it assumed written underneath.",
+      "When you ate a number of something, the note says what one came to, like \u201c55 at about 47 kcal and 2 g protein each\u201d, so you can see what the total stands on.",
+      "It can take a few seconds longer than it did, up to about eight. Named restaurant food, like a Big Mac, is as exact as before." ] },
     { b: "2026-11-13.100", t: "Today\u2019s sets, ready to tick off", items: [
       "Add a movement and last time comes first, in a box of its own: where, when, how long that session was, each set, your note, and the set to beat.",
       "Under it, today is one row for every set you did last time, already holding last time\u2019s numbers in grey. Did the same again? One tap on \u2713 and it is logged.",
@@ -7357,20 +7362,27 @@
         "restaurant products, and its typical cuts, preparations and serving sizes. A named store " +
         "or brand means that country's version of it, and an ambiguous unit means whatever that " +
         "country normally uses.\n" +
-      "- Split the description into individual foods, one object each. A restaurant order is one object per item.\n" +
-      "- Use the stated quantity. Weights of rice, pasta and grains are cooked weight unless the text says dry or uncooked.\n" +
+      "- Split the description into individual foods, one object each. A restaurant order is one object per item. " +
+        "List only what the text names: never add a drink, alcohol, side or sauce nobody mentioned.\n" +
+      "- Use the stated quantity, however large: 55 pieces is 55 pieces, never a normal serving. " +
+        "Weights of rice, pasta and grains are cooked weight unless the text says dry or uncooked.\n" +
+      "- A vague amount (\"a big plate\", \"a lot\", \"half the bag\", \"all you can eat\") still gets real numbers: " +
+        "decide what a realistic amount is, use it, and say what you assumed in the note.\n" +
+      "- A mix with no kind given (\"sushi\", \"wings\", \"tacos\", \"cookies\") is the average of the usual " +
+        "assortment as served, neither its lightest kind nor its heaviest.\n" +
       "- If a brand, store or restaurant is named and you know its published nutrition, use those figures " +
         "and set basis to \"published\". For a generic food use standard food composition data and set basis " +
         "to \"typical\". If you are unsure what it is or how big it was, give your best estimate and set basis to \"rough\".\n" +
       "- If a quantity is missing, assume one typical serving and say so in the note.\n" +
       "- If the text is not food at all, return no items.\n" +
-      "- amount: how much, in a few words, such as \"6 oz\", \"1 cup\", \"1 medium\" or \"1 burger\".\n" +
+      "- amount: how much, in a few words, such as \"6 oz\", \"1 cup\", \"1 medium\", \"55 pieces\" or \"1 burger\".\n" +
       "- grams: what that amount weighs in grams, or 0 if you cannot say.\n" +
       "- calories: whole kcal. protein, carbs, fat: whole grams. Calories should come close to " +
         "4 x protein + 4 x carbs + 9 x fat, apart from alcohol.\n" +
+      "- count: how many pieces or items the amount is (55 pieces is 55, 3 slices is 3); 1 for a weight, a volume or one dish.\n" +
       "- note: one short sentence naming any assumption worth knowing, or an empty string.\n\n" +
       'Return exactly this shape: {"items":[{"food":"","amount":"","grams":0,"calories":0,"protein":0,' +
-        '"carbs":0,"fat":0,"basis":"typical"}],"note":""}';
+        '"carbs":0,"fat":0,"basis":"typical","count":1}],"note":""}';
   }
   // The finder's own check. Calories come to about 4 a gram of protein and
   // carbs and 9 a gram of fat, so an answer far from that has a slip in it —
@@ -7389,6 +7401,19 @@
       ". Check them and answer again in exactly the same shape. If alcohol explains a gap, keep its calories and say so in the note.";
   }
   var BASIS = { published: "brand’s figures", typical: "typical", rough: "rough guess" };
+  // A food that was counted says what one of it came to, under the answer
+  // (b101), so a total as big as 55 pieces of sushi can be checked against
+  // the piece it stands on: "55 at about 47 kcal and 2 g protein each". The
+  // relay writes this into its own note for the phone (answer() in
+  // relay/worker.js); this is the same line for Claude's answers.
+  function eachNote(out) {
+    return (out && Array.isArray(out.items) ? out.items : []).map(function (it) {
+      var count = Math.min(Math.round(Number(it && it.count)) || 1, 5000), cal = Math.round(Number(it && it.calories)) || 0;
+      if (!it || !it.food || count < 2 || cal <= 0) return "";
+      return String(it.food) + ": " + count + " at about " + Math.round(cal / count) + " kcal and " +
+        (Math.round((Number(it.protein) || 0) / count * 10) / 10) + " g protein each.";
+    }).filter(Boolean).join(" ");
+  }
   function modelItems(out, src) {
     function n(v) { var x = Math.round(Number(v)); return isFinite(x) && x >= 0 ? x : null; }
     return (out && Array.isArray(out.items) ? out.items : []).filter(function (it) { return it && it.food; })
@@ -7430,7 +7455,7 @@
     return askClaude(text);
   }
   function askClaude(text) {
-    function note(o) { return o && o.note ? String(o.note) : ""; }
+    function note(o) { return [o && o.note ? String(o.note) : "", eachNote(o)].filter(Boolean).join(" "); }
     function ask(prompt) { return sampleFn.json(prompt, { modelTier: "default", cache: true }); }
     return ask(estimatePrompt(text)).then(function (out) {
       var items = modelItems(out, "claude");
@@ -12787,7 +12812,15 @@
         el.addEventListener("input", keep);
         // Typing replaces what is in the box rather than landing in the
         // middle of it: 12 over a 15 is not 1512.
-        el.addEventListener("focus", function () { setTimeout(function () { selectAll(el); }, 0); });
+        // The selecting waits a moment, for the tap that focused the box to
+        // finish placing its caret. Anything typed in that moment is the
+        // start of the new number, not what was in the box, so it is left
+        // alone: selecting it had the next digit typed over it, 185 going
+        // in as 85 (sweep, 2026-11-16, typing 5 ms after its tap).
+        el.addEventListener("focus", function () {
+          var was = el.value;
+          setTimeout(function () { if (el.value === was) selectAll(el); }, 0);
+        });
       });
       // The next set's weight is what the bar picture is for.
       w.addEventListener("input", function () {

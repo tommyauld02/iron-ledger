@@ -3,7 +3,7 @@ import rooms      # Pantry is a section of Macros since b99: tests/rooms.py
 import logways   # Macros' ways in are on the plate's sheet: tests/logways.py
 import gymways    # the Gym's bottom bar opens its boxes: tests/gymways.py
 from playwright.sync_api import sync_playwright
-import io, os, json, datetime, calendar
+import io, os, sys, json, datetime, calendar
 import re
 import fakeai
 
@@ -114,8 +114,25 @@ def add_movement(pg, name, wait=300):
         pg.select_option("#mSel", "__new"); pg.fill("#mNew", name)
     pg.click("#addLift"); pg.wait_for_timeout(wait)
 
+# The table is printed once, at the end. A check that throws ends the run
+# before it, and took every failure before it along: on 2026-11-16 all a run
+# said was a traceback at a colour check, when the cause was a set logged
+# wrong four checks earlier. So a failure is also said the moment it happens,
+# and a crash says how far the run had got.
 def check(name, ok, detail=""):
     results.append((("PASS" if ok else "FAIL"), name, detail))
+    if not ok:
+        print("FAIL   %s   %s" % (name, detail), file=sys.stderr, flush=True)
+
+def _crashed(kind, err, tb):
+    fails = [r for r in results if r[0] == "FAIL"]
+    print("\nsweep stopped after %d checks (the last: %s), %d of them FAILED" %
+          (len(results), results[-1][1] if results else "none", len(fails)), file=sys.stderr)
+    for st, name, detail in fails:
+        print("FAIL   %s   %s" % (name, detail), file=sys.stderr)
+    sys.stderr.flush()
+    sys.__excepthook__(kind, err, tb)
+sys.excepthook = _crashed
 
 with sync_playwright() as pw:
     b=pw.chromium.launch()
@@ -2131,8 +2148,17 @@ with sync_playwright() as pw:
           [r["done"] for r in done]==["60×15 warm-up","100×15","155×12"], str([r["done"] for r in done]))
     check("lastsets: set 4 is the one row left, and it is next",
           [(r["ph"], r["next"]) for r in PLAN(q, 0)]==[("200x10", True)], str(PLAN(q, 0)))
+    # A box selects what is in it a moment after it is focused, not at once.
+    # A digit typed inside that moment was selected with the rest and typed
+    # over by the next: 205 went in as 05, and this suite, typing 5 ms after
+    # its tap, failed about half its runs that way (2026-11-16). Here the
+    # first digit lands in the same turn as the focus, so it is always
+    # ahead of the selecting, on any machine.
+    q.evaluate("s=>{const e=document.querySelector(s); e.focus(); document.execCommand('insertText', false, '2');}", NEXT(0)+" .tw")
+    q.wait_for_timeout(120); q.keyboard.type("05"); q.wait_for_timeout(60)
+    check("lastsets: a digit typed before the box has selected itself is kept, not typed over",
+          q.input_value(NEXT(0)+" .tw")=="205", q.input_value(NEXT(0)+" .tw"))
     # what is typed into a row is kept through a redraw
-    q.click(NEXT(0)+" .tw"); q.keyboard.type("205")
     q.click('[data-rowmore="0"]'); q.wait_for_timeout(250)
     check("lastsets: + Set adds a row after it, holding the numbers above it, on normal",
           [(r["ph"], r["t"]) for r in PLAN(q, 0)]==[("200x10",""), ("205x10","")] and SAY(q, 0)=="5 sets · 4 last time",
@@ -3782,10 +3808,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Today\u2019s sets, ready to tick off"
-          and titles[1]=="Pantry is inside Macros"
-          and titles[2]=="The plate"
-          and titles[3]=="The stage and the sheet", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Ask an agent, better numbers"
+          and titles[1]=="Today\u2019s sets, ready to tick off"
+          and titles[2]=="Pantry is inside Macros"
+          and titles[3]=="The plate", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

@@ -33,6 +33,7 @@ export const MAX_FOOD = 300;
 export const MAX_BODY = 2048;
 const MAX_REGION = 60;
 const MAX_ITEMS = 12;
+const MAX_NOTE = 400;
 const BASES = ["published", "typical", "rough"];
 
 export default {
@@ -147,20 +148,27 @@ export function estimatePrompt(food, region) {
       "restaurant products, and its typical cuts, preparations and serving sizes. A named store " +
       "or brand means that country's version of it, and an ambiguous unit means whatever that " +
       "country normally uses.\n" +
-    "- Split the description into individual foods, one object each. A restaurant order is one object per item.\n" +
-    "- Use the stated quantity. Weights of rice, pasta and grains are cooked weight unless the text says dry or uncooked.\n" +
+    "- Split the description into individual foods, one object each. A restaurant order is one object per item. " +
+      "List only what the text names: never add a drink, alcohol, side or sauce nobody mentioned.\n" +
+    "- Use the stated quantity, however large: 55 pieces is 55 pieces, never a normal serving. " +
+      "Weights of rice, pasta and grains are cooked weight unless the text says dry or uncooked.\n" +
+    "- A vague amount (\"a big plate\", \"a lot\", \"half the bag\", \"all you can eat\") still gets real numbers: " +
+      "decide what a realistic amount is, use it, and say what you assumed in the note.\n" +
+    "- A mix with no kind given (\"sushi\", \"wings\", \"tacos\", \"cookies\") is the average of the usual " +
+      "assortment as served, neither its lightest kind nor its heaviest.\n" +
     "- If a brand, store or restaurant is named and you know its published nutrition, use those figures " +
       "and set basis to \"published\". For a generic food use standard food composition data and set basis " +
       "to \"typical\". If you are unsure what it is or how big it was, give your best estimate and set basis to \"rough\".\n" +
     "- If a quantity is missing, assume one typical serving and say so in the note.\n" +
     "- If the text is not food at all, return no items.\n" +
-    "- amount: how much, in a few words, such as \"6 oz\", \"1 cup\", \"1 medium\" or \"1 burger\".\n" +
+    "- amount: how much, in a few words, such as \"6 oz\", \"1 cup\", \"1 medium\", \"55 pieces\" or \"1 burger\".\n" +
     "- grams: what that amount weighs in grams, or 0 if you cannot say.\n" +
     "- calories: whole kcal. protein, carbs, fat: whole grams. Calories should come close to " +
       "4 x protein + 4 x carbs + 9 x fat, apart from alcohol.\n" +
+    "- count: how many pieces or items the amount is (55 pieces is 55, 3 slices is 3); 1 for a weight, a volume or one dish.\n" +
     "- note: one short sentence naming any assumption worth knowing, or an empty string.\n\n" +
     'Return exactly this shape: {"items":[{"food":"","amount":"","grams":0,"calories":0,"protein":0,' +
-      '"carbs":0,"fat":0,"basis":"typical"}],"note":""}';
+      '"carbs":0,"fat":0,"basis":"typical","count":1}],"note":""}';
 }
 
 // Calories come to about 4 a gram of protein and carbs and 9 a gram of fat,
@@ -172,7 +180,7 @@ export function addsUp(it) {
 }
 
 export function recheckPrompt(food, region, out, off) {
-  return estimatePrompt(food, region) + "\n\nYou answered:\n" + JSON.stringify(out) + "\n\n" +
+  return estimatePrompt(food, region) + "\n\nYou answered:\n" + JSON.stringify({ items: out.items, note: out.note }) + "\n\n" +
     "These don't add up — calories should come close to 4 x protein + 4 x carbs + 9 x fat: " +
     off.map((it) => it.food + " (" + it.calories + " kcal, but " + (4 * it.protein + 4 * it.carbs + 9 * it.fat) +
       " from its macros)").join("; ") +
@@ -180,16 +188,24 @@ export function recheckPrompt(food, region, out, off) {
 }
 
 // Free models wrap JSON in a code fence or a sentence; the object is found in
-// the reply rather than the reply being taken as the object.
+// the reply rather than the reply being taken as the object. And the lite
+// model now and then garbles a number: "a big plate of spaghetti bolognese"
+// came back with "carbs":95id three times in eight (2026-11-16), which is not
+// JSON, so the lookup failed on a reply that was otherwise right. A number
+// with letters stuck to its end is read as the number.
 export function readJson(text) {
   if (Array.isArray(text)) text = text.map((x) => (x && x.text) || "").join("");
   if (typeof text !== "string") return null;
   const a = text.indexOf("{"), b = text.lastIndexOf("}");
   if (a < 0 || b < a) return null;
-  try { return JSON.parse(text.slice(a, b + 1)); } catch (e) { return null; }
+  const body = text.slice(a, b + 1);
+  try { return JSON.parse(body); } catch (e) { /* try it mended */ }
+  try { return JSON.parse(body.replace(/(":\s*-?\d+(?:\.\d+)?)[A-Za-z]+(?=\s*[,}\]])/g, "$1")); } catch (e) { return null; }
 }
 
-// Only food rows go back to the app: named, numbered, nothing else.
+// What the model said, cut down to food rows. The count is kept only as far
+// as answer(), which drops it before anything goes back to the app.
+const MAX_COUNT = 5000;
 export function tidy(out) {
   const n = (v) => { const x = Math.round(Number(v)); return isFinite(x) && x >= 0 ? x : null; };
   const items = (out && Array.isArray(out.items) ? out.items : [])
@@ -198,20 +214,47 @@ export function tidy(out) {
     .map((it) => ({
       food: clean(it.food, 80), amount: clean(it.amount, 40), grams: n(it.grams) || 0,
       calories: n(it.calories) || 0, protein: n(it.protein) || 0, carbs: n(it.carbs), fat: n(it.fat),
-      basis: BASES.indexOf(it.basis) > -1 ? it.basis : "rough"
+      basis: BASES.indexOf(it.basis) > -1 ? it.basis : "rough",
+      count: Math.min(n(it.count) || 1, MAX_COUNT)
     }));
   return { items: items, note: clean(out && out.note, 200) };
 }
+// Only food rows go back to the app: named, numbered, nothing else. A food
+// that was counted says what one of it came to, under the answer, so a number
+// as big as 55 pieces of sushi can be checked against the piece it stands on:
+// "55 at about 45 kcal and 2.4 g protein each". Worked out from the totals,
+// so it always agrees with them.
+export function answer(got, rechecked) {
+  const how = got.items.filter((it) => it.count >= 2 && it.calories).map((it) =>
+    it.food + ": " + it.count + " at about " + Math.round(it.calories / it.count) + " kcal and " +
+    (Math.round(it.protein / it.count * 10) / 10) + " g protein each.");
+  return {
+    items: got.items.map((it) => ({ food: it.food, amount: it.amount, grams: it.grams, calories: it.calories,
+      protein: it.protein, carbs: it.carbs, fat: it.fat, basis: it.basis })),
+    note: clean([got.note].concat(how).filter(Boolean).join(" "), MAX_NOTE), rechecked: rechecked
+  };
+}
 
-// Gemini's free tier gives each model its own daily allowance, and the
-// busiest model the smallest: on the first night gemini-flash-latest answered
-// "high demand" (503) five times, then "quota exceeded … limit: 20" a day
-// (429), while gemini-flash-lite-latest answered every lookup. So the relay
-// works down MODELS, lightest first: a model that is overloaded (503, 500),
-// out of allowance (429), slower than ATTEMPT_MS or gone (404) hands the
-// question to the next. Only when every one has said no is the app told — busy
-// if any was merely busy. A refused key is said straight away: another model
-// would not help.
+// Which model answers. Gemini's free tier gives each model its own daily
+// allowance, and the better the model the smaller it is. Read from the
+// owner's own page (ai.dev/rate-limit) on 2026-11-16: the two lite models get
+// 500 lookups a day each, every stronger one 20. Measured the same day on the
+// owner's example and eight other awkward foods, the stronger ones were
+// plainly better where the lite one guesses: 30 chicken wings came to about
+// 2,600 kcal from Gemini 4 Hydrogen and Gemini 3.6 Flash alike (a restaurant
+// lists 2,200 to 3,300) and 1,400 to 2,100 from the lite model. But they are
+// also the ones the free tier turns away or keeps waiting: Gemini 3.8 Flash
+// answered none of thirteen lookups in 28 seconds each.
+//
+// So there are two lists, asked at the same time. BEST is the stronger
+// models, given BEST_WAIT to answer; MODELS is the lite ones, which nearly
+// always answer in a second or two. The best answer is used if it comes in
+// time, the lite one if it doesn't, so a lookup is never worse than it was and
+// never waits longer than BEST_WAIT for nothing. Down either list, a model
+// that is overloaded (503, 500), out of allowance (429), too slow, gone (404)
+// or unreadable hands the question to the next. Only when every one has said
+// no is the app told — busy if any was merely busy. A refused key is said
+// straight away: another model would not help.
 const OVERLOADED = [429, 500, 503];
 const ATTEMPT_MS = 12000;
 // A model whose allowance is spent is left alone until Google says it is back
@@ -225,20 +268,52 @@ export function restFor(text) {
   const ms = ((+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0)) * 1000;
   return Math.min(ms, 24 * 3600 * 1000);
 }
+const listed = (v) => String(v || "").split(",").map((s) => s.trim()).filter(Boolean);
 export function modelsFor(env) {
-  if (env.MODELS) return String(env.MODELS).split(",").map((s) => s.trim()).filter(Boolean);
+  if (env.MODELS) return listed(env.MODELS);
   return [env.MODEL || "gemini-flash-lite-latest"].concat(env.FALLBACK_MODEL ? [env.FALLBACK_MODEL] : []);
 }
+export function bestFor(env) { return listed(env.BEST); }
+const BEST_WAIT = 8000;
 export function forgetResting() { resting.clear(); }
 
-async function ask(prompt, env) {
-  const models = modelsFor(env);
+// The app gives a lookup 45 seconds (RELAY_WAIT) and then says it took too
+// long. Three models at 12 seconds each, asked twice when the numbers need a
+// second look, could run to 72: on 2026-11-16 a lookup that answered took 47,
+// so the phone had given up on an answer that then arrived for nobody. So a
+// lookup has a budget, BUDGET_MS, well inside the app's wait. No model is
+// started with less than MIN_LEFT of it to go, and none is given longer than
+// what is left.
+const BUDGET_MS = 30000;
+const MIN_LEFT = 3000;
+async function ask(prompt, env, until) {
+  const best = bestFor(env);
+  if (!best.length) return askDown(prompt, modelsFor(env), env, until);
+  const settled = (p) => p.then((ok) => ({ ok: ok }), (e) => ({ e: e }));
+  // Both at once: the lite answer is usually in hand long before it is needed.
+  const lite = settled(askDown(prompt, modelsFor(env), env, until));
+  const wait = Math.min(until, Date.now() + (Number(env.BEST_WAIT) || BEST_WAIT));
+  const b = await settled(askDown(prompt, best, env, wait));
+  if (b.ok) return b.ok;
+  if (b.e && b.e.code === "key") throw b.e;
+  const l = await lite;
+  if (l.ok) return l.ok;
+  throw l.e;
+}
+
+// Down one list of models until one answers.
+async function askDown(prompt, models, env, until) {
   let last = null, busy = false;
   for (const model of models) {
     if ((resting.get(model) || 0) > Date.now()) { busy = true; continue; }
-    try { return await askModel(prompt, model, env); }
+    const left = until - Date.now();
+    if (left < MIN_LEFT) { busy = true; break; }
+    try { return await askModel(prompt, model, env, left); }
     catch (e) {
-      if (!e || e.code === "key" || e.code === "unreadable") throw e;
+      // A refused key is the same key for every model. A reply that could
+      // not be read is one model's slip, so the next is asked (until b101 it
+      // failed the lookup there and then).
+      if (!e || e.code === "key") throw e;
       if (e.code === "busy") busy = true;
       last = e;
     }
@@ -246,15 +321,23 @@ async function ask(prompt, env) {
   throw busy ? err("busy") : last || err("busy");
 }
 
-async function askModel(prompt, model, env) {
+// A little thinking before the answer (b101). Asked to think "low", the lite
+// model gave the same 2,090 kcal for 55 pieces of sushi twice running, where
+// without it the same question had come back as 1,650 and 2,200; and the
+// stronger models answer in 2 to 6 seconds instead of 6 to 26. EFFORT in
+// wrangler.toml changes it; "none" leaves the model to its own default.
+const EFFORT = "low";
+async function askModel(prompt, model, env, left) {
   let r, text;
+  const effort = String(env.EFFORT == null ? EFFORT : env.EFFORT).trim();
   const ctl = new AbortController();
-  const timer = setTimeout(() => ctl.abort(), Number(env.ATTEMPT_MS) || ATTEMPT_MS);
+  const timer = setTimeout(() => ctl.abort(), Math.min(Number(env.ATTEMPT_MS) || ATTEMPT_MS, left));
   try {
     r = await fetch(GEMINI, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + env.GEMINI_KEY },
-      body: JSON.stringify({ model: model, temperature: 0.2, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify(Object.assign({ model: model, temperature: 0.2, messages: [{ role: "user", content: prompt }] },
+        effort && effort !== "none" ? { reasoning_effort: effort } : {})),
       signal: ctl.signal
     });
     text = await r.text();
@@ -276,21 +359,32 @@ async function askModel(prompt, model, env) {
   try { j = JSON.parse(text); } catch (e) { /* unreadable below */ }
   const msg = j && j.choices && j.choices[0] && j.choices[0].message;
   const out = readJson(msg && msg.content);
-  if (!out) throw err("unreadable");
+  if (!out) {
+    // Why, for the log, and never what: the reply may repeat the food typed.
+    const said = msg && typeof msg.content === "string" ? msg.content.length : 0;
+    note(env, "Gemini unreadable (" + model + "): " + said + " characters, finish " +
+      String((j && j.choices && j.choices[0] && j.choices[0].finish_reason) || "unknown"));
+    throw err("unreadable");
+  }
   return tidy(out);
 }
 
 // Ask, check, and ask once more about anything that doesn't add up. The second
 // answer is kept only if it adds up better; what still doesn't, the app flags.
+// The second look is skipped when the budget has no room for it: an answer
+// the app can flag beats one that arrives after the phone has given up.
+const RECHECK_NEEDS = 6000;
 export async function findMacros(food, region, env) {
-  const first = await ask(estimatePrompt(food, region), env);
+  const until = Date.now() + (Number(env.BUDGET_MS) || BUDGET_MS);
+  const first = await ask(estimatePrompt(food, region), env, until);
   const off = first.items.filter((it) => !addsUp(it));
-  if (!off.length) return Object.assign(first, { rechecked: false });
+  if (!off.length || until - Date.now() < RECHECK_NEEDS) return answer(first, false);
   let second = null;
-  try { second = await ask(recheckPrompt(food, region, first, off), env); } catch (e) { /* keep the first */ }
+  try { second = await ask(recheckPrompt(food, region, first, off), env, until); } catch (e) { /* keep the first */ }
   const still = second ? second.items.filter((it) => !addsUp(it)).length : off.length;
   if (second && second.items.length && still < off.length) {
-    return { items: second.items, note: second.note || first.note, rechecked: true };
+    if (!second.note) second.note = first.note;
+    return answer(second, true);
   }
-  return Object.assign(first, { rechecked: true });
+  return answer(first, true);
 }

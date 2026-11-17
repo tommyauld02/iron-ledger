@@ -27,16 +27,25 @@ rules and the index of these docs. The rules apply here too.
 - The food finder's numbers are an AI's estimate, tagged as such, and checked
   only for adding up (4·protein + 4·carbs + 9·fat), not against a source. A
   chain's figure is the model's memory of what the chain publishes, not a
-  reading of its page: Gemini's free tier cannot search the web (as of
-  2026-10). If exactness matters for a food eaten often, save it to the pantry
-  from its label.
+  reading of its page: Gemini's free tier cannot search the web (checked again
+  2026-11-16: Google Search grounding is "not available" on the free tier for
+  every Gemini 3 and 4 model, and the owner's limits page shows 0 a day). With
+  billing on it is 5,000 searches a month free, then $14 a thousand, which is
+  the owner's call. If exactness matters for a food eaten often, save it to
+  the pantry from its label.
 - The food finder shares one free Gemini key through the relay, and each model
-  on it has its own daily allowance (the big Flash model only 20 a day; the
-  relay asks the lightest first and works down the list). That is plenty for
-  the owner and his testers; if the app is ever used widely enough to use them
-  all up, *busy, or at today's free limit* is what people see until midnight
-  Pacific, and the fix is turning billing on for that key (a fraction of a cent
-  a lookup), which is the owner's call.
+  on it has its own daily allowance: 500 a day for each lite model, 20 for
+  each stronger one (2026-11-16). Since b101 a stronger model is asked
+  alongside the lite one and used when it answers in time, so the first 40 or
+  so lookups a day are the better ones and the same food can come back a little
+  different later in the day. That is plenty for the owner and his testers; if
+  the app is ever used widely enough to use them all up, *busy, or at today's
+  free limit* is what people see until midnight Pacific, and the fix is turning
+  billing on for that key (a fraction of a cent a lookup), which is the owner's
+  call.
+- A lookup can take up to about 8 seconds since b101, where it took 1 or 2:
+  that is how long a stronger model is given before the lite answer is used.
+  The owner asked for the most accurate number, and a search takes as long.
 - The relay's origin check keeps other websites out, not scripts: anyone can
   claim the app's origin. Nothing in a public app can prove it is the app. The
   per-address limit, the size cap and the server-built prompt limit what a

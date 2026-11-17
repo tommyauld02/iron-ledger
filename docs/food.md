@@ -110,9 +110,82 @@ answer again (`modelItems()`), so a slip that survives is flagged on its row —
 *These calories don't match its protein, carbs and fat* — never quietly
 logged. A drink with alcohol is the honest exception and the flag says so. The
 relay reads Gemini's reply leniently: free models wrap JSON in a code fence or
-a sentence, and that must not read as a failure. The models are aliases, so a
-renamed model does not break the finder, and they are a list (`MODELS`), see
-*When it can't answer* below.
+a sentence, and that must not read as a failure. Nor must a garbled number:
+the lite model answered *a big plate of spaghetti bolognese* with
+`"carbs":95id` three times in eight (2026-11-16), so a number with letters
+stuck to its end is read as the number (`readJson()`), and a reply that still
+can't be read hands the question to the next model rather than failing the
+lookup. Which models are asked is *Two lists of models* below.
+
+**Better numbers for a count or a vague amount (b101).** The owner's ask
+(2026-11-16): the finder should do what a search does for "55 pieces of
+sushi", without leaving the app. Measured that day on the live relay, named
+restaurant food was already right (20 McNuggets, 2 Big Macs and a large fries,
+a Chipotle bowl all matched what the chains publish), but a count or a vague
+amount was not: the same question came back as 1,650 kcal and then 2,200, 30
+chicken wings as 1,410 (a restaurant lists 2,200 to 3,300), and *all you can
+eat korean bbq, ate a lot* came with two pints of beer nobody typed. Three
+things changed, each measured on the same sixteen foods:
+
+- *The prompt.* A stated quantity is used however large ("55 pieces is 55
+  pieces, never a normal serving"), a vague amount still gets real numbers
+  with the assumption in the note, a mix with no kind given is the average of
+  the usual assortment, and nothing is listed that the text did not name.
+- *A little thinking* (`EFFORT`, `reasoning_effort: "low"`). The lite model
+  then gave 2,090 kcal for the sushi twice running.
+- *A stronger model when one is free*, see *Two lists of models*.
+
+After: sushi 2,590 kcal and 110 g protein, wings 2,895 and 255 g, and the
+named food as exact as before. A food that was counted says what one of it
+came to under the answer, *55 at about 47 kcal and 2 g protein each*, worked
+out from the totals (`answer()` in the relay, `eachNote()` in the app for
+Claude's answers), so the total can be checked against the piece it stands on.
+The model is asked for that count as the last thing in each row.
+
+Two things were tried and dropped, so they are not tried again blind. Asking
+for ONE piece and multiplying in the relay fixed the sushi and broke named
+food: a 20-piece box of McNuggets is published as a box (830 kcal), and built
+from a piece it came to 870 and 950; *half a large pepperoni pizza* came back
+as one slice. Asking for the piece first and the total after pushed the lite
+model's wings to 4,200 to 5,100 kcal. The lite model's totals for a usual size
+are better than its idea of a piece. And Google Search grounding, the obvious
+way to match a search, is not on the free tier for any Gemini 3 or 4 model
+(pricing page and the owner's own limits page, 2026-11-16): it needs billing,
+which is the owner's call (*Known and deliberate*).
+
+**Two lists of models, asked at once (b101).** Each Gemini model has its own
+free daily allowance, and the better the model the smaller: read from the
+owner's limits page (ai.dev/rate-limit, 2026-11-16), the two lite models get
+500 lookups a day each and every stronger one 20. The stronger ones are
+plainly better where the lite one guesses (the wings above), but they are also
+the ones the free tier turns away or keeps waiting. So `relay/wrangler.toml`
+has two lists and the relay asks down both at the same time (`ask()`):
+
+- `BEST`, the stronger models (`gemini-4-hydrogen`, then
+  `gemini-3-flash-preview`), whose answer is used if it comes inside
+  `BEST_WAIT`, 8 seconds. With light thinking they answer in 2 to 6.
+- `MODELS`, the lite ones (`gemini-flash-lite-latest`, which is Gemini 3.5
+  Flash Lite, then `gemini-3.1-flash-lite`, then the big Flash as a last
+  resort), whose answer is usually in hand in a second or two and is used when
+  no best model was in time.
+
+So a lookup is never worse than it was before there was a `BEST`, and never
+waits more than 8 seconds for nothing. The busiest day in the four weeks
+before this used 40 lookups, and the two best models allow 40 between them, so
+for now most answers come from a best model; past that, and whenever they are
+busy, the lite ones answer. Left off `BEST` on purpose: Gemini 3.8 Flash
+(`gemini-flash-latest`) answered none of thirteen lookups in 28 seconds each
+that day, and Gemini 3.6 Flash was right but took 12 to 21 seconds every time.
+Gemma 4 has 14,400 a day but was overloaded on every try, so it is not on a
+list either. Every lookup now uses one lite request as well as a best one.
+
+**A lookup has 30 seconds (b101).** The app waits 45 (`RELAY_WAIT`) and then
+says it took too long. Three models at 12 seconds each, asked twice when the
+numbers needed a second look, could run to 72, and on 2026-11-16 a lookup that
+did answer took 47: the phone had given up on an answer that then arrived for
+nobody. The relay now has a budget (`BUDGET_MS`): no model is started with
+under 3 seconds of it left, none is given longer than what is left, and the
+second look is skipped when there is no room for it.
 
 Inside Claude, a published artifact cannot reach the internet, so the relay is
 out of reach and Claude (`sample`) answers instead, with the app's own copy of
@@ -145,15 +218,19 @@ model is currently experiencing high demand", five times in a row — the free
 tier turning people away from its busiest model — and then "quota exceeded …
 limit: 20" a day for that model, while `gemini-flash-lite-latest` answered every
 lookup. Each model has its own free daily allowance, so the relay works down
-`MODELS`, lightest first (`gemini-flash-lite-latest`, `gemini-flash-latest`,
-`gemini-3.5-flash-lite`): a model that is overloaded, out of allowance, slower
-than 12 seconds or retired hands the question to the next, and one out of
-allowance is skipped until Google says it's back (`restFor()`). The app hears
-*busy* only when every model has said no. The last one is a pinned model, not
-an alias, and pinned models retire: on 2026-10-19 `gemini-2.5-flash-lite`
+a list: a model that is overloaded, out of allowance, slower than 12 seconds,
+retired or unreadable hands the question to the next, and one out of allowance
+is skipped until Google says it's back (`restFor()`). Since b101 there are two
+lists, asked at once (*Two lists of models*, above); the app hears *busy* only
+when every model on both has said no. Until b101 the list was
+`gemini-flash-lite-latest`, `gemini-flash-latest`, `gemini-3.5-flash-lite`,
+and the third was the model the first alias already pointed at: the same
+allowance, asked twice. Most names on the lists are pinned models, not
+aliases, and pinned models retire: on 2026-10-19 `gemini-2.5-flash-lite`
 answered 404 "no longer available to new users" while both aliases were
 overloaded, so four lookups in six (100 g brown rice) came back *busy*. When
-the log shows a 404, replace that model in `relay/wrangler.toml` and redeploy.
+the log shows a 404, replace that model in `relay/wrangler.toml` and redeploy;
+`gemini-3-flash-preview` is a preview and will be the first to go.
 
 The suites never reach the relay or a real AI. `tests/fakeai.py` stands in for
 the relay, answering from a small fixture of foods the way the relay would

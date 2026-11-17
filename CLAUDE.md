@@ -157,7 +157,9 @@ Everything else:
 - **Logging food** — the three ways in, the words box, folded boxes and
   pop-ups, grams and units, meals → `docs/food.md`
 - **The food finder** — the free AI that answers what the pantry doesn't know,
-  the relay that holds its key, the self-check → `docs/food.md`; deploying the
+  the relay that holds its key, the self-check, the stronger and lite models
+  asked together (b101) → `docs/food.md` (*Better numbers for a count or a
+  vague amount*, *Two lists of models, asked at once*); deploying the
   relay → `relay/README.md`
 - **Reading a label**, grocery brands, barcodes → `docs/food.md`
 - **Carbs and fat, water, body weight, the goal calculator** → `docs/food.md`

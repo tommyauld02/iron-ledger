@@ -552,8 +552,12 @@ filled from.
 
 **Typing replaces what is in the box.** Typing 12 over 15 gave 1512, because a
 focused field puts the caret at the end. Focusing a row's weight or reps selects
-what is in it (`selectAll()`, at once and again in a timeout, in case the caret
-is placed after the focus event). A grey placeholder is not in the box, so
+what is in it (`selectAll()`, in a timeout, because the tap places its caret
+after the focus event). What is typed before the timeout runs is the start of
+the new number and is left alone: the box is selected only if it still holds
+what it held when it was focused. Selecting it regardless had the next digit
+typed over the first, 185 going in as 85, which only a machine is quick enough
+to do (`sweep`, 2026-11-16; `docs/testing.md`). A grey placeholder is not in the box, so
 typing over one is just typing. A set being *changed* in the sheet keeps the
 old behaviour, a caret where it was tapped, to fix one digit.
 
