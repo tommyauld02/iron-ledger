@@ -140,7 +140,8 @@ Everything else:
   `docs/architecture.md`
 - **Fonts** → `docs/architecture.md` (*Fonts are self-hosted*)
 - **Look and touch** — the dock, long press, sheets, Settings, theme and
-  accent, teal means you can tap it, contrast, `darkcheck`'s fixture →
+  accent, teal means you can tap it, contrast, `darkcheck`'s fixture, the
+  keyboard and a keyboard the WebView still thinks is up (b102) →
   `docs/ui.md`
 - **Chalk and Iron** — the new look (b96), built in four steps; the black
   floor is a scope with its own palette; every feature and setting carries
@@ -186,7 +187,7 @@ Everything else:
 - **The iPhone app** — the Capacitor shell, the log in native storage, the
   bundle ID, running it from Xcode, live updates, TestFlight from GitHub, the
   shell's version and what needs a store build, steps from Apple Health
-  (shell 1.4) → `docs/ios.md`; how the log is kept
+  (shell 1.4), the keyboard reset (shell 1.5) → `docs/ios.md`; how the log is kept
   there → `docs/architecture.md` (*In the iPhone app the log lives in native
   storage*)
 - **Known and deliberate** — what is left as it is on purpose, including

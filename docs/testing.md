@@ -39,7 +39,12 @@ the field never hidden with the dock). Then each of `SCREENS` — every tab,
 folded and with each box open — is scrolled top to bottom: the dock at the
 bottom the whole way, nothing off the side, and the last thing on the page
 ending above the dock. On the owner's 402x874 and a 320x568. **A new field or
-a new box goes into its lists.**
+a new box goes into its lists.** Since b102 it also stands in for shell 1.5's
+`KeyboardReset`: a keyboard short with nothing typed in, a field that lets go
+of a keyboard that never leaves, and coming back to the app a keyboard short
+each ask it once; a field, a select's picker and a zoomed page never do, nor
+does a shell without it. And back in the app with the keyboard up and
+`innerHeight` shrunk to 106px above it, the dock steps aside.
 
 **`muscles` covers what a movement works and the recovery body map (b88).**
 The built-in list, the guesses (narrow rules before broad ones, and a name

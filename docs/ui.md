@@ -125,6 +125,32 @@ nothing and adds no height, and the page is its own height once it goes. What
 it cannot show is the WebView's own lift, since Chromium has no keyboard.
 Only the phone can check that.
 
+**A keyboard the WebView still thinks is up (b102, shell 1.5).** The owner's
+video (b101, the TestFlight app): nothing being typed, and the tab bar rode
+halfway up the screen, sliding as the page scrolled, with the page showing under
+it. The WebView had missed iOS's word that the keyboard went and kept a
+keyboard's height cut off the foot of the screen; the dock sits at the foot of
+the page's viewport, and the shorter view pushed it about. Only the next
+keyboard put it right. `ghost()` is that state as the page sees it: nothing in
+focus that takes typing (not `typing()`, not a select, whose picker is a real
+keyboard, not an editable element), the page a keyboard short by more than
+120px, not zoomed. `ghostSoon()` looks 800 ms after the visual viewport
+resizes, 900 ms after a field lets go and after coming back to the app, and,
+in a shell that has it (`shellHas("KeyboardReset")`), asks the shell to tell
+the WebView the keyboard has gone, at most once in three seconds
+(`docs/ios.md`, *The keyboard reset*). The page cannot do it alone; older
+shells are never asked. `keys` checks when it asks and when it never does.
+
+**The keyboard is measured against the root's height, not innerHeight (b102).**
+Safari keeps `innerHeight` at the whole page, but the iPhone app's WebView
+shrinks it with the keyboard. Back in the app with the keyboard still up, it
+was 604 to the keyboard's 498 left, under the 120 that says a keyboard is up,
+so the dock and the plate sat on top of it (found in the Simulator, b102).
+`fullH()` is the larger of `innerHeight` and the root's `clientHeight`, which
+stayed 874 throughout. On the web it is `innerHeight`, as before. The page also
+looks again once it is visible after coming back (`visibilitychange`), since
+the keyboard can return with the app before the page is running.
+
 **A long press on a button pops the iOS copy menu.** `.t-row` already guarded
 the selection magnifier; `button, [role="tab"]` now guard the same bubble
 appearing over a control held a beat too long with a wet thumb. Inputs are

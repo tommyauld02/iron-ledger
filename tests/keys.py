@@ -76,6 +76,13 @@ NATIVEFAKE = """window.Capacitor={isNativePlatform:()=>true,getPlatform:()=>'ios
     if(p==='Preferences'&&m==='set'){sessionStorage.setItem(k,o.value); return Promise.resolve({});}
     if(p==='Preferences'&&m==='remove'){sessionStorage.removeItem(k); return Promise.resolve({});}
     return Promise.reject(new Error(p+'.'+m+' is not stood in for'));}};"""
+# Shell 1.5's KeyboardReset (b102): counted, and the WebView it tells puts the
+# visual viewport back, as the Simulator showed it does.
+RESETFAKE = """(()=>{const C=window.Capacitor, n=C.nativePromise;
+  C.isPluginAvailable=(p)=>p==='KeyboardReset';
+  C.nativePromise=(p,m,o)=>{
+    if(p==='KeyboardReset'&&m==='reset'){window.__resets=(window.__resets||0)+1; window.__kb(0); return Promise.resolve({});}
+    return n(p,m,o);};})()"""
 
 # Every field a person types into: where it is, and the presses that reveal it.
 # "__new" picks + New movement in the list, which is what shows its name field.
@@ -142,6 +149,7 @@ def opened(b, w, h, native=False):
     ctx=b.new_context(viewport={"width":w,"height":h}, has_touch=True, is_mobile=True)
     ctx.add_init_script("delete window.claude;"); ctx.add_init_script(KBFAKE)
     if native: ctx.add_init_script(NATIVEFAKE)
+    if native == "reset": ctx.add_init_script(RESETFAKE)
     p=ctx.new_page(); errs=[]
     p.on("pageerror", lambda e: errs.append(str(e)))
     p.goto(URL); p.wait_for_timeout(300)
@@ -234,6 +242,75 @@ with sync_playwright() as pw:
                       dk["vis"]=="visible" and dk["bot"]==H, str(dk))
             except Exception as e:
                 check("keyboard (%s): could be reached and typed in" % tag, False, str(e).splitlines()[0][:140])
+        allerrs += errs; ctx.close()
+
+        # ---------- a keyboard the WebView still thinks is up (b102) ----------
+        # On the owner's phone the WebView missed the word that the keyboard
+        # went, and the dock rode halfway up the screen (b101's video). Shell
+        # 1.5 can tell it (KeyboardReset). Here the stand-in plugin counts the
+        # calls and, like the WebView once told, puts the viewport back.
+        ctx, p, errs = opened(b, W, H, native="reset")
+        RESETS="()=>window.__resets||0"
+        tag="%s app" % phone
+        try:
+            go(p, "macros", []); p.evaluate("()=>window.scrollTo(0, 400)")
+            p.evaluate("h=>window.__kb(h)", KB); p.wait_for_timeout(1300)
+            check("ghost keyboard (%s): nothing typed in and a keyboard short: the shell is asked once" % tag,
+                  p.evaluate(RESETS)==1, "%s calls" % p.evaluate(RESETS))
+            dk=p.evaluate(DOCK)
+            check("ghost keyboard (%s): and the dock is back at the bottom" % tag,
+                  dk["vis"]=="visible" and dk["bot"]==H and not p.evaluate("()=>document.documentElement.classList.contains('kb-open')"), str(dk))
+
+            go(p, "macros", ['#plate', '[data-logway="numbers"]'])
+            p.locator("#fCal").tap(); p.evaluate("h=>window.__kb(h)", KB); p.wait_for_timeout(1300)
+            check("ghost keyboard (%s): a field being typed in has a real keyboard: never asked" % tag,
+                  p.evaluate(RESETS)==0, "%s calls" % p.evaluate(RESETS))
+            # The field lets go, and the WebView never hears the keyboard went.
+            p.evaluate("()=>document.activeElement.blur()"); p.wait_for_timeout(1300)
+            check("ghost keyboard (%s): the field let go and the keyboard never went: asked once" % tag,
+                  p.evaluate(RESETS)==1, "%s calls" % p.evaluate(RESETS))
+
+            go(p, "gym", ['#ctxMain [data-gymway="move"]'])
+            p.locator("#mSel").focus(); p.evaluate("h=>window.__kb(h)", KB); p.wait_for_timeout(1300)
+            check("ghost keyboard (%s): a list's picker is a real keyboard too: never asked" % tag,
+                  p.evaluate(RESETS)==0, "%s calls" % p.evaluate(RESETS))
+
+            go(p, "macros", [])
+            p.evaluate("()=>{visualViewport.scale=2;}"); p.evaluate("h=>window.__kb(h)", KB); p.wait_for_timeout(1300)
+            check("ghost keyboard (%s): zoomed in, a short view is the zoom: never asked" % tag,
+                  p.evaluate(RESETS)==0, "%s calls" % p.evaluate(RESETS))
+
+            # Back in the app, with no word of the keyboard while it was away.
+            go(p, "macros", [])
+            p.evaluate("h=>{window.__kbH=h; document.dispatchEvent(new Event('visibilitychange'));}", KB)
+            p.wait_for_timeout(1300)
+            check("ghost keyboard (%s): back in the app a keyboard short: asked once" % tag,
+                  p.evaluate(RESETS)==1, "%s calls" % p.evaluate(RESETS))
+
+            # Back in the app with a real keyboard: the WebView left innerHeight
+            # only 106 taller than the keyboard left, under the old 120 (b102).
+            go(p, "macros", ['#plate', '[data-logway="numbers"]'])
+            p.locator("#fCal").tap(); p.wait_for_timeout(60)
+            p.evaluate("""h=>{Object.defineProperty(window,'innerHeight',{configurable:true,get:()=>h-270});
+                              window.__kb(106);}""", H)
+            p.wait_for_timeout(500)
+            check("keyboard (%s): back with the keyboard up, the dock steps aside" % tag,
+                  p.evaluate(DOCK)["vis"]=="hidden", str(p.evaluate(DOCK)))
+        except Exception as e:
+            check("ghost keyboard (%s): could be run" % tag, False, str(e).splitlines()[0][:140])
+        allerrs += errs; ctx.close()
+
+        # A shell without the plugin is never asked.
+        ctx, p, errs = opened(b, W, H, native=True)
+        try:
+            go(p, "macros", [])
+            p.evaluate("()=>{window.__asked=0; const n=Capacitor.nativePromise;"
+                       "Capacitor.nativePromise=(pl,m,o)=>{if(pl==='KeyboardReset') window.__asked++; return n(pl,m,o);};}")
+            p.evaluate("h=>window.__kb(h)", KB); p.wait_for_timeout(1300)
+            check("ghost keyboard (%s app, shell 1.4): a shell without the reset is never asked" % phone,
+                  p.evaluate("()=>window.__asked")==0)
+        except Exception as e:
+            check("ghost keyboard (%s app, shell 1.4): could be run" % phone, False, str(e).splitlines()[0][:140])
         allerrs += errs; ctx.close()
 
         # ---------- every tab, scrolled from top to bottom ----------
