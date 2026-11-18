@@ -19,7 +19,8 @@ tools/make-www.mjs      assembles www/ from mntl-dt.html, fonts/, icons/, vendor
                         and the live-update manifest Pages publishes
 tools/shell-version.py  the shell's version and its ledger, ios/shell-versions.json
 ios/App/App/HealthStepsPlugin.swift   steps from Apple Health, read only (shell 1.4)
-ios/App/App/MainViewController.swift  Capacitor's view controller, registering it
+ios/App/App/KeyboardResetPlugin.swift tells the WebView a keyboard has gone (shell 1.5)
+ios/App/App/MainViewController.swift  Capacitor's view controller, registering both
 ios/App/App/App.entitlements          the HealthKit capability (shell 1.4)
 www/                    generated, never committed (the same rule as dist/)
 ios/App/                the Xcode project; Swift Package Manager, no CocoaPods
@@ -189,6 +190,39 @@ that run. If an upload fails with a profile that lacks
 developer.apple.com → Certificates, Identifiers & Profiles → Identifiers, and
 run the workflow again. App Review for a HealthKit app reads the privacy
 policy, which says what is read (`privacy.html`, *Apple Health*).
+
+## The keyboard reset (shell 1.5)
+
+The owner's video (b101, the TestFlight app): with nothing being typed, the
+tab bar rode halfway up the screen and slid as the page scrolled, the page
+showing under it. The WebView had missed iOS's word that the keyboard went and
+kept a keyboard's height (336 points on a 402x874 phone) cut off the foot of
+the screen: `visualViewport.height` stayed 538, and the tab bar, at the foot of
+the page's viewport, was pushed about by that shorter view. It lasted until
+the next keyboard came and went. Nothing in the page can reach the WebView's
+idea of the keyboard, so the shell does.
+
+`KeyboardResetPlugin.swift` is a plugin of the app's own, registered beside
+`HealthSteps`. The page calls it as `KeyboardReset`:
+
+- `reset()`: posts `UIKeyboardWillHideNotification` and
+  `UIKeyboardDidChangeFrameNotification`, the keyboard off the bottom of the
+  screen with no animation. These are iOS's own public notifications with its
+  own keys, the ones the WebView missed. The WebView takes its keyboard from
+  both: with the first alone it updated only at the next scroll, ten seconds
+  later in the Simulator; with both, 9 ms after the call.
+
+The page decides when (`docs/ui.md`, *A keyboard the WebView still thinks is
+up*): only with nothing on it that takes typing, which is the only time an
+iPhone shows the WebView no keyboard. Were it ever wrong, the real keyboard's
+next notification would put the WebView right.
+
+**Found in the Simulator.** No way of putting the keyboard away there left it
+stuck: Done, *Close*, the home screen and back (once and twice), locking the
+phone, Control Center. Posting a keyboard to the WebView with no keyboard on
+screen gave the video's picture exactly, and `reset()` took it away. So the cure is checked;
+what makes a phone miss the word is not known. Only a phone can show that the
+tab bar no longer sticks.
 
 ## How an update reaches phones
 

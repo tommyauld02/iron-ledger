@@ -4880,7 +4880,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-16.101";
+  var BUILD = "2026-11-17.102";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5880,6 +5880,9 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-17.102", t: "The tabs stay at the bottom", items: [
+      "In the iPhone app, the tabs at the bottom no longer get stuck halfway up the screen once the keyboard has gone. The phone sometimes went on keeping room for a keyboard that was no longer there; the app now tells it the keyboard has gone.",
+      "Come back to the app with the keyboard still up, and the tabs and the button above them step out of its way again instead of sitting on top of it." ] },
     { b: "2026-11-16.101", t: "Ask an agent, better numbers", items: [
       "Ask an agent now asks a stronger free AI as well as the quick one, and uses the stronger answer whenever it comes in time. Things like 55 pieces of sushi or 30 wings come out much closer to what a search would tell you.",
       "A big count stays big, and a vague amount like \u201ca big plate\u201d or \u201call you can eat\u201d still gets a real estimate, with what it assumed written underneath.",
@@ -15276,8 +15279,15 @@
       root.classList.remove("kb-room");
       root.style.setProperty("--kb-h", "0px");
     }
+    // The page's height with no keyboard. Safari keeps innerHeight at that, but
+    // the iPhone app's WebView shrinks it with the keyboard: coming back to the
+    // app with the keyboard up, innerHeight was 604 to the keyboard's 498 left,
+    // under the 120 below, so the keyboard read as gone and the dock and plate
+    // sat on top of it (b102, found in the Simulator). The root's clientHeight
+    // stays at the whole screen through all of it.
+    function fullH() { return Math.max(window.innerHeight, root.clientHeight || 0); }
     function fit() {
-      var open = typing() && window.innerHeight - vv.height > 120 && vv.scale < 1.05;
+      var open = typing() && fullH() - vv.height > 120 && vv.scale < 1.05;
       if (open) room(Math.round(window.innerHeight - vv.height));
       root.classList.toggle("kb-open", open);
       // Typing in the dock: lift it so its bar sits on the keyboard.
@@ -15327,7 +15337,37 @@
       window.scrollBy(0, Math.round(r.top - top - Math.max(8, (vv.height - r.height) / 2)));
     }
     function keepSoon() { clearTimeout(settle); settle = setTimeout(keep, 320); }
+    // A keyboard the WebView still thinks is up (b102, shell 1.5). The WebView
+    // hears where the keyboard is only from iOS, and now and then misses the
+    // word that it went: the visual viewport stays a keyboard short with
+    // nothing being typed, and the dock, which sits at the foot of the page's
+    // viewport, rides halfway up the screen over the page as you scroll (the
+    // owner's video, b101, the TestFlight app). It lasted until the next
+    // keyboard came and went. The page cannot reach it, so the shell tells the
+    // WebView the keyboard has gone (KeyboardReset), once the page has been a
+    // keyboard short for most of a second with nothing that takes typing in
+    // focus — a select's picker and a field both bring the WebView's keyboard,
+    // and those are real. Older shells lack it and are never asked.
+    function ghost() {
+      var a = document.activeElement;
+      if (typing() || (a && (a.tagName === "SELECT" || a.isContentEditable))) return false;
+      return fullH() - vv.height > 120 && vv.scale < 1.05;
+    }
+    var ghostT = 0, ghostAt = 0;
+    function ghostSoon(ms) {
+      if (!shellHas("KeyboardReset")) return;
+      clearTimeout(ghostT);
+      ghostT = setTimeout(function () {
+        if (!ghost() || Date.now() - ghostAt < 3000) return;
+        ghostAt = Date.now();
+        try {
+          window.Capacitor.nativePromise("KeyboardReset", "reset", {})
+            .then(function () { setTimeout(fit, 60); }, function () {});
+        } catch (e) {}
+      }, ms);
+    }
     vv.addEventListener("resize", function () {
+      ghostSoon(800);
       if (!fit()) { lastH = 0; return; }
       // A resize that is not the keyboard changing height is the phone
       // settling its own scroll: answering it is what started the tug of war.
@@ -15339,8 +15379,15 @@
       if (coarse && typing()) room(Math.round(window.innerHeight * 0.55));
       keepSoon();
     });
-    document.addEventListener("focusout", function () { setTimeout(function () { fit(); dropRoom(); }, 0); });
+    document.addEventListener("focusout", function () { setTimeout(function () { fit(); dropRoom(); }, 0); ghostSoon(900); });
     window.addEventListener("scroll", dropRoom, { passive: true });
+    // Back in the app, the keyboard can come back with it before the page is
+    // running again: look again once it has (b102).
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState !== "visible") return;
+      setTimeout(fit, 400);
+      ghostSoon(900);
+    });
     fit();
   })();
 
