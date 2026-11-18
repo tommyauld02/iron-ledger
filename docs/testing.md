@@ -155,6 +155,14 @@ name (`mobile`, `hittest`, `handoff`, `darkcheck`, `keys`, `probe`) go
 through it, so "pantry" is still one of the screens they measure. A list of
 taps puts the Macros tab and `[data-fseg="pantry"]` where the Pantry tab was.
 
+**`relay` fakes a model that says nothing, not only one that says no
+(2026-11-17).** Its fake Gemini answers per model (`byModel`), and `"hang"`
+is a model that never replies until it is told to stop. The checks on the
+best list use it for what a status code cannot show: that a silent model
+gives the next a head start instead of using the whole wait, that it is told
+to stop once there is an answer, and that the lookups after it do not ask it
+again. They measure time, so their waits are a few seconds of real clock.
+
 **A run that crosses midnight fails on the clock, not the app.** A suite takes
 today's date once, when it starts, and seeds its fixture on that day; the app
 re-checks the date as it goes (`checkDayRollover()`). `sweep` runs for about

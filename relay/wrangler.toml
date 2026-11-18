@@ -11,7 +11,8 @@ ALLOWED_ORIGINS = "https://tommyauld02.github.io,capacitor://localhost"
 # Two lists, asked at the same time (see "Which model answers" in worker.js).
 # BEST is the stronger models: better numbers, 20 lookups a day each on the
 # free tier, and often busy. Their answer is used when it comes inside 8
-# seconds. Not on it, on purpose: gemini-flash-latest (Gemini 3.8 Flash), which
+# seconds. The first is asked first; if it has said nothing after 4 seconds
+# the next is asked beside it (askBest in worker.js). Not on it, on purpose: gemini-flash-latest (Gemini 3.8 Flash), which
 # answered nothing in 28 seconds thirteen times running on 2026-11-16, and
 # gemini-3.6-flash, right but 12 to 21 seconds every time.
 BEST = "gemini-4-hydrogen,gemini-3-flash-preview"

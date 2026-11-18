@@ -224,15 +224,31 @@ export function tidy(out) {
 // as big as 55 pieces of sushi can be checked against the piece it stands on:
 // "55 at about 45 kcal and 2.4 g protein each". Worked out from the totals,
 // so it always agrees with them.
-export function answer(got, rechecked) {
+export function answer(got, rechecked, typed) {
+  const name = (it) => unstray(it.food, typed) || it.food;   // a name is never emptied: the app drops a nameless row
   const how = got.items.filter((it) => it.count >= 2 && it.calories).map((it) =>
-    it.food + ": " + it.count + " at about " + Math.round(it.calories / it.count) + " kcal and " +
+    name(it) + ": " + it.count + " at about " + Math.round(it.calories / it.count) + " kcal and " +
     (Math.round(it.protein / it.count * 10) / 10) + " g protein each.");
   return {
-    items: got.items.map((it) => ({ food: it.food, amount: it.amount, grams: it.grams, calories: it.calories,
+    items: got.items.map((it) => ({ food: name(it), amount: unstray(it.amount, typed), grams: it.grams, calories: it.calories,
       protein: it.protein, carbs: it.carbs, fat: it.fat, basis: it.basis })),
-    note: clean([got.note].concat(how).filter(Boolean).join(" "), MAX_NOTE), rechecked: rechecked
+    note: clean([unstray(got.note, typed)].concat(how).filter(Boolean).join(" "), MAX_NOTE), rechecked: rechecked
   };
+}
+
+// The lite model garbles words as well as numbers. On 2026-11-17 the live
+// relay answered "55 pieces of sushi" with the amount "55 pieces" and two
+// Burmese letters after it, and they went to the phone as the row's amount.
+// So when what was typed is in Latin letters, letters of any other writing
+// system are taken out of the names, amounts and note that go back. Accents
+// are Latin and stay (jalapeño, phở); so do Greek letters, for the µ in a
+// unit. A question typed in another writing system is left exactly as the
+// model answered it: there those letters are the answer.
+const STRAY = "(?![\\p{Script=Latin}\\p{Script=Greek}\\p{Script=Common}\\p{Script=Inherited}])[\\p{L}\\p{M}\\p{N}]";
+const HAS_STRAY = new RegExp(STRAY, "u"), EVERY_STRAY = new RegExp(STRAY + "+", "gu");
+export function unstray(text, typed) {
+  if (typeof text !== "string" || !text || HAS_STRAY.test(String(typed || ""))) return text;
+  return text.replace(EVERY_STRAY, "").replace(/\s+/g, " ").trim();
 }
 
 // Which model answers. Gemini's free tier gives each model its own daily
@@ -252,7 +268,8 @@ export function answer(got, rechecked) {
 // time, the lite one if it doesn't, so a lookup is never worse than it was and
 // never waits longer than BEST_WAIT for nothing. Down either list, a model
 // that is overloaded (503, 500), out of allowance (429), too slow, gone (404)
-// or unreadable hands the question to the next. Only when every one has said
+// or unreadable hands the question to the next; on the best list a model that
+// is merely silent is not waited out either (askBest). Only when every one has said
 // no is the app told — busy if any was merely busy. A refused key is said
 // straight away: another model would not help.
 const OVERLOADED = [429, 500, 503];
@@ -293,7 +310,7 @@ async function ask(prompt, env, until) {
   // Both at once: the lite answer is usually in hand long before it is needed.
   const lite = settled(askDown(prompt, modelsFor(env), env, until));
   const wait = Math.min(until, Date.now() + (Number(env.BEST_WAIT) || BEST_WAIT));
-  const b = await settled(askDown(prompt, best, env, wait));
+  const b = await settled(askBest(prompt, best, env, wait));
   if (b.ok) return b.ok;
   if (b.e && b.e.code === "key") throw b.e;
   const l = await lite;
@@ -321,17 +338,69 @@ async function askDown(prompt, models, env, until) {
   throw busy ? err("busy") : last || err("busy");
 }
 
+// The best list, each with a head start on the next (2026-11-17). One at a
+// time was not enough. The day after b101 Gemini 4 Hydrogen answered nothing
+// at all, not in 28 seconds and not for "a banana", while Gemini 3 Flash
+// answered in 1.4. Asked in turn, the silent one used up all of BEST_WAIT,
+// the next was never asked, and every lookup took 8 seconds to come back with
+// the lite answer. So a best model that has said nothing after HEAD_START is
+// left running and the next is asked beside it: the first good answer is the
+// one used, and whoever is still running is told to stop. A model that says
+// no outright hands on at once, as before. And one that was passed while
+// silent, or was silent to the end of its time, rests for SLOW_REST, so the
+// lookups that follow neither wait for it nor spend its allowance.
+const HEAD_START = 4000;
+const SLOW_REST = 10 * 60 * 1000;
+function askBest(prompt, models, env, until) {
+  const list = models.filter((m) => !((resting.get(m) || 0) > Date.now()));
+  const head = Number(env.HEAD_START) || HEAD_START;
+  const quit = new AbortController();
+  return new Promise((resolve, reject) => {
+    let i = 0, timer = null, done = false, last = null, busy = list.length < models.length;
+    const open = new Set();
+    const end = (fn, v) => { if (done) return; done = true; clearTimeout(timer); fn(v); quit.abort(); };
+    const next = () => {
+      clearTimeout(timer);
+      if (done) return;
+      const left = until - Date.now();
+      if (i < list.length && left < MIN_LEFT) { busy = true; i = list.length; }
+      if (i >= list.length) { if (!open.size) end(reject, busy ? err("busy") : last || err("busy")); return; }
+      const model = list[i++];
+      open.add(model);
+      askModel(prompt, model, env, left, quit.signal).then((ok) => {
+        open.delete(model);
+        if (done) return;
+        // Whoever was asked before it and is still silent rests a while.
+        open.forEach((m) => { if (list.indexOf(m) < list.indexOf(model)) resting.set(m, Date.now() + SLOW_REST); });
+        end(resolve, ok);
+      }, (e) => {
+        open.delete(model);
+        if (done) return;
+        if (e && e.code === "key") return end(reject, e);
+        if (e && e.slow) resting.set(model, Date.now() + SLOW_REST);
+        if (e && e.code === "busy") busy = true;
+        last = e;
+        next();
+      });
+      if (i < list.length) timer = setTimeout(next, head);
+    };
+    next();
+  });
+}
+
 // A little thinking before the answer (b101). Asked to think "low", the lite
 // model gave the same 2,090 kcal for 55 pieces of sushi twice running, where
 // without it the same question had come back as 1,650 and 2,200; and the
 // stronger models answer in 2 to 6 seconds instead of 6 to 26. EFFORT in
 // wrangler.toml changes it; "none" leaves the model to its own default.
 const EFFORT = "low";
-async function askModel(prompt, model, env, left) {
-  let r, text;
+async function askModel(prompt, model, env, left, quit) {
+  let r, text, told = false;
   const effort = String(env.EFFORT == null ? EFFORT : env.EFFORT).trim();
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), Math.min(Number(env.ATTEMPT_MS) || ATTEMPT_MS, left));
+  // Another model answered first (askBest): stop, and say nothing in the log.
+  if (quit) quit.addEventListener("abort", () => { told = true; ctl.abort(); });
   try {
     r = await fetch(GEMINI, {
       method: "POST",
@@ -342,9 +411,10 @@ async function askModel(prompt, model, env, left) {
     });
     text = await r.text();
   } catch (e) {
+    if (told) throw err("busy", "another model answered first");
     const slow = ctl.signal.aborted;
     note(env, (slow ? "Gemini too slow (" : "Gemini unreachable (") + model + "): " + String(e));
-    throw err(slow ? "busy" : "failed", String(e));
+    throw Object.assign(err(slow ? "busy" : "failed", String(e)), { slow: slow });
   } finally {
     clearTimeout(timer);
   }
@@ -378,13 +448,13 @@ export async function findMacros(food, region, env) {
   const until = Date.now() + (Number(env.BUDGET_MS) || BUDGET_MS);
   const first = await ask(estimatePrompt(food, region), env, until);
   const off = first.items.filter((it) => !addsUp(it));
-  if (!off.length || until - Date.now() < RECHECK_NEEDS) return answer(first, false);
+  if (!off.length || until - Date.now() < RECHECK_NEEDS) return answer(first, false, food);
   let second = null;
   try { second = await ask(recheckPrompt(food, region, first, off), env, until); } catch (e) { /* keep the first */ }
   const still = second ? second.items.filter((it) => !addsUp(it)).length : off.length;
   if (second && second.items.length && still < off.length) {
     if (!second.note) second.note = first.note;
-    return answer(second, true);
+    return answer(second, true, food);
   }
-  return answer(first, true);
+  return answer(first, true, food);
 }

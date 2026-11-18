@@ -89,7 +89,11 @@ lists, and the relay asks down both at the same time:
 
 Down either list, a model that is overloaded, out of allowance, too slow,
 retired or unreadable hands the question to the next; one out of allowance is
-left alone until Google says it's back. Only when every model on both lists has
+left alone until Google says it's back. On the `BEST` list a model that says
+nothing at all is not waited out: after 4 seconds the next is asked beside
+it, the first good answer is used, and the silent one is left alone for ten
+minutes. (Gemini 4 Hydrogen did exactly that on 2026-11-17: in `npx wrangler
+tail` it shows as `Gemini too slow (gemini-4-hydrogen)`.) Only when every model on both lists has
 said no does the app hear "busy". A refused key is said straight away, since
 another model would not help.
 

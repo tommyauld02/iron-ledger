@@ -44,8 +44,12 @@ rules and the index of these docs. The rules apply here too.
   billing on for that key (a fraction of a cent a lookup), which is the owner's
   call.
 - A lookup can take up to about 8 seconds since b101, where it took 1 or 2:
-  that is how long a stronger model is given before the lite answer is used.
-  The owner asked for the most accurate number, and a search takes as long.
+  that is how long the stronger models are given before the lite answer is
+  used. The owner asked for the most accurate number, and a search takes as
+  long. When the first of them is silent, as Gemini 4 Hydrogen was the day
+  after b101, the next is asked beside it after 4 seconds, so that day costs 5
+  or so and not 8 (`docs/food.md`, *A best model that says nothing is not
+  waited out*).
 - The relay's origin check keeps other websites out, not scripts: anyone can
   claim the app's origin. Nothing in a public app can prove it is the app. The
   per-address limit, the size cap and the server-built prompt limit what a

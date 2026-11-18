@@ -20,7 +20,7 @@ if not node:
 
 HARNESS = r"""
 import { readFileSync } from "node:fs";
-import worker, { originAllowed, findMacros, tidy, answer, readJson, restFor, forgetResting, modelsFor, bestFor, MAX_FOOD, MAX_BODY } from "./worker.mjs";
+import worker, { originAllowed, findMacros, tidy, answer, unstray, readJson, restFor, forgetResting, modelsFor, bestFor, MAX_FOOD, MAX_BODY } from "./worker.mjs";
 
 const res = [];
 const check = (n, ok, d) => res.push([ok ? "PASS" : "FAIL", n, d === undefined ? "" : String(d)]);
@@ -177,6 +177,24 @@ check("one of something says nothing extra", noted(item("Ribeye", 990, 82, 0, 73
 check("a count that is missing, zero or nonsense is one", [undefined, 0, "lots", -3].every((c) => noted(item("Egg", 72, 6, 0, 5, { count: c })).note === ""));
 check("a count out of all reason is held, and never divides by nothing",
   tidy({ items: [item("Peanut", 6, 0, 0, 1, { count: 1e9 })] }).items[0].count === 5000 && noted(item("Water", 0, 0, 0, 0, { count: 8 })).note === "");
+// ---- stray letters of another writing system (the live relay, 2026-11-17) ----
+const BURMESE = "\u101E\u1019";
+script = [{ items: [item("Sushi assortment " + BURMESE, 2035, 77, 300, 40, { amount: "55 pieces " + BURMESE, count: 55 })], note: "A usual mix" + BURMESE + "." }];
+r = await call(req("POST", { food: "55 pieces of sushi" }));
+check("stray letters of another writing system are taken out of the amount, the name and the note",
+  r.status === 200 && r.json.items[0].amount === "55 pieces" && r.json.items[0].food === "Sushi assortment"
+  && r.json.note === "A usual mix. Sushi assortment: 55 at about 37 kcal and 1.4 g protein each.", r.text.slice(0, 200));
+check("accents and a Greek unit letter are not stray", unstray("Jalape\u00f1o poppers", "x") === "Jalape\u00f1o poppers"
+  && unstray("Ph\u1edf b\u00f2", "x") === "Ph\u1edf b\u00f2" && unstray("cre\u0300me bru\u0302le\u0301e", "x") === "cre\u0300me bru\u0302le\u0301e"
+  && unstray("400 \u03bcg", "x") === "400 \u03bcg" && unstray("1/2 cup (120 ml) \u2013 25%", "x") === "1/2 cup (120 ml) \u2013 25%");
+script = [{ items: [item("\u5bff\u53f8", 2035, 77, 300, 40, { amount: "55\u500b", count: 55 })], note: "" }];
+r = await call(req("POST", { food: "\u5bff\u53f8 55\u500b" }));
+check("a question typed in another writing system is answered in it, untouched",
+  r.status === 200 && r.json.items[0].food === "\u5bff\u53f8" && r.json.items[0].amount === "55\u500b", r.text.slice(0, 120));
+script = [{ items: [item(BURMESE, 105, 1, 27, 0)], note: "" }];
+r = await call(req("POST", { food: "banana" }));
+check("a name that is nothing but stray letters is left as it came, so its row is not lost",
+  r.status === 200 && r.json.items.length === 1 && r.json.items[0].food === BURMESE, r.text.slice(0, 120));
 check("what a model adds beside the rows is dropped", !("secret" in noted(item("Egg", 72, 6, 0, 5, { secret: "x" })).items[0]));
 
 // ---- replies that are not tidy ----
@@ -282,7 +300,48 @@ r = await call(req("POST", { food: "30 chicken wings" }), TWO);
 check("a best model that is not in time is not waited for: the lite answer is used",
   r.status === 200 && r.json.items[0].calories === 1410 && Date.now() - t0 >= 3000 && Date.now() - t0 < 5000 && who() === "best-a,lite-a",
   (Date.now() - t0) + " ms of a 3,300 ms wait, " + who());
+calls = []; byModel = { "best-b": [BETTER], "lite-a": [LITE] };
+r = await call(req("POST", { food: "30 chicken wings" }), TWO);
+check("and a best model that was silent to the end of its time is left alone for a while",
+  r.status === 200 && r.json.items[0].calories === 2895 && who() === "best-b,lite-a", who());
 const TWO3 = Object.assign({}, TWO, { BEST_WAIT: 3600 });
+
+// One best model silent, the next quick: what Gemini 4 Hydrogen and Gemini 3
+// Flash did on 2026-11-17. The silent one must not use up the whole wait.
+const HEAD = Object.assign({}, TWO, { BEST_WAIT: 3600, HEAD_START: 300 });
+forgetResting(); calls = []; logged.length = 0; byModel = { "best-a": ["hang"], "best-b": [BETTER], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("a best model that says nothing gives the next one a head start, not the whole wait",
+  r.status === 200 && r.json.items[0].calories === 2895 && Date.now() - t0 >= 250 && Date.now() - t0 < 1500 && who() === "best-a,best-b,lite-a",
+  (Date.now() - t0) + " ms of a 3,600 ms wait, " + who());
+check("the silent one is told to stop once there is an answer, and that is not logged as a failure",
+  calls.filter((c) => c.body.model === "best-a")[0].init.signal.aborted && logged.join(" ").indexOf("best-a") === -1, logged.join(" | "));
+calls = []; byModel = { "best-b": [BETTER], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("and the lookups after it go straight to the one that answers",
+  r.status === 200 && r.json.items[0].calories === 2895 && who() === "best-b,lite-a" && Date.now() - t0 < 250, (Date.now() - t0) + " ms, " + who());
+forgetResting(); calls = []; byModel = { "best-a": [BETTER], "best-b": [BETTER], "lite-a": [LITE] };
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("a best model that answers inside its head start is the only best one asked", r.status === 200 && who() === "best-a,lite-a", who());
+calls = []; byModel = { "best-a": ["hang"], "best-b": ["hang"], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("with every best model silent the lite answer is used when the wait is up, never later",
+  r.status === 200 && r.json.items[0].calories === 1410 && Date.now() - t0 >= 3300 && Date.now() - t0 < 5000 && who() === "best-a,best-b,lite-a",
+  (Date.now() - t0) + " ms of a 3,600 ms wait, " + who());
+calls = []; byModel = { "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("and after that the lite answer comes at once, with no best model asked",
+  r.status === 200 && r.json.items[0].calories === 1410 && who() === "lite-a" && Date.now() - t0 < 250, (Date.now() - t0) + " ms, " + who());
+forgetResting(); calls = []; byModel = { "best-a": ["hang"], "best-b": [{ status: 503 }], "lite-a": [LITE] };
+t0 = Date.now();
+r = await call(req("POST", { food: "30 chicken wings" }), HEAD);
+check("a best model still thinking is waited for when the one asked beside it says no",
+  r.status === 200 && r.json.items[0].calories === 1410 && Date.now() - t0 >= 3300 && who() === "best-a,best-b,lite-a", (Date.now() - t0) + " ms, " + who());
+forgetResting();
 calls = []; byModel = { "best-a": [{ status: 503, text: "high demand" }], "best-b": [BETTER], "lite-a": [LITE] };
 r = await call(req("POST", { food: "30 chicken wings" }), TWO3);
 check("a best model that is overloaded hands the question to the next best",
