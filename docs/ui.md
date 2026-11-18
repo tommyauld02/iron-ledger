@@ -488,6 +488,88 @@ counted toward, a running clock, a day gone by), and that the day after a *Got
 it* brings the next line and not the same one. `darkcheck`'s gold pass puts both
 looks on screen.
 
+**Weeks start on the day you choose (b104).** Asked for by the owner, whose
+weeks run Monday to Sunday while the app's ran Sunday to Saturday: *"another
+could choose tuesday to tuesday so granting that capability could be
+appreciated"*. Settings → *Your week* → *Week starts on* is a picker of all
+seven days (a native select: seven buttons cannot each be 44px at 320px),
+kept as `store.weekStart`, 0 for Sunday to 6 for Saturday. Sunday is the
+default, so a log from before it reads exactly as it did.
+
+- **Every week in the app is `weekStart()`**, which reads `weekStartsOn()`, so
+  one change moves them all together: the week strip under the date, the
+  Gym's planned week board and its workouts-a-week line, the cardio goal's
+  week and the Log's eight weeks of it, the daily line's "last week", and the
+  wrap-up below. The Log's calendar starts its columns on that day too, mini
+  months included, so the 1st sits under its own weekday.
+- **The plan is kept by weekday, not by position.** `store.week` stays Sunday
+  first by `getDay()`; only the order it is drawn in changes. Friday's legs are
+  still Friday's after the week moves.
+- **Changing it says so** (*Weeks now run Monday to Sunday*), and is not a new
+  week starting: it counts this week as one whose wrap-up has been shown, so
+  nothing pops up there and then. The Log's card shows the new last week at
+  once. The day weeks start on travels in a restore, and a restore that moves
+  it does the same.
+- A line the daily line put away carries its week's first day in its id, so
+  moving the week can bring one back once, about a different seven days.
+
+**The week wrap-up (b104): last week, in numbers.** Asked for by the owner in
+his words: *"a summary for the week, or a week 'wrap up' here I intend to show
+the facts of the past week, total calories, total protein consumed, total
+training days, total steps, etc."*, *"a one time pop up and could be saved
+somewhere until the next weeks 'wrap up' replaces the prior"*, and *"the facts
+for those who choose to track their water consumption, Fats, carbs etc."*.
+
+- **What it holds** (`wrapFacts()`, numbers only; `wrapHtml()` draws them),
+  a section for each thing tracked that week and none for what was not:
+  - *Food*: calories and protein in all and a day, carbs and fat in all with
+    Carbs & fat shown, then days logged and how many were on target. A day is
+    the average of the days logged, and it says so when that is not all
+    seven. Carbs and fat count only the foods that list them, and it says how
+    many did not.
+  - *Water*, with Water shown and a glass recorded: in all, a day, and days on
+    goal.
+  - *Gym*, for someone who trained that week, or who has a plan or a goal and
+    trained with the app before: training days, sets, lb moved, time in the
+    gym, and the days against the planned week or else the workouts-a-week
+    goal, never both (the daily line's rule).
+  - *Steps* and *Cardio*: from `cardioTotals()`, the Cardio tab's own totals;
+    the cardio goal's line goes under whichever it counts, by the day or the
+    week (a month's goal is not a week's to judge).
+  - *Body weight*: the week's first weigh-in to its last, in the unit chosen.
+  - *Daily checklist*: days finished. *Progress*: check-ins, and how many with
+    a photo.
+- **Gold for a goal met, never red.** A whole week on target (five days logged
+  or more, or one good day would be gold as "1 of 1"), water, the checklist or
+  a daily cardio goal on six or seven days, the planned week or gym goal met,
+  a weekly cardio goal met. It is a record, not a verdict, so a short week is
+  plain ink, not red.
+- **It pops up once a week** (`maybeWrap()`): the first time the app is open
+  in a new week, from opening, from midnight passing with it open, or from
+  coming back to the front. `store.wrapSeen` is the first day of the week it
+  was last said in. Never over the age check, the profile, What's new (it
+  waits for What's new's *Got it*) or any other sheet, and never over a
+  running workout or cardio clock; held back, it waits for the next time the
+  app comes to the front. A week with nothing logged in it is passed over.
+- **It starts with the next week.** The first open of a build with it, or of
+  the app at all, counts the week already begun, so nothing pops up mid-week
+  for someone who has just updated; last week's is on the Log already.
+- **Kept on the Log tab** (`#wrapOpen`, above the year card, this year's page
+  only): one line with the week and three of its numbers, *See it* to open the
+  same sheet. It is counted from the log each time, never kept as a copy, so
+  a day filled in late still counts, a backup carries nothing new, and next
+  week's simply takes its place.
+- Settings → *Your week* → *Week wrap-up: Log tab only / Pops up* (`store.wrapPop`,
+  kept as false only, so an older log pops up without the field). Switched
+  back on, it starts with the next week. `wrapPop` travels in a restore;
+  `wrapSeen` does not, since it is what this phone has said.
+
+`weekwrap` pins the clock to a Wednesday and checks all seven first days, the
+strip, the board, the calendar's columns, the cardio goal's week, every
+section and its gold against a week that must stay plain, the once-only rule,
+each thing that holds it back, What's new first, midnight into a new week, a
+week across two months, a restore, and 320px.
+
 **Teal means you can tap it; grey is only a label.** Asked for by the owner,
 who could not tell which small words were buttons: an audit found twenty kinds
 of text-only control (Edit splits, + Note, Remove, Meals ▾, Take out, ✕…) in

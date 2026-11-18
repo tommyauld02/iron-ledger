@@ -349,11 +349,16 @@ and today's split** (between where you train and today's split until b87,
 when where you train moved to the bottom bar). Asked for by the owner, for two kinds of people. Someone who
 plans gives each day of the week a split — Mondays back, Tuesdays legs —
 by tapping that day's tile and choosing a split, *Rest day* or *Open*; the
-choice is for every week (`store.week`, seven entries, Sunday first like the
-calendar: a split's id, `PLAN_REST`, or null for Open), says what it did and
+choice is for every week (`store.week`, seven entries indexed by `getDay()`,
+Sunday first whichever day the week starts on: a split's id, `PLAN_REST`, or
+null for Open), says what it did and
 offers Undo (rules 3 and 6), and *Clear plan* does the same for all seven.
 Someone who doesn't plan leaves every day Open and trains from *Today's
-split* as always. *Today's split* stays exactly as it was for both.
+split* as always. *Today's split* stays exactly as it was for both. From b104
+the board's seven tiles start on the day Settings → *Your week* says
+(`weekStartsOn()`, Sunday unless changed); the plan is kept by weekday, so
+moving the first day moves no plan (`docs/ui.md`, *Weeks start on the day you
+choose*).
 
 **A tile says what happened before what was meant to.** `weekTile()` decides:
 a day trained shows its first movement's split, the way the week strip
