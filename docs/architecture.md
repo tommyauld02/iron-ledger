@@ -219,7 +219,7 @@ cuts the network and checks the app still opens. The pages carry their own
 copy of the colour tokens and fonts, and follow `iron-ledger-look`, so a
 phone set to dark in the app gets them dark.
 
-**The open-source credits are a fourth page (b103).** `credits.html` names
+**The open-source credits are a fourth page (b105).** `credits.html` names
 what the app is built on (Tesseract.js, zxing-wasm and zxing-cpp, the USDA's
 brands, Capacitor and its plugins, Capgo's updater, the five fonts), each with
 its licence and source, and carries the full Apache 2.0, MIT, MPL 2.0 and OFL

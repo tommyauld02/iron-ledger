@@ -1,5 +1,5 @@
 """The public pages App Store Connect links to: privacy, support and terms,
-and the open-source credits the app's Settings link to (since b103).
+and the open-source credits the app's Settings link to (since b105).
 
 Apple checks that the Privacy Policy URL and Support URL open, and a reviewer
 reads them on a phone. So every page is opened here as a phone, in light and
