@@ -219,6 +219,16 @@ cuts the network and checks the app still opens. The pages carry their own
 copy of the colour tokens and fonts, and follow `iron-ledger-look`, so a
 phone set to dark in the app gets them dark.
 
+**The open-source credits are a fourth page (b103).** `credits.html` names
+what the app is built on (Tesseract.js, zxing-wasm and zxing-cpp, the USDA's
+brands, Capacitor and its plugins, Capgo's updater, the five fonts), each with
+its licence and source, and carries the full Apache 2.0, MIT, MPL 2.0 and OFL
+1.1 texts, folded. The licences ask for their text and notices to go with the
+app, and the fonts' own files carry only a link to the OFL, not the licence.
+Settings → About links to it, and it is in every page's footer rather than the
+header, which keeps to the three pages a reviewer looks for. `legal` treats it
+like the others. A new library or font goes on this page in the same change.
+
 Inside the iPhone app there is no service worker at all: the app ships its
 own files, and on Android it would be served over https, which the protocol
 test alone would let through, so registration also checks `!NATIVE`.

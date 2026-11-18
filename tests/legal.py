@@ -1,4 +1,5 @@
-"""The public pages App Store Connect links to: privacy, support and terms.
+"""The public pages App Store Connect links to: privacy, support and terms,
+and the open-source credits the app's Settings link to (since b103).
 
 Apple checks that the Privacy Policy URL and Support URL open, and a reviewer
 reads them on a phone. So every page is opened here as a phone, in light and
@@ -17,7 +18,10 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import os, io, re, threading, datetime, functools
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PAGES = ["privacy.html", "support.html", "terms.html"]
+LEGAL = ["privacy.html", "support.html", "terms.html"]
+# The credits are in every page's footer, not its header: the header is for
+# the three a reviewer or a worried person looks for.
+PAGES = LEGAL + ["credits.html"]
 res = []
 def check(n, ok, d=""): res.append(("PASS" if ok else "FAIL", n, d))
 
@@ -45,6 +49,33 @@ version = re.search(r'var TERMS = "(\d{4}-\d\d-\d\d)"', app).group(1)
 when = datetime.date.fromisoformat(version)
 stated = "Effective date: %s %d, %d" % (when.strftime("%B"), when.day, when.year)
 check("the Terms state the date the app records", stated in io.open(os.path.join(ROOT, "terms.html"), encoding="utf-8").read(), stated)
+
+# The App Store listing (store/app-store.md), field by field: within Apple's
+# limits, so it pastes without being cut, and pointing at these pages where
+# the app itself points. A field App Store Connect refuses is found here, not
+# with the submission half filled in.
+listing = io.open(os.path.join(ROOT, "store", "app-store.md"), encoding="utf-8").read()
+parts = re.split(r"^## (.+)$", listing, flags=re.M)
+field = {parts[i].strip(): parts[i + 1].strip() for i in range(1, len(parts), 2)}
+LIMITS = {"Name": 30, "Subtitle": 30, "Promotional Text": 170, "Description": 4000,
+          "Keywords": 100, "App Review Notes": 4000}
+for name, most in LIMITS.items():
+    v = field.get(name, "")
+    size = len(v.encode("utf-8")) if name == "Keywords" else len(v)   # keywords are counted in bytes
+    check("the listing's %s is filled in and within %d" % (name, most), 0 < size <= most, size)
+words = field.get("Keywords", "").split(",")
+check("the keywords have no spaces or empty entries", all(w and w == w.strip() for w in words), words)
+said = set(re.findall(r"[a-z]+", (field.get("Name", "") + " " + field.get("Subtitle", "")).lower()))
+check("no keyword repeats a word the name or subtitle already has (Apple counts those already)",
+      not [w for w in words if w.lower() in said], [w for w in words if w.lower() in said])
+site = re.search(r'var PAGES = "([^"]+)"', app).group(1)
+check("the listing's Support URL is the app's", field.get("Support URL") == site + "support.html", field.get("Support URL"))
+check("the listing's Privacy Policy URL is the app's", field.get("Privacy Policy URL") == site + "privacy.html",
+      field.get("Privacy Policy URL"))
+for url in re.findall(r"https://\S+", listing):
+    if url.startswith(site):
+        check("the listing links to a page the deploy publishes: %s" % url, url[len(site):] in PAGES, url)
+check("the listing leaves nothing in [brackets]", "[" not in listing and "]" not in listing)
 
 srv = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(H, directory=ROOT))
 PORT = srv.server_address[1]
@@ -91,9 +122,9 @@ with sync_playwright() as pw:
             check("%s links to %s" % (tag, " and ".join(others)), all(g in hrefs for g in others))
             check("%s links back to the app" % tag, "./" in hrefs)
             check("%s marks itself as the current page" % tag,
-                  p.locator('nav a[aria-current="page"][href="%s"]' % f).count() == 2)
+                  p.locator('nav a[aria-current="page"][href="%s"]' % f).count() == (2 if f in LEGAL else 1))
             check("%s gives the support email" % tag, "mailto:mntldntsupport@gmail.com" in hrefs)
-            if f != "support.html":
+            if f not in ("support.html", "credits.html"):
                 check("%s states its effective date" % tag, "Effective date:" in text)
 
             small = []; missed = []

@@ -84,6 +84,12 @@ package.json, capacitor.config.json   Capacitor, pinned; www/ is generated
 manifest.webmanifest, sw.js   the PWA shell
 privacy.html, support.html, terms.html   the public pages App Store Connect
                     links to (tests/legal.py; docs/architecture.md)
+credits.html        the open-source credits and their licences, linked from
+                    Settings → About and every page's footer
+store/app-store.md  the App Store listing, field by field (tests/legal.py
+                    checks Apple's limits); store/screenshots/ is generated
+tools/make-screenshots.py   the App Store screenshots, from the app itself on a
+                    demo log, at 1320×2868 (never committed, never hand-edited)
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
