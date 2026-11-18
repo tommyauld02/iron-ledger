@@ -623,6 +623,19 @@ with sync_playwright() as pw:
         if not p.locator(".dayline.is-miss .dl-got").count(): found.append("daily line: the reminder is not on screen")
         low = p.evaluate(LOW)
         if low: found.append("daily line (cardio): %s" % low)
+        # The week wrap-up (b104): last week's seven days on target are its
+        # gold line. Its card on the Log, then the sheet the card opens.
+        rooms.go(p, "log"); p.wait_for_timeout(350)
+        if not p.locator("#wrapOpen").count(): found.append("wrap-up: the Log's card is not on screen")
+        else:
+            low = p.evaluate(LOW)
+            if low: found.append("wrap-up card (log): %s" % low)
+            p.click("#wrapOpen"); p.wait_for_timeout(300)
+            if not p.locator("#wrapSheet .wr-line.is-won svg").count(): found.append("wrap-up: the gold line is not on screen")
+            if not p.locator("#wrapSheet .wr-tiles b").count(): found.append("wrap-up: its tiles are not on screen")
+            low = p.evaluate(LOW)
+            if low: found.append("wrap-up (sheet): %s" % low)
+            p.click("#wrapDone"); p.wait_for_timeout(200)
         print("gold   %-5s            %s" % (theme, "; ".join(found) if found else "clean"))
         FAILS.extend("gold/%s: %s" % (theme, x) for x in found)
         if errs: FAILS.append("gold/%s: page errors %s" % (theme, str(errs[:2])[:80]))

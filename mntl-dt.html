@@ -4057,6 +4057,34 @@
   .pk-k { font-family: var(--font-num); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); padding-top: 2px; }
   .pk-v { font-size: 14.5px; line-height: 1.45; color: var(--ink); overflow-wrap: anywhere; }
   .pk-none { margin: 10px 0 0; font-size: 15px; color: var(--ink-2); }
+
+  /* ---------- the week wrap-up (b104) ----------
+     On the Log tab, last week in one line until it is opened; opened, and once
+     when a new week starts, the week's numbers in tiles like the year card's.
+     The card is one button, so the teal is the See it that says so. */
+  .wrap-card {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 3px 12px;
+    width: 100%; min-height: 60px; padding: 12px 14px; text-align: left; font: inherit; color: var(--ink);
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; cursor: pointer;
+  }
+  .wrap-card .wc-k { grid-column: 1; font-family: var(--font-num); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+  .wrap-card .wc-say { grid-column: 1; font-size: 15px; line-height: 1.35; font-weight: 600; }
+  .wrap-card .wc-go { grid-column: 2; grid-row: 1 / span 2; font-size: 14px; font-weight: 700; color: var(--accent); white-space: nowrap; }
+  #wrapSheet .wr-k { margin-bottom: -8px; }
+  #wrapSheet h2 { font-size: 30px; font-stretch: 125%; line-height: 1.05; }
+  .wr-body { display: flex; flex-direction: column; gap: 18px; padding-top: 4px; }
+  .wr-sec { display: flex; flex-direction: column; gap: 8px; }
+  .wr-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .wr-tiles div { background: var(--surface-2); border-radius: 14px; padding: 10px 8px; text-align: center; min-width: 0; }
+  .wr-tiles b {
+    display: block; font-family: var(--font-ui); font-size: 22px; font-weight: 800; font-stretch: 118%;
+    font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+  }
+  .wr-tiles span { font-family: var(--font-num); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2); }
+  .sheet-inner p.wr-line { display: flex; align-items: flex-start; gap: 6px; font-size: 14px; line-height: 1.45; color: var(--ink); }
+  .sheet-inner p.wr-line.is-won { color: var(--gold-ink); font-weight: 600; }
+  .wr-line svg { width: 14px; height: 14px; flex: none; margin-top: 3px; fill: var(--gold); stroke: none; }
+  .sheet-inner p.wr-foot { font-size: 13px; color: var(--ink-2); }
   /* The keyboard is up: the dock steps aside, and a sheet fits what is left.
      The dock is hidden, not taken out: taking it out made the page shorter by
      its height, the phone snapped the scroll to the new end, and the field
@@ -4671,6 +4699,19 @@
   </div>
 </div>
 
+<!-- The week wrap-up (b104): last week's numbers, popped up once when a new
+     week starts and kept on the Log tab until the next one (wrapFacts()). -->
+<div class="sheet" id="wrapSheet" role="dialog" aria-modal="true" aria-labelledby="wrapTitle" hidden>
+  <div class="sheet-inner">
+    <span class="eyebrow wr-k">Week wrap-up</span>
+    <h2 id="wrapTitle"></h2>
+    <p id="wrapSub"></p>
+    <div class="wr-body" id="wrapBody"></div>
+    <p class="wr-foot">It stays on the Log tab until next week&rsquo;s takes its place.</p>
+    <button class="btn" id="wrapDone">Got it</button>
+  </div>
+</div>
+
 <!-- The plate's sheet on Macros (b98): the three ways to add food, each named
      beside its picture, asked for by the owner (b71): a pencil and a # with
      no words said nothing about which was which. The pencil writes down
@@ -4706,6 +4747,16 @@
       <p class="set-who" id="setWho"></p>
       <p class="set-hint" id="setWhoGoals"></p>
       <button class="btn ghost" id="setProfile">Edit profile &amp; goals</button>
+    </div>
+    <!-- Your week (b104): the day weeks start on, which every week in the app
+         follows, and whether the week wrap-up pops up or waits on the Log. -->
+    <div class="set-group">
+      <span class="eyebrow">Your week</span>
+      <div class="field"><label for="setWeekStart">Week starts on</label>
+        <select id="setWeekStart"></select></div>
+      <span class="sec-k" id="setWrapLab">Week wrap-up</span>
+      <div class="seg two" id="setWrap" role="group" aria-labelledby="setWrapLab"></div>
+      <p class="set-hint" id="setWrapHint"></p>
     </div>
     <div class="set-group">
       <span class="eyebrow">Appearance</span>
@@ -4880,7 +4931,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-17.102";
+  var BUILD = "2026-11-18.104";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5647,7 +5698,8 @@
 
   // ---------- the week's plan ----------
   // Which split goes on which day of the week: Mondays are back, Tuesdays are
-  // legs. store.week is seven entries, Sunday first like the calendar, each a
+  // legs. store.week is seven entries, Sunday first by getDay() whichever day
+  // the week starts on (the order is only how it is drawn), each a
   // split's id, PLAN_REST, or null for nothing planned. It is a plan, not
   // history — nothing logged ever reads it — so a split that is removed, or
   // replaced by loading someone's routine, simply reads as unplanned here, and
@@ -5765,7 +5817,8 @@
   // simple: a day carries d.cardio, a list of {id, type, min, dist?, t};
   // the types are the owner's own names (store.cardioTypes), like movements;
   // and a weekly goal (store.cardioGoal) in minutes or in sessions. Weeks run
-  // Sunday to Saturday, the way the calendar is drawn.
+  // from the day Settings says (weekStartsOn(), Sunday unless changed), the
+  // way the calendar is drawn.
   function cardioTypes() {
     if (!Array.isArray(store.cardioTypes)) store.cardioTypes = [];
     return store.cardioTypes;
@@ -5804,9 +5857,19 @@
     return { kind: kind, period: period, v: Number(g.v) > 0 ? Number(g.v) : CARDIO_GOAL_START[kind][period] };
   }
   function cardioMs(d) { return d && d.cardioStart ? Math.max(0, Date.now() - d.cardioStart) : 0; }
+  // The day a week starts on (b104), 0 for Sunday to 6 for Saturday. Asked
+  // for by the owner, whose weeks run Monday to Sunday: "another could choose
+  // tuesday to tuesday". Sunday is the default, so a log from before it reads
+  // exactly as it did. Every week in the app is this one function — the week
+  // strip, the Gym's board and goal, the cardio goal, the daily line, the
+  // wrap-up and the Log's calendar — so they all move together.
+  function weekStartsOn() {
+    var n = Number(store.weekStart);
+    return n >= 1 && n <= 6 && n === Math.floor(n) ? n : 0;
+  }
   function weekStart(key) {
     var dt = parseYmd(key);
-    dt.setDate(dt.getDate() - dt.getDay());
+    dt.setDate(dt.getDate() - (dt.getDay() - weekStartsOn() + 7) % 7);
     return ymd(dt);
   }
   // The first day of the period a day falls in.
@@ -5880,6 +5943,10 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-18.104", t: "Your week, and its wrap-up", items: [
+      "Settings has a new Your week: choose the day your week starts on. Monday to Sunday, Tuesday to Monday, any of the seven. The week across the top, the Gym\u2019s planned week and goal, your cardio goal, the daily line and the Log\u2019s calendar all follow it. It stays Sunday unless you change it.",
+      "A week wrap-up: last week\u2019s totals in one place. Calories and protein, in all and a day, carbs, fat and water if you track them, training days, sets and pounds moved, steps, cardio, body weight and your checklist.",
+      "It pops up once when a new week starts, beginning with your next one, and stays on the Log tab until the following week\u2019s takes its place. Last week\u2019s is there already." ] },
     { b: "2026-11-17.102", t: "The tabs stay at the bottom", items: [
       "In the iPhone app, the tabs at the bottom no longer get stuck halfway up the screen once the keyboard has gone. The phone sometimes went on keeping room for a keyboard that was no longer there; the app now tells it the keyboard has gone.",
       "Come back to the app with the keyboard still up, and the tabs and the button above them step out of its way again instead of sitting on top of it." ] },
@@ -6089,6 +6156,7 @@
     newsSheet.hidden = true;
     var v = newsSheet.querySelector("video");
     if (v) v.pause();
+    maybeWrap();       // a new week's wrap-up waits behind What's new (b104)
   }
   document.getElementById("newsDone").addEventListener("click", closeNews);
   newsSheet.addEventListener("click", function (e) { if (e.target === newsSheet) closeNews(); });
@@ -8203,7 +8271,7 @@
   }
 
   // ---------- the week strip ----------
-  // The Sunday-first week holding the day on show (the week cardioTotals()
+  // The week holding the day on show, from the day it starts on (the week cardioTotals()
   // counts), one button a day. Its mark says what that tab cares about: a hit
   // or a miss on Macros and Pantry (a ring, not just a red, for a miss), the
   // split's colour on Gym, a cardio day on Cardio. Drawn by render(), outside
@@ -8278,7 +8346,8 @@
   //
   // Plain functions with no drawing in them, so the suites can read them.
   function lineOn() { return store.lineOff !== true; }
-  // The seven days of a week gone by, Sunday first: last week, or n weeks back.
+  // The seven days of a week gone by, from the day weeks start on: last
+  // week, or n weeks back.
   function lastWeekKeys(key, n) {
     var s0 = parseYmd(weekStart(key)), out = [], off = 7 * (n || 1);
     for (var i = 0; i < 7; i++) { var dt = new Date(s0); dt.setDate(s0.getDate() - off + i); out.push(ymd(dt)); }
@@ -8519,6 +8588,230 @@
         '<span class="dl-text"><b>' + esc(ln.head) + '</b><span>' + esc(ln.sub) + '</span></span>' +
         '<button class="dl-got" data-gotline="' + esc(ln.id) + '">Got it</button>' +
       '</section>');
+  }
+
+  // ---------- the week wrap-up (b104) ----------
+  // Asked for by the owner: "a summary for the week, or a week wrap up ... the
+  // facts of the past week, total calories, total protein consumed, total
+  // training days, total steps, etc.", as "a one time pop up" that is "saved
+  // somewhere until the next week's wrap up replaces the prior", with "the
+  // facts for those who choose to track their water consumption, fats, carbs".
+  //
+  // It pops up once, the first time the app is open in a new week, and waits
+  // on the Log tab until the next week's takes its place. It is counted from
+  // the log each time it is shown, never kept as a copy, so a day filled in
+  // late still counts and a backup carries nothing new. A section shows only
+  // for what was tracked that week: carbs and fat with Carbs & fat shown,
+  // water with Water shown, the gym for someone who trains with the app.
+  // Gold, as everywhere, is for a goal met (docs/ui.md, *Gold means you
+  // earned it*); nothing here is red, because it is a record, not a verdict.
+  function weekSpan() {
+    var ws = weekStartsOn();
+    return WEEK_DAYS[ws] + " to " + WEEK_DAYS[(ws + 6) % 7];
+  }
+  function weekKeys(startKey) {
+    var s0 = parseYmd(startKey), out = [];
+    for (var i = 0; i < 7; i++) out.push(ymd(new Date(s0.getFullYear(), s0.getMonth(), s0.getDate() + i)));
+    return out;
+  }
+  // The week it is about: the last one to have finished.
+  function wrapStart(today) { return lastWeekKeys(today || TODAY)[0]; }
+  // "Nov 10 – 16", or "Nov 28 – Dec 4" across the end of a month.
+  function wrapRange(startKey) {
+    var a = parseYmd(startKey), b = new Date(a.getFullYear(), a.getMonth(), a.getDate() + 6);
+    var ma = a.toLocaleDateString("en-US", { month: "short" }), mb = b.toLocaleDateString("en-US", { month: "short" });
+    return ma + " " + a.getDate() + " – " + (ma === mb ? "" : mb + " ") + b.getDate();
+  }
+  // The week's numbers, with no drawing in them, so the suites can read them.
+  function wrapFacts(startKey) {
+    var keys = weekKeys(startKey), f = { start: startKey }, d, i;
+    function on(k) { return store.days[k] || {}; }
+    // Food: everything the days carry. A day is judged against the goal
+    // stamped on it, and a day with a food still waiting is not judged.
+    var fd = { days: 0, judged: 0, hit: 0, cal: 0, pro: 0, carb: 0, fat: 0, cfMissing: 0 };
+    keys.forEach(function (k) {
+      d = store.days[k];
+      if (!d || !d.food || !d.food.length) return;
+      fd.days++;
+      var t = totals(d), c = cfTotals(d), v = verdict(k);
+      fd.cal += t.cal; fd.pro += t.pro; fd.carb += c.carb; fd.fat += c.fat; fd.cfMissing += c.missing;
+      if (v !== "none") { fd.judged++; if (v === "hit") fd.hit++; }
+    });
+    f.food = fd.days ? fd : null;
+    // Water, with Water shown and a glass recorded: switched on and never
+    // used is not a week of it.
+    f.water = null;
+    if (waterOn()) {
+      var w = { ml: 0, days: 0, hit: 0 }, wGoal = waterGoalMl();
+      keys.forEach(function (k) {
+        var ml = Number(on(k).water) || 0;
+        if (ml > 0) { w.ml += ml; w.days++; }
+        if (ml > 0 && ml >= wGoal - 1) w.hit++;
+      });
+      if (w.days) f.water = w;
+    }
+    // The daily checklist, for anyone keeping one and ticking it.
+    f.list = null;
+    if (supps().length) {
+      var sAny = 0, sAll = 0;
+      keys.forEach(function (k) { var dd = store.days[k]; if (dd && suppTaken(dd) > 0) sAny++; if (dd && suppsAllIn(dd)) sAll++; });
+      if (sAny) f.list = { all: sAll };
+    }
+    // The gym, against the planned week or the workouts-a-week goal, the way
+    // the daily line counts it: never both, which would be one week said twice.
+    var gy = { days: 0, sets: 0, lb: 0, ms: 0, target: 0, planned: false };
+    keys.forEach(function (k) {
+      if (!gymDay(k)) return;
+      gy.days++;
+      (on(k).lifts || []).forEach(function (l) { var v = volume(l); gy.sets += v.sets; gy.lb += v.vol; });
+      gy.ms += Number(on(k).workoutMs) || 0;
+    });
+    var planned = 0;
+    for (i = 0; i < 7; i++) { var pl = plannedFor(i); if (pl && pl.c) planned++; }
+    gy.planned = planned > 0;
+    gy.target = planned || (Number(store.gymGoal) > 0 ? Number(store.gymGoal) : 0);
+    // A week with no workout in it is still worth saying to someone with a
+    // plan or a goal who trained with the app before; to anyone else the gym
+    // is not part of their week.
+    var before = gy.target > 0 && Object.keys(store.days).some(function (k) { return k < keys[0] && gymDay(k); });
+    f.gym = gy.days || before ? gy : null;
+    // Cardio and steps, from the totals the Cardio tab counts by.
+    var ct = cardioTotals(startKey, "week");
+    f.cardio = ct.sessions ? { sessions: ct.sessions, min: ct.min, dist: ct.dist, cal: ct.cal,
+      days: keys.filter(function (k) { return (on(k).cardio || []).length > 0; }).length } : null;
+    f.steps = ct.stepDays ? { steps: ct.steps, days: ct.stepDays } : null;
+    // The cardio goal, by the day or the week (a month's is not a week's to
+    // say), judged as it stands now: it is not stamped on a day.
+    var cg = cardioGoal();
+    f.goal = cg.period === "month" ? null : { kind: cg.kind, period: cg.period, v: cg.v, have: ct[cg.kind],
+      hit: cg.period === "day" ? keys.filter(function (k) { return cardioTotals(k, "day")[cg.kind] >= cg.v; }).length : null };
+    // Body weight: the week's first weigh-in and its last.
+    var bws = keys.filter(function (k) { return typeof on(k).bw === "number"; });
+    f.bw = bws.length ? { first: on(bws[0]).bw, last: on(bws[bws.length - 1]).bw, n: bws.length } : null;
+    // Progress check-ins (b90).
+    var pg = keys.filter(function (k) { return !!on(k).prog; });
+    f.prog = pg.length ? { n: pg.length, photos: pg.filter(function (k) { return !!on(k).prog.photo; }).length } : null;
+    // Something logged at all. A week away is not a week to sum up.
+    f.any = !!(f.food || f.water || f.list || gy.days || f.cardio || f.steps || f.bw || f.prog);
+    return f;
+  }
+  var WRAP_STAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>';
+  function wrapHtml(f) {
+    function days(n) { return n + (n === 1 ? " day" : " days"); }
+    // Tiles in twos, the Log's own rule: an odd one would sit alone on a row.
+    function tiles(list) {
+      return '<div class="wr-tiles">' + list.map(function (t) {
+        return '<div><b>' + t[0] + '</b><span>' + t[1] + '</span></div>';
+      }).join("") + '</div>';
+    }
+    function line(text, won) {
+      return '<p class="wr-line' + (won ? ' is-won' : '') + '">' + (won ? WRAP_STAR : '') + '<span>' + esc(text) + '</span></p>';
+    }
+    function sec(id, name, body) {
+      return '<section class="wr-sec" data-wrap="' + id + '"><span class="eyebrow">' + name + '</span>' + body + '</section>';
+    }
+    var h = "", g = f.goal;
+    if (f.food) {
+      var fd = f.food, ft = [
+        [fmt(fd.cal), "Calories, total"], [fmt(fd.pro) + " g", "Protein, total"],
+        [fmt(fd.cal / fd.days), "Calories a day"], [fmt(fd.pro / fd.days) + " g", "Protein a day"]];
+      if (cfOn()) ft.push([fmt(fd.carb) + " g", "Carbs, total"], [fmt(fd.fat) + " g", "Fat, total"]);
+      // Five days or more, or one good day would be gold as "1 of 1".
+      var allHit = fd.judged >= 5 && fd.hit === fd.judged;
+      h += sec("food", "Food", tiles(ft) +
+        line((fd.days === 7 ? "All 7 days logged" : fd.days + " of 7 days logged") +
+          (fd.judged ? " · " + (allHit ? "all " + fd.hit : fd.hit) + " on target" : "") + ".", allHit) +
+        (fd.days > 1 && fd.days < 7 ? line("A day is the average of the " + days(fd.days) + " you logged.") : "") +
+        (cfOn() && fd.cfMissing ? line("Carbs and fat count the foods that list them; " + fd.cfMissing +
+          (fd.cfMissing === 1 ? " food didn’t." : " foods didn’t.")) : ""));
+    }
+    if (f.water) {
+      var w = f.water, u = waterUnit();
+      h += sec("water", "Water", tiles([[waterShow(w.ml) + " " + u, "Water, total"], [waterShow(w.ml / w.days) + " " + u, "Water a day"]]) +
+        line("Goal hit " + w.hit + " of 7 days.", w.hit >= 6));
+    }
+    if (f.gym) {
+      var gy = f.gym;
+      h += sec("gym", "Gym", tiles([[gy.days, gy.days === 1 ? "Training day" : "Training days"], [fmt(gy.sets), gy.sets === 1 ? "Set" : "Sets"],
+          [gy.lb ? fmt(gy.lb) : "—", "lb moved"], [gy.ms ? fmtDurShort(gy.ms) : "—", "In the gym"]]) +
+        (gy.target ? line(gy.planned ? gy.days + " of " + gy.target + " planned gym days."
+            : gy.days + " of your " + gy.target + (gy.target === 1 ? " workout" : " workouts") + " a week.", gy.days >= gy.target) : ""));
+    }
+    if (f.steps) {
+      var st = f.steps, sg = "";
+      if (g && g.kind === "steps") sg = g.period === "day"
+        ? line(fmt(g.v) + "-step goal hit " + g.hit + " of 7 days.", g.hit >= 6)
+        : line("Weekly goal: " + fmt(g.have) + " of " + fmt(g.v) + " steps.", g.have >= g.v);
+      h += sec("steps", "Steps", tiles([[fmt(st.steps), "Steps, total"], [fmt(st.steps / st.days), "Steps a day"]]) +
+        (st.days > 1 && st.days < 7 ? line("A day is the average of the " + days(st.days) + " with steps.") : "") + sg);
+    }
+    if (f.cardio) {
+      var c = f.cardio, ctl = [[c.sessions, c.sessions === 1 ? "Session" : "Sessions"], [fmt(c.min), "Minutes"]];
+      if (c.dist) ctl.push([fmtDist(c.dist), "Miles"]);
+      if (c.cal) ctl.push([fmt(c.cal), "kcal burned"]);
+      if (ctl.length % 2) ctl.push([c.days, c.days === 1 ? "Cardio day" : "Cardio days"]);
+      var cgl = "";
+      if (g && g.kind !== "steps") {
+        var unit = function (n) { return goalNum(g.kind, n) + " " + goalWord(g.kind, n); };
+        cgl = g.period === "day"
+          ? line("Daily goal of " + unit(g.v) + " hit " + g.hit + " of 7 days.", g.hit >= 6)
+          : line("Weekly goal: " + goalNum(g.kind, g.have) + " of " + unit(g.v) + ".", g.have >= g.v);
+      }
+      h += sec("cardio", "Cardio", tiles(ctl) + cgl);
+    }
+    if (f.bw) {
+      var b = f.bw, diff = Math.round((bwUnit() === "kg" ? (b.last - b.first) * LB_KG : b.last - b.first) * 10) / 10;
+      h += sec("bw", "Body weight", line(b.n === 1 ? bwShow(b.last) + " " + bwUnit() + ", one weigh-in."
+        : bwShow(b.first) + " → " + bwShow(b.last) + " " + bwUnit() + (diff ? ", " + (diff < 0 ? "down " : "up ") + Math.abs(diff).toFixed(1) + " " + bwUnit() : ", no change") +
+          " over " + b.n + " weigh-ins."));
+    }
+    if (f.list) h += sec("list", "Daily checklist", line("Finished " + f.list.all + " of 7 days.", f.list.all >= 6));
+    if (f.prog) h += sec("prog", "Progress", line(f.prog.n + (f.prog.n === 1 ? " check-in" : " check-ins") +
+      (f.prog.photos ? ", " + (f.prog.n === 1 ? "with a photo" : f.prog.photos + " with a photo") : "") + "."));
+    return h;
+  }
+  // The few numbers on the Log tab's card, before it is opened.
+  function wrapSay(f) {
+    var bits = [];
+    if (f.gym) bits.push(f.gym.days + (f.gym.days === 1 ? " gym day" : " gym days"));
+    if (f.food) bits.push(fmt(f.food.cal / f.food.days) + " kcal a day", fmt(f.food.pro / f.food.days) + " g protein a day");
+    if (f.steps) bits.push(fmt(f.steps.steps) + " steps");
+    if (f.cardio) bits.push(f.cardio.sessions + (f.cardio.sessions === 1 ? " cardio session" : " cardio sessions"));
+    if (f.water) bits.push(waterShow(f.water.ml) + " " + waterUnit() + " water");
+    if (f.bw) bits.push(bwShow(f.bw.last) + " " + bwUnit());
+    if (f.list) bits.push("checklist " + f.list.all + " of 7");
+    if (f.prog) bits.push(f.prog.n + (f.prog.n === 1 ? " check-in" : " check-ins"));
+    return bits.slice(0, 3).join(" · ");
+  }
+  function wrapPopOn() { return store.wrapPop !== false; }
+  var wrapSheet = document.getElementById("wrapSheet");
+  function showWrap(startKey) {
+    document.getElementById("wrapTitle").textContent = wrapRange(startKey);
+    document.getElementById("wrapSub").textContent =
+      (startKey === wrapStart() ? "Last week, " : "") + weekSpan() + ".";
+    document.getElementById("wrapBody").innerHTML = wrapHtml(wrapFacts(startKey));
+    wrapSheet.hidden = false;
+    wrapSheet.querySelector(".sheet-inner").scrollTop = 0;
+  }
+  function closeWrap() { wrapSheet.hidden = true; }
+  document.getElementById("wrapDone").addEventListener("click", closeWrap);
+  wrapSheet.addEventListener("click", function (e) { if (e.target === wrapSheet) closeWrap(); });
+  // Once a week: the first time the app is open in a new one with nothing
+  // else on screen. Never over the age check, the profile, What's new or any
+  // other sheet, and never over a workout or cardio clock that is running —
+  // nobody wants last week mid-set. Held back, it waits for the next time
+  // the app comes to the front. A week with nothing logged is passed over.
+  function maybeWrap() {
+    if (!appOpen || !wrapPopOn()) return;
+    var wk = weekStart(TODAY);
+    if (store.wrapSeen === wk) return;
+    if (document.querySelector(".sheet:not([hidden]), .agegate:not([hidden])")) return;
+    var d = store.days[TODAY];
+    if (d && (d.workoutStart || d.cardioStart)) return;
+    store.wrapSeen = wk;
+    save();
+    var f = wrapFacts(wrapStart());
+    if (f.any) showWrap(f.start);
   }
 
   // ---------- the stage, small (b97) ----------
@@ -9574,7 +9867,7 @@
     '</div>';
     h += '<div class="pf-grp"><span class="eyebrow">Gym</span>' +
       '<div class="pair">' + pfField("pfGym", "gym", "Workouts a week", 'inputmode="numeric" maxlength="1" placeholder="none"') + '<div></div></div>' +
-      '<p class="set-hint">Counted on the Gym tab: each day with a workout logged, Sunday to Saturday.</p>' +
+      '<p class="set-hint">Counted on the Gym tab: each day with a workout logged, ' + weekSpan() + '.</p>' +
     '</div>';
     h += '<div class="pf-grp"><span class="eyebrow" id="pfCardioK">Cardio</span>' +
       pfSeg("pfkind", CARDIO_KINDS, pf.cKind, "pfCardioK", "five") +
@@ -11759,7 +12052,7 @@
   }
 
   // Workouts a week, the profile's Gym goal: days in the week the day falls
-  // in (Sunday to Saturday, like the board above it) with a lift logged.
+  // in (from the day weeks start on, like the board above it) with a lift logged.
   function gymWeekCount(key) {
     var dt = parseYmd(weekStart(key)), n = 0;
     for (var i = 0; i < 7; i++) {
@@ -11829,7 +12122,7 @@
     }).join("");
 
     // The week board, between Start workout and today's split: the week on
-    // screen, one tile a day. Tap one to plan that day of the week; a day
+    // screen, one tile a day, starting on the day Settings says (b104). Tap one to plan that day of the week; a day
     // already gone can be opened from there and logged after the fact.
     var SHORT_DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
     var wkStart = parseYmd(weekStart(key));
@@ -11847,11 +12140,11 @@
         : tl.kind === "planrest" ? "rest day, planned" : "open";
       tiles += '<button class="wb-tile is-' + tl.kind + (wk === key ? ' is-day' : '') + (wk === weekPick ? ' is-pick' : '') +
           '" data-planday="' + wk + '" aria-pressed="' + (wk === weekPick) + '" style="--catcolor:' + (tl.c ? tl.c.color : 'var(--ink-3)') + '" ' +
-          'aria-label="' + WEEK_DAYS[wi] + ' ' + wdt.getDate() + (wk === TODAY ? ', today' : '') + ': ' + esc(say) + '">' +
+          'aria-label="' + WEEK_DAYS[wdt.getDay()] + ' ' + wdt.getDate() + (wk === TODAY ? ', today' : '') + ': ' + esc(say) + '">' +
         // One row of seven (b87): the day over its date, and the tag. The
         // split's name went with the room for it; the tag's letter and colour
         // say which, and the label says it in words.
-        '<span class="wb-d">' + SHORT_DAYS[wi] + '<b>' + (tl.kind === "done" ? '✓' : '') + wdt.getDate() + '</b></span>' +
+        '<span class="wb-d">' + SHORT_DAYS[wdt.getDay()] + '<b>' + (tl.kind === "done" ? '✓' : '') + wdt.getDate() + '</b></span>' +
         '<span class="wb-tag">' + esc(tag) + '</span>' +
       '</button>';
     }
@@ -14279,7 +14572,10 @@
     var now = new Date();
     var MONTHS = ["January", "February", "March", "April", "May", "June",
                   "July", "August", "September", "October", "November", "December"];
-    var DOW = ["S", "M", "T", "W", "T", "F", "S"];
+    // The columns start on the day weeks start on (b104), like every other
+    // week in the app.
+    var ws = weekStartsOn();
+    var DOW = ["S", "M", "T", "W", "T", "F", "S"].map(function (x, i, a) { return a[(i + ws) % 7]; });
 
     var trained = 0, hits = 0, judged = 0, timeMs = 0, timedDays = 0;
     var suppDone = [];
@@ -14383,7 +14679,7 @@
     // Every day of the year is a button: this month large, the other eleven
     // small underneath, so the whole year is still there to tap.
     function monthHtml(m, big) {
-      var pad = new Date(logYear, m, 1).getDay();
+      var pad = (new Date(logYear, m, 1).getDay() - ws + 7) % 7;
       var dim = new Date(logYear, m + 1, 0).getDate();
       var cells = "", nHit = 0, nMiss = 0, nGym = 0;
       for (var i = 0; i < pad; i++) cells += '<span class="cal-cell blank"></span>';
@@ -14481,6 +14777,22 @@
         '</div>' +
       '</section>';
 
+    // Last week's wrap-up (b104), kept here until the next week's takes its
+    // place: the year's page is where a week gone by is looked back on. Only
+    // on this year's page, and only for a week with something in it.
+    var wrapCard = "";
+    if (logYear === now.getFullYear()) {
+      var wf = wrapFacts(wrapStart());
+      if (wf.any) {
+        var wSay = wrapSay(wf);
+        wrapCard = '<button class="wrap-card" id="wrapOpen" aria-label="Week wrap-up, ' + esc(wrapRange(wf.start)) + ': ' + esc(wSay) + '">' +
+            '<span class="wc-k">Week wrap-up \u00b7 ' + esc(wrapRange(wf.start)) + '</span>' +
+            '<span class="wc-say">' + esc(wSay) + '</span>' +
+            '<span class="wc-go" aria-hidden="true">See it</span>' +
+          '</button>';
+      }
+    }
+
     // The peek: a day, looked at before it is opened.
     var peek = "";
     if (logPeek && logPeek.slice(0, 4) === String(logYear)) {
@@ -14511,6 +14823,7 @@
           '<div class="yn-mid"><span class="y">' + logYear + '</span>' + (yearChip ? '<span class="yn-chip">' + yearChip + '</span>' : '') + '</div>' +
           '<button id="nextYear" aria-label="Next year"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>' +
         '</div>' +
+        wrapCard +
         yearCard +
         '<div class="months">' +
           monthHtml(logMonth, true) +
@@ -14524,6 +14837,8 @@
       '</section>' + peek;
 
     wireBw();
+    var wo = document.getElementById("wrapOpen");
+    if (wo) wo.addEventListener("click", function () { showWrap(wrapStart()); });
     document.getElementById("prevYear").addEventListener("click", function () { logYear--; logPeek = null; render(); });
     document.getElementById("nextYear").addEventListener("click", function () { logYear++; logPeek = null; render(); });
     document.getElementById("prevMonth").addEventListener("click", function () {
@@ -16155,10 +16470,12 @@
     hideUndo();
     render();
     if (cardioSaid) notify(cardioSaid);
+    maybeWrap();       // midnight may have started a new week (b104)
   }
 
   document.addEventListener("visibilitychange", function () {
     if (!document.hidden) checkDayRollover();
+    if (!document.hidden) maybeWrap();            // one held back behind a clock (b104)
     if (!document.hidden) healthSteps.read();     // steps walked while the app was away
   });
   window.addEventListener("focus", checkDayRollover);
@@ -16669,6 +16986,16 @@
       waterOn() ? waterShow(waterGoalMl()) + " " + waterUnit() + " water" : "",
       Number(store.bwGoal) > 0 ? "goal weight " + bwShow(store.bwGoal) + " " + bwUnit() : ""
     ].filter(Boolean).join(" · ");
+    // Your week (b104)
+    document.getElementById("setWeekStart").innerHTML = WEEK_DAYS.map(function (n, i) {
+      return '<option value="' + i + '"' + (i === weekStartsOn() ? ' selected' : '') + '>' + n + '</option>';
+    }).join("");
+    document.getElementById("setWrap").innerHTML = [["off", "Log tab only"], ["on", "Pops up"]].map(function (o) {
+      return '<button data-pick-wrap="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === wrapPopOn() ? "true" : "false") + '">' + o[1] + '</button>';
+    }).join("");
+    document.getElementById("setWrapHint").textContent = "Weeks run " + weekSpan() + ". " + (wrapPopOn()
+      ? "When a new one starts, last week\u2019s totals pop up once, and stay on the Log tab until the next week\u2019s."
+      : "Last week\u2019s totals wait on the Log tab, without popping up.");
     document.getElementById("setThemes").innerHTML = LOOKS.map(function (t) {
       return '<button data-pick-theme="' + t.id + '" aria-pressed="' +
         (t.id === l.theme ? "true" : "false") + '">' + t.name + '</button>';
@@ -16749,6 +17076,18 @@
     save(); drawSettings(); render();
   });
 
+  // The day weeks start on. Changing it moves which seven days are "last
+  // week", but no new week has begun, so it does not pop up a wrap-up there
+  // and then; the Log tab shows the new one at once.
+  document.getElementById("setWeekStart").addEventListener("change", function () {
+    var n = Number(this.value);
+    if (!(n >= 0 && n <= 6) || n === weekStartsOn()) return;
+    store.weekStart = n;
+    store.wrapSeen = weekStart(TODAY);
+    save(); drawSettings(); render();
+    notify("Weeks now run " + weekSpan());
+  });
+
   document.getElementById("setBtn").addEventListener("click", function () {
     drawSettings();
     setSheet.hidden = false;
@@ -16794,6 +17133,20 @@
       var want = aib.dataset.pickAi === "on";
       if (want && !aiOn()) showAiSheet();
       else if (!want && aiOn()) { withdrawAi(); drawSettings(); }
+      return;
+    }
+    var wrb = e.target.closest("[data-pick-wrap]");
+    if (wrb) {
+      // Kept as false only, like the daily line, so a log from before b104
+      // pops up without a field. Switched on, it starts with the next week
+      // rather than popping up last week's mid-week.
+      var wantPop = wrb.dataset.pickWrap === "on";
+      if (wantPop !== wrapPopOn()) {
+        store.wrapPop = wantPop;
+        if (wantPop) store.wrapSeen = weekStart(TODAY);
+        save();
+      }
+      drawSettings();
       return;
     }
     var lnb = e.target.closest("[data-pick-line]");
@@ -17554,6 +17907,15 @@
     // Whether the daily line is shown travels; which lines were put away does
     // not, since that is about what this phone has already said.
     if (typeof incoming.lineOff === "boolean") store.lineOff = incoming.lineOff;
+    // The day weeks start on, and whether the wrap-up pops up, come with the
+    // log (b104); which week's wrap-up this phone has shown does not. A
+    // restore that moves the weeks is not a new week starting.
+    var wsIn = Number(incoming.weekStart);
+    if (wsIn >= 0 && wsIn <= 6 && wsIn === Math.floor(wsIn) && wsIn !== weekStartsOn()) {
+      store.weekStart = wsIn;
+      store.wrapSeen = weekStart(TODAY);
+    }
+    if (typeof incoming.wrapPop === "boolean") store.wrapPop = incoming.wrapPop;
     if (typeof incoming.waterOn === "boolean") store.waterOn = incoming.waterOn;
     if (incoming.waterUnit) store.waterUnit = incoming.waterUnit;
     if (Number(incoming.waterGoalMl) > 0) store.waterGoalMl = incoming.waterGoalMl;
@@ -17771,13 +18133,18 @@
   }
 
   function openApp(prevBuild) {
+    // The week wrap-up starts with the next new week (b104): a first open, or
+    // the first open of the build that brought it, counts this week as one
+    // already begun, so nothing pops up mid-week. Last week's is on the Log.
+    var wrapStamp = !store.wrapSeen;
+    if (wrapStamp) store.wrapSeen = weekStart(TODAY);
     // Stamp the build straight away, so a backup always reveals which code wrote
     // it — even if nothing has been logged since.
-    if (store.build !== BUILD || movesNeedSaving) save();
+    if (store.build !== BUILD || movesNeedSaving || wrapStamp) save();
     render();
     // A first yes to the age check goes on to the profile; What's new, if
     // there is any, waits until it is done or skipped.
-    if (setupNext) { setupNext = false; showProfile("setup", function () { showNews(prevBuild); }); }
+    if (setupNext) { setupNext = false; showProfile("setup", function () { showNews(prevBuild); maybeWrap(); }); }
     else showNews(prevBuild);
     // Said once: the first time the app opens on lists that held names it put
     // there, it says how many it took off rather than letting them vanish.
@@ -17788,6 +18155,7 @@
     photos.ready().then(function (ok) { if (!ok && tab === "progress") render(); });
     restAlertStart();
     appOpen = true;
+    maybeWrap();
     quickCheck();
     healthSteps.read();
   }

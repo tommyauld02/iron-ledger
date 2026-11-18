@@ -29,7 +29,8 @@ rest timer here; it stays a Gym-tab thing.
 (the owner's call). He asked for distance and calories burned as goals too,
 each daily, weekly or monthly, so `store.cardioGoal` is `{kind, period, v}`
 over `CARDIO_KINDS` × `CARDIO_PERIODS`, and `cardioTotals(key, period)` sums
-the day, its Sunday-first week, or its month. Switching what is counted or how
+the day, its week (from the day Settings → *Your week* says since b104;
+Sunday before), or its month. Switching what is counted or how
 often goes to that pairing's starting number (`CARDIO_GOAL_START`) rather than
 re-reading the old one, which is the unit picker's rule. The editor flips its
 buttons in place, so a number being typed survives. Met, the line turns
