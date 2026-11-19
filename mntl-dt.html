@@ -4818,10 +4818,14 @@
       <div class="seg two" id="setAi" role="group" aria-label="Ask an agent"></div>
       <p class="set-hint" id="setAiHint"></p>
     </div>
+    <!-- The credits are a page of their own beside the Terms (credits.html):
+         what the app is built on and each licence, which the licences ask
+         to travel with the app. -->
     <div class="set-group">
       <span class="eyebrow">About</span>
       <div class="ag-links"></div>
       <p class="set-hint" id="setTermsHint"></p>
+      <div class="ag-links"><a data-page="credits" target="_blank" rel="noopener">Open-source credits</a></div>
     </div>
     <button class="btn ghost" id="setDone">Done</button>
   </div>
@@ -4931,7 +4935,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-18.104";
+  var BUILD = "2026-11-18.105";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5943,6 +5947,8 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-18.105", t: "Open-source credits", items: [
+      "Settings, under About, now has Open-source credits: the label reader, the barcode reader, the grocery brands, the fonts and what makes the iPhone app work, each with its licence. Thank you to the people who made them." ] },
     { b: "2026-11-18.104", t: "Your week, and its wrap-up", items: [
       "Settings has a new Your week: choose the day your week starts on. Monday to Sunday, Tuesday to Monday, any of the seven. The week across the top, the Gym\u2019s planned week and goal, your cardio goal, the daily line and the Log\u2019s calendar all follow it. It stays Sunday unless you change it.",
       "A week wrap-up: last week\u2019s totals in one place. Calories and protein, in all and a day, carbs, fat and water if you track them, training days, sets and pounds moved, steps, cardio, body weight and your checklist.",
