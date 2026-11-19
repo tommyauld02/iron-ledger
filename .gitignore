@@ -37,3 +37,7 @@ relay/node_modules/
 # assembles from mntl-dt.html (ios/ has its own .gitignore for its copy)
 node_modules/
 www/
+
+# the App Store screenshots: tools/make-screenshots.py makes them from the
+# app itself, so they are made again rather than kept
+store/screenshots/
