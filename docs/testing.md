@@ -175,7 +175,23 @@ re-checks the date as it goes (`checkDayRollover()`). `sweep` runs for about
 nine minutes, and a full run started at ten to midnight (b98) had its fixture
 become yesterday halfway through: a tap on a row timed out, because the app
 had moved on to an empty today. Every check before and after it passed. Run it
-again; do not go looking for the bug.
+again; do not go looking for the bug. `weekwrap` is the one suite immune to
+it: its clock is pinned to noon of the day it means, not shifted from real
+time, so the run can cross midnight and stay on its day.
+
+**A day carried in storage can reach the page a reload late.** `weekwrap`
+first moved its clock by writing the offset to `sessionStorage` and then
+reloading. On CI (PR #68, run 44423695727) two of those writes landed one
+reload late: the page meant for Dec 9 opened on the day before it (no wrap-up,
+an empty title), and the restore after it opened on Dec 9 (Dec 7 stamped where
+this week's Monday was expected). The two writes and the reload travel to the
+browser separately, with nothing ordering them; it never once lost locally, in
+70 tries and under a 6× CPU slowdown. Replaying the old suite with those two
+writes moved after their reloads fails exactly CI's two checks with CI's
+values. Now each page is opened with its day in its own address
+(`mntl-dt.html?day=2026-12-09`, read only by the suite's clock; the app never
+reads its address), and `go()` fails a check by name if the page's date is not
+the day it meant. A suite that moves the clock passes the day in the address.
 
 **`agecheck` and `profile` open over http, and seed their log once.** They used
 to fail now and then on CI with the age check back after a reload (2026-10-29,

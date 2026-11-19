@@ -12,9 +12,14 @@ weight, the checklist and check-ins. It pops up once, the first time the app
 is open in a new week, never over another sheet or a running clock, and waits
 on the Log tab until the next week's takes its place.
 
-Pinned to a Wednesday so "last week" is the same seven days whatever day the
-suite actually runs on. The clock can be moved on: window.__off for midnight
-passing with the app open, setOff() for a page opened on another day.
+Pinned to noon on a Wednesday so "last week" is the same seven days whatever
+day the suite actually runs on. Each page is opened with its day in its own
+address (go()), never in storage written just before a reload: on CI a
+sessionStorage write once reached the page one reload late, so the Dec 9 page
+opened on Nov 29 and the restore after it on Dec 9 (PR #68, run 44423695727).
+The clock is pinned to noon of that day, not shifted from real time, so a run
+that crosses real midnight stays on its day. window.__off moves it on with the
+app open, for midnight passing.
 """
 import answered   # every page has said 18 or older: tests/answered.py
 from playwright.sync_api import sync_playwright
@@ -31,10 +36,14 @@ MON_LAST = k(-9)                                    # last week, Monday to Sunda
 BUILD = None
 
 CLOCK = """
- const REAL = Date; window.__off = Number(sessionStorage.getItem("__off")) || %d;
- class FD extends REAL { constructor(...a){ if(!a.length) super(REAL.now()+window.__off); else super(...a);} static now(){return REAL.now()+window.__off;} }
- window.Date = FD;
-""" % (SHIFT * 86400000)
+ (() => {
+   const REAL = Date;
+   const day = (new URLSearchParams(location.search).get("day") || "%s").split("-").map(Number);
+   window.__off = new REAL(day[0], day[1] - 1, day[2], 12).getTime() - REAL.now();
+   class FD extends REAL { constructor(...a){ if(!a.length) super(REAL.now()+window.__off); else super(...a);} static now(){return REAL.now()+window.__off;} }
+   window.Date = FD;
+ })();
+""" % WED
 
 G = {"cal": {"dir": "-", "v": 2400}, "pro": {"dir": "+", "v": 160}}
 MOVES = {"back": ["Barbell Row"], "push": ["Bench Press"], "legs": ["Back Squat"]}
@@ -98,16 +107,22 @@ with sync_playwright() as pw:
     ctx.add_init_script(CLOCK)
     p = ctx.new_page(); errs = []
     p.on("pageerror", lambda e: errs.append(str(e)))
-    p.goto("file://" + d + "/mntl-dt.html"); p.wait_for_timeout(300)
+    def go(day):
+        """Open the app on a day, and wait for it to have drawn itself. Says so,
+        as a failed check, if the page's own date is not that day."""
+        p.goto("file://" + d + "/mntl-dt.html?day=" + day)
+        p.wait_for_function("()=>{const v=document.getElementById('view');return !!v&&v.children.length>0}", timeout=15000)
+        p.wait_for_timeout(150)
+        got = p.evaluate("()=>{const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}")
+        if got != day: check("the page opened on " + day, False, got)
+        return got == day
+
+    go(WED)
     BUILD = p.evaluate("()=>document.documentElement.innerHTML.match(/BUILD = \"([^\"]+)\"/)[1]")
 
-    def open_with(s, wait=900):
+    def open_with(s, day=WED):
         p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", s)
-        setOff(SHIFT * 86400000)
-        p.reload(); p.wait_for_timeout(wait)
-
-    def setOff(ms):
-        p.evaluate("o=>sessionStorage.setItem('__off', String(o))", ms)
+        return go(day)
 
     def tab(name):
         p.click('.tabs button[data-tab="%s"]' % name); p.wait_for_timeout(350)
@@ -165,7 +180,7 @@ with sync_playwright() as pw:
     for ws in range(7):
         s = store(weekStart=ws, wrapSeen=None)
         s.pop("wrapSeen")
-        open_with(s, 700)
+        open_with(s)
         first = strip_first(p)
         dt = datetime.date.fromisoformat(first)
         check("weeks starting %s begin on that day" % ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][ws],
@@ -221,7 +236,7 @@ with sync_playwright() as pw:
     check("nothing runs off the side", nowide)
     done(p)
     check("Got it puts it away", not wrap_up(p))
-    p.reload(); p.wait_for_timeout(900)
+    go(WED)
     check("once: not again on the next open", not wrap_up(p))
 
     # ================= kept on the Log tab =================
@@ -320,29 +335,23 @@ with sync_playwright() as pw:
 
     # midnight into a new week, with the app open: Sunday night to Monday
     s = store(weekStart=1, wrapSeen=MON_THIS)    # this week's has been said already
-    p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", s)
-    setOff((SHIFT + 4) * 86400000)        # Sunday k(4), the last day of this week
-    p.reload(); p.wait_for_timeout(900)
-    check("Sunday is still this week: nothing to say", not wrap_up(p) and p.evaluate("()=>new Date().getDay()") == 0)
+    sunday = open_with(s, k(4))                  # Sunday k(4), the last day of this week
+    check("Sunday is still this week: nothing to say", sunday and not wrap_up(p) and p.evaluate("()=>new Date().getDay()") == 0)
     sv = saved(p)
     sv["days"][k(1)] = {"food": [food(2100, 165, i=9)], "lifts": [], "updated": 1, "goal": G}
-    p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", sv)
-    p.reload(); p.wait_for_timeout(900)
+    open_with(sv, k(4))
     p.evaluate("()=>{window.__off+=86400000; window.dispatchEvent(new Event('focus'))}")
-    p.wait_for_timeout(500)
+    p.wait_for_timeout(300)
     check("midnight into Monday pops up the week just gone", wrap_up(p))
     check("the week just gone", p.text_content("#wrapTitle") == span(MON_THIS), p.text_content("#wrapTitle"))
     done(p)
 
     # a week across the end of a month says both months: Wednesday, Dec 9
     # 2026, Monday-first, is the week after Mon Nov 30 to Sun Dec 6
-    to = (datetime.date(2026, 12, 9) - REAL).days * 86400000
     s = store({"2026-11-30": {"food": [food(2000, 150)], "lifts": [], "updated": 1},
                "2026-12-03": {"food": [food(2000, 150)], "lifts": [], "updated": 1}},
               weekStart=1, wrapSeen="2026-11-30")
-    p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", s)
-    setOff(to)
-    p.reload(); p.wait_for_timeout(900)
+    open_with(s, "2026-12-09")
     check("a week across two months names both", p.text_content("#wrapTitle") == "Nov 30 \u2013 Dec 6", p.text_content("#wrapTitle"))
     done(p)
 
