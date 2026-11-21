@@ -207,7 +207,7 @@ with sync_playwright() as pw:
     check("it names the week", p.text_content("#wrapTitle") == span(MON_LAST), p.text_content("#wrapTitle"))
     check("and how weeks run", "Last week, Monday to Sunday." == p.text_content("#wrapSub"), p.text_content("#wrapSub"))
     check("this week is marked as said", saved(p).get("wrapSeen") == MON_THIS, str(saved(p).get("wrapSeen")))
-    check("every section tracked is there", secs(p) == ["food", "water", "gym", "steps", "cardio", "bw"], str(secs(p)))
+    check("every section tracked is there", secs(p) == ["food", "water", "gym", "steps", "cardio", "burn", "bw"], str(secs(p)))
     ft = tiles(p, "food")
     check("calories and protein, in all and a day", ft[:4] == [["15,400", "Calories, total"], ["1,190 g", "Protein, total"],
           ["2,200", "Calories a day"], ["170 g", "Protein a day"]], str(ft))
@@ -225,7 +225,15 @@ with sync_playwright() as pw:
     st = tiles(p, "steps")
     check("steps in all and a day", st == [["56,000", "Steps, total"], ["8,000", "Steps a day"]], str(st))
     ct = tiles(p, "cardio")
-    check("cardio sessions, minutes, miles and kcal", ct == [["2", "Sessions"], ["50", "Minutes"], ["3", "Miles"], ["300", "kcal burned"]], str(ct))
+    # b106: the Bike's 20 minutes carry no calories, so they are estimated
+    # (182 lb, steady cycling: 170) and the total is marked as holding one.
+    check("cardio sessions, minutes, miles and kcal", ct == [["2", "Sessions"], ["50", "Minutes"], ["3", "Miles"], ["~470", "kcal burned"]], str(ct))
+    bt = tiles(p, "burn")
+    check("burned: gym and cardio, a week and a day (b106)", bt == [["~1,310", "kcal, total"], ["~190", "kcal a day"]], str(bt))
+    bnl = lines(p, "burn")
+    check("burned: where it came from, and that it is an estimate; no height, so no steps",
+          len(bnl) == 2 and bnl[0]["t"] == "Gym about 840 · cardio about 470." and "on top of what you burn at rest" in bnl[1]["t"]
+          and not any(x["won"] for x in bnl), str(bnl))
     cl = lines(p, "cardio")
     check("the cardio goal for the week, short is not gold", len(cl) == 1 and "Weekly goal: 50 of 150 min." == cl[0]["t"] and not cl[0]["won"], str(cl))
     bl = lines(p, "bw")

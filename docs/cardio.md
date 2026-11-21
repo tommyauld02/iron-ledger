@@ -19,9 +19,10 @@ workout clock. Over `MAX_SESSION_MS` it was forgotten, so nothing is logged,
 and the bar goes *Left running* first. Under a minute it was a mis-tap, and
 the app says nothing was logged. Midnight stops it on the day it started and
 says so. Sessions can also be added by hand: minutes are required and say so;
-miles and calories are optional. The calories are typed from the machine or a
-watch. The app does not guess them, because it does not know anyone's weight
-and a made-up number is the confident wrong one. *Finish cardio* is *Lock in
+miles and calories are optional. Calories typed from the machine or a watch
+always win; left empty, the app estimates them from the weight (b106, see
+*Calories burned are estimated* below). Until b81 there was no weight to go
+on, and the app said it never guessed. *Finish cardio* is *Lock in
 the day*: a *Cardio complete* card, `celebrate()`, and *Unlock*. There is no
 rest timer here; it stays a Gym-tab thing.
 
@@ -112,6 +113,50 @@ its own permission.
   A failed read (the phone locked, Health busy) changes nothing and is tried
   at the next look. A log that says yes on a phone iOS never asked (the log
   came over in the phone's own backup) gets the card again.
+
+**Calories burned are estimated (b106).** Asked for by the owner
+(2026-11-20): what a workout, each cardio session and the day's steps burned,
+everywhere it fits. Shown with a proposal page of mock-ups first; he chose
+*shown only*: the burn is never added to the food target, because *How
+active* already counts training in that target, and adding it would count it
+twice. Everything here is arithmetic on the phone; nothing is stored but how
+hard an unknown type is.
+
+- **Always the extra.** Each number is what was burned on top of the resting
+  burn (Apple's Active Energy), rounded to ten and said as *about* or *~*.
+  Expect it to read lower than a watch, which usually shows the total.
+- **The weight on the day** (`burnKg()`): the last weigh-in on or before it,
+  the first after it for an older day, so a session keeps its number when the
+  weight moves on and the number named is one the person typed. No weigh-in
+  at all, no estimate anywhere, and each place says what it needs.
+- **The gym** (`gymBurn()`): the banked clock time × weight × 2.5, lifting with
+  rests at 3.5 MET (Compendium 02054) less the resting 1. Day complete reads
+  *Took 58:00 · burned about 200 kcal*, with a line naming the weight. No
+  clock, no time and no burn, the clock's own rule.
+- **A session** (`cardioEst()`): typed calories always win. A walk and a run go
+  by distance (ACSM: 0.5 and 1 kcal per kg per km), from the miles typed or
+  the minutes at 4.8 and 9 km/h. Anything else by the first match in
+  `CARDIO_BY_NAME` (so *Incline walk* is uphill and *Spin bike* is spin), at
+  (MET − 1) × weight × hours. The card marks it *~250 · kcal · est.* and the
+  foot says *about 250 kcal*; the heading gives the day's total.
+- **A name it doesn't know** asks once on its card, *How hard is …?*, Easy,
+  Steady or Hard (4, 6, 8 MET). The answer is the type's
+  (`store.cardioEffort`), like its name on the picker, said on the bar
+  (*Treadmill counts as steady*, short enough for 320px; the card shows the
+  number) and undoable; *Change* can change it. A restore adds the types
+  this phone hasn't answered, never overriding one it has.
+- **Steps** (`stepsBurn()`), only while the goal counts them: steps × 41.5% of
+  the height = km, at the walking cost, less every walk or run session's own
+  km (`footKm()`), so a run's steps are not counted twice. A line under the
+  lap says *12,240 steps burned about 380 kcal*, or *on top of your Run*, or
+  where to add a height.
+- **Totals include estimates**: `cardioTotals().cal` and the lap's values, so a
+  Calories goal counts them, Cardio complete, the Log's year tile and the
+  wrap-up's cardio tile, each with *~* when any of it is estimated. The
+  wrap-up gains a *Burned* section (`docs/ui.md`). A calendar day's title
+  still says only the calories typed: it is a record of what was logged.
+
+`tests/burn.py` checks all of it.
 
 The shell's side, and what the store build needs, is in `docs/ios.md` (*Steps
 from Apple Health*). `tests/native.py` checks all of the above with a stand-in

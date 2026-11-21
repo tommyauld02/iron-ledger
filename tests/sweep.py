@@ -3473,8 +3473,9 @@ with sync_playwright() as pw:
 
     # adding by hand: a sheet, behind Log a session by hand
     by_hand(q)
-    check("cardio: by hand, the calories line says the app never guesses",
-          "never guesses" in q.inner_text("#cardioAdd"))
+    # b106: an empty calories box is estimated from the weight, and says so.
+    check("cardio: by hand, the calories line says an empty one is estimated",
+          "Leave it empty and the app estimates it from your weight." in q.inner_text("#cardioAdd"))
     q.click("#cAdd"); q.wait_for_timeout(200)
     check("cardio: Add with no minutes says so, and adds nothing",
           q.inner_text("#cHint")=="How many minutes?" and len(q.evaluate(CARDS))==1)
@@ -3809,10 +3810,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Open-source credits"
-          and titles[1]=="Your week, and its wrap-up"
-          and titles[2]=="The tabs stay at the bottom"
-          and titles[3]=="Ask an agent, better numbers", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Calories burned"
+          and titles[1]=="Open-source credits"
+          and titles[2]=="Your week, and its wrap-up"
+          and titles[3]=="The tabs stay at the bottom", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

@@ -177,7 +177,10 @@ weigh-in. The goal calculator's arithmetic is `calcNumbers()`, shared by both,
 and its *Use these numbers* writes into the profile, never over it. One Save is
 one Undo. A birth date changed to under 18 goes to the age check, said back
 first. `mergeInto()` brings the profile and the two new goals back, but keeps
-this phone's birth date: it came with this phone's age check.
+this phone's birth date: it came with this phone's age check. Settings → You
+sums the person up in one line, and from b106 the height is in it, beside the
+weight: it was asked from b81 but showed only inside the edit screen, so the
+owner did not know the app had it.
 
 **The yes to the age check is the yes to the Terms (b80).** The screen says
 *By tapping Continue, you agree to the Terms of Use*, so a birth date of 18 or

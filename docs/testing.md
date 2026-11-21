@@ -69,6 +69,19 @@ and the tabs at 320px. It opens over `http`, because its reloads stand for
 the app being closed and opened (see *agecheck* below). The full list is in
 `docs/progress.md`.
 
+**`burn` covers calories burned (b106).** Day complete's line and what it
+stands on (the weight, in lb and in kg), and nothing without a weight or a
+clock; each kind of cardio estimate (a name's MET, a walk and a run by their
+miles, an incline walk), typed calories winning, the heading's total; a name
+the app doesn't know asking how hard, the answer kept for the type, said on
+the bar and undone; how hard changed in Change; the by-hand note; Cardio
+complete's total and the Calories goal counting estimates; steps from weight
+and height, a run's own steps taken out, no height, a height in cm; the
+height in Settings; the wrap-up's Burned section; the food target untouched;
+and 320px. Its expected numbers are worked out with the app's own arithmetic,
+rounded the way `Math.round` rounds (.5 up), not Python's `round`, which goes
+to even and once failed it on 322.5.
+
 When you add a suite, end it the way the gates do. A suite that reports FAIL
 and exits 0 is a report wearing a test's clothes, and rule 1 quietly stops
 meaning anything.
@@ -88,7 +101,8 @@ lessons worth keeping: a helper outside the repo is a suite that only works on
 one machine, and a suite whose exit code is discarded is not a test.
 
 Suites: `sweep` features · `days` date rollover and month/year boundaries · `weekwrap`
-the day weeks start on and the week wrap-up (b104) · `week` the
+the day weeks start on and the week wrap-up (b104) · `burn` calories burned
+(b106) · `week` the
 planned week split: what each tile says, locking in, logging a day later,
 Rest at midnight, a removed split, the pick on opening · `probe` clicks every tappable and asserts something changed · `darkcheck` WCAG
 contrast in both themes · `coach` routine
