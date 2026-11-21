@@ -29,6 +29,14 @@ destructive. The calendar and the Log tab's *Avg session* read **banked** time
 only: a clock still running is not a finished session and must not drag the
 average down all afternoon.
 
+**Day complete says what the workout burned (b106).** Beside *Took 58:00*:
+*burned about 200 kcal*, the banked time × the day's weight × 2.5 (lifting
+with rests, 3.5 MET, less the resting 1), and a line naming the weight it used.
+No weight, and the line says where to add one; no clock, and there is no
+burn, for the same reason there is no time. It is shown only, never added to
+the food target. The arithmetic and the rest of it are in `docs/cardio.md`
+(*Calories burned are estimated*).
+
 **The bottom bar: three boxes, the way Macros has them (b87).** Asked for by
 the owner, to carry Macros' layout over: what you watch all session stays open
 at the top — the workout clock, then the planned week, then *Today's split* —

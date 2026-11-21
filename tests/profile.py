@@ -340,7 +340,7 @@ with sync_playwright() as pw:
     p.click('[data-tab="log"]'); p.wait_for_timeout(300)
     check("Log: the goal weight beside the trend", text(p, "#bwGoal") == "Goal 175.0 lb · 7.0 lb to go on the trend", text(p, "#bwGoal"))
     p.click("#setBtn"); p.wait_for_timeout(300)
-    check("Settings, You: who", text(p, "#setWho") == "Tommy · %d · Male · 182.0 lb" % age_on(1992, 3, 14), text(p, "#setWho"))
+    check("Settings, You: who, with the height (b106)", text(p, "#setWho") == "Tommy · %d · Male · 5′11″ · 182.0 lb" % age_on(1992, 3, 14), text(p, "#setWho"))
     check("Settings, You: the goals in force", text(p, "#setWhoGoals").startswith("2,000 kcal · 150 g protein · 2 workouts a week · 150 min cardio a week")
           and "goal weight 175.0 lb" in text(p, "#setWhoGoals"), text(p, "#setWhoGoals"))
     targets(p, "#setProfile", "Settings, You")

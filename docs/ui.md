@@ -535,7 +535,12 @@ for those who choose to track their water consumption, Fats, carbs etc."*.
     goal, never both (the daily line's rule).
   - *Steps* and *Cardio*: from `cardioTotals()`, the Cardio tab's own totals;
     the cardio goal's line goes under whichever it counts, by the day or the
-    week (a month's goal is not a week's to judge).
+    week (a month's goal is not a week's to judge). Cardio's kcal include
+    estimates from b106, marked *~*.
+  - *Burned* (b106): the gym, cardio and steps, in all and a day, then where it
+    came from and that it is an estimate on top of the resting burn
+    (`docs/cardio.md`, *Calories burned are estimated*). Shown only, like
+    everywhere else: it never moves the food target.
   - *Body weight*: the week's first weigh-in to its last, in the unit chosen.
   - *Daily checklist*: days finished. *Progress*: check-ins, and how many with
     a photo.
