@@ -280,7 +280,7 @@ with sync_playwright() as pw:
     age = age_on(1992, 3, 14)
     bmr = 10 * 82 + 6.25 * 178 - 5 * age - 161
     cal = max(1200, round((bmr * 1.375 - 500) / 10) * 10)
-    pro = round(82 / LB_KG / 5) * 5
+    pro = round(82 / LB_KG * 0.85 / 5) * 5      # b107: 0.85 g a pound unless chosen otherwise
     check("no target set yet: the calculator's numbers are filled in, with the working shown",
           p.input_value("#pfCal") == str(cal) and p.input_value("#pfPro") == str(pro)
           and "You burn about" in text(p, "#pfCalc") and "Estimates only, not medical advice." in text(p, "#profCard"),

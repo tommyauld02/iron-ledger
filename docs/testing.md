@@ -69,6 +69,20 @@ and the tabs at 320px. It opens over `http`, because its reloads stand for
 the app being closed and opened (see *agecheck* below). The full list is in
 `docs/progress.md`.
 
+**`calc` covers the calculator, body fat and the real burn (b107).** Seven
+aims and the 1% warning; protein by choice and of the goal weight; carbs and
+fat by style, filled by Use, in both calculators; body fat's box and sheet
+(the tape in both equations and in cm, the six drawings a sex, the other
+ways, Use, Save with where it came from, an impossible number, emptying it,
+Undo), lean mass in the working; the real burn on the Log, in the wrap-up and
+in the calculator, worked out in Python with the app's arithmetic; the Macros
+line (what was eaten, the target to try, Use with Undo, Got it, three weeks
+quiet), eating over the target, losing too fast, and quiet for a patchy log,
+a target just changed, or holding steady; 44px, 16px and 320px. A good week
+has a daily line of its own, so the suite looks for the burn line by what it
+says rather than for any line. `darkcheck` measures the profile and each of
+body fat's ways in both themes and every accent.
+
 **`burn` covers calories burned (b106).** Day complete's line and what it
 stands on (the weight, in lb and in kg), and nothing without a weight or a
 clock; each kind of cardio estimate (a name's MET, a walk and a run by their
@@ -102,7 +116,7 @@ one machine, and a suite whose exit code is discarded is not a test.
 
 Suites: `sweep` features · `days` date rollover and month/year boundaries · `weekwrap`
 the day weeks start on and the week wrap-up (b104) · `burn` calories burned
-(b106) · `week` the
+(b106) · `calc` the calculator, body fat and the real burn (b107) · `week` the
 planned week split: what each tile says, locking in, logging a day later,
 Rest at midnight, a removed split, the pick on opening · `probe` clicks every tappable and asserts something changed · `darkcheck` WCAG
 contrast in both themes · `coach` routine

@@ -3810,10 +3810,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Calories burned"
-          and titles[1]=="Open-source credits"
-          and titles[2]=="Your week, and its wrap-up"
-          and titles[3]=="The tabs stay at the bottom", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Your calories, from your own results"
+          and titles[1]=="Calories burned"
+          and titles[2]=="Open-source credits"
+          and titles[3]=="Your week, and its wrap-up", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from
@@ -4682,10 +4682,11 @@ with sync_playwright() as pw:
           "Fill these in" in q.inner_text("#gcOut") and q.is_disabled("#gcUse"))
     q.click('[data-gcsex="m"]'); q.fill("#gcAge","29"); q.fill("#gcFt","5"); q.fill("#gcIn","11"); q.wait_for_timeout(100)
     out=q.inner_text("#gcOut")
-    # Mifflin-St Jeor: 10*82.55 + 6.25*180.34 - 5*29 + 5 = 1812; x1.55 = 2809; -500 -> 2310; 182 lb -> 180 g
-    check("calc: the working is shown, from the standard equation", "2,810 kcal a day" in out and "2,310 kcal" in out and "180 g protein" in out, out)
+    # Mifflin-St Jeor: 10*82.55 + 6.25*180.34 - 5*29 + 5 = 1812; x1.55 = 2809; -500 -> 2310;
+    # protein 0.85 g a pound from b107: 182 lb -> 155 g
+    check("calc: the working is shown, from the standard equation", "2,810 kcal a day" in out and "2,310 kcal" in out and "155 g protein" in out, out)
     q.click("#gcUse"); q.wait_for_timeout(200)
-    check("calc: Use fills the target, and Save still decides", q.input_value("#gCal")=="2310" and q.input_value("#gPro")=="180"
+    check("calc: Use fills the target, and Save still decides", q.input_value("#gCal")=="2310" and q.input_value("#gPro")=="155"
           and q.evaluate(LBST)["goal"]["cal"]["v"]==2000)
     q.select_option("#gcAim","250"); q.wait_for_timeout(100); q.click("#gcUse"); q.wait_for_timeout(100)
     check("calc: gaining sets calories to reach at least the number",

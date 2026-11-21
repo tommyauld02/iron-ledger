@@ -509,6 +509,20 @@ def walk(p, label):
     p.click("#setBtn"); p.wait_for_timeout(350)
     low = p.evaluate(LOW)
     if low: found.append("settings: %s" % low)
+    # b107: the profile, and body fat's sheet with each way of finding it,
+    # which exist only after a press (docs/testing.md)
+    p.click("#setProfile"); p.wait_for_timeout(300)
+    low = p.evaluate(LOW)
+    if low: found.append("settings (profile): %s" % low)
+    p.click("#pfBfHow"); p.wait_for_timeout(250)
+    for way in ["tape", "look", "other"]:
+        p.click('[data-bftab="%s"]' % way); p.wait_for_timeout(200)
+        if way == "look" and p.locator("[data-bflook]").count():
+            p.locator("[data-bflook]").nth(2).click(); p.wait_for_timeout(150)
+        low = p.evaluate(LOW)
+        if low: found.append("settings (body fat, %s): %s" % (way, low))
+    p.click("#pfBfClose"); p.wait_for_timeout(200)
+    p.click("#pfCancel"); p.wait_for_timeout(250)          # back to Settings, by design
     p.click("#setDone"); p.wait_for_timeout(250)
     for f in found:
         FAILS.append("%s %s" % (label, str(f)[:110]))

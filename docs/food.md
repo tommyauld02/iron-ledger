@@ -356,6 +356,75 @@ its age from the birth date and its equation from the profile (Other picks
 one), and *Use these numbers* writes into `store.profile`, never over it
 (`docs/architecture.md`, *The profile sets the goals*).
 
+**The calculator, reviewed (b107).** Asked for by the owner: set the goal
+from what a person prefers. `calcNumbers()` takes options, the same in both
+places it runs (the profile's *Your goals* and the target editor's *Work it
+out*):
+- **Seven aims**, lose 2 lb a week to gain 1 (`AIMS`), 500 kcal a day per
+  pound a week. Past 1% of the weight a week, the working says it is hard to
+  keep muscle at that pace.
+- **Protein by choice**, 0.7, 0.85 (the default) or 1 g a pound
+  (`profile.proPer`). Losing toward a goal weight lower than today's, it is
+  per pound of the goal: 1 g per pound of today's weight, the rule until
+  b107, told a 260 lb person to eat 260 g.
+- **Carbs and fat** from a style (`profile.cfStyle`: Balanced 30% fat,
+  Lower carb 40%, Higher carb 20%), only with Carbs & fat shown; protein
+  first, fat its share, carbs the rest. *Use these numbers* fills all four.
+- **Body fat**, when there is a reading: the resting burn from lean mass
+  (Katch-McArdle, 370 + 21.6 × lean kg) in place of Mifflin-St Jeor.
+- **The real burn**, when the log has one (below): it replaces the formula's
+  whole guess, and the working says so (*From your log … The formula
+  guessed …*).
+
+**Body fat % (b107).** In the owner's words: *"the option of filling it if
+known, or if it wants to be guessed, but also including how one can figure
+it out, or examples of what different percentages look like"*. An optional
+box under the height in Settings → You, and *Don't know it?* opens a sheet
+(`pfBfSheetHtml()`) with three ways:
+- **Tape measure**: waist and neck (and hips, for the female equation) in the
+  weight's unit, and the height already in the profile; the US Navy method
+  (`navyBf()`), within about 3–4% of a scan. *Use 18%* fills the box.
+- **By look**: six drawings a sex (`torsoSvg()`, drawn from numbers: no
+  photos, nobody's body), about 10% to 35%+ for men and 15% to 40%+ for
+  women, each with plain, neutral words. Within about 5%, and it says a tape
+  gets closer.
+- **Other ways**: a DEXA scan, a gym body-scan machine, a smart scale,
+  calipers and the tape, each with how close it gets.
+A reading is the day's, like a weigh-in (`d.bf`, `d.bfBy`: typed, tape or
+look), so it has a history; `latestBf()` is used. The box says where it came
+from and when (*From your tape measure, Nov 20*), so a guess is never passed
+off as a scan. Emptied and saved, `profile.bfOff` stops the app using any,
+and the readings stay. 3 to 60, or it says so. Settings → You's line names
+it. Apple Health could fill it later, in the same store build as Active
+Energy.
+
+**Your real burn, from the weekly summaries (b107).** The owner: *"to have an
+accurate calculation you need data expanding over a week ... let's take the
+data from a user's weekly summary"*. One week alone is too noisy (a pound of
+water is 500 kcal a day over a week), so `realBurn()` takes the three whole
+weeks ending with the last one summed up: the average eaten on the days
+logged, plus the pounds lost a day × 3,500, from a straight line through the
+weigh-ins. It needs 18 of the 21 days logged (a forgotten day would look like
+eating nothing) and 6 weigh-ins, one in the first week and one in the last;
+a calorie target changed inside the three weeks, or lowered in the week
+before them (the quick loss then is mostly water), means waiting. It shows on
+the Log's body weight card (`#bwReal`), in the wrap-up's Body weight section,
+and in the calculator.
+
+**When the weight isn't moving, a target to try (b107).** The owner: *"if a
+user is not getting closer to their weight goal or simply not losing weight,
+let's suggest a calorie goal to them based on what they had vs. what they
+should lower it to"*. `burnAdvice()` speaks when the weight moved less than
+half the aim's pace toward the goal (the profile's aim; with none, the goal
+weight at a pound a week). It says what was eaten and a new target, the real
+burn less 500 a pound a week, but a step of 300 at most and never under
+1,500 (men) or 1,200 (women). Eating over the target is said instead, with
+nothing to change. Losing faster than 1% of the weight a week gets the other
+line, to eat a little more. It is a daily line on Macros (`docs/ui.md`) with
+*Use 1,970*, which sets the target from today with Undo; nothing changes
+without the tap. Put away or used, it waits three weeks. `tests/calc.py`
+covers all of this.
+
 **Meals read through, never store.** A meal is `{id, note, items:[...]}`. Its
 calories and protein come from `rowCal()`/`rowPro()` summing the items on every
 draw — never written onto the meal — so the day total cannot drift from its
