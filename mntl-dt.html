@@ -2392,6 +2392,29 @@
   .daydone .dd-stats div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   /* --ink-3 on the card's tint fell just short of 4.5:1 in four accents (darkcheck) */
   .daydone .dd-burn { margin: 2px 0 0; color: var(--ink-2); }
+  /* b107: body fat's box in the profile, and the sheet that helps find it */
+  .pf-bfhow { width: 100%; min-height: 50px; }
+  .pf-bfsheet .sheet-inner { gap: 12px; }
+  .pf-bfsheet .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .bf-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .bf-card {
+    display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; min-height: 44px; padding: 10px 8px;
+    border: 1px solid var(--rule); border-radius: 14px; background: var(--surface); color: var(--ink);
+    font: inherit; text-align: center; cursor: pointer;
+  }
+  .bf-card[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .bf-card b { font-size: 15px; }
+  .bf-card > span:last-child { font-size: 12.5px; line-height: 1.35; color: var(--ink-2); }
+  .bf-pic { display: block; width: 84px; height: 100px; color: var(--ink-2); }
+  .bf-pic svg { display: block; width: 100%; height: 100%; }
+  .bf-body { fill: var(--accent-soft); stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+  .bf-card[aria-pressed="true"] .bf-body { fill: var(--surface); }
+  .bf-ways { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .bf-ways li { display: flex; flex-direction: column; gap: 2px; border-top: 1px solid var(--rule); padding-top: 8px; }
+  .bf-ways b { font-size: 15px; }
+  .bf-ways span { font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+  /* b107: the daily line's one other button, Use, beside Got it */
+  .dl-acts { display: flex; flex-direction: column; align-items: flex-end; }
   .daydone .dd-time {
     font-family: var(--font-num);
     font-size: 11px;
@@ -4941,7 +4964,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-20.106";
+  var BUILD = "2026-11-20.107";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -6075,6 +6098,11 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-20.107", t: "Your calories, from your own results", items: [
+      "After three weeks of logging food and weighing in, the app works out what you really burn: what you ate, and how your weight moved. It shows on the Log tab\u2019s body weight card and in the week wrap-up, and the calorie calculator uses it in place of its guess.",
+      "If your weight isn\u2019t moving toward your goal, a line at the top of Macros says what you averaged and suggests a new target, a step at a time. Use sets it from today, with Undo. Nothing changes unless you tap it.",
+      "Body fat %, in Settings \u2192 You, if you know it. Don\u2019t know it? Work it out with a tape measure, pick from drawings of what each level looks like, or see the other ways to find it. With it, your resting burn comes from your lean mass.",
+      "The calculator has seven aims, from losing 2 lb a week to gaining 1, a choice of protein (0.7, 0.85 or 1 g for each pound, of your goal weight when you\u2019re losing), and with Carbs & fat shown, it fills those in too." ] },
     { b: "2026-11-20.106", t: "Calories burned", items: [
       "Lock in the day on the Gym tab and Day complete now says about how much the workout burned, from your weight and the time on the workout clock.",
       "Cardio sessions without calories typed in show an estimate, marked ~ and est., from the session\u2019s name, minutes and miles. A number from the machine or your watch always wins.",
@@ -8534,6 +8562,9 @@
         for (;;) { c.setDate(c.getDate() - 1); if (hasFood(ymd(c)) || gap > 60) break; gap++; }
         if (gap >= 3 && gap <= 60) miss("gap:" + today, "Nothing logged for " + gap + " days.", "Log today and pick it back up.");
       }
+      // Not getting closer to the goal weight (b107): a target from what was eaten.
+      var ba = burnAdvice(today);
+      if (ba) misses.push(ba);
       // protein missed several days running, counted back from yesterday
       c = parseYmd(today);
       for (;;) {
@@ -8689,6 +8720,111 @@
   // the tab's line away until tomorrow, and that line away for the day, week
   // or month it is about. A reminder holds its place until it is answered;
   // good news takes turns, so a good week is a different line each day.
+  // ---------- your real burn (b107) ----------
+  // The owner: "to have an accurate calculation you need data expanding over
+  // a week ... let's take the data from a user's weekly summary". One week
+  // alone is too noisy (a pound of water is 500 kcal a day over a week), so
+  // it is the three whole weeks ending with the last one summed up: what was
+  // eaten on the days logged, and how the weight moved, as a straight line
+  // through the weigh-ins so one heavy morning doesn't swing it.
+  //   real burn = average eaten + pounds lost a day x 3,500
+  // It needs 18 of the 21 days logged (a forgotten day would look like eating
+  // nothing) and 6 weigh-ins, one in the first week and one in the last. A
+  // target changed inside the three weeks, or lowered in the week before them
+  // (when the quick loss is mostly water), means waiting: {wait: true}.
+  var REAL_DAYS = 21;
+  function lastWeekEnd(today) { var s0 = parseYmd(weekStart(today || TODAY)); s0.setDate(s0.getDate() - 1); return ymd(s0); }
+  function realBurn(endKey) {
+    endKey = endKey || lastWeekEnd();
+    var end = parseYmd(endKey), keys = [], i;
+    for (i = REAL_DAYS - 1; i >= 0; i--) { var dt = new Date(end); dt.setDate(end.getDate() - i); keys.push(ymd(dt)); }
+    var c = parseYmd(keys[0]), prev = null, changed = null;
+    c.setDate(c.getDate() - 7);
+    for (; ymd(c) <= endKey; c.setDate(c.getDate() + 1)) {
+      var dd = store.days[ymd(c)];
+      if (!dd || !dd.goal) continue;
+      var v = normGoal(dd.goal).cal.v;
+      if (prev !== null && v !== prev && (ymd(c) >= keys[0] || v < prev)) changed = ymd(c);
+      prev = v;
+    }
+    if (changed) return { wait: true, changed: changed };
+    var n = 0, cal = 0, pts = [];
+    keys.forEach(function (k, x) {
+      var d = store.days[k];
+      if (d && d.food && d.food.length && !pendingCount(d)) { n++; cal += totals(d).cal; }
+      var w = dayBw(k);
+      if (w !== null) pts.push([x, w]);
+    });
+    if (n < 18 || pts.length < 6 || pts[0][0] > 6 || pts[pts.length - 1][0] < REAL_DAYS - 7) return null;
+    var mx = 0, my = 0, sxy = 0, sxx = 0;
+    pts.forEach(function (q) { mx += q[0]; my += q[1]; });
+    mx /= pts.length; my /= pts.length;
+    pts.forEach(function (q) { sxy += (q[0] - mx) * (q[1] - my); sxx += (q[0] - mx) * (q[0] - mx); });
+    var slope = sxx ? sxy / sxx : 0, avg = cal / n;
+    var burn = Math.round((avg - slope * 3500) / 10) * 10;
+    if (!(burn >= 1000 && burn <= 6000)) return null;
+    return { burn: burn, avg: Math.round(avg), rate: slope * 7, change: slope * (REAL_DAYS - 1), start: keys[0], end: endKey, days: n, weighIns: pts.length };
+  }
+  // When the weight isn't moving toward the goal (b107): a new target from
+  // what was actually eaten, one step at a time (300 at most), never under
+  // 1,500 (men) or 1,200 (women), and never set without a tap. Eating over the
+  // target is said instead: the target isn't the problem. Losing faster than
+  // 1% of the weight a week gets the other line: eat a little more. Put away,
+  // it waits three weeks, the time a new target needs to show.
+  function burnAdvice(today) {
+    var got = store.lineGot || {}, cut = parseYmd(today);
+    cut.setDate(cut.getDate() - REAL_DAYS);
+    if (Object.keys(got).some(function (id) { return id.indexOf("macros/burn:") === 0 && got[id] >= ymd(cut); })) return null;
+    var r = realBurn(lastWeekEnd(today));
+    if (!r || r.wait) return null;
+    var pr = store.profile || {}, aim = Number(pr.aim) || 0, target = normGoal(store.goal).cal.v;
+    var tr = trendAt(today), now = tr ? tr.t : 0, goalLb = Number(store.bwGoal) || 0;
+    var dir = aim < 0 || (!aim && goalLb && goalLb < now - 1) ? -1 : aim > 0 || (!aim && goalLb > now + 1) ? 1 : 0;
+    if (!dir) return null;
+    var pace = aim ? Math.abs(aim) / 500 : dir < 0 ? 1 : 0.5;
+    var floor = calcSexOf(pr) === "f" ? 1200 : 1500, toward = r.rate * dir, want = r.burn + dir * pace * 500;
+    var lbs = function (x) { return bwUnit() === "kg" ? (x * LB_KG).toFixed(1) + " kg" : x.toFixed(1) + " lb"; };
+    var head = Math.abs(r.change) < 0.5 ? "Weight steady for 3 weeks" : (r.change < 0 ? "Down " : "Up ") + lbs(Math.abs(r.change)) + " in 3 weeks";
+    var id = "macros/burn:" + r.end, ate = "You averaged " + fmt(r.avg) + " kcal a day";
+    if (toward < pace / 2) {
+      head += toward > 0 && Math.abs(r.change) >= 0.5 ? ", slower than your aim." : ".";
+      var off = dir < 0 ? r.avg - target : target - r.avg;
+      if (off > 100) return { id: id, kind: "miss", head: head,
+        sub: ate + ", " + fmt(off) + (dir < 0 ? " over" : " under") + " your " + fmt(target) + " target. " +
+             (dir < 0 ? "Sticking to " : "Eating up to ") + fmt(target) + " should get it moving." };
+      var next = Math.round((dir < 0 ? Math.max(floor, target - 300, want) : Math.min(target + 300, want)) / 10) * 10;
+      if (dir < 0 ? next > target - 20 : next < target + 20) return null;
+      return { id: id, kind: "miss", head: head, sub: ate + ". Try " + fmt(next) + " and see how the next 3 weeks go.", use: next };
+    }
+    if (dir < 0 && toward > Math.max(1.5 * pace, 0.01 * now)) {
+      var up = Math.round(Math.min(target + 300, want) / 10) * 10;
+      if (up < target + 20) return null;
+      return { id: id, kind: "miss", head: head + ", faster than your aim.", sub: ate + ". Try " + fmt(up) + " to keep more of your muscle.", use: up };
+    }
+    return null;
+  }
+  // Use: the new calorie target from today, as Save target does, said on the
+  // bar with Undo. The days already logged keep the target they had.
+  function useLine(id, cal) {
+    if (!(cal > 0)) return;
+    var was = store.goal ? JSON.parse(JSON.stringify(store.goal)) : undefined;
+    var td = store.days[TODAY], dayWas = td && td.goal ? JSON.parse(JSON.stringify(td.goal)) : undefined;
+    var next = normGoal(store.goal);
+    next.cal.v = cal;
+    store.goal = next;
+    day(TODAY).goal = JSON.parse(JSON.stringify(next));
+    touch(TODAY);
+    if (!store.lineGot || typeof store.lineGot !== "object") store.lineGot = {};
+    store.lineGot[id] = TODAY;
+    save(); render();
+    offerUndo("Calorie target " + fmt(cal) + " from today", function () {
+      if (was === undefined) delete store.goal; else store.goal = was;
+      var dd = day(TODAY);
+      if (dayWas === undefined) delete dd.goal; else dd.goal = dayWas;
+      if (store.lineGot) delete store.lineGot[id];
+      touch(TODAY); save(); render();
+    });
+  }
   function dailyLine(which, today) {
     if (!lineOn()) return null;
     var got = store.lineGot || {};
@@ -8727,7 +8863,10 @@
         '<i class="dl-mark" aria-hidden="true">' + (ln.kind === "win"
           ? '<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.2 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg>' : '') + '</i>' +
         '<span class="dl-text"><b>' + esc(ln.head) + '</b><span>' + esc(ln.sub) + '</span></span>' +
-        '<button class="dl-got" data-gotline="' + esc(ln.id) + '">Got it</button>' +
+        (ln.use
+          ? '<span class="dl-acts"><button class="dl-got" data-useline="' + esc(ln.id) + '" data-cal="' + ln.use + '">Use ' + fmt(ln.use) + '</button>' +
+              '<button class="dl-got" data-gotline="' + esc(ln.id) + '">Got it</button></span>'
+          : '<button class="dl-got" data-gotline="' + esc(ln.id) + '">Got it</button>') +
       '</section>');
   }
 
@@ -8843,6 +8982,10 @@
     // Body weight: the week's first weigh-in and its last.
     var bws = keys.filter(function (k) { return typeof on(k).bw === "number"; });
     f.bw = bws.length ? { first: on(bws[0]).bw, last: on(bws[bws.length - 1]).bw, n: bws.length } : null;
+    // The real burn (b107): this week and the two before it, from the food and
+    // weigh-ins these summaries count.
+    var rb = realBurn(keys[6]);
+    f.real = rb && !rb.wait ? rb : null;
     // Progress check-ins (b90).
     var pg = keys.filter(function (k) { return !!on(k).prog; });
     f.prog = pg.length ? { n: pg.length, photos: pg.filter(function (k) { return !!on(k).prog.photo; }).length } : null;
@@ -8930,7 +9073,8 @@
       var b = f.bw, diff = Math.round((bwUnit() === "kg" ? (b.last - b.first) * LB_KG : b.last - b.first) * 10) / 10;
       h += sec("bw", "Body weight", line(b.n === 1 ? bwShow(b.last) + " " + bwUnit() + ", one weigh-in."
         : bwShow(b.first) + " → " + bwShow(b.last) + " " + bwUnit() + (diff ? ", " + (diff < 0 ? "down " : "up ") + Math.abs(diff).toFixed(1) + " " + bwUnit() : ", no change") +
-          " over " + b.n + " weigh-ins."));
+          " over " + b.n + " weigh-ins.") +
+        (f.real ? line("Your real burn: about " + fmt(f.real.burn) + " kcal a day, from this week and the two before: what you ate, and how your weight moved.") : ""));
     }
     if (f.list) h += sec("list", "Daily checklist", line("Finished " + f.list.all + " of 7 days.", f.list.all >= 6));
     if (f.prog) h += sec("prog", "Progress", line(f.prog.n + (f.prog.n === 1 ? " check-in" : " check-ins") +
@@ -9715,7 +9859,7 @@
           esc(last.k === TODAY ? 'today' : shortDate(last.k)) + '</span>' : '') + '</div>' +
       chart +
       '<p class="bw-note">' + note + '</p>' +
-      bwGoalHtml(last) +
+      bwGoalHtml(last) + bwRealHtml() +
       '<div class="bw-entry">' +
         '<input id="bwIn" inputmode="decimal" placeholder="' + (today != null ? bwShow(today) : (bwUnit() === "kg" ? "82.5" : "182.4")) +
           '" aria-label="Today\u2019s weight in ' + bwUnit() + '">' +
@@ -9733,6 +9877,11 @@
     var off = last ? Math.abs(last.t - g) : null, met = off !== null && off < 0.5;
     return '<p class="bw-goal' + (met ? ' is-met' : '') + '" id="bwGoal">Goal ' + bwShow(g) + ' ' + bwUnit() +
       (off === null ? '' : met ? ' · the trend is there' : ' · ' + bwShow(off) + ' ' + bwUnit() + ' to go on the trend') + '</p>';
+  }
+  // Your real burn (b107), once three weeks of food and weigh-ins show it.
+  function bwRealHtml() {
+    var r = realBurn();
+    return r && !r.wait ? '<p class="bw-goal" id="bwReal">Your real burn: about ' + fmt(r.burn) + ' kcal a day, from 3 weeks of food and weigh-ins.</p>' : '';
   }
   function wireBw() {
     var save1 = document.getElementById("bwSave"), inp = document.getElementById("bwIn");
@@ -9770,12 +9919,35 @@
     { id: "1.725", name: "Training 6\u20137 days a week" },
     { id: "1.9", name: "Hard training daily, or a physical job" }
   ];
+  // Seven aims from b107 (four before): a pound of fat is about 3,500 kcal,
+  // so each pound a week is 500 a day.
   var AIMS = [
+    { id: "-1000", name: "Lose 2 lb a week", short: "lose 2 lb a week" },
+    { id: "-750", name: "Lose 1\u00bd lb a week", short: "lose 1\u00bd lb a week" },
     { id: "-500", name: "Lose 1 lb a week", short: "lose 1 lb a week" },
     { id: "-250", name: "Lose \u00bd lb a week", short: "lose \u00bd lb a week" },
     { id: "0", name: "Stay the same", short: "stay the same" },
-    { id: "250", name: "Gain \u00bd lb a week", short: "gain \u00bd lb a week" }
+    { id: "250", name: "Gain \u00bd lb a week", short: "gain \u00bd lb a week" },
+    { id: "500", name: "Gain 1 lb a week", short: "gain 1 lb a week" }
   ];
+  // Protein in grams for each pound (b107). Until b107 it was always 1 g per
+  // pound of today's weight, which tells a 260 lb person to eat 260 g. Losing
+  // toward a goal weight, it is per pound of the goal.
+  var PRO_PERS = [["0.7", "0.7 g/lb"], ["0.85", "0.85 g/lb"], ["1", "1 g/lb"]];
+  // How the calories left after protein split between carbs and fat, for
+  // anyone tracking them.
+  var CF_STYLES = [{ id: "bal", name: "Balanced \u00b7 30% fat", fat: 30 },
+                   { id: "low", name: "Lower carb \u00b7 40% fat", fat: 40 },
+                   { id: "high", name: "Higher carb \u00b7 20% fat", fat: 20 }];
+  function proPerOf(pr) {
+    var v = String((pr || {}).proPer || "");
+    return PRO_PERS.some(function (x) { return x[0] === v; }) ? v : "0.85";
+  }
+  function cfStyleOf(pr) {
+    var v = String((pr || {}).cfStyle || "");
+    return CF_STYLES.some(function (x) { return x.id === v; }) ? v : "bal";
+  }
+  function cfFatPct(id) { return (CF_STYLES.filter(function (x) { return x.id === id; })[0] || CF_STYLES[0]).fat; }
   var goalCalc = false;
   function calcHtml() {
     var pr = store.profile || {}, metric = bwUnit() === "kg", w = latestBw(), sx = calcSexOf(pr);
@@ -9798,6 +9970,10 @@
           '</div>') +
       '<div class="field"><label for="gcAct">How active</label><select id="gcAct">' + calcOpts(ACTIVITY, pr.act || "1.55") + '</select></div>' +
       '<div class="field"><label for="gcAim">Aim</label><select id="gcAim">' + calcOpts(AIMS, pr.aim || "-500") + '</select></div>' +
+      '<div class="field"><label for="gcPro">Protein</label><select id="gcPro">' +
+        PRO_PERS.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === proPerOf(pr) ? ' selected' : '') + '>' + o[1] + '</option>'; }).join("") +
+      '</select></div>' +
+      (cfOn() ? '<div class="field"><label for="gcStyle">Carbs and fat</label><select id="gcStyle">' + calcOpts(CF_STYLES, cfStyleOf(pr)) + '</select></div>' : '') +
       '<p class="calc-out is-empty" id="gcOut">Fill these in to see the numbers.</p>' +
       // The Terms (section 2) say targets are general information; this is
       // that, said where the numbers are.
@@ -9815,18 +9991,39 @@
     var kg = bwUnit() === "kg" ? wt : wt * LB_KG;
     var act = Number(document.getElementById("gcAct").value), aim = Number(document.getElementById("gcAim").value);
     if (!sexB) return null;
-    return calcNumbers(sexB.getAttribute("data-gcsex") === "m", age, kg, cm, act, aim);
+    var st = document.getElementById("gcStyle"), bf = latestBf(), rb = realBurn();
+    return calcNumbers(sexB.getAttribute("data-gcsex") === "m", age, kg, cm, act, aim, {
+      bf: bf ? bf.v : 0, proPer: document.getElementById("gcPro").value, goalLb: Number(store.bwGoal) || 0,
+      style: st ? st.value : "", real: rb && !rb.wait ? rb.burn : 0 });
   }
   // The arithmetic, on its own, so the profile works out the same numbers
   // from its own boxes. Null until every number is a believable one.
-  function calcNumbers(male, age, kg, cm, act, aim) {
+  //
+  // o (b107), all optional: bf, a body fat % (the resting burn then comes from
+  // lean mass, Katch-McArdle, which fits people who lift); real, the burn the
+  // log has shown (realBurn()), which replaces the formula's guess outright;
+  // proPer, grams of protein a pound; goalLb, the goal weight; style, how
+  // carbs and fat share what protein leaves.
+  function calcNumbers(male, age, kg, cm, act, aim, o) {
+    o = o || {};
     if (!(age >= 14 && age <= 100) || !(kg >= 30 && kg <= 300) || !(cm >= 120 && cm <= 230)) return null;
-    var bmr = 10 * kg + 6.25 * cm - 5 * age + (male ? 5 : -161);
-    var tdee = bmr * act, floor = male ? 1500 : 1200;
+    var bf = Number(o.bf) >= 3 && Number(o.bf) <= 60 ? Number(o.bf) : 0;
+    var bmr = bf ? 370 + 21.6 * kg * (1 - bf / 100) : 10 * kg + 6.25 * cm - 5 * age + (male ? 5 : -161);
+    var formula = bmr * act, real = Number(o.real) > 0 ? Number(o.real) : 0;
+    var tdee = real || formula, floor = male ? 1500 : 1200;
     var cal = Math.round((tdee + aim) / 10) * 10, clipped = false;
     if (cal < floor) { cal = floor; clipped = true; }
-    var pro = Math.round(kg / LB_KG / 5) * 5;          // a gram for every pound
-    return { male: male, age: age, kg: kg, cm: cm, act: act, aim: aim, bmr: bmr, tdee: tdee, cal: cal, pro: pro, clipped: clipped };
+    var lb = kg / LB_KG, per = Number(o.proPer) || 0.85, goalLb = Number(o.goalLb) || 0;
+    var byGoal = aim < 0 && goalLb >= 80 && goalLb < lb;
+    var pro = Math.round((byGoal ? goalLb : lb) * per / 5) * 5;
+    var r = { male: male, age: age, kg: kg, cm: cm, act: act, aim: aim, bmr: bmr, tdee: tdee, formula: formula, real: real,
+              bf: bf, cal: cal, pro: pro, per: per, byGoal: byGoal, goalLb: goalLb, clipped: clipped,
+              fast: aim < 0 && -aim / 500 > 0.01 * lb, fat: null, carb: null };
+    if (o.style) {
+      r.fat = Math.round(cal * cfFatPct(o.style) / 100 / 9 / 5) * 5;
+      r.carb = Math.max(0, Math.round((cal - pro * 4 - r.fat * 9) / 4 / 5) * 5);
+    }
+    return r;
   }
   function calcDraw() {
     var r = calcRead(), out = document.getElementById("gcOut"), use = document.getElementById("gcUse");
@@ -9837,11 +10034,20 @@
     use.disabled = false;
   }
   function calcWords(r) {
-    var aim = AIMS.filter(function (a) { return Number(a.id) === r.aim; })[0];
-    return "You burn about " + fmt(Math.round(r.tdee / 10) * 10) + " kcal a day (" + fmt(Math.round(r.bmr / 10) * 10) +
-      " at rest \u00d7 " + r.act + " for how active you are). To " + aim.short + ": " + fmt(r.cal) + " kcal" +
+    var aim = AIMS.filter(function (a) { return Number(a.id) === r.aim; })[0] || AIMS[2];
+    var ten = function (n) { return fmt(Math.round(n / 10) * 10); };
+    var goal = bwUnit() === "kg" ? bwShow(r.goalLb) + " kg" : fmt(r.goalLb) + " lb";
+    var s = r.real
+      ? "From your log, you burn about " + fmt(r.real) + " kcal a day: 3 weeks of food and weigh-ins. The formula guessed " + ten(r.formula) + ". "
+      : "You burn about " + ten(r.tdee) + " kcal a day (" + ten(r.bmr) + " at rest" +
+        (r.bf ? ", from your lean mass at " + r.bf + "% body fat," : "") + " \u00d7 " + r.act + " for how active you are). ";
+    s += "To " + aim.short + ": " + fmt(r.cal) + " kcal" +
       (r.clipped ? " \u2014 held at the lowest it is safe to go without a doctor" : "") +
-      ", and " + fmt(r.pro) + " g protein, a gram for every pound you weigh.";
+      ", and " + fmt(r.pro) + " g protein, " + (r.per === 1 ? "a gram" : r.per + " g") + " for every pound " +
+      (r.byGoal ? "of your " + goal + " goal" : "you weigh") + "." +
+      (r.fat !== null ? " Carbs and fat: " + fmt(r.carb) + " g and " + fmt(r.fat) + " g." : "");
+    if (r.fast) s += " That\u2019s faster than 1% of your weight a week, which makes it hard to keep muscle.";
+    return s;
   }
   function calcOpts(list, v) {
     return list.map(function (o) { return '<option value="' + o.id + '"' + (String(v) === o.id ? ' selected' : '') + '>' + o.name + '</option>'; }).join("");
@@ -9868,6 +10074,8 @@
       var r = calcRead(); if (!r) return;
       document.getElementById("gCal").value = r.cal;
       document.getElementById("gPro").value = r.pro;
+      var gcb = document.getElementById("gCarb"), gft = document.getElementById("gFat");
+      if (r.fat !== null && gcb && gft) { gcb.value = r.carb; gft.value = r.fat; }
       // Gaining means eating at least the number; losing or holding, at most.
       pendingDir.cal = r.aim > 0 ? "+" : "-"; pendingDir.pro = "+";
       [["dirCal", pendingDir.cal], ["dirPro", "+"]].forEach(function (pair) {
@@ -9878,7 +10086,8 @@
       var pr = profile();
       if (pr.sex === "o") pr.calcSex = r.male ? "m" : "f"; else pr.sex = r.male ? "m" : "f";
       if (!pr.dob) pr.age = r.age;
-      pr.act = String(r.act); pr.aim = String(r.aim);
+      pr.act = String(r.act); pr.aim = String(r.aim); pr.proPer = String(r.per);
+      if (document.getElementById("gcStyle")) pr.cfStyle = document.getElementById("gcStyle").value;
       if (document.getElementById("gcCm")) pr.cm = Math.round(r.cm);
       else { pr.ft = document.getElementById("gcFt").value; pr.inch = document.getElementById("gcIn").value; }
       save();
@@ -9930,12 +10139,17 @@
     // a height kept in the other unit, shown in this one
     if (metric && !cm && Number(ft)) cm = Math.round((Number(ft) * 12 + (Number(inch) || 0)) * 2.54);
     if (!metric && !Number(ft) && Number(cm)) { var ti = Math.round(Number(cm) / 2.54); ft = Math.floor(ti / 12); inch = String(ti % 12); }
-    var water = waterShow(waterGoalMl()).replace(/,/g, "");
+    var water = waterShow(waterGoalMl()).replace(/,/g, ""), bfNow = latestBf();
     pf = {
       name: pr.name || "", dob: pr.dob || "", dobOpen: !pr.dob, dm: "", dd: "", dy: "",
       sex: pr.sex || "", calcSex: pr.calcSex || "", unit: bwUnit(),
       wt: w != null ? bwShow(w) : "", wt0: w != null ? bwShow(w) : "",
       cm: String(cm), ft: String(ft), inch: inch, act: pr.act || "1.55", aim: pr.aim || "-500",
+      proPer: proPerOf(pr), cfStyle: cfStyleOf(pr),
+      // Body fat (b107): the latest reading, where it came from, and the
+      // sheet that helps someone who doesn't know theirs.
+      bf: bfNow ? String(bfNow.v) : "", bf0: bfNow ? String(bfNow.v) : "", bfBy: bfNow ? bfNow.by : "", bfBy0: bfNow ? bfNow.by : "",
+      bfAt: bfNow ? bfNow.k : "", bfOpen: false, bfTab: "tape", bfLook: 0, tapeW: "", tapeN: "", tapeH: "",
       cal: String(g.cal.v), calDir: g.cal.dir, pro: String(g.pro.v), proDir: g.pro.dir,
       carb: g.carb ? String(g.carb) : "", fat: g.fat ? String(g.fat) : "",
       waterOn: waterOn(), water: water, water0: water,
@@ -9969,7 +10183,168 @@
     var age = dob ? ageOn(dob, TODAY) : Number((store.profile || {}).age);
     var wt = num1(pf.wt), kg = pf.unit === "kg" ? wt : wt * LB_KG;
     var cm = pf.unit === "kg" ? Number(pf.cm) : (Number(pf.ft) * 12 + (Number(pf.inch) || 0)) * 2.54;
-    return calcNumbers(sx === "m", age, kg, cm, Number(pf.act), Number(pf.aim));
+    var bf = num1(pf.bf), goal = num1(pf.bwGoal), rb = realBurn();
+    return calcNumbers(sx === "m", age, kg, cm, Number(pf.act), Number(pf.aim), {
+      bf: bf, proPer: pf.proPer, goalLb: goal > 0 ? (pf.unit === "kg" ? goal / LB_KG : goal) : 0,
+      style: cfOn() ? pf.cfStyle : "", real: rb && !rb.wait ? rb.burn : 0 });
+  }
+  // The equation a tape measure and the drawings go by: null until it is known.
+  function pfMale() {
+    var sx = pf.sex === "o" ? pf.calcSex : pf.sex;
+    return sx === "m" ? true : sx === "f" ? false : null;
+  }
+
+  // ---------- body fat (b107) ----------
+  // Asked for by the owner (2026-11-20): body fat, "with the option of filling
+  // it if known, or if it wants to be guessed, but also including how one can
+  // figure it out, or examples of what different percentages look like".
+  // A reading is kept on its day, like a weigh-in (d.bf, and d.bfBy: typed,
+  // tape or look), so it has a history and says where it came from: a guess
+  // is never passed off as a scan. The latest one is used, unless the box was
+  // emptied (profile.bfOff), which stops the app using any.
+  function latestBf(upTo) {
+    if ((store.profile || {}).bfOff) return null;
+    var end = upTo || TODAY;
+    var keys = Object.keys(store.days).filter(function (k) { return typeof store.days[k].bf === "number" && k <= end; }).sort();
+    var k = keys[keys.length - 1];
+    return k ? { k: k, v: store.days[k].bf, by: store.days[k].bfBy || "typed" } : null;
+  }
+  function pfBfSay() {
+    var why = " It sets your resting burn from your lean mass.";
+    if (String(pf.bf).trim() === "") return pf.bf0 ? "Left empty, the app goes back to working from your height and weight." : "If you know it." + why;
+    var how = { tape: "From your tape measure", look: "Your pick by look" }[pf.bfBy] || "You typed it in";
+    if (pf.bf !== pf.bf0 || pf.bfBy !== pf.bfBy0) return how + ". Save to keep it." + why;
+    return how + ", " + (pf.bfAt === TODAY ? "today" : shortDate(pf.bfAt)) + "." + why;
+  }
+  function pfProSay() {
+    var goal = num1(pf.bwGoal), w = num1(pf.wt);
+    if (Number(pf.aim) < 0 && goal > 0 && w > 0 && goal < w)
+      return "For each pound of your goal weight, " + goal + " " + pf.unit + ", since you’re losing. More protein keeps more muscle on a cut.";
+    return "For each pound you weigh.";
+  }
+  function pfHeightSay() {
+    if (pf.unit === "kg") return Number(pf.cm) ? Math.round(Number(pf.cm)) + " cm" : "";
+    return Number(pf.ft) ? Number(pf.ft) + "\u2032" + (Number(pf.inch) || 0) + "\u2033" : "";
+  }
+  // The US Navy method, in cm: within about 3-4% of a scan for most people.
+  function navyBf(male, waist, neck, hips, height) {
+    if (male) return waist > neck ? 495 / (1.0324 - 0.19077 * Math.log10(waist - neck) + 0.15456 * Math.log10(height)) - 450 : NaN;
+    return waist + hips > neck ? 495 / (1.29579 - 0.35004 * Math.log10(waist + hips - neck) + 0.22100 * Math.log10(height)) - 450 : NaN;
+  }
+  function pfTape() {
+    var male = pfMale(), k = pf.unit === "kg" ? 1 : 2.54;
+    var hcm = pf.unit === "kg" ? Number(pf.cm) : (Number(pf.ft) * 12 + (Number(pf.inch) || 0)) * 2.54;
+    if (male === null || !(hcm >= 120 && hcm <= 230)) return { say: "Fill in your gender and height under About you first." };
+    var w = num1(pf.tapeW), n = num1(pf.tapeN), h = num1(pf.tapeH);
+    if (!(w > 0) || !(n > 0) || (!male && !(h > 0)))
+      return { say: male ? "Type your waist and neck to see it." : "Type your waist, neck and hips to see it." };
+    var v = navyBf(male, w * k, n * k, (h || 0) * k, hcm);
+    if (!(v >= 3 && v <= 60)) return { say: "Those don’t give a believable number. Check each measurement." };
+    v = Math.round(v);
+    return { v: v, say: "About " + v + "% body fat. Worked out with the US Navy method, usually within 3–4% of a scan." };
+  }
+  function pfTapeDraw() {
+    var r = pfTape(), out = document.getElementById("pfTapeOut"), use = document.getElementById("pfTapeUse");
+    if (!out || !use) return;
+    out.className = "calc-out" + (r.v ? "" : " is-empty"); out.textContent = r.say;
+    use.disabled = !r.v; use.textContent = r.v ? "Use " + r.v + "%" : "Use it";
+  }
+  function pfBfFocus(el) {
+    var t = el || document.querySelector('#pfBfSheet [data-bftab][aria-pressed="true"]');
+    if (t && t.focus) t.focus({ preventScroll: true });
+  }
+  function pfBfBack() {
+    var f = document.getElementById("pfBfHow");
+    if (f && f.scrollIntoView) f.scrollIntoView({ block: "center" });
+    if (f && f.focus) f.focus({ preventScroll: true });
+  }
+  // What each level tends to look like, in plain and neutral words: each is
+  // described, none is called better. Drawn by the app (torsoSvg), from
+  // numbers: no photos, nobody's body.
+  var BF_LOOK = {
+    m: [[10, "About 10%", "Abs sharp; veins on the arms and lower belly; clear lines between muscles."],
+        [15, "About 15%", "Abs show in good light; a flat stomach; some veins on the arms."],
+        [20, "About 20%", "Abs gone; a little softness at the waist; muscles still keep their shape."],
+        [25, "About 25%", "A softer waist and a small belly; little definition."],
+        [30, "About 30%", "A rounder belly; softness at the chest and sides."],
+        [35, "About 35%+", "Weight carried at the belly and sides; the waist as wide as the chest."]],
+    f: [[15, "About 15%", "Abs show; clear lines in the arms, shoulders and legs."],
+        [20, "About 20%", "A flat stomach with a hint of abs; shape in the arms and legs."],
+        [25, "About 25%", "Little definition; soft curves at the hips and thighs."],
+        [30, "About 30%", "Fuller hips and thighs; a softer belly."],
+        [35, "About 35%", "A rounder belly, hips and thighs; fuller arms."],
+        [40, "About 40%+", "Weight carried at the belly, hips and thighs."]]
+  };
+  var BF_WAYS = [
+    ["A DEXA scan", "The most accurate: within 1–2%. About $50–150 at a clinic, and some gyms have one."],
+    ["A gym body-scan machine", "InBody and the like: within 3–4%. Often free at gyms."],
+    ["A smart scale", "Within about 5%. Better for watching the trend than for one reading."],
+    ["Skinfold calipers", "Within 3–5%, best when the same person measures each time."],
+    ["A tape measure", "Within 3–4%, and the app works it out: see Tape measure."]
+  ];
+  // A front torso, level 0 to 5: the waist and hips widen, the lines of
+  // muscle fade and a belly line comes in. Colours come from the theme.
+  function torsoSvg(level, male) {
+    var S = male ? 33 : 27, A = male ? 29 : 24, C = (male ? 28 : 24.5) + level * 0.7;
+    var W = (male ? [20.5, 22.5, 25, 28, 31, 34] : [18.5, 20.5, 22.5, 25.5, 28.5, 31.5])[level];
+    var H = (male ? [24, 25, 26.5, 29, 31.5, 34] : [27.5, 29, 30.5, 32.5, 34.5, 36.5])[level];
+    var f = function (n) { return n.toFixed(1); };
+    function spline(pts) {
+      var out = [];
+      for (var i = 0; i < pts.length - 1; i++) {
+        var p0 = pts[i > 0 ? i - 1 : i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+        out.push("C" + f(p1[0] + (p2[0] - p0[0]) / 6) + " " + f(p1[1] + (p2[1] - p0[1]) / 6) + " " +
+                 f(p2[0] - (p3[0] - p1[0]) / 6) + " " + f(p2[1] - (p3[1] - p1[1]) / 6) + " " + f(p2[0]) + " " + f(p2[1]));
+      }
+      return out.join(" ");
+    }
+    var right = [[57, 6], [58, 16], [50 + S - 6, 21], [50 + S, 26], [50 + A, 38], [50 + C, 50], [50 + W, 74], [50 + H, 98], [50 + H - 1, 114]];
+    var left = right.slice().reverse().map(function (q) { return [100 - q[0], q[1]]; });
+    var d = "M" + f(left[0][0]) + " " + f(left[0][1]) + " " + spline(left) + " L" + f(right[0][0]) + " " + f(right[0][1]) + " " + spline(right) + " Z";
+    var st = ' stroke="currentColor" fill="none" stroke-linecap="round" stroke-width="1.3"';
+    var line = function (path, o) { return o ? '<path d="' + path + '"' + st + ' opacity="' + o + '"/>' : ''; };
+    var out = male ? line("M48 41 C40 50 30 50 " + f(50 - C + 4) + " 44 M52 41 C60 50 70 50 " + f(50 + C - 4) + " 44", [.8, .6, .4, .25, .12, 0][level])
+                   : line("M47 44 C40 55 31 55 " + f(50 - C + 3) + " 47 M53 44 C60 55 69 55 " + f(50 + C - 3) + " 47", .45);
+    out += line("M50 56 L50 92 M41 64 Q50 66 59 64 M41 73 Q50 75 59 73 M42 82 Q50 84 58 82", (male ? [.85, .5, .2, 0, 0, 0] : [.6, .35, .15, 0, 0, 0])[level]);
+    out += line("M" + f(50 - W + 3) + " 80 L43 104 M" + f(50 + W - 3) + " 80 L57 104", [.6, .35, .12, 0, 0, 0][level]);
+    out += line("M" + f(50 - W * .72) + " 82 Q50 " + f(86 + level * 2.2) + " " + f(50 + W * .72) + " 82", [0, 0, .18, .35, .5, .6][level]);
+    out += line("M" + f(50 - W + 2) + " 66 Q" + f(50 - W - 1.5) + " 74 " + f(50 - W + 1) + " 82 M" + f(50 + W - 2) + " 66 Q" + f(50 + W + 1.5) + " 74 " + f(50 + W - 1) + " 82", [0, 0, 0, .25, .4, .5][level]);
+    out += '<ellipse cx="50" cy="' + (level < 3 ? 86 : 88) + '" rx="1.2" ry="1.6" fill="currentColor" opacity=".7"/>';
+    return '<svg viewBox="0 0 100 118" aria-hidden="true" focusable="false"><path class="bf-body" d="' + d + '"/>' + out + '</svg>';
+  }
+  function pfBfSheetHtml() {
+    var male = pfMale(), tab = pf.bfTab, body;
+    var tabs = '<div class="seg" role="group" aria-label="How to find it">' +
+      [["tape", "Tape measure"], ["look", "By look"], ["other", "Other ways"]].map(function (t) {
+        return '<button data-bftab="' + t[0] + '" aria-pressed="' + (t[0] === tab) + '">' + t[1] + '</button>';
+      }).join("") + '</div>';
+    if (tab === "tape") {
+      var u = pf.unit === "kg" ? "cm" : "in", r = pfTape(), ht = pfHeightSay(), more = 'inputmode="decimal" maxlength="5"';
+      body = '<p class="set-hint">In the morning, standing relaxed, the tape snug but not pressing in.</p>' +
+        '<div class="pair">' + pfField("pfTapeW", "tapeW", "Waist · " + u, more) + pfField("pfTapeN", "tapeN", "Neck · " + u, more) + '</div>' +
+        (male === false ? '<div class="pair">' + pfField("pfTapeH", "tapeH", "Hips · " + u, more) + '<div></div></div>' : '') +
+        '<p class="set-hint">Waist: around your navel. Neck: just below the Adam’s apple' + (male === false ? '. Hips: at the widest point' : '') +
+          '.' + (ht ? ' Your height, ' + ht + ', is already in.' : '') + '</p>' +
+        '<p class="calc-out' + (r.v ? '' : ' is-empty') + '" id="pfTapeOut">' + esc(r.say) + '</p>' +
+        '<button class="btn" id="pfTapeUse"' + (r.v ? '' : ' disabled') + '>' + (r.v ? 'Use ' + r.v + '%' : 'Use it') + '</button>';
+    } else if (tab === "look") {
+      body = male === null
+        ? '<p class="set-hint">Pick your gender under About you first: the drawings and the numbers differ.</p>'
+        : '<p class="set-hint">Pick the closest. By eye it’s within about 5%: a fair start, and a tape gets closer.</p>' +
+          '<div class="bf-grid">' + BF_LOOK[male ? "m" : "f"].map(function (L, i) {
+            return '<button class="bf-card" data-bflook="' + L[0] + '" aria-pressed="' + (pf.bfLook === L[0]) + '">' +
+              '<span class="bf-pic">' + torsoSvg(i, male) + '</span><b>' + L[1] + '</b><span>' + L[2] + '</span></button>';
+          }).join("") + '</div>' +
+          '<button class="btn" id="pfLookUse"' + (pf.bfLook ? '' : ' disabled') + '>' +
+            (pf.bfLook ? 'Use about ' + pf.bfLook + '%' : 'Pick the closest one') + '</button>';
+    } else {
+      body = '<p class="set-hint">Any of these gives a number to type in. The closer it is, the better your burn and protein.</p>' +
+        '<ul class="bf-ways">' + BF_WAYS.map(function (w) { return '<li><b>' + w[0] + '</b><span>' + w[1] + '</span></li>'; }).join("") + '</ul>';
+    }
+    return '<div class="sheet pf-bfsheet" id="pfBfSheet" role="dialog" aria-modal="true" aria-labelledby="pfBfTitle"><div class="sheet-inner">' +
+      '<div class="sh-head"><h2 id="pfBfTitle">Find your body fat %</h2>' +
+        '<button id="pfBfClose" aria-label="Close"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      tabs + body + '</div></div>';
   }
 
   function pfSeg(attr, opts, on, label, cls) {
@@ -10005,6 +10380,11 @@
     h += pf.unit === "kg"
       ? '<div class="pair">' + pfField("pfCm", "cm", "Height · cm") + '<div></div></div>'
       : '<div class="pair">' + pfField("pfFt", "ft", "Height · ft") + pfField("pfIn", "inch", "and in") + '</div>';
+    h += '<div class="pair">' + pfField("pfBf", "bf", "Body fat % · optional", 'inputmode="decimal" maxlength="4"') +
+        '<div class="field"><span class="sec-k" aria-hidden="true">&nbsp;</span>' +
+          '<button class="btn ghost pf-bfhow" id="pfBfHow" aria-haspopup="dialog">Don’t know it?</button></div>' +
+      '</div>' +
+      '<p class="set-hint" id="pfBfSay">' + esc(pfBfSay()) + '</p>';
     h += '<div class="field"><label for="pfAct">How active</label><select id="pfAct" data-pf="act">' + calcOpts(ACTIVITY, pf.act) + '</select></div>';
     return h;
   }
@@ -10012,6 +10392,9 @@
     var r = pfNumbers();
     var h = '<div class="pf-grp"><span class="eyebrow">Macros</span>' +
       '<div class="field"><label for="pfAim">Aim</label><select id="pfAim" data-pf="aim">' + calcOpts(AIMS, pf.aim) + '</select></div>' +
+      '<span class="sec-k" id="pfProK">Protein</span>' + pfSeg("pfpro", PRO_PERS, pf.proPer, "pfProK") +
+      '<p class="set-hint" id="pfProSay">' + esc(pfProSay()) + '</p>' +
+      (cfOn() ? '<div class="field"><label for="pfStyle">Carbs and fat</label><select id="pfStyle" data-pf="cfStyle">' + calcOpts(CF_STYLES, pf.cfStyle) + '</select></div>' : '') +
       '<p class="calc-out' + (r ? '' : ' is-empty') + '" id="pfCalc">' + esc(r ? calcWords(r) : PF_CALC_EMPTY) + '</p>' +
       // The Terms (section 2) say targets are general information.
       '<p class="est-note">Estimates only, not medical advice.</p>' +
@@ -10067,6 +10450,7 @@
         ? '<button class="btn" id="pfNext">Next: your goals</button><button class="btn ghost" id="pfSkip">Skip for now</button>'
         : '<button class="btn" id="pfSave">Save and start</button><button class="btn ghost" id="pfBack">Back</button>') +
       '</div>';
+    if (pf.bfOpen) h += pfBfSheetHtml();
     document.getElementById("profCard").innerHTML = h;
   }
   function pfCalcDraw() {
@@ -10076,11 +10460,14 @@
     out.className = "calc-out" + (r ? "" : " is-empty");
     out.textContent = r ? calcWords(r) : PF_CALC_EMPTY;
     use.disabled = !r;
+    var ps = document.getElementById("pfProSay"); if (ps) ps.textContent = pfProSay();
+    var bs = document.getElementById("pfBfSay"); if (bs) bs.textContent = pfBfSay();
   }
   function pfUseNumbers() {
     var r = pfNumbers();
     if (!r) return false;
     pf.cal = String(r.cal); pf.pro = String(r.pro);
+    if (r.fat !== null) { pf.carb = String(r.carb); pf.fat = String(r.fat); }
     // Gaining means eating at least the number; losing or holding, at most.
     pf.calDir = r.aim > 0 ? "+" : "-"; pf.proDir = "+";
     pf.used = true;
@@ -10095,6 +10482,9 @@
     pf.wt = conv(pf.wt); pf.wt0 = conv(pf.wt0); pf.bwGoal = conv(pf.bwGoal);
     if (toKg && Number(pf.ft)) pf.cm = String(Math.round((Number(pf.ft) * 12 + (Number(pf.inch) || 0)) * 2.54));
     if (!toKg && Number(pf.cm)) { var ti = Math.round(Number(pf.cm) / 2.54); pf.ft = String(Math.floor(ti / 12)); pf.inch = String(ti % 12); }
+    ["tapeW", "tapeN", "tapeH"].forEach(function (k) {
+      var n = num1(pf[k]); if (n > 0) pf[k] = String(Math.round((toKg ? n * 2.54 : n / 2.54) * 10) / 10);
+    });
     pf.unit = u;
   }
   // What is wrong with what is on screen, in words, or "".
@@ -10115,6 +10505,8 @@
         if ((f !== null || i !== null) && !(f >= 3 && f <= 7 && (i === null || (i >= 0 && i < 12))))
           return "Check your height: feet from 3 to 7, and inches from 0 to 11.";
       }
+      var bfc = num1(pf.bf);
+      if (bfc !== null && !(bfc >= 3 && bfc <= 60)) return "Body fat is a percentage from 3 to 60. Check it, or leave it empty.";
     }
     if (part !== "about") {
       if (!(num1(pf.cal) > 0) || !(num1(pf.pro) > 0)) return "Calories and protein each need a number.";
@@ -10156,7 +10548,8 @@
     var before = {};
     PF_KEYS.forEach(function (k) { before[k] = store[k] === undefined ? undefined : JSON.parse(JSON.stringify(store[k])); });
     var td = store.days[TODAY];
-    var todayWas = td ? { goal: td.goal ? JSON.parse(JSON.stringify(td.goal)) : undefined, bw: td.bw } : { goal: undefined, bw: undefined };
+    var todayWas = td ? { goal: td.goal ? JSON.parse(JSON.stringify(td.goal)) : undefined, bw: td.bw, bf: td.bf, bfBy: td.bfBy }
+                      : { goal: undefined, bw: undefined, bf: undefined, bfBy: undefined };
 
     var pr = profile();
     var name = pf.name.trim().slice(0, 40);
@@ -10168,8 +10561,20 @@
     delete pr.cm; delete pr.ft; delete pr.inch;
     if (pf.unit === "kg") { if (num1(pf.cm)) pr.cm = Math.round(num1(pf.cm)); }
     else if (num1(pf.ft)) { pr.ft = String(num1(pf.ft)); pr.inch = String(num1(pf.inch) || 0); }
-    pr.act = pf.act; pr.aim = pf.aim;
+    pr.act = pf.act; pr.aim = pf.aim; pr.proPer = pf.proPer; pr.cfStyle = pf.cfStyle;
     pr.setup = true;
+    // Body fat (b107): a new number is today's reading, kept with where it
+    // came from, as a weight is today's weigh-in. Emptied, the app stops
+    // using it, and the readings stay in the log.
+    if (pf.bf !== pf.bf0 || pf.bfBy !== pf.bfBy0) {
+      var bfv = num1(pf.bf);
+      if (bfv !== null) {
+        var bd = day(TODAY);
+        bd.bf = Math.round(bfv * 10) / 10; bd.bfBy = pf.bfBy || "typed";
+        delete pr.bfOff;
+        touch(TODAY);
+      } else if (pf.bf0) pr.bfOff = true;
+    }
     store.bwUnit = pf.unit;
     // The weight box is the body weight card's number: changed, it is today's weigh-in.
     var w = num1(pf.wt);
@@ -10208,7 +10613,7 @@
     if (ok) offerUndo(mode === "setup" ? "You’re all set · your goals are in" : "Saved your profile and goals", function () {
       PF_KEYS.forEach(function (k) { if (before[k] === undefined) delete store[k]; else store[k] = before[k]; });
       var dd = day(TODAY);
-      ["goal", "bw"].forEach(function (f) { if (todayWas[f] === undefined) delete dd[f]; else dd[f] = todayWas[f]; });
+      ["goal", "bw", "bf", "bfBy"].forEach(function (f) { if (todayWas[f] === undefined) delete dd[f]; else dd[f] = todayWas[f]; });
       save(); render();
     });
     if (then) then();
@@ -10228,6 +10633,8 @@
     var k = e.target.getAttribute && e.target.getAttribute("data-pf");
     if (!k || !pf || pf[k] === e.target.value) return;
     pf[k] = e.target.value;
+    if (k === "bf") pf.bfBy = "typed";
+    if (k === "tapeW" || k === "tapeN" || k === "tapeH") { pfTapeDraw(); return; }
     // A new "how often" starts from that pair's own number, as on the Cardio tab.
     if (k === "cPeriod") {
       pf.cV = String(CARDIO_GOAL_START[pf.cKind][pf.cPeriod]);
@@ -10244,6 +10651,18 @@
     if (ds.pfcalc) { pf.calcSex = ds.pfcalc; drawProfile(); return; }
     if (ds.pfunit) { pfUnit(ds.pfunit); drawProfile(); return; }
     if (ds.pfwater) { pf.waterOn = ds.pfwater === "on"; drawProfile(); return; }
+    if (ds.pfpro) { pf.proPer = ds.pfpro; drawProfile(); return; }
+    // Body fat's sheet (b107)
+    if (b.id === "pfBfHow") { pf.bfOpen = true; pf.bfLook = 0; drawProfile(); pfBfFocus(); return; }
+    if (b.id === "pfBfClose") { pf.bfOpen = false; drawProfile(); pfBfBack(); return; }
+    if (ds.bftab) { pf.bfTab = ds.bftab; drawProfile(); pfBfFocus(); return; }
+    if (ds.bflook) { pf.bfLook = Number(ds.bflook); drawProfile(); pfBfFocus(document.getElementById("pfLookUse")); return; }
+    if (b.id === "pfTapeUse" || b.id === "pfLookUse") {
+      var v = b.id === "pfTapeUse" ? pfTape().v : pf.bfLook;
+      if (!v) return;
+      pf.bf = String(v); pf.bfBy = b.id === "pfTapeUse" ? "tape" : "look"; pf.bfOpen = false;
+      drawProfile(); pfBfBack(); return;
+    }
     if (ds.pfkind) {
       if (pf.cKind !== ds.pfkind) { pf.cKind = ds.pfkind; pf.cV = String(CARDIO_GOAL_START[pf.cKind][pf.cPeriod]); }
       drawProfile(); return;
@@ -16381,6 +16800,8 @@
   view.addEventListener("click", function (e) {
     var gl = e.target.closest && e.target.closest("[data-gotline]");
     if (gl) gotLine(gl.getAttribute("data-gotline"));
+    var ul = e.target.closest && e.target.closest("[data-useline]");
+    if (ul) useLine(ul.getAttribute("data-useline"), Number(ul.getAttribute("data-cal")));
   });
   view.addEventListener("click", function (e) {
     var a = findAction(e.target);
@@ -17220,7 +17641,7 @@
     var pr = store.profile || {}, w = latestBw(), gg = normGoal(store.goal), cg = cardioGoal();
     var who = [pr.name || "", pr.dob ? String(ageOn(pr.dob, TODAY)) : "",
       (GENDERS.filter(function (o) { return o[0] === pr.sex; })[0] || [])[1] || "",
-      heightShow(), w != null ? bwShow(w) + " " + bwUnit() : ""].filter(Boolean);
+      heightShow(), w != null ? bwShow(w) + " " + bwUnit() : "", latestBf() ? latestBf().v + "% body fat" : ""].filter(Boolean);
     document.getElementById("setWho").textContent = who.length ? who.join(" · ")
       : "Your name, birth date, height and weight, and every goal, in one place.";
     var gy = Number(store.gymGoal);

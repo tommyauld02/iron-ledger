@@ -459,6 +459,15 @@ and in this order, then the good ones:
 Water and the checklist stay quiet in a week with none of either recorded:
 switched on and never used is not a week of misses.
 
+**The real burn's line, with Use (b107).** One line is allowed a second
+button: on Macros, when the weight isn't moving toward the goal, *Weight
+steady for 3 weeks. You averaged 2,240 kcal a day. Try 1,970 …* carries
+*Use 1,970* beside *Got it* (`.dl-acts`). It is the exception because it
+changes a goal rather than logging food (what the owner turned down), and it
+has Undo. It comes after *Nothing logged* and before the rest, and put away
+or used, it waits three weeks (`docs/food.md`, *When the weight isn't
+moving*).
+
 **A day nobody logged is not a missed day.** `dayMacro()` returns null for a day
 with no food or with a food still waiting for numbers; it ends a run and is
 left out of last week's count. A reminder that fires on an empty log is worse

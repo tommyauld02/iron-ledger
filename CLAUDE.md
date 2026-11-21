@@ -31,7 +31,7 @@ without a migration and Tommy's say-so.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 33 suites, ~2,390 checks, 26
+**1. Nothing ships without `./verify.sh` passing.** 34 suites, ~2,450 checks, 27
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -93,7 +93,7 @@ tools/make-screenshots.py   the App Store screenshots, from the app itself on a
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              32 Playwright suites, and relay.py, which runs the relay in Node
+tests/              33 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -174,6 +174,12 @@ Everything else:
   relay → `relay/README.md`
 - **Reading a label**, grocery brands, barcodes → `docs/food.md`
 - **Carbs and fat, water, body weight, the goal calculator** → `docs/food.md`
+- **Your calories from your results** (b107) — the calculator's seven aims,
+  protein and carbs-and-fat choices; body fat % typed, measured with a tape
+  or picked from drawings; the real burn from the last three weekly summaries,
+  and the Macros line that suggests a target when the weight isn't moving →
+  `docs/food.md` (*The calculator, reviewed*, *Body fat %*, *Your real burn*,
+  *When the weight isn't moving*)
 - **Pantry** — a section of the Macros tab (b99), part-name matching, the `+` sheet, counts, saved and combined
   meals, sections → `docs/pantry.md`
 - **Daily checklist** (supplements) → `docs/pantry.md`
@@ -252,7 +258,7 @@ is fixed, and it is worth keeping straight:
   `days`, `week`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
   `handoff`, `finder`, `relay`, `label`, `hittest`, `share`, `native`, `live`,
   `agecheck`, `profile`, `legal`, `keys`, `muscles`, `progress`, `weekwrap`,
-  `burn`.
+  `burn`, `calc`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s
