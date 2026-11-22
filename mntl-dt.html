@@ -16624,7 +16624,8 @@
     rowEditing = null;
     stampGoal(TODAY);
     touch(TODAY); if (save()) buzz("tap"); render();
-    offerUndo("Added " + rowNote(copy) + " to today \u00b7 " + fmt(rowCal(copy)) + " kcal \u00b7 " + fmt(rowPro(copy)) + " g",
+    // Short enough for the bar on a phone: the name, which is what was chosen.
+    offerUndo("Added to today \u00b7 " + rowNote(copy),
       function () {
         var dd = day(TODAY), i = -1;
         dd.food.forEach(function (f, n) { if (f.id === copy.id) i = n; });

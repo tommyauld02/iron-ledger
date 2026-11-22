@@ -963,9 +963,11 @@ with sync_playwright() as pw:
     # what is on screen: water's goal and unit stay folded away while water is off
     PRESSED="e=>e.filter(x=>x.getClientRects().length).map(x=>x.textContent)"
     # Ask an agent reads On: this phone is a fakeai.phone, which has already allowed it.
-    # The week wrap-up pops up unless told not to (b104), under Your week.
+    # The week wrap-up pops up unless told not to (b104), under Your week. The
+    # rest timer starts when pressed, as it always did (b108); Reminders are
+    # the iPhone app's alone, so the web has none.
     check("settings: it starts on the phone's own look and teal, with carbs, water and Coach hidden and the daily line shown",
-          p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)==["Pops up","Match phone","Teal","In place","Hidden","Shown","Hidden","Hidden","On"],
+          p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)==["Pops up","Match phone","Teal","In place","Hidden","Shown","When I press it","Hidden","Hidden","On"],
           str(p.eval_on_selector_all("#setSheet [aria-pressed=true]",PRESSED)))
     small=[x for x in p.eval_on_selector_all("#setSheet button",
            "e=>e.filter(b=>b.getClientRects().length).map(b=>[b.textContent.trim()||b.getAttribute('aria-label'),Math.round(b.getBoundingClientRect().height)])")
@@ -2105,7 +2107,7 @@ with sync_playwright() as pw:
             const acc='rgb('+[0,2,4].map(i=>parseInt(hex.substr(i,2),16)).join(', ')+')';
             const els=[...document.querySelectorAll('.lift .lastbox, .lift .lastbox *')].filter(e=>!e.closest('.lb-hist'));
             const hist=document.querySelectorAll('.lift .lastbox .lb-hist');
-            return els.length>8 && hist.length===1 && getComputedStyle(hist[0]).color===acc &&
+            return els.length>8 && hist.length>=1 && [...hist].every(h=>getComputedStyle(h).color===acc) &&
               !els.some(e=>e.matches('button,a,input,select,[role=button],[tabindex]') || getComputedStyle(e).color===acc);}"""))
     rows=PLAN(q, 0)
     check("lastsets: today opens as one row per set of last time, holding its numbers in grey",

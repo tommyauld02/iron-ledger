@@ -302,7 +302,7 @@ with sync_playwright() as pw:
           len(td)==5 and td[4]["note"]=="Oats and whey" and td[4]["cal"]==300 and td[4]["pro"]==20 and td[4]["id"] not in ("y1","r1"), str(td[-1]))
     check("past day: and yesterday is left as it was", len(yd)==2 and yd[0]["id"]=="y1")
     check("past day: the undo bar says it went to today",
-          p.locator("#undobar").is_visible() and p.text_content("#undoLabel")=="Added Oats and whey to today \u00b7 300 kcal \u00b7 20 g",
+          p.locator("#undobar").is_visible() and p.text_content("#undoLabel")=="Added to today \u00b7 Oats and whey",
           p.text_content("#undoLabel"))
     check("past day: the day on screen is still yesterday, the box closed",
           p.locator('[data-row="y1"]').count()==1 and p.locator(".row-edit").count()==0)
@@ -315,7 +315,7 @@ with sync_playwright() as pw:
     check("past day: a meal comes over whole, its parts with ids of their own",
           len(td)==5 and m.get("note")=="Burrito bowl" and [x["note"] for x in m["items"]]==["Chicken","Rice"]
           and not ({m["id"]}|{x["id"] for x in m["items"]}) & {"y2","y3","y4"}, str(m))
-    check("past day: the meal's total is said", "Added Burrito bowl to today \u00b7 540 kcal \u00b7 54 g"==p.text_content("#undoLabel"),
+    check("past day: the meal is named on the bar", "Added to today \u00b7 Burrito bowl"==p.text_content("#undoLabel"),
           p.text_content("#undoLabel"))
     p.click("#nextDay"); p.wait_for_timeout(500)
     check("today: the meal is on today's ledger", p.locator('.t-row.is-meal').count()==1 and "Burrito bowl" in p.inner_text(".t-row.is-meal"))

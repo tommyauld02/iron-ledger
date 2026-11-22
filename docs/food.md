@@ -545,8 +545,8 @@ day before today the row's box offers *Add to today* in its place, and an open
 meal offers it first among its actions (a meal never had *Log again*).
 `addToTodayById()` puts a copy into today, a meal whole with new ids for its
 parts, stamps today's goal, and leaves the day on screen as it was. Today is
-not on screen, so the undo bar says where it went (*Added Oats and whey to
-today · 300 kcal · 20 g*), rule 3, and Undo takes it back out. Today and days
+not on screen, so the undo bar says where it went (*Added to today · Oats and
+whey*, short enough for a phone's bar), rule 3, and Undo takes it back out. Today and days
 ahead keep *Log again*. `meals` checks both, and *Log again* itself, which
 had no check until then.
 
