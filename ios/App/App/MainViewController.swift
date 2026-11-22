@@ -9,5 +9,6 @@ class MainViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(HealthStepsPlugin())    // shell 1.4
         bridge?.registerPluginInstance(KeyboardResetPlugin())  // shell 1.5
+        bridge?.registerPluginInstance(HealthWeightPlugin())   // shell 1.6
     }
 }

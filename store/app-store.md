@@ -50,7 +50,7 @@ DIET
 
 CARDIO AND PROGRESS
 • Log cardio and set a goal by minutes, distance, calories, sessions or steps.
-• Steps from Apple Health: with your permission, MNTL D&T reads your daily step count. It never writes to Apple Health.
+• Steps and weigh-ins from Apple Health: with your permission, MNTL D&T reads your daily step count and your weight. It never writes to Apple Health.
 • Progress check-ins: a photo, a note and your weight. Compare two photos side by side. Photos stay on your phone.
 
 YOURS, AND PRIVATE
@@ -88,7 +88,7 @@ MNTL D&T is a gym and macro log. There is no account and no sign-in: everything 
 2. Gym tab: tap Add movement, name one, then fill in a set row and tap its check to log it. A haptic tap confirms each set. Tap Rest timer, start it, choose Buzz at 1:00 and lock the phone: the alert still arrives (a local notification).
 3. Macros tab: tap the plate button, then Ask an agent, and type a food in your own words, for example "two eggs and toast". The first time, the app asks permission before it sends anything; the text and the country setting go to Google Gemini through our relay. Everything else in the app works offline.
 4. Macros tab, plate button, Scan: reads a barcode with the camera. Settings, Grocery brands downloads the US brand list once (about 8 MB) so lookups happen on the phone.
-5. Cardio tab: Connect Apple Health reads the daily step count only. The app never writes to Apple Health.
+5. Cardio tab: Connect Apple Health reads the daily step count only. Log tab, body weight card: Connect Apple Health reads body weight only. The app never writes to Apple Health.
 6. Progress tab: a check-in can hold a photo (camera or photo library), which is stored only on the phone.
 7. Hold the app icon for four quick actions: Log food, Ask an agent, Start workout and Scan a barcode.
 

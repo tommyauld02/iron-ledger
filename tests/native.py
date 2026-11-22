@@ -588,7 +588,18 @@ with sync_playwright() as pw:
     # connect and days the way HealthStepsPlugin.swift does: days only within
     # from..to, and only days with steps.
     HEALTH = {"days": {}, "fail": None, "calls": []}
+    WEIGHT = {"days": {}, "fail": None, "calls": []}
     def health_bridge(plugin, method, opts):
+        if plugin == "HealthWeight":
+            # HealthWeightPlugin.swift (shell 1.6): the last weight each day, in lb
+            WEIGHT["calls"].append((method, dict(opts)))
+            if method == "status": return {"available": True, "asked": False}
+            if method == "connect": return {"asked": True}
+            if method == "days":
+                if WEIGHT["fail"] == "not_asked": return {"error": "Apple Health has not been asked yet", "code": "not_asked"}
+                if WEIGHT["fail"]: return {"error": WEIGHT["fail"]}
+                return {"days": {k: v for k, v in WEIGHT["days"].items() if opts["from"] <= k <= opts["to"]}}
+            return {"error": method + " is not a HealthWeight method"}
         if plugin != "HealthSteps":
             return bridge(plugin, method, opts)
         HEALTH["calls"].append((method, dict(opts)))
@@ -889,6 +900,104 @@ with sync_playwright() as pw:
     pol = io.open(os.path.join(ROOT, "privacy.html"), encoding="utf-8").read()
     check("health: the Privacy Policy says what is read and that it stays on the phone",
           "reads your daily step count" in pol and "does not connect to Apple Health" not in pol)
+
+    # ---- 13. weigh-ins from Apple Health (shell 1.6, b109) ---------------------
+    # HealthWeight, stood in for beside HealthSteps: the last weight each day.
+    def wlog():
+        f = fixture("Oats")
+        f["days"][ago(1)] = {"food": [], "lifts": [], "updated": 7, "bw": 190.0}        # typed
+        return f
+    def wcalls(): return [c for c in WEIGHT["calls"] if c[0] == "days"]
+    def to_log(p):
+        p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(300)
+    PW = ["Preferences", "HealthSteps", "HealthWeight"]
+    native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(wlog())}
+    WEIGHT["calls"] = []
+    ctx, p, errs = open_shell(b, ["Preferences", "HealthSteps"])
+    to_log(p)
+    check("weight: a 1.5 shell offers no Apple Health weigh-ins and is never asked",
+          p.locator("#hwOffer, #hwConnect, #hwStop").count() == 0 and not WEIGHT["calls"], str(WEIGHT["calls"][:2]))
+    allerrs += errs; ctx.close()
+    ctx, p, errs = open_shell(b, PW)
+    to_log(p)
+    check("weight: a 1.6 shell offers it on the body weight card, read only, nothing sent",
+          p.locator("#bwCard #hwOffer").is_visible() and "never written" in p.inner_text("#hwOffer")
+          and "Nothing is sent" in p.inner_text("#hwOffer"))
+    check("weight: nothing is read before the person says yes", not wcalls(), str(WEIGHT["calls"]))
+    sz = sizes(p, "#hwOffer button")
+    check("weight: its buttons are at least 44px", len(sz) == 2 and all(w >= 44 and h >= 44 for w, h in sz), str(sz))
+    p.click("#hwNotNow"); p.wait_for_timeout(250)
+    check("weight: Not now puts it away, says so, and is kept",
+          p.locator("#hwOffer").count() == 0 and "won\u2019t fill in" in bar(p) and saved().get("healthWeight", {}).get("on") is False, bar(p))
+    check("weight: and leaves a way back in", p.locator("#hwConnect.hw-link").is_visible())
+    p.click("#undoBtn"); p.wait_for_timeout(250)
+    check("weight: Undo brings the card back", p.locator("#hwOffer").count() == 1 and "healthWeight" not in saved())
+    allerrs += errs; ctx.close()
+
+    native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(wlog())}
+    WEIGHT["calls"] = []
+    WEIGHT["days"] = {ago(0): 188.2, ago(1): 189.6, ago(3): 189.9, ago(500): 200.0}
+    ctx, p, errs = open_shell(b, PW)
+    to_log(p)
+    p.click("#hwConnect"); p.wait_for_timeout(600)
+    dc = wcalls()
+    check("weight: Connect reads 400 days up to today",
+          dc and dc[0][1] == {"from": ago(399), "to": ago(0)}, str(dc[:1]))
+    st = saved()
+    check("weight: the days without a typed weight fill in, marked as Health's",
+          st["days"][ago(0)].get("bw") == 188.2 and st["days"][ago(0)].get("bwBy") == "health"
+          and st["days"][ago(3)].get("bw") == 189.9 and st["days"][ago(3)].get("bwBy") == "health", str({k: st["days"].get(k) for k in (ago(0), ago(3))}))
+    check("weight: a typed weight is never written over", st["days"][ago(1)].get("bw") == 190.0 and "bwBy" not in st["days"][ago(1)])
+    check("weight: filling a day leaves its updated alone", st["days"][ago(3)].get("updated") == 0 and st["days"][ago(0)].get("updated") == 1,
+          str((st["days"][ago(3)].get("updated"), st["days"][ago(0)].get("updated"))))
+    check("weight: it says what it did", bar(p) == "Apple Health filled in your weight for 2 days", bar(p))
+    check("weight: and the card says where today's came from",
+          p.inner_text("#hwLine") == "Today\u2019s weight is from Apple Health." and p.locator("#hwStop").is_visible(), p.inner_text("#hwLine"))
+    check("weight: the chart and the number on the card have it",
+          "188.2" in p.inner_text("#bwCard .bw-now"), p.inner_text("#bwCard .bw-now"))
+    WEIGHT["days"][ago(0)] = 187.8
+    later(p)
+    check("weight: a Health day follows Health", sday(ago(0)).get("bw") == 187.8, str(sday(ago(0))))
+    p.fill("#bwIn", "186.0"); p.click("#bwSave"); p.wait_for_timeout(300)
+    check("weight: typing today's takes it from Health", sday(ago(0)).get("bw") == 186.0 and "bwBy" not in sday(ago(0)), str(sday(ago(0))))
+    check("weight: and the card says so", p.inner_text("#hwLine") == "You typed today\u2019s weight, so Apple Health leaves it be.", p.inner_text("#hwLine"))
+    WEIGHT["days"][ago(0)] = 185.0
+    later(p)
+    check("weight: a later read leaves the typed one be", sday(ago(0)).get("bw") == 186.0, str(sday(ago(0))))
+    p.click("#hwStop"); p.wait_for_timeout(250)
+    check("weight: Stop says so, keeps what came in, and stops", saved()["healthWeight"]["on"] is False
+          and "Stopped filling in" in bar(p) and sday(ago(3)).get("bw") == 189.9, bar(p))
+    n = len(wcalls()); later(p)
+    check("weight: stopped, Health is not read", len(wcalls()) == n)
+    p.click("#undoBtn"); p.wait_for_timeout(400)
+    check("weight: Undo turns it back on", saved()["healthWeight"]["on"] is True and p.locator("#hwStop").count() == 1)
+    allerrs += errs; ctx.close()
+
+    native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(dict(wlog(), healthWeight={"on": True, "at": 1}))}
+    WEIGHT["days"] = {}
+    ctx, p, errs = open_shell(b, PW)
+    to_log(p); p.wait_for_timeout(300)
+    check("weight: nothing from Health says where the switch is, not why",
+          "Data Access & Devices" in p.inner_text("#hwLine"), p.inner_text("#hwLine"))
+    allerrs += errs; ctx.close()
+    native["prefs"] = {"CapacitorStorage." + KEY: json.dumps(dict(wlog(), healthWeight={"on": True, "at": 1}))}
+    WEIGHT["fail"] = "not_asked"
+    ctx, p, errs = open_shell(b, PW)
+    to_log(p); p.wait_for_timeout(300)
+    check("weight: a phone iOS never asked gets the card again", p.locator("#hwOffer").count() == 1 and "healthWeight" not in saved())
+    WEIGHT["fail"] = None
+    allerrs += errs; ctx.close()
+
+    hw = io.open(os.path.join(APP, "HealthWeightPlugin.swift"), encoding="utf-8").read()
+    check("weight: the plugin is the one the page asks for, compiled and registered",
+          'jsName = "HealthWeight"' in hw and "registerPluginInstance(HealthWeightPlugin())" in mvc
+          and "HealthWeightPlugin.swift in Sources" in src_phase)
+    check("weight: it asks to read body weight and to share nothing",
+          "requestAuthorization(toShare: [], read: [weight])" in hw
+          and set(re.findall(r"HKQuantityType\(\.(\w+)\)", hw)) == {"bodyMass"}
+          and not re.search(r"\.save\(|HKWorkoutType|HKCategoryType|toShare: \[[^\]]", hw))
+    check("weight: Info.plist and the Privacy Policy say weight is read too",
+          "your weight" in str(info.get("NSHealthShareUsageDescription", "")) and "your weight" in pol)
 
     check("no page errors", not allerrs, str(allerrs[:3]))
     b.close()

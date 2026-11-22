@@ -208,6 +208,20 @@ developer.apple.com → Certificates, Identifiers & Profiles → Identifiers, an
 run the workflow again. App Review for a HealthKit app reads the privacy
 policy, which says what is read (`privacy.html`, *Apple Health*).
 
+## Weigh-ins from Apple Health (shell 1.6)
+
+`HealthWeightPlugin.swift`, registered beside HealthSteps in
+`MainViewController.swift` and called by the page as `HealthWeight`:
+`status()`, `connect()` (read body weight, share nothing) and
+`days({from, to})`, the last body weight sample each day as pounds to a tenth
+(an `HKSampleQuery` sorted by date, later samples winning). A plugin of its
+own, not more methods on HealthSteps, because a call to a method an older
+shell lacks is never answered, while `shellHas("HealthWeight")` asks first.
+`NSHealthShareUsageDescription` now names weight as well as steps. Same
+entitlement, no new one. Being native code and a wider Health permission,
+it is a store build (shell 1.6); the page's side ships with b109. How the
+page uses it is in `docs/food.md` (*Weigh-ins from Apple Health*).
+
 ## The keyboard reset (shell 1.5)
 
 The owner's video (b101, the TestFlight app): with nothing being typed, the

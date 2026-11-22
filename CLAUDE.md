@@ -173,7 +173,9 @@ Everything else:
   vague amount*, *Two lists of models, asked at once*); deploying the
   relay → `relay/README.md`
 - **Reading a label**, grocery brands, barcodes → `docs/food.md`
-- **Carbs and fat, water, body weight, the goal calculator** → `docs/food.md`
+- **Carbs and fat, water, body weight, the goal calculator** → `docs/food.md`;
+  weigh-ins from Apple Health (b109, shell 1.6) → `docs/food.md` (*Weigh-ins
+  from Apple Health*) and `docs/ios.md`
 - **Your calories from your results** (b107) — the calculator's seven aims,
   protein and carbs-and-fat choices; body fat % typed, measured with a tape
   or picked from drawings; the real burn from the last three weekly summaries,
