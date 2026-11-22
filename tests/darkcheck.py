@@ -387,6 +387,16 @@ def walk(p, label):
                 low = p.evaluate(LOW)
                 if low: found.append("compare: %s" % low)
                 p.click("#cmpDone"); p.wait_for_timeout(200)
+            # a lift's history (b108): a sheet, open only after a press
+            if p.locator(".lift [data-hist]").count():
+                p.locator(".lift [data-hist]").first.click(); p.wait_for_timeout(300)
+                if not p.locator("#histBody .hist-row").count():
+                    found.append("history: the sheet has no rows")
+                low = p.evaluate(LOW)
+                if low: found.append("history: %s" % low)
+                p.click("#histDone"); p.wait_for_timeout(200)
+            else:
+                found.append("history: no card offers History")
             # What a movement works (b88): the question sheet, chips in all
             # three states, then the recovery card, which only a locked day has
             if p.locator("[data-works]").count():

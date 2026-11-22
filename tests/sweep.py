@@ -2002,8 +2002,8 @@ with sync_playwright() as pw:
     check("beat: one more rep at the same weight beats it",
           q.evaluate(BL)[0]=="↑ Beaten · 145×9 over 145×8", q.evaluate(BL)[0])
     check("beat: and there is still no suggestions line once it is beaten", q.evaluate(WAYS)[0]=="", q.evaluate(WAYS)[0])
-    check("beat: and it reads in the macro green",
-          q.evaluate("""()=>{const h=getComputedStyle(document.documentElement).getPropertyValue('--hit').trim().replace('#','');
+    check("beat: and it reads in gold, because it was earned (green until b108)",
+          q.evaluate("""()=>{const h=getComputedStyle(document.documentElement).getPropertyValue('--gold-ink').trim().replace('#','');
             const rgb='rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
             return getComputedStyle(document.querySelector('.beat.is-beaten b')).color===rgb;}"""))
     q.click('[data-done="0"]'); q.wait_for_timeout(350)
@@ -2099,12 +2099,14 @@ with sync_playwright() as pw:
     check("lastsets: then the movement's own note", lb["note"]=="“last set was really hard”", lb["note"])
     check("lastsets: then To beat, and the suggestions line is still gone",
           lb["beat"]=="To beat · 200×10" and q.locator(".lift .beat-ways").count()==0, lb["beat"])
-    check("lastsets: nothing in last time's box is tappable, and nothing is teal",
+    # History (b108) is the box's one teal thing, and the one thing in it to tap.
+    check("lastsets: nothing in last time's box is tappable or teal but History",
           q.evaluate("""()=>{const hex=getComputedStyle(document.documentElement).getPropertyValue('--accent').trim().replace('#','');
             const acc='rgb('+[0,2,4].map(i=>parseInt(hex.substr(i,2),16)).join(', ')+')';
-            const els=[...document.querySelectorAll('.lift .lastbox, .lift .lastbox *')];
-            return els.length>8 && !els.some(e=>e.matches('button,a,input,select,[role=button],[tabindex]') ||
-              getComputedStyle(e).color===acc);}"""))
+            const els=[...document.querySelectorAll('.lift .lastbox, .lift .lastbox *')].filter(e=>!e.closest('.lb-hist'));
+            const hist=document.querySelectorAll('.lift .lastbox .lb-hist');
+            return els.length>8 && hist.length===1 && getComputedStyle(hist[0]).color===acc &&
+              !els.some(e=>e.matches('button,a,input,select,[role=button],[tabindex]') || getComputedStyle(e).color===acc);}"""))
     rows=PLAN(q, 0)
     check("lastsets: today opens as one row per set of last time, holding its numbers in grey",
           [r["ph"] for r in rows]==["60x15","100x15","150x15","200x10"] and all(r["val"]=="x" for r in rows), str(rows))
@@ -2175,15 +2177,28 @@ with sync_playwright() as pw:
           done[3]["mark"]=="ls-beat" and done[3]["word"]=="↑ Beat" and done[3]["done"]=="205×11" and PLAN(q, 0)==[], str(done[3]))
     check("lastsets: − Set has nothing to take off, and a logged set is never taken off by it",
           q.eval_on_selector('[data-rowless="0"]',"e=>e.disabled") and len(DONE(q, 0))==4)
-    check("lastsets: Beat is in the macro green and Matched and Short are not",
-          q.evaluate("""()=>{const h=getComputedStyle(document.documentElement).getPropertyValue('--hit').trim().replace('#','');
-            const rgb='rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';
-            const c=s=>getComputedStyle(document.querySelector(s)).color;
-            return c('.ls-beat')===rgb && c('.ls-matched')!==rgb && c('.ls-short')!==rgb;}"""))
+    # Gold on a beaten set (b108): it was the macro green until then.
+    GOLDS = """()=>{const v=n=>{const h=getComputedStyle(document.documentElement).getPropertyValue(n).trim().replace('#','');
+            return 'rgb('+[0,2,4].map(i=>parseInt(h.substr(i,2),16)).join(', ')+')';};
+            const rows=[...document.querySelectorAll('.lift[data-li="0"] .trow.is-logged')];
+            return {ink:v('--gold-ink'), soft:v('--gold-soft'),
+              beat:getComputedStyle(document.querySelector('.ls-beat')).color,
+              others:[...document.querySelectorAll('.ls-matched, .ls-short')].map(e=>getComputedStyle(e).color),
+              rows:rows.map(r=>[r.classList.contains('is-beat'), r.classList.contains('is-new'),
+                getComputedStyle(r.querySelector('.tset')).color, getComputedStyle(r.querySelector('.tset')).backgroundColor])};}"""
+    gd = q.evaluate(GOLDS)
+    check("lastsets: Beat is gold, because it was earned, and Matched and Short are not",
+          gd["beat"] == gd["ink"] and gd["others"] and gd["ink"] not in gd["others"], str(gd))
+    check("gold set: the set that beat is gold, numbers and fill, and only that one",
+          [r[0] for r in gd["rows"]] == [False, False, False, True]
+          and gd["rows"][3][2:] == [gd["ink"], gd["soft"]] and gd["rows"][0][3] != gd["soft"], str(gd["rows"]))
+    check("gold set: it stamps in on the draw that logged it", gd["rows"][3][1], str(gd["rows"]))
     check("lastsets: the Beaten line stays exactly as it was",
           q.eval_on_selector(".lift .beat","e=>e.textContent")=="↑ Beaten · 205×11 over 200×10", q.eval_on_selector(".lift .beat","e=>e.textContent"))
     # no reps, nothing logged, and it says why
     q.click('[data-rowmore="0"]'); q.wait_for_timeout(250)
+    check("gold set: and only then: a redraw shows it gold and still",
+          q.evaluate("()=>document.querySelectorAll('.lift .trow.is-beat').length===1 && !document.querySelector('.lift .trow.is-new')"))
     q.fill(NEXT(0)+" .tr","0"); q.click(NEXT(0)+" .tlog"); q.wait_for_timeout(250)
     check("lastsets: a row with no reps is not logged, and it says so",
           len(q.evaluate(LSSETS)[0])==4 and "reps" in q.eval_on_selector("#undoLabel","e=>e.textContent"),
@@ -3810,10 +3825,10 @@ with sync_playwright() as pw:
     opened(dict(LBSTORE, build="2026-10-09.58"))
     titles=q.evaluate(NEWS)
     check("news: after an update it shows what changed since, newest first",
-          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Your calories, from your own results"
-          and titles[1]=="Calories burned"
-          and titles[2]=="Open-source credits"
-          and titles[3]=="Your week, and its wrap-up", str(titles))
+          q.is_visible("#newsSheet") and len(titles)==4 and titles[0]=="Your lifts, over time"
+          and titles[1]=="Your calories, from your own results"
+          and titles[2]=="Calories burned"
+          and titles[3]=="Open-source credits", str(titles))
     check("news: and not what this phone already had", "Cardio" not in titles, str(titles))
     # b69's walkthrough aged out of the newest four at b73, like every entry
     # before it. Its checks (inline, preload none, Got it pauses it) ran from

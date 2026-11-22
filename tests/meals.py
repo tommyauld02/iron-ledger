@@ -272,6 +272,54 @@ with sync_playwright() as pw:
           p.locator(".t-row.is-meal").count()==1, str(p.locator(".t-row").count())+" rows")
     check("edit: a meal is named its own way, not by this box", p.locator('.t-row.is-meal [data-editrow]').count()==0)
 
+    # ---- a day gone by's food, added to today (b108) ----
+    # The same breakfast most mornings: from yesterday, it goes into today and
+    # yesterday stays as it was. Log again stays for the day on screen.
+    Y=(datetime.date.today()-datetime.timedelta(days=1)).isoformat()
+    fx=fresh()
+    fx["days"][Y]={"food":[{"id":"y1","cal":300,"pro":20,"note":"Oats and whey"},
+                           {"id":"y2","note":"Burrito bowl","items":[
+                              {"id":"y3","cal":330,"pro":50,"note":"Chicken"},
+                              {"id":"y4","cal":210,"pro":4,"note":"Rice"}]}],
+                   "lifts":[],"updated":1,"goal":G}
+    p.evaluate("s=>localStorage.setItem('iron-ledger-v1',JSON.stringify(s))", fx)
+    p.reload(); p.wait_for_timeout(800)
+    p.click('[data-editrow="r1"]'); p.wait_for_timeout(300)
+    check("today: a row keeps Log again, and has no Add to today",
+          p.locator('[data-again="r1"]').count()==1 and p.locator("[data-totoday]").count()==0)
+    p.click('[data-again="r1"]'); p.wait_for_timeout(300)
+    td=store_of(p)["days"][T]["food"]
+    check("today: Log again still logs it again, today", len(td)==4 and td[3]["note"]=="White rice" and td[3]["id"]!="r1", str(td[-1]))
+    p.click("#prevDay"); p.wait_for_timeout(500)
+    p.click('[data-editrow="y1"]'); p.wait_for_timeout(300)
+    check("past day: the row offers Add to today in Log again's place",
+          p.locator('[data-totoday="y1"]').count()==1 and p.locator("[data-again]").count()==0)
+    bb=p.locator('[data-totoday="y1"]').bounding_box()
+    check("past day: Add to today is a proper target", bb and bb["height"]>=44, bb and "%dx%d"%(bb["width"],bb["height"]))
+    p.click('[data-totoday="y1"]'); p.wait_for_timeout(400)
+    st=store_of(p); td=st["days"][T]["food"]; yd=st["days"][Y]["food"]
+    check("past day: it goes into today, numbers and all, with an id of its own",
+          len(td)==5 and td[4]["note"]=="Oats and whey" and td[4]["cal"]==300 and td[4]["pro"]==20 and td[4]["id"] not in ("y1","r1"), str(td[-1]))
+    check("past day: and yesterday is left as it was", len(yd)==2 and yd[0]["id"]=="y1")
+    check("past day: the undo bar says it went to today",
+          p.locator("#undobar").is_visible() and p.text_content("#undoLabel")=="Added Oats and whey to today \u00b7 300 kcal \u00b7 20 g",
+          p.text_content("#undoLabel"))
+    check("past day: the day on screen is still yesterday, the box closed",
+          p.locator('[data-row="y1"]').count()==1 and p.locator(".row-edit").count()==0)
+    p.click("#undoBtn"); p.wait_for_timeout(400)
+    check("past day: Undo takes it back out of today", len(store_of(p)["days"][T]["food"])==4)
+    p.click('[data-row="y2"] .meal-open'); p.wait_for_timeout(400)
+    check("past day: a meal offers it too", p.locator('[data-totoday="y2"]').count()==1)
+    p.click('[data-totoday="y2"]'); p.wait_for_timeout(400)
+    td=store_of(p)["days"][T]["food"]; m=td[-1]
+    check("past day: a meal comes over whole, its parts with ids of their own",
+          len(td)==5 and m.get("note")=="Burrito bowl" and [x["note"] for x in m["items"]]==["Chicken","Rice"]
+          and not ({m["id"]}|{x["id"] for x in m["items"]}) & {"y2","y3","y4"}, str(m))
+    check("past day: the meal's total is said", "Added Burrito bowl to today \u00b7 540 kcal \u00b7 54 g"==p.text_content("#undoLabel"),
+          p.text_content("#undoLabel"))
+    p.click("#nextDay"); p.wait_for_timeout(500)
+    check("today: the meal is on today's ledger", p.locator('.t-row.is-meal').count()==1 and "Burrito bowl" in p.inner_text(".t-row.is-meal"))
+
     print()
     for st,n,dt in res: print("%-6s %-52s %s"%(st,n,dt))
     print("\n%d passed, %d FAILED"%(sum(1 for r in res if r[0]=="PASS"),

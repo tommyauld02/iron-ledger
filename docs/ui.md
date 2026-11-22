@@ -374,8 +374,9 @@ Macros*).
 found that wins were quiet: beating the protein goal changed almost nothing on
 screen. It is the third colour rule, beside teal for tap and green and red for
 hit and missed, and it has one meaning, so nothing you can tap is gold and no
-accent is. Three things are gold, and a good week's daily line (below, b95)
-makes four. Only these:
+accent is, with one exception, a beaten set (below). Three things were gold at
+first; a good week's daily line (below, b95) made four, and a beaten set and a
+lift's best ever (b108) make six. Only these:
 
 - **The plates**, once an "at least" protein goal is reached *with the bar
   still steady*, and nothing waiting for numbers (`barWon()`). Over on calories
@@ -388,6 +389,17 @@ makes four. Only these:
   gold, with a star where the tick was. The protein figure and the card's edge
   go gold with it.
 - **A streak of three days or more**, on the Macros chip, with a flame.
+- **A beaten set (b108)**, on the Gym tab: a logged set worth more than its
+  partner from last time (`lastPlan()`'s *beat*), its numbers, fill and edge,
+  its *↑ Beat* label, and the card's *↑ Beaten* line. These were `--hit` green.
+  The set is still a button, as every logged set is, to change or remove it:
+  the one gold thing you can tap, because the gold is about what was done,
+  not about the tap. It was on the owner's to-do list from 2026-11-11.
+  It stamps in once, on the draw that logged it (`justLogged`, cleared after
+  that draw, so a redraw shows it still), with the success buzz in the iPhone
+  app. Reduce Motion keeps the gold and drops the stamp.
+- **A lift's best ever (b108)**, in its history sheet and on Your lifts
+  (`docs/gym.md`, *A lift's history*).
 
 The bar can be off the top of the screen when the food that wins the day goes
 in from *Log numbers* lower down, so the *Added* confirmation under the ledger

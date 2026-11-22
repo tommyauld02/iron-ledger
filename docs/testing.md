@@ -69,6 +69,32 @@ and the tabs at 320px. It opens over `http`, because its reloads stand for
 the app being closed and opened (see *agecheck* below). The full list is in
 `docs/progress.md`.
 
+**`remind` covers reminders and the rest timer on each set (b108).** The
+iPhone shell is stood in for with a LocalNotifications that keeps what is
+booked. None on the web; both off and nothing booked or asked at first; food
+on asks iOS, says so, is saved, and books fourteen evenings from today with
+the day's id, a real date and a sound, none on a day with food; a new time
+moves them all; food logged today takes today's off; a refusal stays off and
+says where to fix it; the weigh-in every morning from tomorrow, and weekly on
+the day weeks start; off takes its own off and leaves the other; opening books
+again without asking; a weight logged takes today's weigh-in off; 44px and
+16px. The rest timer: by its button a set starts nothing; on each set, a set
+starts it folded, and the next starts it again from 0:00.
+
+**`history` covers a lift's history and Your lifts (b108).** History on
+the card: in the Last box, 44px, teal, taking the tap, beside the set to
+beat; a first time here done elsewhere still has it; warm-ups alone and never
+done do not. The sheet at one gym: the best ever by five pounds a rep with a
+heavy warm-up ignored, a row a time newest first with Today on top, another
+gym's heavier day kept off, one gold row and one gold dot, the change counted
+at the best ever's reps, the switch's gyms and Every gym, one time drawn as a
+row and a word. Fourteen times showing the last twelve with the best said
+under them; level, up in reps for body weight, down in `--miss`; a movement
+on every gym with no switch; no gyms at all. Your lifts: newest first, six,
+Show all and Show fewer, gold on a best ever, the eight weeks, a row opening
+its sheet. Nothing saved by looking; Done and the shade close it; 44px and
+320px. `darkcheck` opens the sheet in both themes and every accent.
+
 **`calc` covers the calculator, body fat and the real burn (b107).** Seven
 aims and the 1% warning; protein by choice and of the goal weight; carbs and
 fat by style, filled by Use, in both calculators; body fat's box and sheet

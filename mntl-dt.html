@@ -2219,6 +2219,13 @@
   .lift .lb-t { font-family: var(--font-num); font-size: 12px; color: var(--ink-3); }
   .lift .lb-note { margin: 6px 0 0; font-size: 13.5px; font-style: italic; color: var(--ink-2); overflow-wrap: anywhere; }
   .lift .lastbox .beat { margin-top: 6px; }
+  /* History (b108): the one teal thing in the box, on the To beat line's
+     right, so the box stays the height it was. */
+  .lift .lb-foot { display: flex; align-items: center; gap: 8px; margin: 0 0 -10px; }
+  .lift .lb-foot .beat { flex: 1; min-width: 0; margin: 0; }
+  .lift .lb-hist { flex: none; min-height: 44px; min-width: 44px; margin-left: auto; padding: 0 0 0 8px;
+    font-size: 13.5px; font-weight: 600; color: var(--accent); background: none; border: 0; }
+  .lift .last + .lb-foot { margin: -4px 0 -6px; justify-content: flex-end; }
   /* Today, one row a set. A row still to do is a plan: last time's numbers
      sit in it as grey placeholders until something is typed, and its check
      is what logs it. The next one to do has the filled check. */
@@ -2313,9 +2320,23 @@
     text-transform: uppercase;
     color: var(--ink-2);
   }
-  .lift .ls-mark.ls-beat { color: var(--hit); }
+  /* Gold on a beaten set (b108). A set worth more than its partner from last
+     time is earned, so it is gold the moment it is logged: its numbers, its
+     edge and its label, and the card's Beaten line with it. It was --hit
+     green until b108. The set stays a button, as every logged set is, to
+     change or remove it: the one gold thing that can be tapped. */
+  .lift .ls-mark.ls-beat { color: var(--gold-ink); }
   .lift .beat.is-beaten .beat-k,
-  .lift .beat.is-beaten b { color: var(--hit); }
+  .lift .beat.is-beaten b { color: var(--gold-ink); }
+  .lift .trow.is-beat .tset { color: var(--gold-ink); background: var(--gold-soft); border-color: var(--gold); }
+  .lift .trow.is-beat .tset .x { color: var(--gold-ink); }
+  @keyframes beatStamp {
+    0% { transform: scale(.92); }
+    55% { transform: scale(1.04); box-shadow: 0 0 0 5px var(--gold-soft); }
+    100% { transform: none; box-shadow: 0 0 0 0 transparent; }
+  }
+  .lift .trow.is-beat.is-new .tset { animation: beatStamp .45s ease-out; }
+  @media (prefers-reduced-motion: reduce) { .lift .trow.is-beat.is-new .tset { animation: none; } }
 
   .sets {
     display: flex;
@@ -4147,6 +4168,37 @@
   .log-page .cardio-track .yearstats div { background: var(--surface-2); border-radius: 14px; }
   .log-page .cardio-track .yearstats b { font-family: var(--font-ui); font-size: 20px; font-weight: 800; font-stretch: 118%; }
 
+  /* ---------- a lift's history (b108) ---------- */
+  .hist-best { flex: none; padding: 4px 10px; border-radius: 12px; font-size: 12.5px; font-weight: 700;
+    background: var(--gold-soft); color: var(--gold-ink); }
+  .hist-sub { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+  .hist-seg { grid-template-columns: repeat(var(--n, 2), 1fr); }
+  .hist-chart { display: block; width: 100%; height: auto; }
+  .hist-chart text { font-family: var(--font-num); font-size: 10px; fill: var(--ink-3); }
+  .hist-ch { margin: 0; font-family: var(--font-num); font-size: 13px; color: var(--ink-2); }
+  .hist-ch.is-up { color: var(--hit); }
+  .hist-ch.is-down { color: var(--miss); }
+  .hist-rows { display: flex; flex-direction: column; }
+  .hist-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 10px 0;
+    border-top: 1px solid var(--rule); font-family: var(--font-num); font-size: 13.5px; }
+  .hist-row .hr-when { color: var(--ink-2); }
+  .hist-row .hr-what { color: var(--ink); text-align: right; }
+  .hist-row .hr-what b { font-weight: 600; }
+  .hist-row.is-best .hr-what b { color: var(--gold-ink); }
+  /* Your lifts, on the Log: a row a movement, each one opening its history. */
+  .log-page .lifts-card { padding: 14px; background: var(--surface); border: 1px solid var(--rule); border-radius: 22px; }
+  .lifts-card .lc-rows { display: flex; flex-direction: column; }
+  .lifts-card .lc-row { display: grid; grid-template-columns: minmax(0, 1fr) auto 72px; align-items: center; gap: 10px;
+    min-height: 48px; padding: 0; text-align: left; background: none; border: 0; border-top: 1px solid var(--rule); color: var(--ink); }
+  .lifts-card .lc-row:first-child { border-top: 0; }
+  .lifts-card .lc-name { font-size: 15px; font-weight: 600; color: var(--accent); overflow-wrap: anywhere; }
+  .lifts-card .lc-best { font-family: var(--font-num); font-size: 13.5px; color: var(--ink); }
+  .lifts-card .lc-best.is-won { color: var(--gold-ink); }
+  .lifts-card .lc-ch { font-family: var(--font-num); font-size: 12.5px; color: var(--ink-3); text-align: right; }
+  .lifts-card .lc-ch.is-up { color: var(--hit); }
+  .lifts-card .lc-ch.is-down { color: var(--miss); }
+  .lifts-card .lc-more { min-height: 44px; padding: 0; background: none; border: 0; color: var(--accent); font-weight: 600; font-size: 14px; text-align: left; }
+
   /* ---------- Progress (b90): a check-in a day, if you want one ---------- */
   /* Seven tabs with Coach on: a 320px phone still gives each one 44px. */
   .tabs { grid-auto-columns: minmax(0, 1fr); }
@@ -4821,6 +4873,27 @@
       <div class="seg two" id="setLine" role="group" aria-label="Daily line"></div>
       <p class="set-hint" id="setLineHint"></p>
     </div>
+    <!-- Reminders (b108): iPhone app only, because only it can put a
+         notification on a locked phone. Each is off until turned on. -->
+    <div class="set-group" id="setRem" hidden>
+      <span class="eyebrow">Reminders</span>
+      <span class="sec-k" id="setRemFoodLab">No food logged by evening</span>
+      <div class="seg two" id="setRemFood" role="group" aria-labelledby="setRemFoodLab"></div>
+      <div class="field" id="setRemFoodMore"><label for="setRemFoodAt">At</label><select id="setRemFoodAt"></select></div>
+      <span class="sec-k" id="setRemBwLab">Weigh in</span>
+      <div class="seg two" id="setRemBw" role="group" aria-labelledby="setRemBwLab"></div>
+      <div class="pair" id="setRemBwMore">
+        <div class="field"><label for="setRemBwAt">At</label><select id="setRemBwAt"></select></div>
+        <div class="field"><label for="setRemBwEvery">How often</label><select id="setRemBwEvery"></select></div>
+      </div>
+      <p class="set-hint" id="setRemHint"></p>
+    </div>
+    <!-- The rest timer (b108): started by its button, or by every set logged. -->
+    <div class="set-group">
+      <span class="eyebrow">Rest timer starts</span>
+      <div class="seg two" id="setRestAuto" role="group" aria-label="Rest timer starts"></div>
+      <p class="set-hint" id="setRestAutoHint"></p>
+    </div>
     <!-- Water: a line on Macros to tap a glass in at a time. -->
     <div class="set-group">
       <span class="eyebrow">Water</span>
@@ -4930,6 +5003,14 @@
   </div>
 </div>
 
+<!-- A lift's history (b108). Filled when it opens; nothing in it is stored. -->
+<div class="sheet" id="histSheet" hidden>
+  <div class="sheet-inner">
+    <div id="histBody"></div>
+    <button class="btn ghost" id="histDone">Done</button>
+  </div>
+</div>
+
 <div class="sheet" id="panSheet" hidden>
   <div class="sheet-inner">
     <h2 id="panSheetName">Add from pantry</h2>
@@ -4964,7 +5045,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-20.107";
+  var BUILD = "2026-11-21.108";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -5569,6 +5650,7 @@
     }
     queueSync();
     refreshSaveBar();
+    remSoon();             // a day that now has food loses its reminder (b108)
     return true;
   }
 
@@ -6098,6 +6180,15 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-21.108", t: "Your lifts, over time", items: [
+      "Every movement has a history now. Tap History in a movement\u2019s Last box on the Gym tab: your best set each time you did it, on a line, with your best ever in gold and how far it has moved.",
+      "The Log tab has Your lifts: each movement\u2019s best set the last time and how much it has moved in the eight weeks before. Tap one for its history.",
+      "It counts the way To beat does, five pounds for a rep, and keeps each gym\u2019s numbers to itself, with a switch to see another gym or every gym.",
+      "Beat last time on a set and it turns gold the moment you tick it, with a buzz in the iPhone app. The Beat label and the Beaten line are gold now too.",
+      "Eat the same thing again? On any earlier day, tap a food\u2019s name and Add to today puts it in today, with Undo. A meal from an earlier day has it too.",
+      "In the iPhone app, Settings has Reminders, each off until you turn it on: one in the evening on a day with no food logged, and one to weigh in, every morning or once a week.",
+      "Settings \u2192 Rest timer starts: choose On each set, and logging a set starts the rest timer for you.",
+      "Tap Done on a movement and the next one slides up to the top, ready for its first set." ] },
     { b: "2026-11-20.107", t: "Your calories, from your own results", items: [
       "After three weeks of logging food and weighing in, the app works out what you really burn: what you ate, and how your weight moved. It shows on the Log tab\u2019s body weight card and in the week wrap-up, and the calorie calculator uses it in place of its guess.",
       "If your weight isn\u2019t moving toward your goal, a line at the top of Macros says what you averaged and suggests a new target, a step at a time. Use sets it from today, with Undo. Nothing changes unless you tap it.",
@@ -9177,6 +9268,20 @@
   // is in view, under the slim bar once it has scrolled away. Anything the app
   // brings up to the top is brought to here, not to the header's foot, which
   // is off the screen (and a negative number) once the page has scrolled.
+  // Done brings the next movement up (b108). Mid-workout the Gym page is
+  // several screens of open cards; the one just finished folds short, and the
+  // next one still open slides up to sit under the bar, so the next set is in
+  // front of you without a scroll. Nothing open after it: the page stays.
+  function glideToNext(li) {
+    var next = [].slice.call(view.querySelectorAll(".lift[data-li]")).filter(function (c) {
+      return Number(c.dataset.li) > li && !c.classList.contains("is-closed");
+    })[0];
+    if (!next) return;
+    var by = next.getBoundingClientRect().top - topEdge() - 8;
+    if (Math.abs(by) < 4) return;
+    var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: Math.max(0, window.scrollY + by), behavior: still ? "auto" : "smooth" });
+  }
   function topEdge() {
     var bar = document.querySelector(".topbar");
     return Math.max(bar ? bar.getBoundingClientRect().bottom : 0,
@@ -11070,6 +11175,7 @@
             '</div>';
           }).join("") +
           '<div class="meal-actions">' +
+            (ymd(cursor) < TODAY ? '<button data-totoday="' + esc(f.id) + '">Add to today</button>' : '') +
             '<button data-renamemeal="' + esc(f.id) + '">Name this meal</button>' +
             // Only a meal with numbers on every part can be saved — otherwise
             // it would bake a zero into every future log of it — and a note
@@ -12943,7 +13049,8 @@
           upW = String(s.w); upR = String(s.r);
           var inner = s.w + '<span class="x">×</span>' + s.r +
             (s.tech ? ' <span class="tq">' + esc(techShort(s.tech)) + '</span>' : '');
-          return '<div class="trow is-logged"><span class="tn">' + no + '</span>' +
+          var beat = row.status === "beat" ? ' is-beat' + (freshBeat(key, i, row.si) ? ' is-new' : '') : '';
+          return '<div class="trow is-logged' + beat + '"><span class="tn">' + no + '</span>' +
             (locked
               ? '<span class="tset">' + inner + '</span>'
               : '<button class="tset" data-lift="' + i + '" data-set="' + row.si + '" aria-label="Set ' + no + ' of ' +
@@ -13056,10 +13163,19 @@
           : goal && !locked && !l.closed
             ? '<p class="beat"><span class="beat-k">To beat ·</span> <b>' + esc(setText(goal)) + '</b></p>'
             : '';
+      // History (b108): every time it was done, on a line, in a sheet. It
+      // opens at the gym this card takes its targets from; done only at
+      // another gym, at the gym it was last done at.
+      // Warm-ups alone are no history: nothing to draw a line through.
+      var histBtn = (prev || away) && liftSessions(l.movement, "").length
+        ? '<button class="lb-hist" data-hist="' + esc(l.movement) + '"' +
+            (prev && here && !shared ? ' data-histgym="' + esc(here) + '"' : '') +
+            ' aria-label="History of ' + esc(l.movement) + '">History</button>'
+        : '';
       // Last time, in a box of its own (b99, the owner's layout): where, when
       // and how long that whole session took, the day's note, its sets in
       // order with how each was done, the movement's own note, and the set to
-      // beat. Read-only, so nothing in it is teal.
+      // beat. Read-only but for History, its one teal thing (b108).
       var lastBox = prev
         ? '<div class="lastbox">' +
             '<p class="lb-head"><b>Last</b>' + (prevAt ? ' at ' + esc(gymTagOf(prevAt)) : '') + ' · ' + shortDate(prev.key) +
@@ -13070,9 +13186,10 @@
                 (s.tech ? ' <span class="lb-t">' + esc(techShort(s.tech)) + '</span>' : '') + '</p>';
             }).join('') +
             (prev.lift.note ? '<p class="lb-note">“' + esc(clip(prev.lift.note, 140)) + '”</p>' : '') +
-            beatLine +
+            '<div class="lb-foot">' + beatLine + histBtn + '</div>' +
           '</div>'
-        : '<p class="last">' + lastLine + '</p>' + beatLine;
+        : '<p class="last">' + lastLine + '</p>' + beatLine +
+          (histBtn ? '<div class="lb-foot">' + histBtn + '</div>' : '');
 
       // Finished: what you did and how long it took, and nothing on it to hit
       // by accident. Reopen is the one control left, and it changes nothing
@@ -13915,6 +14032,7 @@
         var was = snapshot(members, keys);
         finishUnit(d, members);
         touch(key); save(); render();
+        glideToNext(Math.max.apply(null, members.map(function (x) { return d.lifts.indexOf(x); })));
         var lap = null;
         members.forEach(function (x) { if (x.lapMs != null) lap = (lap || 0) + x.lapMs; });
         offerUndo("Finished the superset" + (lap != null ? " · " + fmtDur(lap) : ""), function () {
@@ -13951,6 +14069,7 @@
         var was = { doneAt: l.doneAt, lapMs: l.lapMs, closed: l.closed };
         finishLift(d, l);
         touch(key); save(); render();
+        glideToNext(Number(b.dataset.done));
         // The undo is for the Done tapped a set too early. It puts back
         // exactly what was there, so the time is taken again on the real Done.
         offerUndo("Finished " + l.movement + (l.lapMs != null ? " · " + fmtDur(l.lapMs) : ""), function () {
@@ -15496,11 +15615,14 @@
             '<div class="heat-grid">' + minis + '</div></div>' +
         '</div>' +
         bwHtml() +
+        liftsCardHtml() +
         cardioTrackerHtml() +
         '<p class="log-foot">Colour is your macro target for that day. The bar underneath is the split you trained — no bar means no gym. Tap any day to peek at it.</p>' +
       '</section>' + peek;
 
     wireBw();
+    var lm = document.getElementById("liftsMore");
+    if (lm) lm.addEventListener("click", function () { liftsAll = !liftsAll; render(); });
     var wo = document.getElementById("wrapOpen");
     if (wo) wo.addEventListener("click", function () { showWrap(wrapStart()); });
     document.getElementById("prevYear").addEventListener("click", function () { logYear--; logPeek = null; render(); });
@@ -16487,6 +16609,30 @@
     notify("Logged " + rowNote(copy) + " again \u00b7 " + fmt(rowCal(copy)) + " kcal \u00b7 " + fmt(rowPro(copy)) + " g");
   }
 
+  // A day gone by's food, eaten again today (b108): the same breakfast most
+  // mornings. It goes into today and the day on screen is left as it was. A
+  // meal comes over whole, its parts with ids of their own. Today is not on
+  // screen, so the undo bar says where it went, and Undo takes it back out.
+  function addToTodayById(id) {
+    var key = ymd(cursor), at = locate(day(key), id);
+    if (key >= TODAY || !at || at.meal) return;
+    var copy = JSON.parse(JSON.stringify(at.row));
+    copy.id = uid();
+    if (isMeal(copy)) copy.items.forEach(function (x) { x.id = uid(); });
+    var td = day(TODAY);
+    td.food.push(copy);
+    rowEditing = null;
+    stampGoal(TODAY);
+    touch(TODAY); if (save()) buzz("tap"); render();
+    offerUndo("Added " + rowNote(copy) + " to today \u00b7 " + fmt(rowCal(copy)) + " kcal \u00b7 " + fmt(rowPro(copy)) + " g",
+      function () {
+        var dd = day(TODAY), i = -1;
+        dd.food.forEach(function (f, n) { if (f.id === copy.id) i = n; });
+        if (i > -1) dd.food.splice(i, 1);
+        touch(TODAY); save(); render();
+      });
+  }
+
   function deleteFoodById(id) {
     var key = ymd(cursor);
     var d = day(key);
@@ -16649,7 +16795,11 @@
         '<button class="btn ghost" id="reCancel">Cancel</button>' +
       '</div>' +
       '<div class="row-acts">' +
-        '<button data-again="' + esc(f.id) + '">Log again</button>' +
+        // On a day gone by, again means today (b108): Log again would add it
+        // to the day on screen, which is not when it was eaten again.
+        (ymd(cursor) < TODAY
+          ? '<button data-totoday="' + esc(f.id) + '">Add to today</button>'
+          : '<button data-again="' + esc(f.id) + '">Log again</button>') +
         '<button class="t-del" data-del="' + esc(f.id) + '" aria-label="Remove ' + esc(f.note || "this entry") + '">Remove</button>' +
       '</div>' +
     '</div>';
@@ -16760,6 +16910,9 @@
       if (el.getAttribute && el.getAttribute("data-again")) {
         return { kind: "again", id: el.getAttribute("data-again") };
       }
+      if (el.getAttribute && el.getAttribute("data-totoday")) {
+        return { kind: "totoday", id: el.getAttribute("data-totoday") };
+      }
       if (el.getAttribute && el.getAttribute("data-openmeal")) {
         return { kind: "openmeal", id: el.getAttribute("data-openmeal") };
       }
@@ -16824,6 +16977,8 @@
       deleteFoodById(a.id);
     } else if (a.kind === "again") {
       logAgainById(a.id);
+    } else if (a.kind === "totoday") {
+      addToTodayById(a.id);
     } else if (a.kind === "openmeal") {
       if (Date.now() < swallowTapUntil) return;   // this was the end of a drag
       openMeal = (openMeal === a.id) ? null : a.id;
@@ -17143,6 +17298,7 @@
     if (!document.hidden) checkDayRollover();
     if (!document.hidden) maybeWrap();            // one held back behind a clock (b104)
     if (!document.hidden) healthSteps.read();     // steps walked while the app was away
+    if (!document.hidden) remSync();              // reminders from today on (b108)
   });
   window.addEventListener("focus", checkDayRollover);
   window.addEventListener("pageshow", checkDayRollover);
@@ -17430,6 +17586,8 @@
     drawRestAlert();
   }
 
+  // Started by its button, or by each set logged today (b108, Settings).
+  function restAutoOn() { return store.restAuto === true; }
   function restGo(on) {
     if (!on) {
       restStart = 0;
@@ -17529,6 +17687,158 @@
       if (REST_ALERT_TIMES.indexOf(secs) > -1) { restAlert.secs = secs; drawRest(); }
     }, alertFailed);
   }
+
+  // ---------- reminders (b108) ----------
+  // Asked for by the owner from a list of improvements (2026-11-21). Two,
+  // iPhone app only and each off until turned on in Settings: no food logged
+  // by an evening time, and a weigh-in in the morning, every day or once a
+  // week on the day weeks start. The app cannot run in the background, so
+  // each is a notification booked ahead for the next fourteen days, and
+  // booked again whenever the log changes or the app comes back. A day that
+  // already has food (or a weight) is left out, so the evening one only ever
+  // comes on a day with nothing in it. Somebody who stops opening the app
+  // hears nothing more after two weeks, which is right: no nagging. The ids
+  // are the reminder's kind and the day's number, so a day never has two.
+  var REM_DAYS = 14, REM_FOOD = 7100000, REM_BW = 7200000, REM_END = 7300000;
+  var REM_FOOD_TIMES = ["18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"];
+  var REM_BW_TIMES = ["05:00", "05:30", "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30", "10:00"];
+  var remOk = shellHas("LocalNotifications");
+  var remBusy = false, remAgain = false, remTimer = null;
+  function rem() {
+    var r = store.remind || {}, f = r.food || {}, w = r.bw || {};
+    return {
+      food: { on: !!f.on, at: REM_FOOD_TIMES.indexOf(f.at) > -1 ? f.at : "20:00" },
+      bw: { on: !!w.on, at: REM_BW_TIMES.indexOf(w.at) > -1 ? w.at : "07:00", every: w.every === "week" ? "week" : "day" }
+    };
+  }
+  function remTime(hm) {
+    var p = hm.split(":"), h = Number(p[0]);
+    return (h % 12 || 12) + ":" + p[1] + (h < 12 ? " am" : " pm");
+  }
+  function remAt(key, hm) {
+    var dt = parseYmd(key), p = hm.split(":");
+    dt.setHours(Number(p[0]), Number(p[1]), 0, 0);
+    return dt;
+  }
+  function remDayNo(key) { return Math.round((parseYmd(key) - parseYmd("2020-01-01")) / 864e5); }
+  function remWeekly() { return WEEK_DAYS[weekStartsOn()] + "s"; }
+  // What should be booked now: one of each a day it applies to, from today.
+  function remWanted() {
+    var r = rem(), out = [], now = Date.now();
+    for (var i = 0; i < REM_DAYS; i++) {
+      var dt = parseYmd(TODAY);
+      dt.setDate(dt.getDate() + i);
+      var key = ymd(dt), d = store.days[key], n = remDayNo(key), at;
+      if (r.food.on && !(d && (d.food || []).length) && (at = remAt(key, r.food.at)).getTime() > now) {
+        out.push({ id: REM_FOOD + n, title: "No food logged yet today",
+          body: "A couple of minutes now beats guessing tomorrow.", sound: "default", schedule: { at: at } });
+      }
+      if (r.bw.on && (r.bw.every === "day" || dt.getDay() === weekStartsOn()) &&
+          !(d && typeof d.bw === "number") && (at = remAt(key, r.bw.at)).getTime() > now) {
+        out.push({ id: REM_BW + n, title: "Time to weigh in",
+          body: "Before breakfast is best. Log it on the Log tab and the trend line does the rest.", sound: "default", schedule: { at: at } });
+      }
+    }
+    return out;
+  }
+  // Takes off every reminder booked, then books what is wanted. A call while
+  // one is under way becomes one more run after it.
+  function remSync() {
+    if (!remOk) return;
+    if (remBusy) { remAgain = true; return; }
+    remBusy = true;
+    var want = remWanted();
+    alertNative("getPending").then(function (r) {
+      var mine = ((r && r.notifications) || []).filter(function (x) {
+        var id = Number(x.id);
+        return id >= REM_FOOD && id < REM_END;
+      }).map(function (x) { return { id: Number(x.id) }; });
+      return mine.length ? alertNative("cancel", { notifications: mine }) : null;
+    }).then(function () {
+      return want.length ? alertNative("schedule", { notifications: want }) : null;
+    }).catch(function (e) {
+      lastError = "reminders: " + (e && e.message ? e.message : String(e));
+    }).then(function () {
+      remBusy = false;
+      if (remAgain) { remAgain = false; remSync(); }
+    });
+  }
+  // After a save, a moment later, so a run of sets books once. Nothing to do
+  // with both off: turning one off takes its bookings off there and then.
+  function remSoon() {
+    if (!remOk) return;
+    var r = rem();
+    if (!r.food.on && !r.bw.on) return;
+    clearTimeout(remTimer);
+    remTimer = setTimeout(remSync, 1200);
+  }
+  function remSays(kind) {
+    var r = rem();
+    return kind === "food"
+      ? "Reminder on · " + remTime(r.food.at) + " on a day with no food logged"
+      : "Weigh-in reminder on · " + remTime(r.bw.at) + (r.bw.every === "week" ? " on " + remWeekly() : " every morning");
+  }
+  // On asks iOS first. Refused, it stays off and says where to turn it on.
+  function remTurn(kind, on) {
+    var r = store.remind || (store.remind = {});
+    var k = r[kind] || (r[kind] = {});
+    if (!on) {
+      if (!k.on) return;
+      k.on = false;
+      save(); drawSettings(); remSync();
+      notify(kind === "food" ? "Food reminder off" : "Weigh-in reminder off");
+      return;
+    }
+    alertNative("requestPermissions").then(function (res) {
+      if (res && res.display === "granted") {
+        k.on = true;
+        save(); drawSettings(); remSync();
+        notify(remSays(kind));
+      } else {
+        drawSettings();
+        notify("Notifications are off for MNTL D&T, so reminders can’t show · turn them on in iPhone Settings");
+      }
+    }, function (e) {
+      lastError = "reminders: " + (e && e.message ? e.message : String(e));
+      notify("Couldn’t set the reminder");
+    });
+  }
+  function drawRemSettings() {
+    var g = document.getElementById("setRem");
+    g.hidden = !remOk;
+    if (!remOk) return;
+    var r = rem();
+    function seg(attr, on) {
+      return [["off", "Off"], ["on", "On"]].map(function (o) {
+        return '<button ' + attr + '="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === on ? "true" : "false") + '">' + o[1] + '</button>';
+      }).join("");
+    }
+    function opts(list, at) {
+      return list.map(function (t) { return '<option value="' + t + '"' + (t === at ? ' selected' : '') + '>' + remTime(t) + '</option>'; }).join("");
+    }
+    document.getElementById("setRemFood").innerHTML = seg("data-rem-food", r.food.on);
+    document.getElementById("setRemBw").innerHTML = seg("data-rem-bw", r.bw.on);
+    document.getElementById("setRemFoodAt").innerHTML = opts(REM_FOOD_TIMES, r.food.at);
+    document.getElementById("setRemBwAt").innerHTML = opts(REM_BW_TIMES, r.bw.at);
+    document.getElementById("setRemBwEvery").innerHTML =
+      '<option value="day"' + (r.bw.every === "day" ? ' selected' : '') + '>Every morning</option>' +
+      '<option value="week"' + (r.bw.every === "week" ? ' selected' : '') + '>Once a week, ' + remWeekly() + '</option>';
+    document.getElementById("setRemFoodMore").style.display = r.food.on ? "" : "none";
+    document.getElementById("setRemBwMore").style.display = r.bw.on ? "" : "none";
+    document.getElementById("setRemHint").textContent =
+      "A notification on this iPhone, one of each a day at most. The evening one comes only on a day with no food in it, and the weigh-in only before a weight is logged. Nothing is sent anywhere.";
+  }
+  function remPick(kind, field, value) {
+    var r = store.remind || (store.remind = {});
+    var k = r[kind] || (r[kind] = {});
+    if (k[field] === value) return;
+    k[field] = value;
+    save(); drawSettings(); remSync();
+    notify(remSays(kind));
+  }
+  document.getElementById("setRemFoodAt").addEventListener("change", function () { remPick("food", "at", this.value); });
+  document.getElementById("setRemBwAt").addEventListener("change", function () { remPick("bw", "at", this.value); });
+  document.getElementById("setRemBwEvery").addEventListener("change", function () { remPick("bw", "every", this.value); });
 
   // ---------- quick actions on the icon ----------
   // Holding the app's icon offers these (UIApplicationShortcutItems in
@@ -17697,6 +18007,14 @@
     document.getElementById("setLineHint").textContent = lineOn()
       ? "One line at the top of Macros, Gym or Cardio when there is something to say about your week: a goal that keeps being missed, or a week that went well. Got it puts it away."
       : "Hidden: the app says nothing about missed goals or good weeks.";
+    drawRemSettings();
+    document.getElementById("setRestAuto").innerHTML = [["off", "When I press it"], ["on", "On each set"]].map(function (o) {
+      return '<button data-pick-restauto="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === restAutoOn() ? "true" : "false") + '">' + o[1] + '</button>';
+    }).join("");
+    document.getElementById("setRestAutoHint").textContent = restAutoOn()
+      ? "Logging a set today starts the rest timer again from 0:00, on the Gym tab\u2019s Rest timer button." +
+        (restAlert ? " A Buzz at time you picked buzzes for each rest." : "")
+      : "The rest timer starts when you press Rest timer on the Gym tab.";
     document.getElementById("setWater").innerHTML = [["off", "Hidden"], ["on", "Shown"]].map(function (o) {
       return '<button data-pick-water="' + o[0] + '" aria-pressed="' + ((o[0] === "on") === waterOn() ? "true" : "false") + '">' + o[1] + '</button>';
     }).join("");
@@ -17813,6 +18131,19 @@
         save();
       }
       drawSettings();
+      return;
+    }
+    var rmb = e.target.closest("[data-rem-food], [data-rem-bw]");
+    if (rmb) {
+      var rk = rmb.hasAttribute("data-rem-food") ? "food" : "bw";
+      remTurn(rk, (rk === "food" ? rmb.dataset.remFood : rmb.dataset.remBw) === "on");
+      return;
+    }
+    var rab = e.target.closest("[data-pick-restauto]");
+    if (rab) {
+      store.restAuto = rab.dataset.pickRestauto === "on";
+      save(); drawSettings();
+      notify(store.restAuto ? "The rest timer now starts on each set you log" : "The rest timer now starts when you press it");
       return;
     }
     var lnb = e.target.closest("[data-pick-line]");
@@ -17956,6 +18287,206 @@
   document.getElementById("cmpDone").addEventListener("click", function () { cmpSheet.hidden = true; });
   cmpSheet.addEventListener("click", function (e) { if (e.target === cmpSheet) cmpSheet.hidden = true; });
 
+  // ---------- a lift's history (b108) ----------
+  // The question a log of every set should answer and didn't: is this lift
+  // going up? Each time a movement was done, its best set — topSet(), the
+  // owner's five-pounds-a-rep rule, never a warm-up — on a line, with the
+  // best ever in gold, because a best ever is earned. Opened from History on
+  // a card's Last box and from Your lifts on the Log. Nothing is stored.
+  //
+  // Where counts, as it does for To beat: the same fly is 150 at one gym and
+  // 110 at another, and a line through both would zigzag for no reason. So a
+  // history is one gym's, unless the movement takes its numbers from every
+  // gym, and the sheet switches between the gyms it was done at.
+  var HIST_SHOWN = 12, LIFTS_SHOWN = 6;
+  var histSheet = document.getElementById("histSheet");
+  var histFor = null;      // { movement, scope } while the sheet is open
+  var liftsAll = false;    // Your lifts: every movement, or the first six
+  function dayGymOf(k) { return k === TODAY ? dayGym(k) : (store.days[k] && store.days[k].gym) || null; }
+  // Every day it was done, oldest first: the best set, how many sets, where.
+  // A scope of "" is every gym; a gym's id is that gym only.
+  function liftSessions(movement, scope) {
+    var out = [];
+    Object.keys(store.days).filter(function (k) { return k <= TODAY; }).sort().forEach(function (k) {
+      if (scope && dayGymOf(k) !== scope) return;
+      var sets = [];
+      (store.days[k].lifts || []).forEach(function (l) { if (l.movement === movement) sets = sets.concat(l.sets || []); });
+      var best = topSet(sets);
+      if (best) out.push({ key: k, gym: dayGymOf(k), best: best, n: sets.length });
+    });
+    return out;
+  }
+  // The gyms it was done at, in the order of the first time at each.
+  function liftGyms(movement) {
+    var seen = [];
+    liftSessions(movement, "").forEach(function (s) {
+      if (s.gym && seen.indexOf(s.gym) === -1 && gymInfo(s.gym)) seen.push(s.gym);
+    });
+    return seen;
+  }
+  // Where a history opens: every gym when there are no gyms or the movement
+  // takes its numbers from all of them; else the gym asked for, else the gym
+  // it was last done at.
+  function histScope(movement, gym) {
+    if (!gyms().length || sharedMove(movement)) return "";
+    if (gym) return gym;
+    var all = liftSessions(movement, "");
+    return all.length && all[all.length - 1].gym ? all[all.length - 1].gym : "";
+  }
+  // One number a session, so a line can be drawn: the best set counted at the
+  // best ever's reps, by the same rule that picks it (150×7 is 145×8). A lift
+  // never done with weight is counted in reps.
+  function histMeasure(sess) {
+    var bestEver = topSet(sess.map(function (s) { return s.best; }));
+    var byReps = !sess.some(function (s) { return Number(s.best.w) > 0; });
+    var R = Number(bestEver.r) || 0;
+    return { bestEver: bestEver, byReps: byReps, reps: R,
+      v: function (st) { return byReps ? Number(st.r) || 0 : (Number(st.w) || 0) + LB_PER_REP * ((Number(st.r) || 0) - R); } };
+  }
+  function histNum(n) { return String(Math.round(Math.abs(n) * 10) / 10); }
+  // From one session to a later one: which way, how much, over how long.
+  function histChange(a, b, m) {
+    var diff = Math.round((m.v(b.best) - m.v(a.best)) * 10) / 10;
+    var days = Math.max(1, Math.round((parseYmd(b.key) - parseYmd(a.key)) / 864e5));
+    var unit = m.byReps ? (Math.abs(diff) === 1 ? " rep" : " reps") : " lb";
+    return { dir: diff > 0 ? "up" : diff < 0 ? "down" : "same", amt: histNum(diff) + unit,
+             span: days < 14 ? days + (days === 1 ? " day" : " days") : Math.round(days / 7) + " weeks" };
+  }
+  function histWhen(k) { return k === TODAY ? "Today" : shortDate(k); }
+  function histHtml(movement, scope) {
+    var sess = liftSessions(movement, scope);
+    var every = liftSessions(movement, "");
+    var done = gyms().length && !sharedMove(movement) ? liftGyms(movement) : [];
+    var html = '<div class="sh-head"><h2>' + esc(movement) + '</h2>';
+    var m = sess.length ? histMeasure(sess) : null;
+    html += (m ? '<span class="hist-best">★ Best ' + esc(setText(m.bestEver)) + '</span>' : '') + '</div>';
+    // The switch, only when another choice would show something different.
+    if (done.length > 1 || (done.length === 1 && liftSessions(movement, done[0]).length < every.length)) {
+      var opts = done.map(function (g) { return { id: g, label: gymTagOf(gymInfo(g)) }; }).concat([{ id: "", label: "Every gym" }]);
+      html += '<div class="seg hist-seg" role="group" aria-label="Where" style="--n:' + opts.length + '">' +
+        opts.map(function (o) {
+          return '<button data-histscope="' + esc(o.id) + '" aria-pressed="' + (o.id === scope) + '">' + esc(o.label) + '</button>';
+        }).join("") + '</div>';
+    }
+    var where = scope ? ' at ' + esc(gymTagOf(gymInfo(scope))) : gyms().length ? ' at every gym' : '';
+    if (!m) {
+      return html + '<p class="hist-sub">Not done' + where + ' yet.</p>';
+    }
+    var win = sess.slice(-HIST_SHOWN);
+    var mixed = !m.byReps && win.some(function (s) { return Number(s.best.r) !== m.reps; });
+    html += '<p class="hist-sub">Your best set each time' + where + ', warm-ups left out' +
+      (sess.length > win.length ? ' · the last ' + win.length + ' of ' + sess.length + ' times' : '') + '.' +
+      (mixed ? ' Counted at ' + m.reps + ' reps: 5 lb is worth one rep.' : '') + '</p>';
+    if (win.length > 1) {
+      var vals = win.map(function (s) { return m.v(s.best); });
+      var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+      var steps = m.byReps ? [1, 2, 5, 10, 20, 50] : [2.5, 5, 10, 20, 25, 50, 100, 200, 500];
+      var step = steps.filter(function (s) { return (hi - lo) / s <= 4; })[0] || steps[steps.length - 1];
+      var gLo = Math.floor(lo / step) * step, gHi = Math.ceil(hi / step) * step;
+      if (gHi - gLo < step) { gLo -= step; gHi += step; }
+      var W = 320, H = 150, L = 34, R = 10, T = 8, B = 22;
+      var X = function (i) { return L + i * (W - L - R) / (win.length - 1); };
+      var Y = function (v) { return T + (gHi - v) / (gHi - gLo) * (H - T - B); };
+      var grid = "";
+      for (var g = gLo; g <= gHi + 1e-9; g += step) {
+        grid += '<line x1="' + L + '" x2="' + (W - 4) + '" y1="' + Y(g).toFixed(1) + '" y2="' + Y(g).toFixed(1) +
+          '" stroke="var(--rule)"/><text x="0" y="' + (Y(g) + 3.5).toFixed(1) + '">' + histNum(g) + '</text>';
+      }
+      html += '<svg class="hist-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(movement) +
+          ', best set each time, ' + histWhen(win[0].key) + ' to ' + histWhen(win[win.length - 1].key) + '">' + grid +
+        '<polyline fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" points="' +
+          vals.map(function (v, i) { return X(i).toFixed(1) + "," + Y(v).toFixed(1); }).join(" ") + '"/>' +
+        win.map(function (s, i) {
+          var top = s.best === m.bestEver;
+          return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(vals[i]).toFixed(1) + '" r="' + (top ? 5 : 3.5) +
+            '" fill="var(--' + (top ? 'gold' : 'accent') + ')"' + (top ? ' data-histtop="1"' : '') + '/>';
+        }).join("") +
+        '<text x="' + L + '" y="' + (H - 4) + '">' + histWhen(win[0].key) + '</text>' +
+        '<text x="' + (W - R) + '" y="' + (H - 4) + '" text-anchor="end">' + histWhen(win[win.length - 1].key) + '</text>' +
+      '</svg>';
+      var ch = histChange(win[0], win[win.length - 1], m);
+      html += '<p class="hist-ch is-' + ch.dir + '" id="histCh">' +
+        (ch.dir === "up" ? '▲ Up ' + ch.amt + ' in ' + ch.span
+          : ch.dir === "down" ? '▼ Down ' + ch.amt + ' in ' + ch.span
+          : 'Level over ' + ch.span) + '</p>';
+    } else {
+      html += '<p class="hist-sub">Once so far. The line starts the next time.</p>';
+    }
+    var named = !scope && gyms().length;
+    html += '<div class="hist-rows">' + win.slice().reverse().map(function (s) {
+      var top = s.best === m.bestEver, gi = named && s.gym ? gymInfo(s.gym) : null;
+      return '<div class="hist-row' + (top ? ' is-best' : '') + '" data-histday="' + s.key + '">' +
+        '<span class="hr-when">' + histWhen(s.key) + (gi ? ' · ' + esc(gymTagOf(gi)) : '') + '</span>' +
+        '<span class="hr-what">' + s.n + (s.n === 1 ? ' set' : ' sets') + ' · best <b>' +
+          (top ? '★ ' : '') + esc(setText(s.best)) + '</b></span></div>';
+    }).join("") + '</div>';
+    var topSess = sess.filter(function (s) { return s.best === m.bestEver; })[0];
+    if (topSess && win.indexOf(topSess) === -1) {
+      html += '<p class="hist-sub">Your best, ' + esc(setText(m.bestEver)) + ', was on ' + shortDate(topSess.key) + '.</p>';
+    }
+    return html;
+  }
+  function openHistory(movement, scope) {
+    // A gym where it was only ever warmed up opens where it was really done.
+    if (scope && !liftSessions(movement, scope).length) scope = histScope(movement, "");
+    histFor = { movement: movement, scope: scope };
+    document.getElementById("histBody").innerHTML = histHtml(movement, scope);
+    histSheet.hidden = false;
+    var inner = histSheet.querySelector(".sheet-inner");
+    if (inner) inner.scrollTop = 0;
+  }
+  function closeHistory() { histSheet.hidden = true; histFor = null; }
+  document.getElementById("histDone").addEventListener("click", closeHistory);
+  histSheet.addEventListener("click", function (e) {
+    if (e.target === histSheet) { closeHistory(); return; }
+    var b = e.target.closest && e.target.closest("[data-histscope]");
+    if (b && histFor) openHistory(histFor.movement, b.getAttribute("data-histscope"));
+  });
+  // Both ways in are buttons drawn into #view, so one listener serves them.
+  view.addEventListener("click", function (e) {
+    var b = e.target.closest && e.target.closest("[data-hist]");
+    if (!b) return;
+    var mv = b.getAttribute("data-hist");
+    openHistory(mv, histScope(mv, b.getAttribute("data-histgym") || ""));
+  });
+
+  // Your lifts (b108), on the Log: each movement's best set the last time it
+  // was done, and how far it moved in the eight weeks before, newest first.
+  // A row opens its history. Six, then Show all.
+  function liftsCardHtml() {
+    var lastAt = {};
+    Object.keys(store.days).filter(function (k) { return k <= TODAY; }).forEach(function (k) {
+      (store.days[k].lifts || []).forEach(function (l) {
+        if (topSet(l.sets || []) && !(lastAt[l.movement] > k)) lastAt[l.movement] = k;
+      });
+    });
+    var list = Object.keys(lastAt).sort(function (a, b) {
+      return lastAt[a] === lastAt[b] ? a.localeCompare(b) : lastAt[a] > lastAt[b] ? -1 : 1;
+    });
+    if (!list.length) return "";
+    var rows = (liftsAll ? list : list.slice(0, LIFTS_SHOWN)).map(function (mv) {
+      var sess = liftSessions(mv, histScope(mv, ""));
+      if (!sess.length) sess = liftSessions(mv, "");
+      var last = sess[sess.length - 1], m = histMeasure(sess);
+      var from = sess.filter(function (s) { return (parseYmd(last.key) - parseYmd(s.key)) / 864e5 <= 56; })[0];
+      var ch = from && from !== last ? histChange(from, last, m) : null;
+      var won = sess.length > 1 && last.best === m.bestEver;
+      return '<button class="lc-row" data-hist="' + esc(mv) + '" aria-label="' + esc(mv) + ', history">' +
+        '<span class="lc-name">' + esc(mv) + '</span>' +
+        '<span class="lc-best' + (won ? ' is-won' : '') + '">' + (won ? '★ ' : '') + esc(setText(last.best)) + '</span>' +
+        '<span class="lc-ch' + (ch ? ' is-' + ch.dir : '') + '">' +
+          (!ch ? '' : ch.dir === "up" ? '▲ ' + ch.amt : ch.dir === "down" ? '▼ ' + ch.amt : '= level') + '</span>' +
+      '</button>';
+    }).join("");
+    return '<section class="lifts-card bw" id="liftsCard">' +
+      '<div class="bw-head"><span class="eyebrow">Your lifts</span></div>' +
+      '<div class="lc-rows">' + rows + '</div>' +
+      (list.length > LIFTS_SHOWN
+        ? '<button class="lc-more" id="liftsMore">' + (liftsAll ? 'Show fewer' : 'Show all ' + list.length) + '</button>' : '') +
+      '<p class="bw-note">Your best set the last time, and the change over the 8 weeks before it. Tap one for its history.</p>' +
+    '</section>';
+  }
+
   // ---------- changing a set ----------
   // Wired once, outside #view, like the other sheets. The set is found again
   // by day, movement and position each time rather than held as an object,
@@ -17984,9 +18515,24 @@
     if (starts) d.workoutStart = now;
     l.sets.push(st);
     stampGym(key, d);
-    touch(key); if (save()) buzz("tap"); render();
+    touch(key);
+    var ok = save();
+    justLogged = { key: key, li: li, si: l.sets.length - 1 };
+    render();
+    justLogged = null;
+    // Rest starts again from 0:00 on each set, when that is the setting (b108).
+    if (ok && key === TODAY && restAutoOn()) { restGo(false); restGo(true); }
+    // A set that beat last time is the success buzz, the one a won day gets.
+    if (ok) buzz(document.querySelector(".lift .trow.is-beat.is-new") ? "up" : "tap");
     if (starts) notify("Workout started with your first set");
     return true;
+  }
+  // The set just logged, for its gold to stamp in once (b108): only the draw
+  // logSet() makes carries it, so any later redraw shows it gold and still.
+  var justLogged = null;
+  function freshBeat(key, li, si) {
+    var j = justLogged;
+    return !!j && j.key === key && j.li === li && j.si === si;
   }
 
   // The movements a card can change to: its split's, or every one on a
@@ -18826,6 +19372,7 @@
     emptyPhotoBin();
     photos.ready().then(function (ok) { if (!ok && tab === "progress") render(); });
     restAlertStart();
+    remSync();         // what was booked last time is booked again from today (b108)
     appOpen = true;
     maybeWrap();
     quickCheck();
