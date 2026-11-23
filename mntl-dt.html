@@ -4162,6 +4162,12 @@
   }
   .log-page .bw-now b { font-family: var(--font-ui); font-size: 26px; font-weight: 800; font-stretch: 118%; }
   .log-page .bw-entry input { --field-size: 20px; height: 50px; }
+  /* Weigh-ins from Apple Health (b109) */
+  .bw .hw-offer { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--surface-2); }
+  .bw .hw-offer b { color: var(--ink); }
+  .bw .hw-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bw .hw-link { align-self: flex-start; min-height: 44px; padding: 0; background: none; border: 0;
+    color: var(--accent); font-weight: 600; font-size: 14px; text-align: left; }
   .log-page .ct-bar { background: var(--bar); border-radius: 4px 4px 0 0; }
   .log-page .ct-bar.is-met { background: var(--hit); }
   .log-page .cardio-track .yearstats { gap: 8px; background: none; border: 0; }
@@ -5045,7 +5051,7 @@
   // name on purpose: renaming one strands every log already on a phone.
   // Nobody sees them. Leave them be.
   var KEY = "iron-ledger-v1";
-  var BUILD = "2026-11-21.108";
+  var BUILD = "2026-11-21.109";
   // Running inside the iPhone app (Capacitor, ios/) rather than a browser.
   // Capacitor's bridge defines window.Capacitor before this page runs; nothing
   // on the web does, so the web build never takes a native path.
@@ -6180,6 +6186,9 @@
   // b69 is the one entry with a video: the owner walking through the redesign,
   // asked for as a one-off. Entries after it go back to words only.
   var NEWS = [
+    { b: "2026-11-21.109", t: "Weigh-ins from Apple Health", items: [
+      "In the iPhone app, your weight can fill in by itself from Apple Health: step on a smart scale, or log it in the Health app. Connect it on the Log tab\u2019s body weight card.",
+      "It reads your weight and nothing else, never writes to Health, and a weight you type always stays as you typed it." ] },
     { b: "2026-11-21.108", t: "Your lifts, over time", items: [
       "Every movement has a history now. Tap History in a movement\u2019s Last box on the Gym tab: your best set each time you did it, on a line, with your best ever in gold and how far it has moved.",
       "The Log tab has Your lifts: each movement\u2019s best set the last time and how much it has moved in the eight weeks before. Tap one for its history.",
@@ -9964,7 +9973,7 @@
           esc(last.k === TODAY ? 'today' : shortDate(last.k)) + '</span>' : '') + '</div>' +
       chart +
       '<p class="bw-note">' + note + '</p>' +
-      bwGoalHtml(last) + bwRealHtml() +
+      bwGoalHtml(last) + bwRealHtml() + healthWeightHtml() +
       '<div class="bw-entry">' +
         '<input id="bwIn" inputmode="decimal" placeholder="' + (today != null ? bwShow(today) : (bwUnit() === "kg" ? "82.5" : "182.4")) +
           '" aria-label="Today\u2019s weight in ' + bwUnit() + '">' +
@@ -9991,17 +10000,21 @@
   function wireBw() {
     var save1 = document.getElementById("bwSave"), inp = document.getElementById("bwIn");
     if (!save1) return;
+    wireHealthWeight();
+    healthWeight.read();
     function go() {
       var v = Number(String(inp.value).replace(",", "."));
       if (!(v > 0)) { inp.focus(); return; }
       var lb = bwUnit() === "kg" ? v / LB_KG : v;
       if (lb < 50 || lb > 900) { inp.value = ""; inp.placeholder = "That doesn\u2019t look like a weight"; inp.focus(); return; }
-      var d = day(TODAY), was = d.bw;
+      var d = day(TODAY), was = d.bw, wasBy = d.bwBy;
       d.bw = Math.round(lb * 10) / 10;
+      delete d.bwBy;                 // typed: Apple Health leaves it be (b109)
       touch(TODAY); save(); render();
       offerUndo("Logged " + bwShow(d.bw) + " " + bwUnit() + " for today", function () {
         var dd = day(TODAY);
         if (was === undefined) delete dd.bw; else dd.bw = was;
+        if (wasBy) dd.bwBy = wasBy;
         save(); render();
       });
     }
@@ -10685,6 +10698,7 @@
     var w = num1(pf.wt);
     if (w !== null && pf.wt !== pf.wt0) {
       day(TODAY).bw = Math.round((pf.unit === "kg" ? w / LB_KG : w) * 10) / 10;
+      delete day(TODAY).bwBy;        // typed (b109)
       touch(TODAY);
     }
     // Calories and protein from today on, as Save target does: the days
@@ -12062,6 +12076,143 @@
       connect: connect
     };
   })();
+  // ---- weigh-ins from Apple Health (shell 1.6, b109) ----
+  // From the list of improvements of 2026-11-21: a smart scale (or the Health
+  // app) already has the morning's weight, so it fills in on the Log by
+  // itself. The shell's HealthWeight plugin reads body weight and nothing
+  // else, never writes to Health, and nothing is sent anywhere. Built the
+  // way steps are (healthSteps, above), with the same rules:
+  //
+  // A day Health filled says so (d.bwBy = "health") and follows Health. A
+  // typed weight has no bwBy (every weight before b109 looks like that) and
+  // is never written over: typing one, on the Log, in the profile or in a
+  // check-in, takes bwBy off. Filling a day never touches its `updated`.
+  // store.healthWeight is this phone's answer, {on, at}, and a backup never
+  // brings it. iOS never says whether reading was allowed, so nothing at all
+  // from Health says where the switch is rather than claiming either.
+  var healthWeight = (function () {
+    var has = shellHas("HealthWeight");
+    var avail = null, busy = null, lastRead = 0, lastOk = 0, gotAny = false;
+    var READ_EVERY = 60000;
+    function call(method, opts) {
+      try { return window.Capacitor.nativePromise("HealthWeight", method, opts || {}); }
+      catch (e) { return Promise.reject(e); }
+    }
+    function on() { return has && !!(store.healthWeight && store.healthWeight.on); }
+    if (has) call("status").then(function (r) {
+      avail = !!(r && r.available);
+      if (!avail) quietRedraw();
+    }, function () {});
+    // The last 400 days, the most the shell reads at once: the chart and the
+    // real burn want what is there.
+    function span() {
+      var floor = parseYmd(TODAY); floor.setDate(floor.getDate() - 399);
+      return { from: ymd(floor), to: TODAY };
+    }
+    function fill(got, r) {
+      var filled = 0;
+      gotAny = false;
+      Object.keys(got).forEach(function (k) {
+        var lb = Math.round(Number(got[k]) * 10) / 10;
+        if (!(lb >= 50 && lb <= 900) || !/^\d{4}-\d\d-\d\d$/.test(k) || k < r.from || k > r.to) return;
+        gotAny = true;
+        var d = store.days[k];
+        if (d && typeof d.bw === "number" && d.bwBy !== "health") return;     // typed: left be
+        if (d && d.bwBy === "health" && d.bw === lb) return;
+        d = day(k);
+        d.bw = lb; d.bwBy = "health";
+        filled++;
+      });
+      if (filled) { save(); quietRedraw(); }
+      return { filled: filled, any: gotAny };
+    }
+    function read(force) {
+      if (!on() || !appOpen) return Promise.resolve(null);
+      if (busy) return busy;
+      if (!force && Date.now() - lastRead < READ_EVERY) return Promise.resolve(null);
+      lastRead = Date.now();
+      var r = span();
+      busy = call("days", { from: r.from, to: r.to }).then(function (out) {
+        busy = null; lastOk = Date.now();
+        if (!on()) return null;
+        return fill((out && out.days) || {}, r);
+      }, function (e) {
+        busy = null;
+        lastError = "health weight: " + (e && e.message ? e.message : String(e));
+        if (e && e.code === "not_asked") { delete store.healthWeight; save(); quietRedraw(); }
+        return null;
+      });
+      return busy;
+    }
+    function connect() {
+      return call("connect").then(function () {
+        store.healthWeight = { on: true, at: Date.now() };
+        save(); render();
+        return read(true).then(function (res) {
+          if (!res) notify("Weights fill in when Apple Health can be read");
+          else if (res.filled) notify("Apple Health filled in your weight for " + fmt(res.filled) + (res.filled === 1 ? " day" : " days"));
+          else if (res.any) notify("Apple Health is on · your typed weights stay");
+          else notify("No weights in Apple Health yet");
+          render();
+        });
+      }, function (e) {
+        lastError = "health weight: " + (e && e.message ? e.message : String(e));
+        render();
+        notify("Couldn’t reach Apple Health · type your weight in for now");
+      });
+    }
+    return {
+      on: on,
+      offer: function () { return has && avail !== false && !store.healthWeight; },
+      can: function () { return has && avail !== false; },
+      empty: function () { return on() && lastOk > 0 && !gotAny; },
+      read: read,
+      connect: connect
+    };
+  })();
+  // The body weight card's part: asked once, then a line saying where
+  // today's weight came from, with a way to stop; after Not now or Stop, a
+  // way back in.
+  function healthWeightHtml() {
+    var d = store.days[TODAY];
+    if (healthWeight.offer()) {
+      return '<div class="hw-offer" id="hwOffer">' +
+        '<p class="bw-note"><b>Weigh-ins from Apple Health</b><br>Step on a smart scale, or log your weight in the Health app, and it fills in here by itself. ' +
+          'Weight only, read and never written. Nothing is sent anywhere.</p>' +
+        '<div class="hw-acts"><button class="btn" id="hwConnect">Connect Apple Health</button>' +
+          '<button class="btn ghost" id="hwNotNow">Not now</button></div></div>';
+    }
+    if (healthWeight.on()) {
+      var line = healthWeight.empty()
+        ? 'Nothing from Apple Health yet. If weights never come, check Settings → Health → Data Access & Devices → MNTL D&T.'
+        : d && typeof d.bw === "number"
+          ? (d.bwBy === "health" ? 'Today’s weight is from Apple Health.' : 'You typed today’s weight, so Apple Health leaves it be.')
+          : 'Weights fill in from Apple Health.';
+      return '<p class="bw-goal hw-line" id="hwLine">' + esc(line) + '</p>' +
+        '<button class="hw-link" id="hwStop">Stop filling in from Apple Health</button>';
+    }
+    return healthWeight.can() ? '<button class="hw-link" id="hwConnect">Fill in from Apple Health</button>' : '';
+  }
+  function wireHealthWeight() {
+    var c = document.getElementById("hwConnect"), n = document.getElementById("hwNotNow"), st = document.getElementById("hwStop");
+    if (c) c.addEventListener("click", function () { healthWeight.connect(); });
+    if (n) n.addEventListener("click", function () {
+      store.healthWeight = { on: false, at: Date.now() };
+      save(); render();
+      offerUndo("Apple Health won’t fill in your weight · the card keeps a way back", function () {
+        delete store.healthWeight; save(); render();
+      });
+    });
+    if (st) st.addEventListener("click", function () {
+      var was = store.healthWeight;
+      store.healthWeight = { on: false, at: Date.now() };
+      save(); render();
+      offerUndo("Stopped filling in your weight from Apple Health · the weights so far stay", function () {
+        store.healthWeight = was; save(); render(); healthWeight.read(true);
+      });
+    });
+  }
+
   // Health's numbers arrive by themselves, so the screen is redrawn only when
   // nothing is half typed or open: a sheet, a field, the goal or a session
   // being edited. Otherwise they show at the next redraw.
@@ -15985,7 +16136,7 @@
     if (note) p.note = note;
     if (photoId) p.photo = photoId;
     d.prog = p;
-    if (lb === null) delete d.bw; else if (lb !== undefined) d.bw = lb;
+    if (lb === null) { delete d.bw; delete d.bwBy; } else if (lb !== undefined) { d.bw = lb; delete d.bwBy; }
     if (oldPhoto && oldPhoto !== photoId) binPhoto(oldPhoto);
     touch(k);
     var ok = save();
@@ -17299,6 +17450,7 @@
     if (!document.hidden) checkDayRollover();
     if (!document.hidden) maybeWrap();            // one held back behind a clock (b104)
     if (!document.hidden) healthSteps.read();     // steps walked while the app was away
+    if (!document.hidden) healthWeight.read();    // a weigh-in on the scale meanwhile (b109)
     if (!document.hidden) remSync();              // reminders from today on (b108)
   });
   window.addEventListener("focus", checkDayRollover);
@@ -19378,6 +19530,7 @@
     maybeWrap();
     quickCheck();
     healthSteps.read();
+    healthWeight.read();
   }
 })();
 </script>

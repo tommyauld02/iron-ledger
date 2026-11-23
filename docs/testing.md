@@ -155,7 +155,11 @@ storage outlives the browser: a restart with the WebView wiped, a failed
 write and its retry, a log that cannot be read, taps before it is read, no
 service worker in the app, and the privacy manifest: bundled by Xcode, its
 reasons, and every reasoned API in the shell's and installed plugins' Swift
-declared · `live` the iPhone app's live updates against a
+declared; and from b109 weigh-ins from Apple Health against a stand-in
+HealthWeight (offered only by a 1.6 shell, Not now and Undo, 400 days read,
+a typed weight never written over, a Health day following Health, typing
+taking a day from Health, Stop and Undo, nothing from Health, a phone never
+asked) · `live` the iPhone app's live updates against a
 stand-in updater and manifest: what is taken and when, the shell-version and
 downgrade guards, a build that failed to start, an updater that never
 answers, the manifest Pages publishes, and that the shell's version was raised

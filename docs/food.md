@@ -356,6 +356,25 @@ its age from the birth date and its equation from the profile (Other picks
 one), and *Use these numbers* writes into `store.profile`, never over it
 (`docs/architecture.md`, *The profile sets the goals*).
 
+**Weigh-ins from Apple Health (b109, shell 1.6).** From the list of
+improvements of 2026-11-21: a smart scale writes the morning's weight to
+Health, so it fills in on the Log by itself. Built the way steps are
+(`docs/cardio.md`, *Steps from Apple Health*), with the same rules, through a
+plugin of its own (`HealthWeight`, `HealthWeightPlugin.swift`), so a 1.5 shell
+is simply never asked (`shellHas`). The body weight card offers it once
+(*Connect Apple Health*, *Not now* with Undo), then says where today's weight
+came from, with *Stop filling in from Apple Health* (Undo); after Not now or
+Stop it keeps *Fill in from Apple Health*. The shell answers the last weight
+each day for the last 400 days, in pounds to a tenth. A day Health filled
+carries `d.bwBy = "health"` and follows Health; a typed weight (on the card,
+in the profile, in a check-in) takes `bwBy` off and is never written over.
+Filling never touches a day's `updated`. Read on opening, on coming back and
+when the card is drawn, at most once a minute. `store.healthWeight` is this
+phone's own answer; a backup never brings it. Nothing at all from Health says
+where the switch is (Settings → Health → Data Access & Devices), because iOS
+never tells an app whether reading was allowed. More weigh-ins also give the
+real burn (below) what it needs sooner. `native` covers it.
+
 **The calculator, reviewed (b107).** Asked for by the owner: set the goal
 from what a person prefers. `calcNumbers()` takes options, the same in both
 places it runs (the profile's *Your goals* and the target editor's *Work it

@@ -18,6 +18,7 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		B7E2D4A12FF1C0A000C8E5D2 /* HealthStepsPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E2D4A02FF1C0A000C8E5D2 /* HealthStepsPlugin.swift */; };
 		B7E2D4B12FF1C0A000C8E5D2 /* KeyboardResetPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E2D4B02FF1C0A000C8E5D2 /* KeyboardResetPlugin.swift */; };
+		B7E2D4B32FF1C0A000C8E5D2 /* HealthWeightPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E2D4B22FF1C0A000C8E5D2 /* HealthWeightPlugin.swift */; };
 		B7E2D4A32FF1C0A000C8E5D2 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7E2D4A22FF1C0A000C8E5D2 /* MainViewController.swift */; };
 		A1F0C3E22FEB5A9000D7E4B1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1F0C3E12FEB5A9000D7E4B1 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
@@ -36,6 +37,7 @@
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		B7E2D4A02FF1C0A000C8E5D2 /* HealthStepsPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthStepsPlugin.swift; sourceTree = "<group>"; };
 		B7E2D4B02FF1C0A000C8E5D2 /* KeyboardResetPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardResetPlugin.swift; sourceTree = "<group>"; };
+		B7E2D4B22FF1C0A000C8E5D2 /* HealthWeightPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthWeightPlugin.swift; sourceTree = "<group>"; };
 		B7E2D4A22FF1C0A000C8E5D2 /* MainViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		B7E2D4A42FF1C0A000C8E5D2 /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		A1F0C3E12FEB5A9000D7E4B1 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -77,6 +79,7 @@
 				B7E2D4A22FF1C0A000C8E5D2 /* MainViewController.swift */,
 				B7E2D4A02FF1C0A000C8E5D2 /* HealthStepsPlugin.swift */,
 				B7E2D4B02FF1C0A000C8E5D2 /* KeyboardResetPlugin.swift */,
+				B7E2D4B22FF1C0A000C8E5D2 /* HealthWeightPlugin.swift */,
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
@@ -178,6 +181,7 @@
 				B7E2D4A32FF1C0A000C8E5D2 /* MainViewController.swift in Sources */,
 				B7E2D4A12FF1C0A000C8E5D2 /* HealthStepsPlugin.swift in Sources */,
 				B7E2D4B12FF1C0A000C8E5D2 /* KeyboardResetPlugin.swift in Sources */,
+				B7E2D4B32FF1C0A000C8E5D2 /* HealthWeightPlugin.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -327,7 +331,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = app.mntldt;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -351,7 +355,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = app.mntldt;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
