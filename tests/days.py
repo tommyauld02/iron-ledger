@@ -23,6 +23,12 @@ def resume(p):
     p.evaluate("""()=>{Object.defineProperty(document,'hidden',{value:false,configurable:true});
                       document.dispatchEvent(new Event('visibilitychange'));}""")
     p.wait_for_timeout(500)
+    # A jump that crosses the start of a week brings up the week wrap-up
+    # (b104), which is weekwrap's business. Put away, the suite runs the same
+    # on every weekday: from b104 to b108 it failed whenever its three days
+    # crossed a Sunday (CI on Monday 2026-11-23), with the wrap-up over the tabs.
+    if p.locator("#wrapDone").count() and p.locator("#wrapDone").is_visible():
+        p.click("#wrapDone"); p.wait_for_timeout(200)
 
 def keys(p): return p.evaluate("()=>Object.keys(JSON.parse(localStorage.getItem('iron-ledger-v1')).days).sort()")
 
@@ -92,7 +98,11 @@ with sync_playwright() as pw:
     # ---- skip two days entirely (app closed over a weekend) ----
     p.evaluate("()=>window.__setOffsetDays(0)"); resume(p)
     ck("gap: jumps straight to today", p.evaluate("()=>document.getElementById('todayBtn').hidden"))
-    ck("gap: today empty, history intact", p.eval_on_selector_all(".t-row","e=>e.length")==0 and len(keys(p))==2)
+    # The days with something in them. A new week's first look saves the log
+    # (the wrap-up's wrapSeen), and with it the empty day render() made for
+    # today: harmless, a day nobody logged, so it is not counted here.
+    logged=p.evaluate("()=>{const d=JSON.parse(localStorage.getItem('iron-ledger-v1')).days;return Object.keys(d).filter(k=>(d[k].food||[]).length||(d[k].lifts||[]).length).sort()}")
+    ck("gap: today empty, history intact", p.eval_on_selector_all(".t-row","e=>e.length")==0 and logged==k1, str(logged))
 
     # ---- calendar reflects all of it ----
     p.click('.tabs button[data-tab="log"]'); p.wait_for_timeout(600)

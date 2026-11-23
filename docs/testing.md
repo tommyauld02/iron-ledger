@@ -227,6 +227,15 @@ gives the next a head start instead of using the whole wait, that it is told
 to stop once there is an answer, and that the lookups after it do not ask it
 again. They measure time, so their waits are a few seconds of real clock.
 
+**A suite that moves its clock can cross a week (found on PR #72).** `days`
+opens three days back and walks to today. From b104 that failed on any
+Sunday, Monday or Tuesday, when the walk crossed the start of a week: the
+week wrap-up came up over the tabs, and its save kept the empty day
+`render()` makes for today, so "history intact" counted three days. It only
+ever ran on other weekdays until CI ran on Monday 2026-11-23. `resume()` now
+puts the wrap-up away, and the check counts the days with something in them.
+A suite that moves the clock should not depend on the weekday it runs on.
+
 **A run that crosses midnight fails on the clock, not the app.** A suite takes
 today's date once, when it starts, and seeds its fixture on that day; the app
 re-checks the date as it goes (`checkDayRollover()`). `sweep` runs for about
