@@ -537,6 +537,19 @@ open the box. Fields never start a drag, since holding one is how a phone
 moves the cursor. Meals are not edited by this box; *Name this meal* and *Take
 out* are theirs. `meals` and `finder` check all of it.
 
+**On a day gone by, again means today (b108).** From a list of improvements
+the owner was shown on 2026-11-21: the same breakfast most mornings had no
+quick way back in. *Log again* copies a row into the day on screen
+(`logAgainById()`), which on yesterday put the copy into yesterday. On any
+day before today the row's box offers *Add to today* in its place, and an open
+meal offers it first among its actions (a meal never had *Log again*).
+`addToTodayById()` puts a copy into today, a meal whole with new ids for its
+parts, stamps today's goal, and leaves the day on screen as it was. Today is
+not on screen, so the undo bar says where it went (*Added to today · Oats and
+whey*, short enough for a phone's bar), rule 3, and Undo takes it back out. Today and days
+ahead keep *Log again*. `meals` checks both, and *Log again* itself, which
+had no check until then.
+
 **Grams are the basis; the unit is only how it is shown.** The whole food
 table is keyed per 100 g and every macro is derived from `it.grams`, so that
 is what gets stored and nothing downstream has to know what unit you like.

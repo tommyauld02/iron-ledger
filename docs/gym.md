@@ -123,6 +123,14 @@ taps, and there was no way to see how long any one movement took. Done appears
 once a movement has a set; tapping it folds the card down to what you did and
 how long it took, with nothing left on it to hit but *Reopen*.
 
+**Done brings the next movement up (b108).** From the list of improvements
+of 2026-11-21: mid-workout the page is several screens of open cards, and
+after Done the next set was a scroll away. `glideToNext()` slides the next
+card still open (after the one finished, in order) up to sit just under the
+bar, smoothly, or at once with Reduce Motion. *Done with superset* does the
+same from the group's last member. With nothing open after it, the page stays
+where it is. `history` checks it.
+
 The time is a **lap**: from the last movement you finished — or from *Start
 workout*, for the first — to this one's Done. `finishLift()` computes it once
 and stores it as `lapMs` beside `doneAt`, so nothing afterwards (another
@@ -304,6 +312,16 @@ Because it sits in the dock, **`hittest`'s usable band now ends at the dock's
 top, not the tab bar's**, and the whole dock counts as chrome; otherwise
 anything scrolled under the rest bar reads as covered.
 
+**Or it starts on each set (b108).** Settings → *Rest timer starts*: *When I
+press it* (the default, as it always was) or *On each set*, asked for from the
+list of improvements of 2026-11-21: after every set the timer was a press, and
+a press forgotten was a rest alert that never came. On each set, `logSet()`
+starts it again from 0:00 (`restGo(false)` then `restGo(true)`) for a set
+logged today, folded, so the count shows on the Rest timer button and nothing
+on the page moves. A set typed into another day is a record, not a rest, and
+starts nothing. A *Buzz at* time already picked goes with every rest.
+`store.restAuto`; `remind` checks it.
+
 **The rest alert tells a phone in a pocket.** iPhone app only (b85), because
 only a notification reaches a locked phone; added to help the app pass Apple's
 4.2 review as more than a website. While the clock runs, a row above it offers
@@ -351,6 +369,47 @@ the last time it was done: top weight, sets, reps, volume and time. Up is
 listed a longer session with the heavier weights, so time is coloured the same
 way. A figure missing on either side is shown as *not compared* rather than
 counted as a change.
+
+**A lift's history (b108).** Asked for by the owner on 2026-11-21, from a
+list of improvements he was shown: the app kept every set and still could not
+answer "is my bench going up?". *History*, on an open card's *Last* box,
+opens a sheet (`#histSheet`, filled by `histHtml()`; nothing in it is
+stored): the movement's best set each time it was done (`topSet()`, so five
+pounds is worth a rep and a warm-up never counts), a line through the last
+twelve (`HIST_SHOWN`), the best ever as a gold badge, a gold dot and a gold
+row, *▲ Up 20 lb in 6 weeks* from the first point on the line to the last,
+then the sessions newest first, *Today* on top. A best ever older than the
+twelve is said under them in words. Gold, because a best ever is earned.
+
+To draw one line through 135×10 and 145×8, each best set is **counted at the
+best ever's reps** by the same rule (`histMeasure()`): at 8 reps, 135×10 is
+145. The sheet says so (*Counted at 8 reps: 5 lb is worth one rep*) only when
+the reps on the line differ. A lift never done with weight (dips, pull-ups at
+body weight) is counted in reps. Up is `--hit` and down `--miss`, as Compare
+has them.
+
+**A history is one gym's.** For the reason *To beat* is: the fly is 150 at one
+gym and 110 at another, and a line through both zigzags for nothing. From a
+card it opens at the gym the card takes its targets from (`data-histgym`);
+from the Log, at the gym it was last done at (`histScope()`). When it was done
+anywhere else, a switch lists each gym it was done at and *Every gym*, and
+*Every gym* names the gym on each row. A movement set to *every gym* (the
+card's gym tag) has no switch, and neither does a phone with no gyms. A card
+that is a first time at this gym, done elsewhere, has History under its one
+line, and opens at the gym it was done at. Warm-ups alone are no history: a
+movement with nothing but warm-ups has no button.
+
+The *Last* box was read-only by design ("nothing in it is teal"). History is
+now its one teal thing, on the *To beat* line's right, so the box is no
+taller. Folded cards have no History: a finished card keeps only *Reopen*,
+so nothing on it is hit by accident.
+
+**Your lifts, on the Log (b108).** A card under Body weight: each movement's
+best set the last time it was done, and its change over the eight weeks
+before that (`liftsCardHtml()`), newest first, six and then *Show all*. A row
+is one button that opens the same sheet. Its best set is gold, with a star,
+when the last time was the best ever (and not the only time). Once is no
+change, so its change is blank. `history` covers both ways in.
 
 **The planned week split: a board of this week, between the workout clock
 and today's split** (between where you train and today's split until b87,
@@ -437,7 +496,7 @@ measures 4.3:1.
 **The set to beat.** Asked for from the gym: starting a movement, what is the
 number to pass? Every open card carries it under *Last* — last time's best
 set, never a warm-up — as *To beat · 145×8*. When one of today's sets goes past
-it the line turns `--hit` and reads *↑ Beaten · 145×9 over 145×8*, and the
+it the line turns gold (`--hit` green until b108) and reads *↑ Beaten · 145×9 over 145×8*, and the
 folded card keeps it, so tapping Done does not take the moment away.
 
 **Five pounds is worth one rep — the owner's rule, not a formula from a
@@ -528,7 +587,9 @@ set, `Set 2 · 100×15` (a tag reads `60×15 warm-up`, and normal says nothing),
 then the movement's own note in quotes, then *To beat*. Nothing in it is
 tappable and nothing is teal, because teal means you can tap it. Today's
 numbers are not in it any more: they are the rows under it, each logged row
-with its label (`= Matched` grey, `↑ Beat` in `--hit`, `↓ Short` grey).
+with its label (`= Matched` grey, `↑ Beat` gold, `↓ Short` grey). From b108 a
+beaten set is gold as well, its numbers, fill and edge (`docs/ui.md`, *Gold
+means you earned it*); it was `--hit` green before.
 `lastPlan()` still does the pairing, and the rows and the labels both read it.
 
 **A first time at this gym** still shows only the other gym's numbers, on one

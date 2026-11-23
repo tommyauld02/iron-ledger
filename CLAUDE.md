@@ -31,7 +31,7 @@ without a migration and Tommy's say-so.
 
 ## The rules, in order of how much damage breaking them does
 
-**1. Nothing ships without `./verify.sh` passing.** 34 suites, ~2,450 checks, 27
+**1. Nothing ships without `./verify.sh` passing.** 36 suites, ~2,550 checks, 29
 of which can fail the build (see Testing — the rest are diagnostics). Run
 it after every change, including cosmetic ones — a colour token change once
 broke WCAG contrast on every muted label in the app, in both themes.
@@ -93,7 +93,7 @@ tools/make-screenshots.py   the App Store screenshots, from the app itself on a
 tools/make-icons.py renders the icons from the app's own colour tokens
 build.sh            generates dist/ for publishing (never hand-edit dist/)
 verify.sh           runs every suite
-tests/              33 Playwright suites, and relay.py, which runs the relay in Node
+tests/              35 Playwright suites, and relay.py, which runs the relay in Node
 .github/workflows/  verifies, then deploys to GitHub Pages on push to main
 ```
 
@@ -186,7 +186,8 @@ Everything else:
 - **Gym tab** — the workout clock, Done and laps, today's sets as rows with a
   check to log each (b100), the set sheet for changing one,
   techniques, supersets, the drag, the rest timer, movement lists, the
-  week's plan, what a movement works and the recovery body map →
+  week's plan, what a movement works and the recovery body map, a lift's
+  history and Your lifts on the Log (b108) →
   `docs/gym.md`
 - **Targets** — compare with last time, special day, notes, the set to beat,
   five pounds a rep, gyms, last time set by set → `docs/gym.md`
@@ -210,6 +211,9 @@ Everything else:
   (shell 1.4), the keyboard reset (shell 1.5) → `docs/ios.md`; how the log is kept
   there → `docs/architecture.md` (*In the iPhone app the log lives in native
   storage*)
+- **Reminders** (b108) — no food logged by evening and a weigh-in, iPhone app
+  only, booked two weeks ahead and again on every save → `docs/ios.md` (*What
+  only the iPhone app does*); the rest timer on each set → `docs/gym.md`
 - **Known and deliberate** — what is left as it is on purpose, including
   *Ask an agent* needing a connection → `docs/known-and-deliberate.md`
 
@@ -258,7 +262,7 @@ is fixed, and it is worth keeping straight:
   `days`, `week`, `coach`, `meals`, `estmeal`, `touch`, `mobile`, `darkcheck`, `pwa`,
   `handoff`, `finder`, `relay`, `label`, `hittest`, `share`, `native`, `live`,
   `agecheck`, `profile`, `legal`, `keys`, `muscles`, `progress`, `weekwrap`,
-  `burn`, `calc`.
+  `burn`, `calc`, `history`, `remind`.
 - **Diagnostics** (print only, always exit 0): `probe`, `commit`, `noclaude`,
   `yourwords`, `firstrun`, `photo2`, `taborder`. These are read by a human.
   Converting them needs judgement about what counts as a failure — `probe`'s

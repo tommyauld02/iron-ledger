@@ -136,6 +136,23 @@ stand-in for the plugins; the feel of them is on the list below.
   and rings the page with a `mntlquickaction` window event. The page reads it once
   the app is open, so it never gets past the age check. Changing a title or
   adding one needs a store build.
+- **Reminders (b108)**: no food logged by an evening time, and a weigh-in in
+  the morning, in Settings → Reminders, each off until turned on. They use the
+  same `@capacitor/local-notifications` as the rest alert, so they came in a
+  live update, not a store build. The app cannot run in the background, so
+  `remSync()` books each one ahead for the next fourteen days (`REM_DAYS`), as
+  one-off notifications with ids `7100000` + the day's number (food) and
+  `7200000` + it (weigh-in), and books again after every save (`remSoon()`, a
+  moment later, so a run of sets books once), on opening and on coming back.
+  Each run takes off every id in its range and books what is wanted
+  (`remWanted()`): a day that already has food loses its evening reminder, and
+  a day with a weight its weigh-in. Somebody who stops opening the app hears
+  nothing after two weeks, on purpose. Turning one on asks iOS
+  (`requestPermissions`); refused, it stays off and says to turn notifications
+  on in iPhone Settings. iOS keeps 64 notifications an app; two weeks of both
+  is 28 at most, beside the rest alert's one. A tap on one opens the app where
+  it was: the page has no listener for which notification it was, and adding
+  one is a store build. `tests/remind.py` stands in for the plugin.
 
 ## The log lives in native storage
 
